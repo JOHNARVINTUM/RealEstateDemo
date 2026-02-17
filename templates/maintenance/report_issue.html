@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Report Issue - RealEstate360+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex">
+
+  <!-- Sidebar (reuse your sidebar styling) -->
+ <aside class="w-72 bg-emerald-900 text-white flex flex-col">
+    <div class="px-6 py-6 border-b border-emerald-800">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-emerald-800 flex items-center justify-center font-bold">
+          RE
+        </div>
+        <div>
+          <div class="text-lg font-bold">RealEstate360+</div>
+          <div class="text-xs text-emerald-200">Tenant Portal</div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="px-4 py-6 space-y-2 flex-1">
+      <a href="{% url 'tenant_dashboard' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40">Dashboard</a>
+      <a href="{% url 'tenant_pay_advance' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40">Make Payment</a>
+      <a href="{% url 'maintenance_list' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40">Maintenance Requests</a>
+      <a href="{% url 'report_issue' %}" class="block px-4 py-3 rounded-lg bg-emerald-800/60 font-semibold">Report Issue</a>
+      
+    </nav>
+
+    <div class="px-4 py-6 border-t border-emerald-800">
+      <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="w-full text-left px-4 py-3 rounded-lg hover:bg-emerald-800/40">Logout</button>
+      </form>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1 bg-gray-50">
+    <div class="px-8 py-8">
+      <h1 class="text-3xl font-bold text-gray-900">Report Maintenance Issue</h1>
+      <p class="text-gray-500 mt-1">Submit a maintenance request for your unit.</p>
+
+      <div class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Form -->
+        <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border p-6">
+          <h2 class="text-xl font-bold mb-4">Issue Details</h2>
+
+          <form method="post" class="space-y-4">
+            {% csrf_token %}
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+              {{ form.category }}
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Title</label>
+              {{ form.title }}
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+              {{ form.description }}
+              <p class="text-xs text-gray-500 mt-2">Be as specific as possible to help resolve the issue quickly.</p>
+            </div>
+
+            <button class="w-full bg-emerald-600 text-white py-3 rounded-lg font-semibold hover:bg-emerald-700 transition">
+              Submit Request
+            </button>
+          </form>
+        </div>
+
+        <!-- Unit Card -->
+        <div class="bg-white rounded-2xl shadow-sm border p-6">
+          <h2 class="text-xl font-bold mb-4">Your Unit</h2>
+          {% if lease %}
+            <div class="space-y-2 text-sm">
+              <p class="text-gray-500">Unit Number</p>
+              <p class="text-lg font-bold">Unit {{ lease.unit.number }}</p>
+
+              <p class="text-gray-500 mt-3">Tenant</p>
+              <p class="font-semibold">{{ request.user.email }}</p>
+            </div>
+          {% else %}
+            <p class="text-gray-500 text-sm">No active lease assigned.</p>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<style>
+  /* Make Django form fields match Tailwind */
+  select, input, textarea {
+    width: 100%;
+    border: 1px solid rgb(209 213 219);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    outline: none;
+  }
+  select:focus, input:focus, textarea:focus {
+    box-shadow: 0 0 0 2px rgba(59,130,246,.3);
+    border-color: rgb(59 130 246);
+  }
+</style>
+{% endblock %}

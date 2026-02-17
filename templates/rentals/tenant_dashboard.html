@@ -24,236 +24,146 @@
         Dashboard
       </a>
 
-      <a href="#billing"
-         class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">
-        View Billing
-      </a>
-
-      <a href="{% url 'tenant_pay_qr' %}"
+      <a href="{% url 'tenant_pay_advance' %}"
          class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">
         Make Payment
       </a>
-
-      <a href="#report"
-         class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">
-        Report Issue
+    
+      <a href="{% url 'maintenance_list' %}"
+      class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">
+      Maintenance Requests
       </a>
-    </nav>
 
-  <form method="post" action="{% url 'logout' %}">
-    {% csrf_token %}
-    <button type="submit"
-            class="w-full text-left px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">
-        Logout
-    </button>
-</form>
+      <a href="{% url 'report_issue' %}"
+      class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">
+      Report Issue
+      </a>
+
+      </nav>
+
+    <div class="px-4 py-6 border-t border-emerald-800">
+      <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit"
+                class="w-full text-left px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">
+          Logout
+        </button>
+      </form>
+    </div>
   </aside>
 
   <!-- Main -->
   <main class="flex-1">
-    <div class="px-8 py-8">
+    <div class="px-8 py-8 space-y-6">
 
-      <!-- Welcome -->
-      <div class="mb-6">
+      <div>
         <h1 class="text-3xl font-bold text-gray-900">
-          Welcome, {{ profile.username|default:request.user.username }}
+          Welcome, {{ profile.full_name|default:request.user.username }}
         </h1>
         <p class="text-gray-500 mt-1">
-          {% if lease %}
-            Unit {{ lease.unit.number }} • {{ request.user.email }}
-          {% else %}
-            {{ request.user.username }}
-          {% endif %}
+          {% if lease %}Unit {{ lease.unit.number }} • {% endif %}{{ request.user.email }}
         </p>
       </div>
 
-      <!-- Payment Status Card -->
-      <div class="bg-white rounded-2xl shadow-sm border p-6 mb-6">
-        <div class="flex items-start justify-between gap-6">
-          <div class="flex items-start gap-4">
-            <div class="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold">
-              ₱
+      <!-- Current Bill -->
+      <div class="bg-white rounded-2xl shadow-sm border p-6">
+        <h2 class="text-xl font-bold text-gray-900">Current Month Bill</h2>
+
+        {% if lease and current_payment and current_balance %}
+          <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <p class="text-sm text-gray-500">Billing Month</p>
+              <p class="text-lg font-bold">{{ current_payment.billing_month|date:"F Y" }}</p>
             </div>
 
             <div>
-              {% if balance %}
-                {% if balance.balance <= 0 %}
-                  <h2 class="text-xl font-bold text-gray-900">Payment Received</h2>
-                  <p class="text-sm text-emerald-700 mt-1 font-semibold">
-                    Paid{% if payment and payment.paid_at %} on {{ payment.paid_at|date:"Y-m-d" }}{% endif %}
-                  </p>
-                {% else %}
-                  <h2 class="text-xl font-bold text-gray-900">
-                    {% if balance.is_late %}Payment Overdue{% else %}Payment Due{% endif %}
-                  </h2>
-                  <p class="text-sm text-gray-500 mt-1">
-                    {% if balance.is_late %}
-                      Late fee (3%) applied.
-                    {% else %}
-                      Please settle before due date.
-                    {% endif %}
-                  </p>
-                {% endif %}
+              <p class="text-sm text-gray-500">Due Date</p>
+              <p class="text-lg font-bold">{{ current_balance.due_date }}</p>
+            </div>
 
-                <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <p class="text-sm text-gray-500">Amount Due</p>
-                    <p class="text-2xl font-extrabold text-gray-900">₱{{ balance.total_due }}</p>
-                    <p class="text-sm text-gray-500 mt-1">
-                      Rent: ₱{{ balance.base_rent }}
-                      {% if balance.interest > 0 %} • Interest: ₱{{ balance.interest }}{% endif %}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p class="text-sm text-gray-500">Due Date</p>
-                    <p class="text-lg font-bold text-gray-900">{{ balance.due_date }}</p>
-                  </div>
-
-                  <div class="md:text-right">
-                    {% if balance.balance > 0 %}
-                      <p class="text-sm text-gray-500">Remaining</p>
-                      <p class="text-xl font-bold text-red-600">₱{{ balance.balance }}</p>
-                      <a href="{% url 'tenant_pay_qr' %}"
-                         class="inline-block mt-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-                        Pay (QR Testing)
-                      </a>
-                    {% else %}
-                      <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-emerald-100 text-emerald-800">
-                        PAID
-                      </span>
-                    {% endif %}
-                  </div>
-                </div>
-              {% else %}
-                <h2 class="text-xl font-bold text-gray-900">No Billing Data</h2>
-                <p class="text-gray-500 mt-1">No active lease/billing found.</p>
+            <div class="md:text-right">
+              <p class="text-sm text-gray-500">Total Due</p>
+              <p class="text-2xl font-extrabold">₱{{ current_balance.total_due }}</p>
+              {% if current_balance.is_late %}
+                <p class="text-sm text-red-600 mt-1">Includes 3% late interest</p>
               {% endif %}
             </div>
           </div>
-        </div>
-      </div>
 
-      <!-- Summary Cards -->
-
-      <!-- Payment History -->
-<div class="bg-white rounded-2xl shadow-sm border p-6 mb-6">
-  <h2 class="text-xl font-bold text-gray-900 mb-4">Payment History</h2>
-
-  {% if payment_history %}
-    <div class="overflow-x-auto">
-      <table class="min-w-full">
-        <thead class="bg-gray-50">
-          <tr>
-            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Paid Date</th>
-            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Billing Month</th>
-            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Amount</th>
-            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Status</th>
-            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Reference</th>
-          </tr>
-        </thead>
-
-        <tbody class="divide-y">
-          {% for p in payment_history %}
-            <tr class="hover:bg-gray-50">
-              <td class="px-4 py-3 text-sm text-gray-700">
-                {% if p.paid_at %}{{ p.paid_at|date:"Y-m-d" }}{% else %}-{% endif %}
-              </td>
-
-              <td class="px-4 py-3 text-sm text-gray-700">
-                {{ p.billing_month|date:"Y-m" }}
-              </td>
-
-              <td class="px-4 py-3 text-sm font-semibold text-gray-900">
-                ₱{{ p.amount_paid }}
-              </td>
-
-              <td class="px-4 py-3 text-sm">
-                {% if p.status == "PAID" %}
-                  <span class="px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">PAID</span>
-                {% elif p.status == "LATE" %}
-                  <span class="px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">LATE</span>
-                {% else %}
-                  <span class="px-2 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">PENDING</span>
-                {% endif %}
-              </td>
-
-              <td class="px-4 py-3 text-sm text-gray-500">
-                {{ p.payment_reference|default:"-" }}
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% else %}
-    <p class="text-gray-500">No payment history yet.</p>
-  {% endif %}
-</div>
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div class="bg-white rounded-2xl shadow-sm border p-6">
-          <p class="text-sm text-gray-500">Move-in Date</p>
-          <p class="text-2xl font-bold text-gray-900 mt-2">
-            {% if lease %}{{ lease.start_date }}{% else %}-{% endif %}
-          </p>
-        </div>
-
-        <div class="bg-white rounded-2xl shadow-sm border p-6">
-          <p class="text-sm text-gray-500">Monthly Rent</p>
-          <p class="text-2xl font-bold text-gray-900 mt-2">
-            {% if lease %}₱{{ lease.monthly_rent }}{% else %}-{% endif %}
-          </p>
-        </div>
-
-        <div class="bg-white rounded-2xl shadow-sm border p-6">
-          <p class="text-sm text-gray-500">Payment Status</p>
-          <div class="mt-3">
-            {% if balance %}
-              {% if balance.balance <= 0 %}
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-emerald-100 text-emerald-800">
-                  PAID
-                </span>
-              {% elif balance.is_late %}
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-red-100 text-red-800">
-                  OVERDUE
-                </span>
-              {% else %}
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-yellow-100 text-yellow-800">
-                  PENDING
-                </span>
-              {% endif %}
+          <div class="mt-4">
+            {% if current_balance.balance <= 0 %}
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-emerald-100 text-emerald-800">PAID</span>
             {% else %}
-              <span class="text-gray-500">-</span>
+              <a href="{% url 'tenant_pay_advance' %}"
+                 class="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                Pay Now
+              </a>
             {% endif %}
           </div>
-        </div>
+        {% else %}
+          <p class="text-gray-500 mt-2">No billing found yet.</p>
+        {% endif %}
+      </div>
+
+      <!-- Payment History -->
+      <div class="bg-white rounded-2xl shadow-sm border p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">Payment History</h2>
+
+        {% if payment_history %}
+          <div class="overflow-x-auto">
+            <table class="min-w-full">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Billing Month</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Status</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Amount Paid</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Paid At</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Reference</th>
+                </tr>
+              </thead>
+
+              <tbody class="divide-y">
+                {% for p in payment_history %}
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 text-sm">{{ p.billing_month|date:"F Y" }}</td>
+                    <td class="px-4 py-3 text-sm">
+                      {% if p.status == "PAID" %}
+                        <span class="px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">PAID</span>
+                      {% elif p.status == "LATE" %}
+                        <span class="px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">LATE</span>
+                      {% else %}
+                        <span class="px-2 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">PENDING</span>
+                      {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-sm font-semibold">₱{{ p.amount_paid }}</td>
+                    <td class="px-4 py-3 text-sm">{% if p.paid_at %}{{ p.paid_at|date:"Y-m-d" }}{% else %}-{% endif %}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">{{ p.payment_reference|default:"-" }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="text-gray-500">No payment history.</p>
+        {% endif %}
       </div>
 
       <!-- Announcements -->
-      <section class="bg-white rounded-2xl shadow-sm border p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-xl font-bold text-gray-900">Announcements</h2>
-        </div>
+      <div class="bg-white rounded-2xl shadow-sm border p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">Announcements</h2>
 
         <div class="space-y-4">
           {% for a in announcements %}
-            <div class="rounded-xl border p-5 {% if a.is_active %}bg-white{% endif %}">
-              <div class="flex items-start justify-between gap-4">
-                <div>
-                  <h3 class="font-bold text-gray-900">{{ a.title }}</h3>
-                  <p class="text-gray-600 mt-1">{{ a.body }}</p>
-                  <p class="text-xs text-gray-400 mt-2">
-                    Posted: {{ a.created_at|date:"Y-m-d" }}
-                  </p>
-                </div>
-              </div>
+            <div class="rounded-xl border p-5">
+              <h3 class="font-bold text-gray-900">{{ a.title }}</h3>
+              <p class="text-gray-600 mt-1">{{ a.body }}</p>
+              <p class="text-xs text-gray-400 mt-2">Posted: {{ a.created_at|date:"Y-m-d" }}</p>
             </div>
           {% empty %}
             <p class="text-gray-500">No announcements.</p>
           {% endfor %}
         </div>
-      </section>
+      </div>
 
     </div>
   </main>

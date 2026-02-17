@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+<head><title>Pay (QR Testing)</title></head>
+<body>
+  <h2>Pay using QR (Testing)</h2>
+  <p>This is a placeholder flow. Enter any reference code.</p>
+
+  <form method="post">
+    {% csrf_token %}
+    <label>Reference:</label>
+    <input name="reference" required />
+    <button type="submit">Submit Payment</button>
+  </form>
+
+  <p><a href="{% url 'tenant_dashboard' %}">Back</a></p>
+</body>
+</html>

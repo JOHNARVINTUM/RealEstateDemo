@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "billing",
     "announcements",
     "maintenance",
+    "water",
 ]
 
 MIDDLEWARE = [

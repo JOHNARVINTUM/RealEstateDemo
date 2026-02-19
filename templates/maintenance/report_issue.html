@@ -20,9 +20,13 @@
 
     <nav class="px-4 py-6 space-y-2 flex-1">
       <a href="{% url 'tenant_dashboard' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40">Dashboard</a>
+      <a href="{% url 'tenant_billing' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">
+      View Billing
+     </a>
       <a href="{% url 'tenant_pay_advance' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40">Make Payment</a>
       <a href="{% url 'maintenance_list' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40">Maintenance Requests</a>
       <a href="{% url 'report_issue' %}" class="block px-4 py-3 rounded-lg bg-emerald-800/60 font-semibold">Report Issue</a>
+      
       
     </nav>
 

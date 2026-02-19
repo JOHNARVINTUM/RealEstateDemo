@@ -1,101 +1,144 @@
 {% extends "base.html" %}
-{% block title %}Advance Payment - RealEstate360+{% endblock %}
+{% block title %}Make Payment - RealEstate360+{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-  <div class="bg-white w-full max-w-lg rounded-2xl shadow-sm border p-6">
+<div class="min-h-screen flex bg-gray-50">
 
-    <h2 class="text-2xl font-bold text-gray-900">Advance Payment</h2>
-    <p class="text-gray-500 mt-1">Select how many months to pay. Total updates automatically.</p>
-
-    <div class="mt-4 rounded-xl border p-4 bg-gray-50">
-      <p class="text-sm text-gray-700"><b>Unit:</b> {{ lease.unit.number }}</p>
-      <p class="text-sm text-gray-700"><b>Monthly Rent:</b> ₱{{ lease.monthly_rent }}</p>
+  <!-- Sidebar -->
+  <aside class="w-72 bg-emerald-900 text-white flex flex-col">
+    <div class="px-6 py-6 border-b border-emerald-800">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-emerald-800 flex items-center justify-center font-bold">
+          RE
+        </div>
+        <div>
+          <div class="text-lg font-bold">RealEstate360+</div>
+          <div class="text-xs text-emerald-200">Tenant Portal</div>
+        </div>
+      </div>
     </div>
 
-    <!-- ✅ AUTO PREVIEW (GET) -->
-    <form id="monthsForm" method="get" class="mt-6 space-y-4">
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">Months to pay</label>
-        <select name="months_to_pay"
-                class="w-full px-4 py-3 border rounded-lg"
-                onchange="document.getElementById('monthsForm').submit()">
-          {% for i in "123456789012"|make_list %}
-            <option value="{{ forloop.counter }}"
-              {% if forloop.counter == months_to_pay %}selected{% endif %}>
-              {{ forloop.counter }}
-            </option>
-          {% endfor %}
-        </select>
-      </div>
-    </form>
+    <nav class="px-4 py-6 space-y-2 flex-1">
+      <a href="{% url 'tenant_dashboard' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">
+        Dashboard
+      </a>
 
-    <!-- ✅ Breakdown -->
-    <div class="mt-6 border rounded-xl p-4">
-      <h3 class="font-bold text-lg text-gray-900 mb-3">Estimated Total</h3>
+      <a href="{% url 'tenant_billing' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">
+      View Billing
+     </a>
 
-      {% if breakdown %}
-        <div class="space-y-2">
-          {% for row in breakdown %}
-            <div class="flex justify-between text-sm">
-              <span class="text-gray-700">
-                {{ row.payment.billing_month|date:"F Y" }}
-                {% if row.is_late %}
-                  <span class="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
-                    Late +3%
-                  </span>
-                {% endif %}
-              </span>
-              <span class="font-semibold text-gray-900">₱{{ row.total_due }}</span>
+      <a href="{% url 'tenant_pay_advance' %}" class="block px-4 py-3 rounded-lg bg-emerald-800/60 hover:bg-emerald-800 transition font-semibold">
+        Make Payment
+      </a>
+
+      <a href="{% url 'maintenance_list' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">
+        Maintenance Requests
+      </a>
+
+      <a href="{% url 'report_issue' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">
+        Report Issue
+      </a>
+
+    
+    </nav>
+
+    <div class="px-4 py-6 border-t border-emerald-800">
+      <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="w-full text-left px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">
+          Logout
+        </button>
+      </form>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1 px-10 py-8">
+    <h1 class="text-4xl font-extrabold text-gray-900">Make Payment</h1>
+
+    {% if breakdown %}
+      <p class="text-gray-600 mt-2">
+        You have pending bills. You can pay the oldest unpaid months below.
+      </p>
+    {% else %}
+      <p class="text-gray-600 mt-2">No pending bills at this time</p>
+    {% endif %}
+
+    <!-- Big status card -->
+    <div class="mt-6 rounded-2xl border bg-emerald-50 p-10 flex items-center justify-center">
+      <div class="text-center max-w-xl">
+        <div class="mx-auto w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center">
+          <!-- Check icon -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 6 9 17l-5-5"></path>
+          </svg>
+        </div>
+
+        <h2 class="mt-6 text-4xl font-extrabold text-emerald-700">All Caught Up!</h2>
+        <p class="mt-2 text-emerald-700">
+          You have no pending payments.
+        </p>
+        <p class="mt-2 text-emerald-700">
+          You can still make advance payments below if you wish.
+        </p>
+
+        <!-- Advance payment card -->
+        <div class="mt-8 bg-white rounded-2xl shadow-sm border p-8 mx-auto max-w-md">
+          <h3 class="text-xl font-bold text-gray-900">Make Advance Payment</h3>
+          <p class="text-sm text-gray-500 mt-1">Pay for future months in advance</p>
+
+          <!-- GET for auto-price updates -->
+          <form id="monthsForm" method="get" class="mt-5">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Number of Months</label>
+            <select name="months_to_pay"
+                    class="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
+                    onchange="document.getElementById('monthsForm').submit()">
+              {% for i in "123456789012"|make_list %}
+                <option value="{{ forloop.counter }}"
+                  {% if forloop.counter == months_to_pay %}selected{% endif %}>
+                  {{ forloop.counter }} Month{% if forloop.counter > 1 %}s{% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </form>
+
+          <!-- Summary -->
+          <div class="mt-5 rounded-xl bg-emerald-50 border border-emerald-100 p-4">
+            <div class="flex justify-between text-sm text-gray-700">
+              <span>Monthly Rate</span>
+              <span class="font-semibold">₱{{ lease.monthly_rent }}</span>
             </div>
-            {% if row.is_late and row.interest > 0 %}
-              <div class="text-xs text-gray-500 -mt-1 flex justify-between">
-                <span>Late interest</span>
-                <span>₱{{ row.interest }}</span>
+            <div class="mt-2 flex justify-between items-end">
+              <span class="font-bold text-gray-900">Total Amount</span>
+              <span class="text-2xl font-extrabold text-emerald-700">₱{{ total_amount }}</span>
+            </div>
+          </div>
+
+          <!-- POST confirm (reference required) -->
+          <form method="post" class="mt-5 space-y-3">
+            {% csrf_token %}
+            <input type="hidden" name="months_to_pay" value="{{ months_to_pay }}">
+
+            {% if error %}
+              <div class="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+                {{ error }}
               </div>
             {% endif %}
-          {% endfor %}
-        </div>
 
-        <div class="border-t mt-4 pt-4 flex justify-between text-lg font-extrabold">
-          <span>Total</span>
-          <span>₱{{ total_amount }}</span>
+            <input name="reference"
+                   required
+                   class="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
+                   placeholder="Reference number (required to confirm)">
+
+            <button class="w-full bg-emerald-600 text-white py-3 rounded-xl font-semibold hover:bg-emerald-700 transition">
+              Proceed to Payment
+            </button>
+          </form>
+
         </div>
-      {% else %}
-        <p class="text-gray-500">No Months Inputed yet</p>
-      {% endif %}
+      </div>
     </div>
 
-    <!-- ✅ Confirm payment (POST) requires reference -->
-    <form method="post" class="mt-6 space-y-4">
-      {% csrf_token %}
-      <input type="hidden" name="months_to_pay" value="{{ months_to_pay }}">
-
-      {% if error %}
-        <div class="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
-          {{ error }}
-        </div>
-      {% endif %}
-
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">Reference Number</label>
-        <input name="reference"
-               class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
-               placeholder="Required to confirm payment"
-               required>
-      </div>
-
-      <button class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
-              {% if not breakdown %}disabled style="opacity:.6; cursor:not-allowed"{% endif %}>
-        Confirm & Pay ₱{{ total_amount }}
-      </button>
-    </form>
-
-    <a href="{% url 'tenant_dashboard' %}"
-       class="inline-block mt-4 text-sm text-blue-600 hover:underline">
-      ← Back to Dashboard
-    </a>
-
-  </div>
+  </main>
 </div>
 {% endblock %}

@@ -67,7 +67,7 @@
             <div>
               <h2 class="text-xl font-bold text-gray-900">Current Bill</h2>
               <p class="text-gray-500 text-sm">
-                {% if current_payment %}{{ current_payment.billing_month|date:"F Y" }}{% else %}-{% endif %}
+                {% if current_bill %}{{ current_bill.billing_month|date:"F Y" }}{% else %}-{% endif %}
               </p>
             </div>
           </div>
@@ -79,21 +79,23 @@
 
               <div class="flex justify-between py-2 text-sm">
                 <span class="text-gray-700">Monthly Rent</span>
-                <span class="font-semibold">₱{{ lease.monthly_rent }}</span>
+                <span class="font-semibold">
+                  ₱{% if current_bill %}{{ current_bill.base_rent }}{% else %}{{ lease.monthly_rent }}{% endif %}
+                </span>
               </div>
 
               <div class="flex justify-between py-2 text-sm">
                 <span class="text-gray-700">Water Utility</span>
                 <span class="font-semibold">
-                  ₱{% if current_balance %}{{ current_balance.water|default:"0.00" }}{% else %}0.00{% endif %}
+                  ₱{% if current_bill %}{{ current_bill.water_amount|default:"0.00" }}{% else %}0.00{% endif %}
                 </span>
               </div>
 
               <div class="flex justify-between py-2 text-sm">
                 <span class="text-gray-700">Penalty</span>
                 <span class="font-semibold">
-                  {% if current_balance and current_balance.interest and current_balance.interest != 0 %}
-                    ₱{{ current_balance.interest }}
+                  {% if current_bill and current_bill.interest and current_bill.interest != 0 %}
+                    ₱{{ current_bill.interest }}
                   {% else %}
                     -
                   {% endif %}
@@ -103,7 +105,7 @@
               <div class="border-t mt-4 pt-4 flex justify-between items-end">
                 <span class="text-lg font-bold text-gray-900">Total Amount</span>
                 <span class="text-2xl font-extrabold text-emerald-700">
-                  ₱{% if current_balance %}{{ current_balance.total_due|default:"0.00" }}{% else %}0.00{% endif %}
+                  ₱{% if current_bill %}{{ current_bill.total_due|default:"0.00" }}{% else %}0.00{% endif %}
                 </span>
               </div>
             </div>
@@ -122,7 +124,7 @@
                 <div>
                   <div class="text-xs text-gray-500">Due Date</div>
                   <div class="font-semibold text-gray-900">
-                    {% if current_balance and current_balance.due_date %}{{ current_balance.due_date|date:"Y-m-d" }}{% else %}-{% endif %}
+                    {% if current_bill and current_bill.due_date %}{{ current_bill.due_date|date:"Y-m-d" }}{% else %}-{% endif %}
                   </div>
                 </div>
               </div>
@@ -136,7 +138,7 @@
                 <div>
                   <div class="text-xs text-gray-500">Payment Date</div>
                   <div class="font-semibold text-emerald-700">
-                    {% if current_payment and current_payment.paid_at %}{{ current_payment.paid_at|date:"Y-m-d" }}{% else %}-{% endif %}
+                    {% if current_bill and current_bill.paid_at %}{{ current_bill.paid_at|date:"Y-m-d" }}{% else %}-{% endif %}
                   </div>
                 </div>
               </div>
@@ -148,7 +150,7 @@
       </div>
     </div>
 
-    <!-- ✅ Ongoing Billing -->
+    <!-- Ongoing Billing -->
     <div class="mt-8 bg-white rounded-2xl shadow-sm border overflow-hidden">
       <div class="px-6 py-5 border-b">
         <h2 class="text-lg font-bold text-gray-900">Ongoing Billing</h2>
@@ -206,7 +208,7 @@
       </div>
     </div>
 
-    <!-- ✅ Payment History = Transactions ONLY -->
+    <!-- Payment History -->
     <div class="mt-8 bg-white rounded-2xl shadow-sm border overflow-hidden">
       <div class="px-6 py-5 border-b">
         <h2 class="text-lg font-bold text-gray-900">Payment History</h2>
@@ -228,7 +230,7 @@
             {% for t in transactions %}
               <tr class="hover:bg-gray-50">
                 <td class="px-4 py-3 text-sm">
-                  {% if t.created_at %}{{ t.created_at|date:"Y-m-d" }}{% else %}-{% endif %}
+                  {% if t.paid_at %}{{ t.paid_at|date:"Y-m-d" }}{% else %}-{% endif %}
                 </td>
                 <td class="px-4 py-3 text-sm font-semibold">{{ t.reference }}</td>
                 <td class="px-4 py-3 text-sm">{{ t.months_paid }}</td>

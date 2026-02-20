@@ -8,9 +8,7 @@
   <aside class="w-72 bg-emerald-900 text-white flex flex-col">
     <div class="px-6 py-6 border-b border-emerald-800">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-emerald-800 flex items-center justify-center font-bold">
-          RE
-        </div>
+        <div class="w-10 h-10 rounded-lg bg-emerald-800 flex items-center justify-center font-bold">RE</div>
         <div>
           <div class="text-lg font-bold">RealEstate360+</div>
           <div class="text-xs text-emerald-200">Tenant Portal</div>
@@ -24,8 +22,8 @@
       </a>
 
       <a href="{% url 'tenant_billing' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">
-      View Billing
-     </a>
+        View Billing
+      </a>
 
       <a href="{% url 'tenant_pay_advance' %}" class="block px-4 py-3 rounded-lg bg-emerald-800/60 hover:bg-emerald-800 transition font-semibold">
         Make Payment
@@ -38,8 +36,6 @@
       <a href="{% url 'report_issue' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">
         Report Issue
       </a>
-
-    
     </nav>
 
     <div class="px-4 py-6 border-t border-emerald-800">
@@ -56,88 +52,204 @@
   <main class="flex-1 px-10 py-8">
     <h1 class="text-4xl font-extrabold text-gray-900">Make Payment</h1>
 
-    {% if breakdown %}
+    {% if has_pending %}
       <p class="text-gray-600 mt-2">
-        You have pending bills. You can pay the oldest unpaid months below.
+        You have pending bills ({{ unpaid_count }}). Pay them below.
       </p>
-    {% else %}
-      <p class="text-gray-600 mt-2">No pending bills at this time</p>
-    {% endif %}
 
-    <!-- Big status card -->
-    <div class="mt-6 rounded-2xl border bg-emerald-50 p-10 flex items-center justify-center">
-      <div class="text-center max-w-xl">
-        <div class="mx-auto w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center">
-          <!-- Check icon -->
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M20 6 9 17l-5-5"></path>
-          </svg>
+      <!-- RED PANEL -->
+      <div class="mt-6 rounded-2xl border bg-red-50 p-8 shadow-sm">
+        <div class="flex items-center justify-center">
+          <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-red-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 9v4"></path>
+              <path d="M12 17h.01"></path>
+              <path d="M10 3h4l7 7v4l-7 7h-4l-7-7v-4z"></path>
+            </svg>
+          </div>
         </div>
 
-        <h2 class="mt-6 text-4xl font-extrabold text-emerald-700">All Caught Up!</h2>
-        <p class="mt-2 text-emerald-700">
-          You have no pending payments.
-        </p>
-        <p class="mt-2 text-emerald-700">
-          You can still make advance payments below if you wish.
-        </p>
+        <div class="mt-5 text-center">
+          <h2 class="text-3xl font-extrabold text-red-800">Payment Required</h2>
+          <p class="text-sm text-red-700 mt-2">Select how many months to pay (oldest unpaid first).</p>
+        </div>
 
-        <!-- Advance payment card -->
-        <div class="mt-8 bg-white rounded-2xl shadow-sm border p-8 mx-auto max-w-md">
-          <h3 class="text-xl font-bold text-gray-900">Make Advance Payment</h3>
-          <p class="text-sm text-gray-500 mt-1">Pay for future months in advance</p>
+        <!-- Center Card -->
+        <div class="mt-8 flex justify-center">
+          <div class="w-full max-w-md bg-white rounded-2xl border shadow-sm p-6">
+            <h3 class="text-lg font-bold text-gray-900 text-center">Pay Pending Bills</h3>
+            <p class="text-sm text-gray-500 text-center mt-1">Oldest unpaid months will be paid first</p>
 
-          <!-- GET for auto-price updates -->
-          <form id="monthsForm" method="get" class="mt-5">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Number of Months</label>
-            <select name="months_to_pay"
-                    class="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
-                    onchange="document.getElementById('monthsForm').submit()">
-              {% for i in "123456789012"|make_list %}
-                <option value="{{ forloop.counter }}"
-                  {% if forloop.counter == months_to_pay %}selected{% endif %}>
-                  {{ forloop.counter }} Month{% if forloop.counter > 1 %}s{% endif %}
-                </option>
-              {% endfor %}
-            </select>
-          </form>
-
-          <!-- Summary -->
-          <div class="mt-5 rounded-xl bg-emerald-50 border border-emerald-100 p-4">
-            <div class="flex justify-between text-sm text-gray-700">
-              <span>Monthly Rate</span>
-              <span class="font-semibold">₱{{ lease.monthly_rent }}</span>
-            </div>
-            <div class="mt-2 flex justify-between items-end">
-              <span class="font-bold text-gray-900">Total Amount</span>
-              <span class="text-2xl font-extrabold text-emerald-700">₱{{ total_amount }}</span>
-            </div>
-          </div>
-
-          <!-- POST confirm (reference required) -->
-          <form method="post" class="mt-5 space-y-3">
-            {% csrf_token %}
-            <input type="hidden" name="months_to_pay" value="{{ months_to_pay }}">
-
-            {% if error %}
-              <div class="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
-                {{ error }}
+            <!-- ✅ GET form: dropdown refreshes total -->
+            <form method="get" id="pendingMonthsForm" class="mt-6 space-y-4">
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Number of Months</label>
+                <select name="months_to_pay"
+                        class="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-red-200"
+                        onchange="document.getElementById('pendingMonthsForm').submit()">
+                  <option value="1" {% if months_to_pay == 1 %}selected{% endif %}>1 Month</option>
+                  <option value="2" {% if months_to_pay == 2 %}selected{% endif %}>2 Months</option>
+                  <option value="3" {% if months_to_pay == 3 %}selected{% endif %}>3 Months</option>
+                  <option value="4" {% if months_to_pay == 4 %}selected{% endif %}>4 Months</option>
+                  <option value="5" {% if months_to_pay == 5 %}selected{% endif %}>5 Months</option>
+                  <option value="6" {% if months_to_pay == 6 %}selected{% endif %}>6 Months</option>
+                  <option value="12" {% if months_to_pay == 12 %}selected{% endif %}>12 Months</option>
+                </select>
+                <p class="text-xs text-gray-500 mt-2">You currently have {{ unpaid_count }} unpaid month(s).</p>
               </div>
-            {% endif %}
+            </form>
 
-            <input name="reference"
-                   required
-                   class="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
-                   placeholder="Reference number (required to confirm)">
+            <!-- ✅ POST form: actual payment submit -->
+            <form method="post" class="mt-4 space-y-4">
+              {% csrf_token %}
+              <input type="hidden" name="months_to_pay" value="{{ months_to_pay }}">
 
-            <button class="w-full bg-emerald-600 text-white py-3 rounded-xl font-semibold hover:bg-emerald-700 transition">
-              Proceed to Payment
-            </button>
-          </form>
+              <div class="rounded-2xl border bg-red-50 p-4">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <p class="text-xs text-gray-500">Monthly Rate</p>
+                    <p class="text-sm font-semibold text-gray-900">
+                      ₱{% if lease %}{{ lease.monthly_rent }}{% else %}0.00{% endif %}
+                    </p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-xs text-gray-500">Total Amount</p>
+                    <p class="text-xl font-extrabold text-red-700">
+                      ₱{{ total_amount|default:"0.00" }}
+                    </p>
+                  </div>
+                </div>
 
+                <div class="mt-3 border-t pt-3">
+                  <p class="text-xs font-semibold text-gray-700 mb-2">Paying:</p>
+                  <div class="space-y-1">
+                    {% for r in preview_rows %}
+                      <div class="flex justify-between text-xs text-gray-700">
+                        <span>{{ r.month_label }}</span>
+                        <span class="font-semibold">₱{{ r.total }}</span>
+                      </div>
+                    {% empty %}
+                      <p class="text-xs text-gray-500">No preview available.</p>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+
+              {% if error %}
+                <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {{ error }}
+                </div>
+              {% endif %}
+
+              <div>
+                <input
+                  type="text"
+                  name="reference"
+                  value="{{ request.POST.reference }}"
+                  placeholder="Reference number (required to confirm)"
+                  class="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-red-200"
+                  required
+                />
+              </div>
+
+              <button type="submit" class="w-full px-4 py-3 rounded-xl bg-red-700 text-white font-semibold hover:bg-red-800 transition">
+                Proceed to Payment
+              </button>
+
+              <a href="{% url 'tenant_billing' %}" class="block text-center text-sm text-gray-600 hover:text-gray-900 mt-2">
+                View billing breakdown
+              </a>
+            </form>
+          </div>
         </div>
       </div>
-    </div>
+
+    {% else %}
+      <p class="text-gray-600 mt-2">No pending bills at this time</p>
+
+      <!-- GREEN PANEL -->
+      <div class="mt-6 rounded-2xl border bg-emerald-50 p-8 shadow-sm">
+        <div class="flex items-center justify-center">
+          <div class="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-emerald-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 6 9 17l-5-5"></path>
+            </svg>
+          </div>
+        </div>
+
+        <div class="mt-5 text-center">
+          <h2 class="text-3xl font-extrabold text-emerald-800">All Caught Up!</h2>
+          <p class="text-sm text-emerald-700 mt-2">You have no pending payments.</p>
+          <p class="text-sm text-emerald-700 mt-1">You can still make advance payments below if you wish.</p>
+        </div>
+
+        <div class="mt-8 flex justify-center">
+          <div class="w-full max-w-md bg-white rounded-2xl border shadow-sm p-6">
+            <h3 class="text-lg font-bold text-gray-900 text-center">Make Advance Payment</h3>
+            <p class="text-sm text-gray-500 text-center mt-1">Pay for future months in advance</p>
+
+            <!-- ✅ GET form: dropdown refreshes total -->
+            <form method="get" id="advanceMonthsForm" class="mt-6 space-y-4">
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Number of Months</label>
+                <select name="months_to_pay"
+                        class="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                        onchange="document.getElementById('advanceMonthsForm').submit()">
+                  <option value="1" {% if months_to_pay == 1 %}selected{% endif %}>1 Month</option>
+                  <option value="2" {% if months_to_pay == 2 %}selected{% endif %}>2 Months</option>
+                  <option value="3" {% if months_to_pay == 3 %}selected{% endif %}>3 Months</option>
+                  <option value="4" {% if months_to_pay == 4 %}selected{% endif %}>4 Months</option>
+                  <option value="5" {% if months_to_pay == 5 %}selected{% endif %}>5 Months</option>
+                  <option value="6" {% if months_to_pay == 6 %}selected{% endif %}>6 Months</option>
+                  <option value="12" {% if months_to_pay == 12 %}selected{% endif %}>12 Months</option>
+                </select>
+              </div>
+            </form>
+
+            <!-- ✅ POST form: actual payment submit -->
+            <form method="post" class="mt-4 space-y-4">
+              {% csrf_token %}
+              <input type="hidden" name="months_to_pay" value="{{ months_to_pay }}">
+
+              <div class="rounded-2xl border bg-emerald-50 p-4 flex items-start justify-between">
+                <div class="text-left">
+                  <p class="text-xs text-gray-500">Monthly Rate</p>
+                  <p class="text-sm font-semibold text-gray-900">
+                    ₱{% if lease %}{{ lease.monthly_rent }}{% else %}0.00{% endif %}
+                  </p>
+
+                  <p class="text-xs text-gray-500 mt-3">Total Amount</p>
+                  <p class="text-xl font-extrabold text-emerald-700">
+                    ₱{{ total_amount|default:"0.00" }}
+                  </p>
+                </div>
+              </div>
+
+              {% if error %}
+                <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {{ error }}
+                </div>
+              {% endif %}
+
+              <div>
+                <input
+                  type="text"
+                  name="reference"
+                  value="{{ request.POST.reference }}"
+                  placeholder="Reference number (required to confirm)"
+                  class="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                  required
+                />
+              </div>
+
+              <button type="submit" class="w-full px-4 py-3 rounded-xl bg-emerald-700 text-white font-semibold hover:bg-emerald-800 transition">
+                Proceed to Payment
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    {% endif %}
 
   </main>
 </div>

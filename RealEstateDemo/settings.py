@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "announcements",
     "maintenance",
     "water",
+    "payments",
 ]
 
 MIDDLEWARE = [
@@ -126,4 +127,6 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+GCASH_NUMBER = "09219429053"
+GCASH_NAME = "John Arvin Tumbagahon"
+GCASH_QR_URL = "/static/img/qr.jpg"

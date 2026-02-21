@@ -2,146 +2,178 @@
 {% block title %}Make Payment - RealEstate360+{% endblock %}
 
 {% block content %}
-<div class="min-h-screen flex bg-gray-50">
+<div class="min-h-screen flex bg-slate-50 font-['Poppins',_sans-serif]">
 
-  <!-- Sidebar -->
-  <aside class="w-72 bg-emerald-900 text-white flex flex-col">
-    <div class="px-6 py-6 border-b border-emerald-800">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-emerald-800 flex items-center justify-center font-bold">RE</div>
-        <div>
-          <div class="text-lg font-bold">RealEstate360+</div>
-          <div class="text-xs text-emerald-200">Tenant Portal</div>
-        </div>
+  <aside class="w-72 bg-blue-950 text-white flex flex-col shadow-xl z-10">
+    
+    <div class="px-6 py-8 border-b border-blue-900/50">
+      <div class="bg-white rounded-full w-24 h-24 mx-auto p-3 flex justify-center items-center shadow-lg mb-4 transition-all duration-300 opacity-80 hover:opacity-100 hover:shadow-xl cursor-pointer">
+        <img 
+          src="/static/img/RealEstateLogo.png" 
+          alt="RealEstate360+ Logo" 
+          class="w-full h-full object-contain transition-transform duration-300 hover:scale-105"
+        >
+      </div>
+      <div class="text-center">
+        <h2 class="text-lg font-bold tracking-wide text-white">RealEstate360<span class="text-green-500">+</span></h2>
+        <span class="text-[10px] text-blue-200 font-semibold tracking-widest uppercase bg-blue-900/50 px-3 py-1 rounded-full mt-2 inline-block">Tenant Portal</span>
       </div>
     </div>
 
     <nav class="px-4 py-6 space-y-2 flex-1">
-      <a href="{% url 'tenant_dashboard' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">
+      <a href="{% url 'tenant_dashboard' %}" class="block px-4 py-3 rounded-xl hover:bg-blue-900/50 hover:translate-x-1 text-blue-100 hover:text-white transition-all duration-200 font-medium">
         Dashboard
       </a>
 
-      <a href="{% url 'tenant_billing' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">
+      <a href="{% url 'tenant_billing' %}" class="block px-4 py-3 rounded-xl hover:bg-blue-900/50 hover:translate-x-1 text-blue-100 hover:text-white transition-all duration-200 font-medium">
         View Billing
       </a>
 
       <a href="{% url 'tenant_pay_advance' %}"
-         class="block px-4 py-3 rounded-lg bg-emerald-800/60 hover:bg-emerald-800 transition font-semibold">
+         class="block px-4 py-3 rounded-xl bg-blue-900 border-l-4 border-green-500 transition-all font-semibold text-white shadow-md">
         Make Payment
       </a>
 
-      <a href="{% url 'maintenance_list' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">
+      <a href="{% url 'maintenance_list' %}" class="block px-4 py-3 rounded-xl hover:bg-blue-900/50 hover:translate-x-1 text-blue-100 hover:text-white transition-all duration-200 font-medium">
         Maintenance Requests
       </a>
 
-      <a href="{% url 'report_issue' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">
+      <a href="{% url 'report_issue' %}" class="block px-4 py-3 rounded-xl hover:bg-blue-900/50 hover:translate-x-1 text-blue-100 hover:text-white transition-all duration-200 font-medium">
         Report Issue
       </a>
     </nav>
 
-    <div class="px-4 py-6 border-t border-emerald-800">
+    <div class="px-4 py-6 border-t border-blue-900/50">
       <form method="post" action="{% url 'logout' %}">
         {% csrf_token %}
-        <button type="submit" class="w-full text-left px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">
+        <button type="submit" class="w-full text-left px-4 py-3 rounded-xl hover:bg-red-500/10 hover:text-red-400 text-blue-200 transition-all duration-200 font-medium flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
           Logout
         </button>
       </form>
     </div>
   </aside>
 
-  <!-- Main -->
-  <main class="flex-1 px-10 py-8">
-    <h1 class="text-4xl font-extrabold text-gray-900">Make Payment</h1>
-    <p class="text-gray-600 mt-2">
-      Preview your payment total. When you click Pay, you’ll be redirected to Manual GCash.
-    </p>
+  <main class="flex-1 px-10 py-8 overflow-y-auto">
+    
+    <div class="mb-8 animate-fade-in">
+      <h1 class="text-4xl font-extrabold text-blue-950 tracking-tight">Make Payment</h1>
+      <p class="text-gray-500 mt-2 font-medium">Preview your payment total. When you click Pay, you’ll be redirected to Manual GCash.</p>
+    </div>
 
-    <!-- Preview controls + total -->
-    <div class="mt-6 bg-white rounded-2xl shadow-sm border p-6">
-      <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+    <div class="mt-6 bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+      <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-10">
 
-        <form method="get" class="w-full lg:max-w-md">
-          <label class="text-sm font-semibold text-gray-700">Number of Months</label>
-          <select name="months_to_pay"
-                  class="mt-2 w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-emerald-200"
-                  onchange="this.form.submit()">
-            {% for n in months_options %}
-              <option value="{{ n }}" {% if months_to_pay == n %}selected{% endif %}>
-                {{ n }} Month{% if n != 1 %}s{% endif %}
-              </option>
-            {% endfor %}
-          </select>
+        <form method="get" class="w-full lg:flex-1">
+          <label class="text-sm font-bold text-blue-950 uppercase tracking-wider">Number of Months</label>
+          <div class="relative mt-2">
+            <select name="months_to_pay"
+                    class="w-full px-5 py-4 bg-slate-50 border border-gray-200 rounded-xl text-gray-800 font-medium appearance-none focus:bg-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all shadow-sm cursor-pointer"
+                    onchange="this.form.submit()">
+              {% for n in months_options %}
+                <option value="{{ n }}" {% if months_to_pay == n %}selected{% endif %}>
+                  {{ n }} Month{% if n != 1 %}s{% endif %}
+                </option>
+              {% endfor %}
+            </select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-5 text-gray-500">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </div>
+          </div>
 
-          <p class="text-xs text-gray-500 mt-2">
-            {% if has_pending %}
-              You have {{ unpaid_count }} pending unpaid bill(s). Preview shows oldest unpaid first.
-            {% else %}
-              No pending bills. Preview shows advance months.
-            {% endif %}
-          </p>
+          <div class="mt-5 p-4 rounded-xl {% if has_pending %}bg-orange-50 border border-orange-100{% else %}bg-blue-50 border border-blue-100{% endif %} flex items-start gap-3">
+            <div class="mt-0.5">
+              {% if has_pending %}
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+              {% else %}
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              {% endif %}
+            </div>
+            <p class="text-sm font-medium {% if has_pending %}text-orange-800{% else %}text-blue-800{% endif %}">
+              {% if has_pending %}
+                You have <strong>{{ unpaid_count }} pending unpaid bill(s)</strong>. Preview shows oldest unpaid first.
+              {% else %}
+                No pending bills. Preview shows advance months.
+              {% endif %}
+            </p>
+          </div>
         </form>
 
-        <div class="w-full lg:max-w-sm rounded-2xl border bg-emerald-50 p-6">
-          <div class="text-sm text-gray-600">Total Amount (Preview)</div>
-          <div class="text-3xl font-extrabold text-emerald-700 mt-2">
+        <div class="w-full lg:max-w-sm rounded-2xl border-l-4 border-l-green-500 border-y border-r border-gray-200 bg-gradient-to-br from-white to-slate-50 p-6 shadow-sm">
+          <div class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Total Amount (Preview)</div>
+          <div class="text-4xl font-extrabold text-blue-950 mt-2 tracking-tight">
             ₱{{ total_amount|default:"0.00" }}
           </div>
 
-          <!-- PAY button -> POST -> view redirects to manual -->
-          <form method="post" class="mt-4">
+          <form method="post" class="mt-6">
             {% csrf_token %}
             <button type="submit"
-                    class="w-full px-4 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold transition">
-              Pay (Manual GCash)
+                    class="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold text-lg shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              </svg>
+              Pay via GCash
             </button>
           </form>
 
-          <div class="text-xs text-gray-500 mt-3">
-            Next step: show QR/number and submit the GCash reference number.
+          <div class="text-xs font-medium text-gray-500 mt-4 text-center">
+            Next step: Scan QR/Number and submit the GCash reference number.
           </div>
         </div>
 
       </div>
     </div>
 
-    <!-- Preview table -->
-    <div class="mt-8 bg-white rounded-2xl shadow-sm border overflow-hidden">
-      <div class="px-6 py-5 border-b">
-        <h2 class="text-lg font-bold text-gray-900">Payment Preview</h2>
-        <p class="text-sm text-gray-500 mt-1">This is only a preview. Admin verification happens in Manual GCash.</p>
+    <div class="mt-8 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8">
+      <div class="px-6 py-5 border-b border-gray-100 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+        </div>
+        <div>
+          <h2 class="text-lg font-bold text-blue-950">Payment Preview Ledger</h2>
+          <p class="text-xs text-gray-500 mt-0.5 font-medium">This is only a preview. Admin verification happens in Manual GCash.</p>
+        </div>
       </div>
 
       <div class="overflow-x-auto">
         <table class="min-w-full">
-          <thead class="bg-gray-50">
+          <thead class="bg-slate-50 border-b border-gray-200">
             <tr>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Month</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Rent</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Water</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Penalty</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Total</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Due Date</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Month</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Rent</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Water</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Penalty</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Due Date</th>
             </tr>
           </thead>
 
-          <tbody class="divide-y">
+          <tbody class="divide-y divide-gray-100">
             {% for r in preview_rows %}
-              <tr class="hover:bg-gray-50">
-                <td class="px-4 py-3 text-sm">{{ r.month_label }}</td>
-                <td class="px-4 py-3 text-sm">₱{{ r.rent }}</td>
-                <td class="px-4 py-3 text-sm">₱{{ r.water|default:"0.00" }}</td>
-                <td class="px-4 py-3 text-sm">
+              <tr class="hover:bg-slate-50 transition-colors duration-200">
+                <td class="px-6 py-4 text-sm font-medium text-blue-950">{{ r.month_label }}</td>
+                <td class="px-6 py-4 text-sm text-gray-600">₱{{ r.rent }}</td>
+                <td class="px-6 py-4 text-sm text-gray-600">₱{{ r.water|default:"0.00" }}</td>
+                <td class="px-6 py-4 text-sm text-red-500">
                   {% if r.penalty and r.penalty != 0 %}₱{{ r.penalty }}{% else %}-{% endif %}
                 </td>
-                <td class="px-4 py-3 text-sm font-semibold">₱{{ r.total }}</td>
-                <td class="px-4 py-3 text-sm">
-                  {% if r.due_date %}{{ r.due_date|date:"Y-m-d" }}{% else %}-{% endif %}
+                <td class="px-6 py-4 text-sm font-bold text-blue-950">₱{{ r.total }}</td>
+                <td class="px-6 py-4 text-sm text-gray-600">
+                  {% if r.due_date %}{{ r.due_date|date:"F j, Y" }}{% else %}-{% endif %}
                 </td>
               </tr>
             {% empty %}
               <tr>
-                <td colspan="6" class="px-6 py-6 text-sm text-gray-500">
-                  No preview available.
+                <td colspan="6" class="px-6 py-12 text-center">
+                  <div class="flex flex-col items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    <p class="text-gray-500 font-medium">No preview available.</p>
+                  </div>
                 </td>
               </tr>
             {% endfor %}

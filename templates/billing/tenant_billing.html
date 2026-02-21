@@ -2,98 +2,105 @@
 {% block title %}Billing Information - RealEstate360+{% endblock %}
 
 {% block content %}
-<div class="min-h-screen flex bg-gray-50">
+<div class="min-h-screen flex bg-slate-50 font-['Poppins',_sans-serif]">
 
-  <!-- Sidebar -->
-  <aside class="w-72 bg-emerald-900 text-white flex flex-col">
-    <div class="px-6 py-6 border-b border-emerald-800">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-emerald-800 flex items-center justify-center font-bold">RE</div>
-        <div>
-          <div class="text-lg font-bold">RealEstate360+</div>
-          <div class="text-xs text-emerald-200">Tenant Portal</div>
-        </div>
+  <aside class="w-72 bg-blue-950 text-white flex flex-col shadow-xl z-10">
+    
+    <div class="px-6 py-8 border-b border-blue-900/50">
+      <div class="bg-white rounded-full w-24 h-24 mx-auto p-3 flex justify-center items-center shadow-lg mb-4 transition-all duration-300 opacity-80 hover:opacity-100 hover:shadow-xl cursor-pointer">
+        <img 
+          src="/static/img/RealEstateLogo.png" 
+          alt="RealEstate360+ Logo" 
+          class="w-full h-full object-contain transition-transform duration-300 hover:scale-105"
+        >
+      </div>
+      <div class="text-center">
+        <h2 class="text-lg font-bold tracking-wide text-white">RealEstate360<span class="text-green-500">+</span></h2>
+        <span class="text-[10px] text-blue-200 font-semibold tracking-widest uppercase bg-blue-900/50 px-3 py-1 rounded-full mt-2 inline-block">Tenant Portal</span>
       </div>
     </div>
 
     <nav class="px-4 py-6 space-y-2 flex-1">
-      <a href="{% url 'tenant_dashboard' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">
+      <a href="{% url 'tenant_dashboard' %}" class="block px-4 py-3 rounded-xl hover:bg-blue-900/50 hover:translate-x-1 text-blue-100 hover:text-white transition-all duration-200 font-medium">
         Dashboard
       </a>
 
-      <a href="{% url 'tenant_billing' %}" class="block px-4 py-3 rounded-lg bg-emerald-800/60 hover:bg-emerald-800 transition font-semibold">
+      <a href="{% url 'tenant_billing' %}"
+         class="block px-4 py-3 rounded-xl bg-blue-900 border-l-4 border-green-500 transition-all font-semibold text-white shadow-md">
         View Billing
       </a>
 
-      <a href="{% url 'tenant_pay_advance' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">
+      <a href="{% url 'tenant_pay_advance' %}" class="block px-4 py-3 rounded-xl hover:bg-blue-900/50 hover:translate-x-1 text-blue-100 hover:text-white transition-all duration-200 font-medium">
         Make Payment
       </a>
 
-      <a href="{% url 'maintenance_list' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">
+      <a href="{% url 'maintenance_list' %}" class="block px-4 py-3 rounded-xl hover:bg-blue-900/50 hover:translate-x-1 text-blue-100 hover:text-white transition-all duration-200 font-medium">
         Maintenance Requests
       </a>
 
-      <a href="{% url 'report_issue' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">
+      <a href="{% url 'report_issue' %}" class="block px-4 py-3 rounded-xl hover:bg-blue-900/50 hover:translate-x-1 text-blue-100 hover:text-white transition-all duration-200 font-medium">
         Report Issue
       </a>
     </nav>
 
-    <div class="px-4 py-6 border-t border-emerald-800">
+    <div class="px-4 py-6 border-t border-blue-900/50">
       <form method="post" action="{% url 'logout' %}">
         {% csrf_token %}
-        <button type="submit" class="w-full text-left px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">
+        <button type="submit" class="w-full text-left px-4 py-3 rounded-xl hover:bg-red-500/10 hover:text-red-400 text-blue-200 transition-all duration-200 font-medium flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
           Logout
         </button>
       </form>
     </div>
   </aside>
 
-  <!-- Main -->
-  <main class="flex-1 px-10 py-8">
-    <h1 class="text-4xl font-extrabold text-gray-900">Billing Information</h1>
-    <p class="text-gray-600 mt-2">View your current bill, ongoing billing, and payment history</p>
+  <main class="flex-1 px-10 py-8 overflow-y-auto">
+    
+    <div class="mb-8 animate-fade-in">
+      <h1 class="text-4xl font-extrabold text-blue-950 tracking-tight">Billing Information</h1>
+      <p class="text-gray-500 mt-2 font-medium">View your current bill, ongoing billing, and payment history</p>
+    </div>
 
-    <!-- Current Bill Card -->
-    <div class="mt-6 bg-white rounded-2xl shadow-sm border p-8">
+    <div class="rounded-2xl border-l-4 border-l-green-500 border-y border-r border-gray-200 bg-gradient-to-br from-white to-slate-50 p-8 shadow-sm hover:shadow-md transition-shadow">
       <div class="flex items-start gap-4">
-        <div class="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 1v22"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6"></path>
-          </svg>
+        
+        <div class="w-14 h-14 rounded-xl bg-blue-50 flex items-center justify-center shrink-0 shadow-inner">
+          <span class="text-3xl font-extrabold text-blue-900">₱</span>
         </div>
 
         <div class="flex-1">
           <div class="flex items-start justify-between">
             <div>
-              <h2 class="text-xl font-bold text-gray-900">Current Bill</h2>
-              <p class="text-gray-500 text-sm">
+              <h2 class="text-xl font-bold text-blue-950 tracking-tight">Current Bill</h2>
+              <p class="text-gray-500 text-sm font-medium mt-1">
                 {% if current_bill %}{{ current_bill.billing_month|date:"F Y" }}{% else %}-{% endif %}
               </p>
             </div>
           </div>
 
           <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-10">
-            <!-- Breakdown -->
-            <div>
-              <p class="text-sm font-semibold text-gray-700 mb-3">Billing Breakdown</p>
+            <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+              <p class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Billing Breakdown</p>
 
-              <div class="flex justify-between py-2 text-sm">
-                <span class="text-gray-700">Monthly Rent</span>
-                <span class="font-semibold">
+              <div class="flex justify-between py-2 text-sm border-b border-gray-50">
+                <span class="text-gray-600 font-medium">Monthly Rent</span>
+                <span class="font-bold text-blue-950">
                   ₱{% if current_bill %}{{ current_bill.base_rent }}{% else %}{{ lease.monthly_rent }}{% endif %}
                 </span>
               </div>
 
-              <div class="flex justify-between py-2 text-sm">
-                <span class="text-gray-700">Water Utility</span>
-                <span class="font-semibold">
+              <div class="flex justify-between py-2 text-sm border-b border-gray-50">
+                <span class="text-gray-600 font-medium">Water Utility</span>
+                <span class="font-bold text-blue-950">
                   ₱{% if current_bill %}{{ current_bill.water_amount|default:"0.00" }}{% else %}0.00{% endif %}
                 </span>
               </div>
 
               <div class="flex justify-between py-2 text-sm">
-                <span class="text-gray-700">Penalty</span>
-                <span class="font-semibold">
+                <span class="text-gray-600 font-medium">Penalty</span>
+                <span class="font-bold text-red-500">
                   {% if current_bill and current_bill.interest and current_bill.interest != 0 %}
                     ₱{{ current_bill.interest }}
                   {% else %}
@@ -102,45 +109,58 @@
                 </span>
               </div>
 
-              <div class="border-t mt-4 pt-4 flex justify-between items-end">
+              <div class="border-t border-gray-200 mt-4 pt-4 flex justify-between items-end">
                 <span class="text-lg font-bold text-gray-900">Total Amount</span>
-                <span class="text-2xl font-extrabold text-emerald-700">
+                <span class="text-3xl font-extrabold text-blue-950 tracking-tight">
                   ₱{% if current_bill %}{{ current_bill.total_due|default:"0.00" }}{% else %}0.00{% endif %}
                 </span>
               </div>
             </div>
 
-            <!-- Payment Details -->
-            <div>
-              <p class="text-sm font-semibold text-gray-700 mb-3">Payment Details</p>
+            <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+              <p class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Payment Details</p>
 
-              <div class="flex items-center gap-3 py-2">
-                <div class="w-9 h-9 rounded-lg bg-gray-50 flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <div class="flex items-center gap-4 py-3 border-b border-gray-50">
+                <div class="w-10 h-10 rounded-lg bg-slate-50 border border-gray-100 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="3" y="4" width="18" height="18" rx="2"></rect>
                     <path d="M16 2v4M8 2v4M3 10h18"></path>
                   </svg>
                 </div>
                 <div>
-                  <div class="text-xs text-gray-500">Due Date</div>
-                  <div class="font-semibold text-gray-900">
-                    {% if current_bill and current_bill.due_date %}{{ current_bill.due_date|date:"Y-m-d" }}{% else %}-{% endif %}
+                  <div class="text-xs text-gray-500 font-medium">Due Date</div>
+                  <div class="font-bold text-blue-950 mt-0.5">
+                    {% if current_bill and current_bill.due_date %}{{ current_bill.due_date|date:"F j, Y" }}{% else %}-{% endif %}
                   </div>
                 </div>
               </div>
 
-              <div class="flex items-center gap-3 py-2">
-                <div class="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20 6 9 17l-5-5"></path>
-                  </svg>
-                </div>
-                <div>
-                  <div class="text-xs text-gray-500">Payment Date</div>
-                  <div class="font-semibold text-emerald-700">
-                    {% if current_bill and current_bill.paid_at %}{{ current_bill.paid_at|date:"Y-m-d" }}{% else %}-{% endif %}
+              <div class="flex items-center gap-4 py-3 mt-1">
+                {% if current_bill and current_bill.paid_at %}
+                  <div class="w-10 h-10 rounded-lg bg-green-50 border border-green-100 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M20 6 9 17l-5-5"></path>
+                    </svg>
                   </div>
-                </div>
+                  <div>
+                    <div class="text-xs text-gray-500 font-medium">Payment Date</div>
+                    <div class="font-bold text-green-600 mt-0.5">
+                      {{ current_bill.paid_at|date:"F j, Y" }}
+                    </div>
+                  </div>
+                {% else %}
+                  <div class="w-10 h-10 rounded-lg bg-red-50 border border-red-100 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div class="text-xs text-gray-500 font-medium">Payment Date</div>
+                    <div class="font-bold text-red-500 mt-0.5">
+                      Not Paid Yet
+                    </div>
+                  </div>
+                {% endif %}
               </div>
 
             </div>
@@ -150,56 +170,66 @@
       </div>
     </div>
 
-    <!-- Ongoing Billing -->
-    <div class="mt-8 bg-white rounded-2xl shadow-sm border overflow-hidden">
-      <div class="px-6 py-5 border-b">
-        <h2 class="text-lg font-bold text-gray-900">Ongoing Billing</h2>
-        <p class="text-sm text-gray-500 mt-1">These are unpaid bills (up to the current month)</p>
+    <div class="mt-8 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="px-6 py-5 border-b border-gray-100 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        </div>
+        <div>
+          <h2 class="text-lg font-bold text-blue-950">Ongoing Billing</h2>
+          <p class="text-xs text-gray-500 mt-0.5 font-medium">These are unpaid bills (up to the current month)</p>
+        </div>
       </div>
 
       <div class="overflow-x-auto">
         <table class="min-w-full">
-          <thead class="bg-gray-50">
+          <thead class="bg-slate-50 border-b border-gray-200">
             <tr>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Month</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Rent</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Water</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Penalty</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Total</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Due Date</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Status</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Month</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Rent</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Water</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Penalty</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Due Date</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
             </tr>
           </thead>
 
-          <tbody class="divide-y">
+          <tbody class="divide-y divide-gray-100">
             {% for r in ongoing_rows %}
-              <tr class="hover:bg-gray-50">
-                <td class="px-4 py-3 text-sm">{{ r.month_label }}</td>
-                <td class="px-4 py-3 text-sm">₱{{ r.rent }}</td>
-                <td class="px-4 py-3 text-sm">₱{{ r.water }}</td>
-                <td class="px-4 py-3 text-sm">
+              <tr class="hover:bg-slate-50 transition-colors duration-200">
+                <td class="px-6 py-4 text-sm font-medium text-blue-950">{{ r.month_label }}</td>
+                <td class="px-6 py-4 text-sm text-gray-600">₱{{ r.rent }}</td>
+                <td class="px-6 py-4 text-sm text-gray-600">₱{{ r.water }}</td>
+                <td class="px-6 py-4 text-sm text-red-500">
                   {% if r.penalty and r.penalty != 0 %}₱{{ r.penalty }}{% else %}-{% endif %}
                 </td>
-                <td class="px-4 py-3 text-sm font-semibold">₱{{ r.total }}</td>
-                <td class="px-4 py-3 text-sm">
+                <td class="px-6 py-4 text-sm font-bold text-blue-950">₱{{ r.total }}</td>
+                <td class="px-6 py-4 text-sm text-gray-600">
                   {% if r.due_date %}{{ r.due_date|date:"Y-m-d" }}{% else %}-{% endif %}
                 </td>
-                <td class="px-4 py-3 text-sm">
+                <td class="px-6 py-4 text-sm">
                   {% if r.badge == "OVERDUE" %}
-                    <span class="px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">OVERDUE</span>
+                    <span class="px-3 py-1 rounded-full text-[11px] font-bold bg-red-100 text-red-700 border border-red-200 tracking-wide">OVERDUE</span>
                   {% elif r.badge == "DUE_TODAY" %}
-                    <span class="px-2 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-800">DUE TODAY</span>
+                    <span class="px-3 py-1 rounded-full text-[11px] font-bold bg-orange-100 text-orange-700 border border-orange-200 tracking-wide">DUE TODAY</span>
                   {% elif r.badge == "NEAR_DUE" %}
-                    <span class="px-2 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">NEAR DUE</span>
+                    <span class="px-3 py-1 rounded-full text-[11px] font-bold bg-yellow-100 text-yellow-700 border border-yellow-200 tracking-wide">NEAR DUE</span>
                   {% else %}
-                    <span class="px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">UPCOMING</span>
+                    <span class="px-3 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200 tracking-wide">UPCOMING</span>
                   {% endif %}
                 </td>
               </tr>
             {% empty %}
               <tr>
-                <td colspan="7" class="px-6 py-6 text-sm text-gray-500">
-                  No ongoing billing. You’re all caught up.
+                <td colspan="7" class="px-6 py-12 text-center">
+                  <div class="flex flex-col items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 text-green-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p class="text-gray-500 font-medium">No ongoing billing.</p>
+                    <p class="text-sm text-gray-400 mt-1">You’re all caught up!</p>
+                  </div>
                 </td>
               </tr>
             {% endfor %}
@@ -208,38 +238,56 @@
       </div>
     </div>
 
-    <!-- Payment History -->
-    <div class="mt-8 bg-white rounded-2xl shadow-sm border overflow-hidden">
-      <div class="px-6 py-5 border-b">
-        <h2 class="text-lg font-bold text-gray-900">Payment History</h2>
-        <p class="text-sm text-gray-500 mt-1">This list shows actual payment transactions only</p>
+    <div class="mt-8 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8">
+      <div class="px-6 py-5 border-b border-gray-100 flex items-center gap-3">
+        
+        <div class="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
+          <span class="text-lg font-extrabold text-green-600">₱</span>
+        </div>
+        
+        <div>
+          <h2 class="text-lg font-bold text-blue-950">Payment History</h2>
+          <p class="text-xs text-gray-500 mt-0.5 font-medium">This list shows actual payment transactions only</p>
+        </div>
       </div>
 
       <div class="overflow-x-auto">
         <table class="min-w-full">
-          <thead class="bg-gray-50">
+          <thead class="bg-slate-50 border-b border-gray-200">
             <tr>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Paid Date</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Reference</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Months Paid</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Total Amount</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Paid Date</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Reference</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Months Paid</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Amount</th>
             </tr>
           </thead>
 
-          <tbody class="divide-y">
+          <tbody class="divide-y divide-gray-100">
             {% for t in transactions %}
-              <tr class="hover:bg-gray-50">
-                <td class="px-4 py-3 text-sm">
-                  {% if t.paid_at %}{{ t.paid_at|date:"Y-m-d" }}{% else %}-{% endif %}
+              <tr class="hover:bg-slate-50 transition-colors duration-200">
+                <td class="px-6 py-4 text-sm text-gray-600">
+                  {% if t.paid_at %}
+                    {{ t.paid_at|date:"Y-m-d" }}
+                  {% else %}
+                    <span class="text-red-500 font-bold flex items-center gap-1">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                      Not Paid
+                    </span>
+                  {% endif %}
                 </td>
-                <td class="px-4 py-3 text-sm font-semibold">{{ t.reference }}</td>
-                <td class="px-4 py-3 text-sm">{{ t.months_paid }}</td>
-                <td class="px-4 py-3 text-sm font-semibold text-emerald-700">₱{{ t.total_amount }}</td>
+                <td class="px-6 py-4 text-sm font-semibold text-blue-950">{{ t.reference }}</td>
+                <td class="px-6 py-4 text-sm text-gray-600">{{ t.months_paid }}</td>
+                <td class="px-6 py-4 text-sm font-bold text-green-600">₱{{ t.total_amount }}</td>
               </tr>
             {% empty %}
               <tr>
-                <td colspan="4" class="px-6 py-6 text-sm text-gray-500">
-                  No payments yet.
+                <td colspan="4" class="px-6 py-12 text-center">
+                  <div class="flex flex-col items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p class="text-gray-500 font-medium">No payments yet.</p>
+                  </div>
                 </td>
               </tr>
             {% endfor %}

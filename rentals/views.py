@@ -129,17 +129,17 @@ def tenant_pay_advance(request):
 
     ensure_bills_since_move_in(lease)
 
-    # ✅ If user clicks Pay (POST), redirect to manual payment page
+    # ✅ Pay button -> redirect to manual GCash page
     if request.method == "POST":
         return redirect("manual_gcash_payment")
 
-    # months_to_pay (1-12) read from GET for preview
+    # months_to_pay (1-12) from GET (preview only)
     months_to_pay = int(request.GET.get("months_to_pay", "1"))
     months_to_pay = max(1, min(months_to_pay, 12))
 
     this_month = month_start(date.today())
 
-    # ✅ Pending = unpaid bills UP TO current month only (not future months)
+    # ✅ Pending = unpaid bills up to current month only
     pending_qs = (
         MonthlyBill.objects
         .filter(lease=lease, status="UNPAID", billing_month__lte=this_month)
@@ -148,7 +148,7 @@ def tenant_pay_advance(request):
     pending_count = pending_qs.count()
     has_pending = pending_count > 0
 
-    # ✅ Choose what to preview
+    # ✅ Preview bills
     if has_pending:
         pay_bills_qs = pending_qs
         months_to_pay_effective = min(months_to_pay, pending_count)
@@ -181,6 +181,7 @@ def tenant_pay_advance(request):
     return render(request, "rentals/tenant_pay_advance.html", {
         "lease": lease,
         "months_to_pay": months_to_pay,
+        "months_options": [1, 2, 3, 4, 5, 6, 12],  # ✅ IMPORTANT
         "total_amount": total_amount,
         "has_pending": has_pending,
         "unpaid_count": pending_count,

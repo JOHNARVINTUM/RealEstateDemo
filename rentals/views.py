@@ -129,6 +129,10 @@ def tenant_pay_advance(request):
 
     ensure_bills_since_move_in(lease)
 
+    # ✅ If user clicks Pay (POST), redirect to manual payment page
+    if request.method == "POST":
+        return redirect("manual_gcash_payment")
+
     # months_to_pay (1-12) read from GET for preview
     months_to_pay = int(request.GET.get("months_to_pay", "1"))
     months_to_pay = max(1, min(months_to_pay, 12))
@@ -144,16 +148,13 @@ def tenant_pay_advance(request):
     pending_count = pending_qs.count()
     has_pending = pending_count > 0
 
-    # ✅ Choose what to preview/pay
+    # ✅ Choose what to preview
     if has_pending:
-        # Pay pending months only
         pay_bills_qs = pending_qs
         months_to_pay_effective = min(months_to_pay, pending_count)
     else:
-        # Advance months starting this month forward
         target_end_month = add_months(this_month, months_to_pay - 1)
         ensure_bills_up_to(lease, target_end_month)
-
         pay_bills_qs = (
             MonthlyBill.objects
             .filter(lease=lease, status="UNPAID", billing_month__gte=this_month)
@@ -170,92 +171,18 @@ def tenant_pay_advance(request):
         total_amount += b.total_due
         preview_rows.append({
             "month_label": b.billing_month.strftime("%B %Y"),
+            "rent": b.base_rent,
+            "water": b.water_amount,
+            "penalty": b.interest,
             "total": b.total_due,
             "due_date": b.due_date,
         })
-
-    # ✅ Current bill for UI state = first pending bill (only up to this month)
-    current_bill = pending_qs.first()
-    if current_bill:
-        current_bill = get_or_update_monthly_bill(lease, current_bill.billing_month)
-
-    # ===================== POST PAYMENT =====================
-    if request.method == "POST":
-        ref = request.POST.get("reference", "").strip()
-        months_to_pay_post = int(request.POST.get("months_to_pay", str(months_to_pay)))
-        months_to_pay_post = max(1, min(months_to_pay_post, 12))
-
-        if not ref:
-            return render(request, "rentals/tenant_pay_advance.html", {
-                "lease": lease,
-                "months_to_pay": months_to_pay,
-                "total_amount": total_amount,
-                "current_bill": current_bill,
-                "has_pending": has_pending,
-                "unpaid_count": pending_count,   # keep template variable name
-                "preview_rows": preview_rows,
-                "error": "Reference number is required.",
-            })
-
-        # ✅ Recompute mode & bills on POST safely
-        pending_qs_post = (
-            MonthlyBill.objects
-            .filter(lease=lease, status="UNPAID", billing_month__lte=this_month)
-            .order_by("billing_month")
-        )
-        pending_count_post = pending_qs_post.count()
-        has_pending_post = pending_count_post > 0
-
-        if has_pending_post:
-            bills_to_pay_qs = pending_qs_post
-            months_to_pay_effective_post = min(months_to_pay_post, pending_count_post)
-        else:
-            target_end_month = add_months(this_month, months_to_pay_post - 1)
-            ensure_bills_up_to(lease, target_end_month)
-
-            bills_to_pay_qs = (
-                MonthlyBill.objects
-                .filter(lease=lease, status="UNPAID", billing_month__gte=this_month)
-                .order_by("billing_month")
-            )
-            months_to_pay_effective_post = months_to_pay_post
-
-        with transaction.atomic():
-            bills_locked = list(
-                bills_to_pay_qs.select_for_update()[:months_to_pay_effective_post]
-            )
-
-            if not bills_locked:
-                return redirect("tenant_dashboard")
-
-            total_paid = Decimal("0.00")
-            now = timezone.now()
-
-            for b in bills_locked:
-                b = get_or_update_monthly_bill(lease, b.billing_month)
-
-                b.status = "PAID"
-                b.paid_at = now
-                b.payment_reference = ref
-                b.save(update_fields=["status", "paid_at", "payment_reference"])
-
-                total_paid += b.total_due
-
-            PaymentTransaction.objects.create(
-                lease=lease,
-                reference=ref,
-                months_paid=len(bills_locked),
-                total_amount=total_paid,
-            )
-
-        return redirect("tenant_billing")
 
     return render(request, "rentals/tenant_pay_advance.html", {
         "lease": lease,
         "months_to_pay": months_to_pay,
         "total_amount": total_amount,
-        "current_bill": current_bill,
         "has_pending": has_pending,
-        "unpaid_count": pending_count,   # keep your template variable name
+        "unpaid_count": pending_count,
         "preview_rows": preview_rows,
     })

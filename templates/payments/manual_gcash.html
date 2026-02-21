@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Manual GCash Payment - RealEstate360+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex bg-gray-50">
+
+  <!-- Sidebar -->
+  <aside class="w-72 bg-emerald-900 text-white flex flex-col">
+    <div class="px-6 py-6 border-b border-emerald-800">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-emerald-800 flex items-center justify-center font-bold">RE</div>
+        <div>
+          <div class="text-lg font-bold">RealEstate360+</div>
+          <div class="text-xs text-emerald-200">Tenant Portal</div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="px-4 py-6 space-y-2 flex-1">
+      <a href="{% url 'tenant_dashboard' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">Dashboard</a>
+      <a href="{% url 'tenant_billing' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">View Billing</a>
+      <a href="{% url 'tenant_pay_advance' %}" class="block px-4 py-3 rounded-lg bg-emerald-800/60 hover:bg-emerald-800 transition font-semibold">Make Payment</a>
+      <a href="{% url 'maintenance_list' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">Maintenance Requests</a>
+      <a href="{% url 'report_issue' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">Report Issue</a>
+    </nav>
+
+    <div class="px-4 py-6 border-t border-emerald-800">
+      <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="w-full text-left px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">Logout</button>
+      </form>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1 px-10 py-8">
+    <h1 class="text-4xl font-extrabold text-gray-900">Manual GCash Payment</h1>
+    <p class="text-gray-600 mt-2">Scan the QR / send payment, then submit your GCash reference number.</p>
+
+    {% if error %}
+      <div class="mt-6 bg-red-50 border border-red-200 text-red-700 rounded-2xl p-4">
+        <p class="font-semibold">Error</p>
+        <p class="text-sm mt-1">{{ error }}</p>
+      </div>
+    {% endif %}
+
+    <div class="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- Pay details -->
+      <div class="bg-white rounded-2xl shadow-sm border p-8">
+        <h2 class="text-xl font-bold text-gray-900">Send Payment</h2>
+        <p class="text-sm text-gray-500 mt-1">Use the GCash number below or scan the QR.</p>
+
+        <div class="mt-6 space-y-4">
+          <div class="rounded-xl border bg-gray-50 p-4">
+            <div class="text-xs text-gray-500">GCash Number</div>
+            <div class="text-lg font-extrabold text-gray-900 mt-1">{{ gcash_number }}</div>
+          </div>
+
+          <div class="rounded-xl border bg-gray-50 p-4">
+            <div class="text-xs text-gray-500">GCash Name</div>
+            <div class="text-lg font-extrabold text-gray-900 mt-1">{{ gcash_name }}</div>
+          </div>
+
+          <div class="rounded-xl border bg-gray-50 p-4">
+            <div class="text-xs text-gray-500 mb-3">Scan QR</div>
+            <img src="/static/img/gcash_qr.jpg" alt="GCash QR" class="max-w-[260px] rounded-xl border bg-white p-2">
+          </div>
+        </div>
+      </div>
+
+      <!-- Submit reference -->
+      <div class="bg-white rounded-2xl shadow-sm border p-8">
+        <h2 class="text-xl font-bold text-gray-900">Submit Reference Number</h2>
+        <p class="text-sm text-gray-500 mt-1">After sending, enter the reference number from GCash receipt.</p>
+
+        <form method="post" class="mt-6 space-y-4">
+          {% csrf_token %}
+
+          <div>
+            <label class="text-sm font-semibold text-gray-700">GCash Reference Number</label>
+            <input type="text" name="reference_code" required
+                   class="mt-2 w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                   placeholder="Enter reference number">
+          </div>
+
+          <button type="submit"
+                  class="w-full px-4 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold transition">
+            Submit for Verification
+          </button>
+
+          <div class="rounded-xl bg-gray-50 border p-4 text-sm text-gray-600">
+            Status will be <span class="font-semibold">PENDING</span> until verified by admin.
+          </div>
+        </form>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+{% endblock %}

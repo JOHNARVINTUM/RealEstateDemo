@@ -2,111 +2,125 @@
 {% block title %}Report Issue - RealEstate360+{% endblock %}
 
 {% block content %}
-<div class="min-h-screen flex">
+<div class="min-h-screen flex bg-slate-50 font-['Poppins',_sans-serif]">
 
-  <!-- Sidebar (reuse your sidebar styling) -->
- <aside class="w-72 bg-emerald-900 text-white flex flex-col">
-    <div class="px-6 py-6 border-b border-emerald-800">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-emerald-800 flex items-center justify-center font-bold">
-          RE
-        </div>
-        <div>
-          <div class="text-lg font-bold">RealEstate360+</div>
-          <div class="text-xs text-emerald-200">Tenant Portal</div>
-        </div>
+  <aside class="w-72 bg-blue-950 text-white flex flex-col shadow-xl z-10">
+    <div class="px-6 py-8 border-b border-blue-900/50">
+      <div class="bg-white rounded-full w-24 h-24 mx-auto p-3 flex justify-center items-center shadow-lg mb-4 opacity-80 transition-all">
+        <img src="/static/img/RealEstateLogo.png" alt="Logo" class="w-full h-full object-contain">
+      </div>
+      <div class="text-center">
+        <h2 class="text-lg font-bold tracking-wide text-white">RealEstate360<span class="text-green-500">+</span></h2>
+        <span class="text-[10px] text-blue-200 font-semibold tracking-widest uppercase bg-blue-900/50 px-3 py-1 rounded-full mt-2 inline-block">Tenant Portal</span>
       </div>
     </div>
 
     <nav class="px-4 py-6 space-y-2 flex-1">
-      <a href="{% url 'tenant_dashboard' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40">Dashboard</a>
-      <a href="{% url 'tenant_billing' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40 transition">
-      View Billing
-     </a>
-      <a href="{% url 'tenant_pay_advance' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40">Make Payment</a>
-      <a href="{% url 'maintenance_list' %}" class="block px-4 py-3 rounded-lg hover:bg-emerald-800/40">Maintenance Requests</a>
-      <a href="{% url 'report_issue' %}" class="block px-4 py-3 rounded-lg bg-emerald-800/60 font-semibold">Report Issue</a>
-      
-      
+      <a href="{% url 'tenant_dashboard' %}" class="block px-4 py-3 rounded-xl hover:bg-blue-900/50 text-blue-100 hover:text-white transition-all font-medium">Dashboard</a>
+      <a href="{% url 'tenant_billing' %}" class="block px-4 py-3 rounded-xl hover:bg-blue-900/50 text-blue-100 hover:text-white transition-all font-medium">View Billing</a>
+      <a href="{% url 'tenant_pay_advance' %}" class="block px-4 py-3 rounded-xl hover:bg-blue-900/50 text-blue-100 hover:text-white transition-all font-medium">Make Payment</a>
+      <a href="{% url 'maintenance_list' %}" class="block px-4 py-3 rounded-xl hover:bg-blue-900/50 text-blue-100 hover:text-white transition-all font-medium">Maintenance Requests</a>
+      <a href="{% url 'report_issue' %}" class="block px-4 py-3 rounded-xl bg-blue-900 border-l-4 border-green-500 transition-all font-semibold text-white shadow-md">Report Issue</a>
     </nav>
 
-    <div class="px-4 py-6 border-t border-emerald-800">
+    <div class="px-4 py-6 border-t border-blue-900/50">
       <form method="post" action="{% url 'logout' %}">
         {% csrf_token %}
-        <button type="submit" class="w-full text-left px-4 py-3 rounded-lg hover:bg-emerald-800/40">Logout</button>
+        <button type="submit" class="w-full text-left px-4 py-3 rounded-xl hover:bg-red-500/10 hover:text-red-400 text-blue-200 transition-all font-medium flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+          Logout
+        </button>
       </form>
     </div>
   </aside>
 
-  <!-- Main -->
-  <main class="flex-1 bg-gray-50">
-    <div class="px-8 py-8">
-      <h1 class="text-3xl font-bold text-gray-900">Report Maintenance Issue</h1>
-      <p class="text-gray-500 mt-1">Submit a maintenance request for your unit.</p>
+  <main class="flex-1 px-10 py-8 overflow-y-auto">
+    <div class="mb-8">
+      <h1 class="text-4xl font-extrabold text-blue-950 tracking-tight">Report Issue</h1>
+      <p class="text-gray-500 font-medium mt-1">Our maintenance team will assist you shortly.</p>
+    </div>
 
-      <div class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Form -->
-        <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border p-6">
-          <h2 class="text-xl font-bold mb-4">Issue Details</h2>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div class="lg:col-span-2">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+          <h2 class="text-xl font-bold text-blue-950 mb-6 flex items-center gap-2">
+            <span class="w-8 h-8 rounded-lg bg-green-100 text-green-600 flex items-center justify-center">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+            </span>
+            Issue Details
+          </h2>
 
-          <form method="post" class="space-y-4">
+          <form method="post" class="space-y-6">
             {% csrf_token %}
-
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+              <label class="block text-sm font-bold text-blue-900 mb-2 uppercase tracking-wide">Category</label>
               {{ form.category }}
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Title</label>
+              <label class="block text-sm font-bold text-blue-900 mb-2 uppercase tracking-wide">Title</label>
               {{ form.title }}
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+              <label class="block text-sm font-bold text-blue-900 mb-2 uppercase tracking-wide">Detailed Description</label>
               {{ form.description }}
-              <p class="text-xs text-gray-500 mt-2">Be as specific as possible to help resolve the issue quickly.</p>
+              <p class="text-xs text-gray-400 mt-2 font-medium italic">* Please include specific locations (e.g., bathroom faucet, kitchen outlet).</p>
             </div>
 
-            <button class="w-full bg-emerald-600 text-white py-3 rounded-lg font-semibold hover:bg-emerald-700 transition">
-              Submit Request
+            <button class="w-full bg-blue-950 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-900 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200">
+              Submit Maintenance Request
             </button>
           </form>
         </div>
-
-        <!-- Unit Card -->
-        <div class="bg-white rounded-2xl shadow-sm border p-6">
-          <h2 class="text-xl font-bold mb-4">Your Unit</h2>
-          {% if lease %}
-            <div class="space-y-2 text-sm">
-              <p class="text-gray-500">Unit Number</p>
-              <p class="text-lg font-bold">Unit {{ lease.unit.number }}</p>
-
-              <p class="text-gray-500 mt-3">Tenant</p>
-              <p class="font-semibold">{{ request.user.email }}</p>
-            </div>
-          {% else %}
-            <p class="text-gray-500 text-sm">No active lease assigned.</p>
-          {% endif %}
-        </div>
       </div>
 
+      <div class="space-y-6">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <h2 class="text-lg font-bold text-blue-950 mb-4">Requesting For</h2>
+          {% if lease %}
+            <div class="p-4 bg-slate-50 rounded-xl border border-gray-100">
+              <p class="text-xs font-bold text-gray-400 uppercase">Current Unit</p>
+              <p class="text-xl font-extrabold text-blue-950">Unit {{ lease.unit.number }}</p>
+              
+              <div class="mt-4 pt-4 border-t border-gray-200">
+                <p class="text-xs font-bold text-gray-400 uppercase">Tenant Record</p>
+                <p class="font-bold text-blue-900">{{ request.user.email }}</p>
+              </div>
+            </div>
+          {% else %}
+            <div class="p-4 bg-red-50 text-red-700 rounded-xl border border-red-100 text-sm font-medium">
+              No active lease detected. You cannot submit requests at this time.
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="bg-blue-50 rounded-2xl p-6 border border-blue-100">
+          <h3 class="font-bold text-blue-900 mb-2">Need help?</h3>
+          <p class="text-sm text-blue-800 leading-relaxed">For emergency issues like major flooding or electrical hazards, please contact building security immediately.</p>
+        </div>
+      </div>
     </div>
   </main>
 </div>
 
 <style>
-  /* Make Django form fields match Tailwind */
-  select, input, textarea {
+  /* Styling Django Form widgets to match Tailwind */
+  select, input[type="text"], textarea {
     width: 100%;
-    border: 1px solid rgb(209 213 219);
-    border-radius: 0.5rem;
-    padding: 0.75rem 1rem;
-    outline: none;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 0.875rem 1rem;
+    background-color: #f8fafc;
+    transition: all 0.2s;
+    font-size: 0.95rem;
+    color: #1e293b;
   }
-  select:focus, input:focus, textarea:focus {
-    box-shadow: 0 0 0 2px rgba(59,130,246,.3);
-    border-color: rgb(59 130 246);
+  select:focus, input[type="text"]:focus, textarea:focus {
+    background-color: white;
+    border-color: #10b981;
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
   }
 </style>
 {% endblock %}

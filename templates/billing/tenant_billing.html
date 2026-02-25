@@ -208,17 +208,17 @@
                 <td class="px-6 py-4 text-sm text-gray-600">
                   {% if r.due_date %}{{ r.due_date|date:"Y-m-d" }}{% else %}-{% endif %}
                 </td>
-                <td class="px-6 py-4 text-sm">
-                  {% if r.badge == "OVERDUE" %}
-                    <span class="px-3 py-1 rounded-full text-[11px] font-bold bg-red-100 text-red-700 border border-red-200 tracking-wide">OVERDUE</span>
-                  {% elif r.badge == "DUE_TODAY" %}
-                    <span class="px-3 py-1 rounded-full text-[11px] font-bold bg-orange-100 text-orange-700 border border-orange-200 tracking-wide">DUE TODAY</span>
-                  {% elif r.badge == "NEAR_DUE" %}
-                    <span class="px-3 py-1 rounded-full text-[11px] font-bold bg-yellow-100 text-yellow-700 border border-yellow-200 tracking-wide">NEAR DUE</span>
-                  {% else %}
-                    <span class="px-3 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200 tracking-wide">UPCOMING</span>
-                  {% endif %}
-                </td>
+              <td class="px-4 py-3 text-sm">
+  {% if r.status == "OVERDUE" %}
+    <span class="px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">OVERDUE</span>
+  {% elif r.status == "PAID" %}
+    <span class="px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">PAID</span>
+  {% elif r.status == "DUE_TODAY" %}
+    <span class="px-2 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">DUE TODAY</span>
+  {% else %}
+    <span class="px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">UPCOMING</span>
+  {% endif %}
+</td>
               </tr>
             {% empty %}
               <tr>

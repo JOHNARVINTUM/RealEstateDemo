@@ -1,0 +1,38 @@
+{% extends "admin_portal/base.html" %}
+{% block title %}Tenant{% endblock %}
+{% block content %}
+  <div class="page-header">
+    <h1>{{ tenant.full_name }}</h1>
+    <p class="muted">{{ tenant.user.email }} • {{ tenant.contact_no }}</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Leases</div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Unit</th>
+            <th>Monthly Rent</th>
+            <th>Due Day</th>
+            <th>Start Date</th>
+            <th>Active</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for l in leases %}
+            <tr>
+              <td>{{ l.unit.number }}</td>
+              <td>₱{{ l.monthly_rent|floatformat:0 }}</td>
+              <td>{{ l.due_day }}</td>
+              <td>{{ l.start_date }}</td>
+              <td>{% if l.is_active %}Yes{% else %}No{% endif %}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5" class="muted">No leases found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

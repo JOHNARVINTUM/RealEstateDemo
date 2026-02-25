@@ -1,0 +1,55 @@
+{% extends "admin_portal/base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>Admin Dashboard</h1>
+    <p class="muted">Property monitoring and analytics overview</p>
+  </div>
+
+  <section class="cards">
+    <div class="card">
+      <div class="card-title">Total Tenants</div>
+      <div class="card-value">{{ total_tenants }}</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Occupied Units</div>
+      <div class="card-value">{{ occupied_units }}</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Vacant Units</div>
+      <div class="card-value">{{ vacant_units }}</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Total Revenue</div>
+      <div class="card-value">₱{{ total_revenue|floatformat:0 }}</div>
+      <div class="card-sub muted">This month</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Overdue Payments</div>
+      <div class="card-value">{{ overdue_payments }}</div>
+    </div>
+  </section>
+
+  <section class="grid-2">
+    <div class="panel">
+      <div class="panel-title">Monthly Rental Income Forecast (SARIMA)</div>
+      <canvas id="rentChart" height="110"></canvas>
+      <div class="panel-foot muted">
+        Forecast placeholder — we’ll connect real data next.
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Water Consumption Trends</div>
+      <canvas id="waterChart" height="110"></canvas>
+      <div class="panel-foot muted">
+        Consumption placeholder — we’ll connect real data next.
+      </div>
+    </div>
+  </section>
+{% endblock %}

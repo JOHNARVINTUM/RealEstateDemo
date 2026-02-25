@@ -1,0 +1,41 @@
+{% extends "admin_portal/base.html" %}
+{% block title %}Maintenance{% endblock %}
+{% block content %}
+  <div class="page-header">
+    <h1>Maintenance</h1>
+    <p class="muted">Requests from tenants</p>
+  </div>
+
+  <form class="toolbar" method="get">
+    <input class="input" name="q" value="{{ q }}" placeholder="Search tenant, unit, description..." />
+    <input class="input" name="status" value="{{ status }}" placeholder="Status (optional)" />
+    <button class="btn" type="submit">Filter</button>
+  </form>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Tenant</th>
+          <th>Unit</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th>Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in reqs %}
+          <tr>
+            <td>{{ r.lease.tenant.email }}</td>
+            <td>{{ r.lease.unit.number }}</td>
+            <td>{{ r.status }}</td>
+            <td>{{ r.created_at }}</td>
+            <td>{{ r.description|truncatechars:60 }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="muted">No requests found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

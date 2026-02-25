@@ -19,6 +19,9 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import path, include
+from accounts.admin_portal_views import admin_dashboard
+from accounts.views import RoleBasedLoginView
+from django.contrib.auth.views import LogoutView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -32,5 +35,17 @@ urlpatterns = [
     path("maintenance/", include("maintenance.urls")), 
 
     path("payments/", include("payments.urls")),
+    path("admin-portal/dashboard/", admin_dashboard, name="admin_dashboard"),
+    path("admin-portal/", include("accounts.admin_portal_urls")),
+
+    path("admin/", admin.site.urls),
+
+    path("login/", RoleBasedLoginView.as_view(), name="login"),
+
+    path("admin-portal/", include("accounts.admin_portal_urls")),
+
+    path("logout/", LogoutView.as_view(), name="logout"),
+
+    
 
 ]

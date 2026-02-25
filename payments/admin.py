@@ -5,10 +5,11 @@ from billing.models import MonthlyBill
 
 @admin.register(ManualPayment)
 class ManualPaymentAdmin(admin.ModelAdmin):
-    list_display = ("user", "reference_code", "status", "created_at", "bill_ids")
+    list_display = ("user", "reference_code", "status", "created_at")
     list_filter = ("status", "created_at")
-    search_fields = ("user__username", "user__email", "reference_code")
-    readonly_fields = ("created_at",)
+    search_fields = ("user__email", "reference_code", "bill_ids")
+    ordering = ("-created_at",)
+    list_select_related = ("user",)
 
     def save_model(self, request, obj, form, change):
         # 1. First, save the ManualPayment object as usual

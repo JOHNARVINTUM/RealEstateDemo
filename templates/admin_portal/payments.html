@@ -1,0 +1,46 @@
+{% extends "admin_portal/base.html" %}
+{% block title %}Payments{% endblock %}
+{% block content %}
+  <div class="page-header">
+    <h1>Payments</h1>
+    <p class="muted">Manual payment submissions</p>
+  </div>
+
+  <form class="toolbar" method="get">
+    <input class="input" name="q" value="{{ q }}" placeholder="Search email, ref code, bill ids..." />
+    <select class="input" name="status">
+      <option value="">All</option>
+      <option value="PENDING" {% if status == "PENDING" %}selected{% endif %}>PENDING</option>
+      <option value="APPROVED" {% if status == "APPROVED" %}selected{% endif %}>APPROVED</option>
+      <option value="REJECTED" {% if status == "REJECTED" %}selected{% endif %}>REJECTED</option>
+    </select>
+    <button class="btn" type="submit">Filter</button>
+  </form>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Reference</th>
+          <th>Bill IDs</th>
+          <th>Status</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in payments %}
+          <tr>
+            <td>{{ p.user.email }}</td>
+            <td>{{ p.reference_code }}</td>
+            <td>{{ p.bill_ids }}</td>
+            <td>{{ p.status }}</td>
+            <td>{{ p.created_at }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="muted">No payments found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

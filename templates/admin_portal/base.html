@@ -1,0 +1,55 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Admin Portal{% endblock %}</title>
+
+  <link rel="stylesheet" href="{% static 'admin_portal/css/admin.css' %}">
+</head>
+
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">🏢</div>
+        <div>
+          <div class="brand-name">RealEstate360+</div>
+          <div class="brand-sub">Admin Portal</div>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <a class="nav-item {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}" href="{% url 'admin_dashboard' %}">Dashboard</a>
+        <a class="nav-item {% if request.resolver_match.url_name == 'admin_tenants' %}active{% endif %}" href="{% url 'admin_tenants' %}">Tenants</a>
+        <a class="nav-item {% if request.resolver_match.url_name == 'admin_billing' %}active{% endif %}" href="{% url 'admin_billing' %}">Billing</a>
+        <a class="nav-item {% if request.resolver_match.url_name == 'admin_payments' %}active{% endif %}" href="{% url 'admin_payments' %}">Payments</a>
+        <a class="nav-item {% if request.resolver_match.url_name == 'admin_maintenance' %}active{% endif %}" href="{% url 'admin_maintenance' %}">Maintenance</a>
+        <a class="nav-item {% if request.resolver_match.url_name == 'admin_announcements' %}active{% endif %}" href="{% url 'admin_announcements' %}">Announcements</a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a class="nav-item" href="{% url 'logout' %}">Logout</a>
+      </div>
+    </aside>
+
+    <main class="content">
+
+      <!-- Page Actions (Add Button Area) -->
+      <div class="page-actions">
+        {% block page_actions %}{% endblock %}
+      </div>
+
+      <!-- Page Content -->
+      {% block content %}{% endblock %}
+
+    </main>
+  </div>
+
+  <!-- scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="{% static 'admin_portal/js/charts.js' %}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

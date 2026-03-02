@@ -1,4 +1,5 @@
 {% extends "admin_portal/base.html" %}
+{% load humanize %}
 {% block title %}Tenant{% endblock %}
 {% block content %}
   <div class="page-header">
@@ -23,10 +24,17 @@
           {% for l in leases %}
             <tr>
               <td>{{ l.unit.number }}</td>
-              <td>₱{{ l.monthly_rent|floatformat:0 }}</td>
+              <td>₱{{ l.monthly_rent|floatformat:0|intcomma }}</td>
               <td>{{ l.due_day }}</td>
               <td>{{ l.start_date }}</td>
               <td>{% if l.is_active %}Yes{% else %}No{% endif %}</td>
+              <td>
+                <a class="link" href="{% url 'admin_edit_lease' l.id %}">Edit</a> |
+                <form method="post" action="{% url 'admin_delete_lease' l.id %}" class="confirm-action" data-confirm="Delete lease for {{ l.unit.number }}?">
+                  {% csrf_token %}
+                  <button class="link" type="submit">Delete</button>
+                </form>
+              </td>
             </tr>
           {% empty %}
             <tr><td colspan="5" class="muted">No leases found.</td></tr>

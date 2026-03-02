@@ -1,11 +1,13 @@
 {% extends "admin_portal/base.html" %}
 {% block title %}Tenants{% endblock %}
-{% block content %}
 {% block page_actions %}
   <a class="action-btn" href="{% url 'admin_create_tenant_profile' %}">+ Add Tenant</a>
-
+  <a class="action-btn" href="{% url 'admin_create_lease' %}">+ Add Lease</a>
+  <a class="action-btn" href="{% url 'admin_create_unit' %}">+ Add Unit</a>
 {% endblock %}
 
+{% block content %}
+ 
   <div class="page-header">
     <h1>Tenants</h1>
     <p class="muted">Search and manage tenant profiles</p>
@@ -23,7 +25,7 @@
           <th>Full Name</th>
           <th>Email</th>
           <th>Contact</th>
-          <th></th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -32,7 +34,18 @@
             <td>{{ t.full_name }}</td>
             <td>{{ t.user.email }}</td>
             <td>{{ t.contact_no }}</td>
-            <td><a class="link" href="{% url 'admin_tenant_detail' t.id %}">View</a></td>
+            <td>
+              <a class="link" href="{% url 'admin_tenant_detail' t.id %}">View</a>
+              |
+              <a class="link" href="{% url 'admin_edit_tenant' t.id %}">Edit</a>
+              |
+              <a class="link" href="{% url 'admin_create_lease' %}?tenant_id={{ t.user.id }}">Add Lease</a>
+              |
+              <form method="post" action="{% url 'admin_delete_tenant' t.id %}" class="confirm-action" data-confirm="Delete tenant {{ t.full_name }}?">
+                {% csrf_token %}
+                <button class="link" type="submit">Delete</button>
+              </form>
+            </td>
           </tr>
         {% empty %}
           <tr><td colspan="4" class="muted">No tenants found.</td></tr>

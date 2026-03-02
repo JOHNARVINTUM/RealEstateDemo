@@ -38,6 +38,9 @@ class MaintenanceRequest(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    # Admin-entered info
+    fixed_by = models.CharField(max_length=120, blank=True, default="")
+    resolved_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.title} ({self.get_status_display()})"

@@ -7,6 +7,8 @@
   <title>{% block title %}Admin Portal{% endblock %}</title>
 
   <link rel="stylesheet" href="{% static 'admin_portal/css/admin.css' %}">
+  <!-- flatpickr datepicker -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 </head>
 
 <body>
@@ -30,7 +32,10 @@
       </nav>
 
       <div class="sidebar-footer">
-        <a class="nav-item" href="{% url 'logout' %}">Logout</a>
+        <form method="post" action="{% url 'logout' %}">
+          {% csrf_token %}
+          <button class="nav-item" type="submit" style="background:none;border:none;padding:0;cursor:pointer;">Logout</button>
+        </form>
       </div>
     </aside>
 
@@ -41,6 +46,7 @@
         {% block page_actions %}{% endblock %}
       </div>
 
+    
       <!-- Page Content -->
       {% block content %}{% endblock %}
 
@@ -48,8 +54,38 @@
   </div>
 
   <!-- scripts -->
+  <!-- Confirmation modal -->
+  <div id="confirmModal" aria-hidden="true">
+    <div class="modal-overlay" aria-hidden="true"></div>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <h3 id="confirmTitle">Confirm action</h3>
+      <p class="confirm-message">Are you sure?</p>
+      <div class="actions" style="margin-top:12px;">
+        <button class="btn confirm-yes" type="button">Confirm</button>
+        <button class="btn confirm-no" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="{% static 'admin_portal/js/charts.js' %}"></script>
+  <script src="{% static 'admin_portal/js/admin-actions.js' %}"></script>
+  <!-- flatpickr -->
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script>
+    (function(){
+      try {
+        // initialize flatpickr on inputs with class 'flatpickr'
+        flatpickr('.flatpickr', {
+          dateFormat: 'Y-m-d',
+          allowInput: true,
+        });
+      } catch(e) {
+        // fail silently if flatpickr not available
+        console.warn('flatpickr init failed', e);
+      }
+    })();
+  </script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

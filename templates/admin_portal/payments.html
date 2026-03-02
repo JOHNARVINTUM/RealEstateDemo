@@ -26,6 +26,7 @@
           <th>Bill IDs</th>
           <th>Status</th>
           <th>Date</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -36,6 +37,21 @@
             <td>{{ p.bill_ids }}</td>
             <td>{{ p.status }}</td>
             <td>{{ p.created_at }}</td>
+            <td>
+              {% if p.status == "PENDING" %}
+                <form method="post" action="{% url 'admin_approve_payment' p.id %}" class="confirm-action" data-confirm="Approve payment {{ p.reference_code }}?" style="display:inline;">
+                  {% csrf_token %}
+                  <button class="link" type="submit">Approve</button>
+                </form>
+                |
+                <form method="post" action="{% url 'admin_reject_payment' p.id %}" class="confirm-action" data-confirm="Reject payment {{ p.reference_code }}?" style="display:inline;">
+                  {% csrf_token %}
+                  <button class="link" type="submit">Reject</button>
+                </form>
+              {% else %}
+                -
+              {% endif %}
+            </td>
           </tr>
         {% empty %}
           <tr><td colspan="5" class="muted">No payments found.</td></tr>

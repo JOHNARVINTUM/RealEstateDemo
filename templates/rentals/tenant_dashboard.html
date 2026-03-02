@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load humanize %}
 {% block title %}Tenant Dashboard - RealEstate360+{% endblock %}
 
 {% block content %}
@@ -108,7 +109,7 @@
               <p class="text-sm text-gray-500 mt-1 font-medium">Amount Due</p>
               <div class="text-4xl font-extrabold text-blue-950 mt-1 tracking-tight">
                 {% if current_balance %}
-                  ₱{{ current_balance.total_due }}
+                  ₱{{ current_balance.total_due|floatformat:2|intcomma }}
                 {% else %}
                   ₱0.00
                 {% endif %}
@@ -116,7 +117,7 @@
 
               {% if lease %}
                 <div class="mt-2 text-sm font-semibold text-gray-500">
-                  Rent: <span class="text-gray-700">₱{{ lease.monthly_rent }}</span>
+                  Rent: <span class="text-gray-700">₱{{ lease.monthly_rent|floatformat:2|intcomma }}</span>
                 </div>
               {% endif %}
 
@@ -124,9 +125,9 @@
                 <div class="mt-4 text-sm font-bold text-green-700 bg-green-100 border border-green-200 inline-block px-4 py-1.5 rounded-full shadow-sm">
                   Paid on {{ current_payment.paid_at|date:"Y-m-d" }}
                 </div>
-              {% elif current_balance and current_balance.is_late %}
+                {% elif current_balance and current_balance.is_late %}
                 <div class="mt-4 text-sm font-bold text-red-700 bg-red-100 border border-red-200 inline-block px-4 py-1.5 rounded-full shadow-sm">
-                  Late • {{ current_balance.weeks_late }} week(s) penalty • Interest: ₱{{ current_balance.interest }}
+                  Late • {{ current_balance.weeks_late }} week(s) penalty • Interest: ₱{{ current_balance.interest|floatformat:2|intcomma }}
                 </div>
               {% endif %}
             </div>
@@ -174,8 +175,8 @@
           <div>
             <p class="text-sm font-semibold text-gray-500">Monthly Rent</p>
             <p class="text-2xl font-bold text-blue-950 mt-2">
-              {% if lease %}
-                ₱{{ lease.monthly_rent }}
+                {% if lease %}
+                ₱{{ lease.monthly_rent|floatformat:2|intcomma }}
               {% else %}
                 -
               {% endif %}

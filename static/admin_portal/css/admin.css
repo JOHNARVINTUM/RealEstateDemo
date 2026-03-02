@@ -47,6 +47,38 @@ body { margin: 0; font-family: system-ui, Arial, sans-serif; background: #f6f7fb
 .card-value { font-size: 28px; font-weight: 800; margin-top: 10px; }
 .card-sub { font-size: 12px; margin-top: 4px; }
 
+/* Inline-action link-style buttons */
+.link {
+  color: #1d4ed8;
+  text-decoration: none;
+}
+.link:hover { text-decoration: underline; }
+
+button.link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: #1d4ed8;
+  cursor: pointer;
+  font: inherit;
+}
+
+/* Form marker for JS confirmation */
+.confirm-action { display: inline; }
+
+/* Modal styles for confirmation */
+#confirmModal { display: none; position: fixed; inset: 0; align-items: center; justify-content: center; z-index: 1200; }
+#confirmModal.open { display: flex; }
+#confirmModal .modal-overlay { position: absolute; inset: 0; background: rgba(2,6,23,0.6); }
+#confirmModal .modal { position: relative; background: white; border-radius: 12px; max-width: 520px; width: 90%; padding: 20px; box-shadow: 0 10px 30px rgba(2,6,23,0.2); z-index: 2; }
+#confirmModal .modal h3 { margin: 0 0 8px 0; font-size: 18px; }
+#confirmModal .modal p { margin: 0 0 16px 0; color: #475569; }
+#confirmModal .modal .actions { display: flex; gap: 8px; justify-content: flex-end; }
+#confirmModal .modal .actions .btn { padding: 8px 12px; border-radius: 8px; }
+#confirmModal .modal .actions .confirm-yes { background:#1d4ed8; color:white; border:none; }
+#confirmModal .modal .actions .confirm-no { background:transparent; color:#334155; border:1px solid #e6eef9; }
+
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 18px; }
 
 .panel {

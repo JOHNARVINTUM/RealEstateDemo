@@ -1,0 +1,23 @@
+{% extends "admin_portal/base.html" %}
+{% block title %}{{ title|default:"Form" }}{% endblock %}
+{% block content %}
+  <div class="page-header">
+    <h1>{{ title|default:"Form" }}</h1>
+  </div>
+
+  <div class="panel">
+    <form method="post">
+      {% csrf_token %}
+      <div class="panel-body">
+        {{ form.as_p }}
+      </div>
+      <div class="panel-actions">
+        <button class="btn" type="submit">Save</button>
+        {% if back_url %}
+          <a class="link" href="{{ back_url }}">Cancel</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+{% endblock %}
+

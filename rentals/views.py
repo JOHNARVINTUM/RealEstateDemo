@@ -1,5 +1,6 @@
 from datetime import date
 from decimal import Decimal
+import logging
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 from django.contrib import messages
@@ -20,6 +21,8 @@ from billing.services import (
     get_or_update_monthly_bill,
     badge_for_bill,
 )
+
+logger = logging.getLogger(__name__)
 
 @login_required
 def tenant_dashboard(request):
@@ -138,9 +141,16 @@ def tenant_billing(request):
         if not payment.bill_ids:
             continue
             
-        bill_id_list = [bid.strip() for bid in payment.bill_ids.split(",") if bid.strip()]
+        bill_id_list = []
+        for bid in [bid.strip() for bid in payment.bill_ids.split(",") if bid.strip()]:
+            try:
+                bill_id_list.append(int(bid))
+            except ValueError:
+                logger.warning("Invalid bill id in manual payment %s: %s", payment.id, bid)
+                continue
+
         bills_paid = MonthlyBill.objects.filter(id__in=bill_id_list)
-        total_paid = sum(b.total_due for b in bills_paid)
+        total_paid = sum((b.total_due or Decimal("0.00")) for b in bills_paid)
         
         transactions.append({
             "paid_at": payment.created_at, 
@@ -264,11 +274,16 @@ def manual_gcash_payment(request):
             })
 
         # Save the transaction securely with the bill_ids included
-        ManualPayment.objects.create(
-            user=request.user,
-            reference_code=reference_code,
-            bill_ids=bill_ids,  
-        )
+        try:
+            ManualPayment.objects.create(
+                user=request.user,
+                reference_code=reference_code,
+                bill_ids=bill_ids,  
+            )
+        except Exception as e:
+            logger.exception("Failed to create ManualPayment for user %s: %s", request.user.id if request.user else None, e)
+            messages.error(request, "Failed to submit payment — please try again.")
+            return redirect("tenant_pay_advance")
         
         # Show a success message on the dashboard after submission
         messages.success(request, "Payment submitted! Please wait for admin verification.")

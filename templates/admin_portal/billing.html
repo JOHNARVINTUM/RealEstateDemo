@@ -2,20 +2,47 @@
 {% load humanize %}
 {% block title %}Billing{% endblock %}
 {% block content %}
-  <div class="page-header">
-    <h1>Billing</h1>
-    <p class="muted">Monthly bills overview</p>
+  <div class="page-top">
+    <div class="page-header">
+      <h1>Billing</h1>
+      <p class="muted">Monthly bills overview</p>
+    </div>
   </div>
 
-  <form class="toolbar" method="get">
-    <input class="input" name="q" value="{{ q }}" placeholder="Search tenant email, unit, ref..." />
-    <select class="input" name="status">
-      <option value="">All</option>
-      <option value="PAID" {% if status == "PAID" %}selected{% endif %}>PAID</option>
-      <option value="UNPAID" {% if status == "UNPAID" %}selected{% endif %}>UNPAID</option>
-    </select>
-    <button class="btn" type="submit">Filter</button>
-  </form>
+  <section class="hero-panel compact">
+    <h2 class="hero-title">Billing Ledger</h2>
+    <p class="hero-copy">Track each bill by tenant, due date, payment status, and reference number. Use filters before taking actions from the ledger.</p>
+  </section>
+
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat-pill">
+      <span class="stat-pill-value">{{ bills|length }}</span> Total Bills
+    </div>
+    <div class="stat-pill status-paid" style="border-color:#bbf7d0;background:#f0fdf4;">
+      <span class="stat-pill-value" style="color:#15803d;">{{ bills|dictsort:"status"|dictsortreversed:"status"|length }}</span>
+      <span style="color:#15803d;">Paid</span>
+    </div>
+  </div>
+
+  <div class="filter-panel">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title">Filters</h2>
+        <p class="section-copy">Find bills by tenant email, unit number, payment reference, or bill status.</p>
+      </div>
+    </div>
+    <form class="toolbar" method="get">
+      <input class="input" name="q" value="{{ q }}" placeholder="Search tenant email, unit, ref..." />
+      <select class="input" name="status">
+        <option value="">All Statuses</option>
+        <option value="PAID" {% if status == "PAID" %}selected{% endif %}>Paid</option>
+        <option value="UNPAID" {% if status == "UNPAID" %}selected{% endif %}>Unpaid</option>
+      </select>
+      <button class="btn" type="submit">Filter</button>
+      {% if q or status %}<a class="link" href="{% url 'admin_billing' %}">Clear</a>{% endif %}
+    </form>
+  </div>
 
   <div class="table-wrap">
     <table class="table">
@@ -28,37 +55,48 @@
           <th>Total</th>
           <th>Status</th>
           <th>Paid At</th>
-          <th>Ref</th>
+          <th>Reference</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for b in bills %}
           <tr>
-            <td>{{ b.lease.tenant.email }}</td>
-            <td>{{ b.lease.unit.number }}</td>
+            <td>
+              <div class="cell-title">{{ b.lease.tenant.email }}</div>
+              <div class="cell-sub">Tenant account</div>
+            </td>
+            <td>
+              <div class="cell-title">{{ b.lease.unit.number }}</div>
+              <div class="cell-sub">Unit</div>
+            </td>
             <td>{{ b.billing_month }}</td>
             <td>{{ b.due_date }}</td>
-            <td>₱{{ b.total_due|floatformat:0|intcomma }}</td>
-            <td>{{ b.status }}</td>
+            <td>PHP {{ b.total_due|floatformat:0|intcomma }}</td>
+            <td>
+              <span class="status-badge {% if b.status == 'PAID' %}status-paid{% else %}status-unpaid{% endif %}">
+                {{ b.status }}
+              </span>
+            </td>
             <td>{{ b.paid_at|default:"-" }}</td>
             <td>{{ b.payment_reference|default:"-" }}</td>
-            <td>
+            <td class="table-actions">
               {% if b.status == "UNPAID" %}
-                <form method="post" action="{% url 'admin_mark_bill_paid' b.id %}" class="confirm-action" data-confirm="Mark bill {{ b.id }} as PAID?">
+                <form method="post" action="{% url 'admin_mark_bill_paid' b.id %}" class="confirm-action" data-confirm="Mark bill #{{ b.id }} as PAID?">
                   {% csrf_token %}
-                  <button class="link" type="submit">Mark Paid</button>
+                  <button class="link link-success" type="submit">Mark Paid</button>
                 </form>
               {% else %}
-                <form method="post" action="{% url 'admin_mark_bill_unpaid' b.id %}" class="confirm-action" data-confirm="Mark bill {{ b.id }} as UNPAID?">
+                <form method="post" action="{% url 'admin_mark_bill_unpaid' b.id %}" class="confirm-action" data-confirm="Mark bill #{{ b.id }} as UNPAID?">
                   {% csrf_token %}
-                  <button class="link" type="submit">Mark Unpaid</button>
+                  <button class="link link-warn" type="submit">Mark Unpaid</button>
                 </form>
               {% endif %}
+              <a class="link link-danger" href="{% url 'admin_delete_bill' b.id %}">Delete</a>
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="8" class="muted">No bills found.</td></tr>
+          <tr><td colspan="9" class="empty-state">No bills found.</td></tr>
         {% endfor %}
       </tbody>
     </table>

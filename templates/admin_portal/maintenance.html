@@ -1,16 +1,37 @@
 {% extends "admin_portal/base.html" %}
 {% block title %}Maintenance{% endblock %}
 {% block content %}
-  <div class="page-header">
-    <h1>Maintenance</h1>
-    <p class="muted">Requests from tenants</p>
+  <div class="page-top">
+    <div class="page-header">
+      <h1>Maintenance</h1>
+      <p class="muted">Requests from tenants</p>
+    </div>
   </div>
 
-  <form class="toolbar" method="get">
-    <input class="input" name="q" value="{{ q }}" placeholder="Search tenant, unit, description..." />
-    <input class="input" name="status" value="{{ status }}" placeholder="Status (optional)" />
-    <button class="btn" type="submit">Filter</button>
-  </form>
+  <section class="hero-panel compact">
+    <h2 class="hero-title">Maintenance Requests</h2>
+    <p class="hero-copy">Review incoming issues, identify urgent requests quickly, and move work toward resolution with better visibility on status and timing.</p>
+  </section>
+
+  <div class="filter-panel">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title">Filters</h2>
+        <p class="section-copy">Search by tenant, unit, or request description, then narrow by status.</p>
+      </div>
+    </div>
+    <form class="toolbar" method="get">
+      <input class="input" name="q" value="{{ q }}" placeholder="Search tenant, unit, description..." />
+      <select class="input" name="status">
+        <option value="">All Statuses</option>
+        <option value="PENDING" {% if status == "PENDING" %}selected{% endif %}>Pending</option>
+        <option value="IN_PROGRESS" {% if status == "IN_PROGRESS" %}selected{% endif %}>In Progress</option>
+        <option value="RESOLVED" {% if status == "RESOLVED" %}selected{% endif %}>Resolved</option>
+      </select>
+      <button class="btn" type="submit">Filter</button>
+      {% if q or status %}<a class="link" href="{% url 'admin_maintenance' %}">Clear</a>{% endif %}
+    </form>
+  </div>
 
   <div class="table-wrap">
     <table class="table">
@@ -30,20 +51,37 @@
       <tbody>
         {% for r in reqs %}
           <tr>
-            <td>{{ r.lease.tenant.email }}</td>
-            <td>{{ r.lease.unit.number }}</td>
-            <td>{{ r.status }}</td>
-            <td>{{ r.priority }}</td>
-            <td>{{ r.fixed_by }}</td>
+            <td>
+              <div class="cell-title">{{ r.lease.tenant.email }}</div>
+              <div class="cell-sub">Tenant</div>
+            </td>
+            <td>
+              <div class="cell-title">{{ r.lease.unit.number }}</div>
+              <div class="cell-sub">Unit</div>
+            </td>
+            <td>
+              <span class="status-badge {% if r.status == 'RESOLVED' %}status-resolved{% elif r.status == 'PENDING' %}status-pending{% else %}status-default{% endif %}">
+                {{ r.status }}
+              </span>
+            </td>
+            <td>
+              <span class="status-badge {% if r.priority == 'HIGH' %}status-high{% elif r.priority == 'MEDIUM' %}status-medium{% else %}status-low{% endif %}">
+                {{ r.priority }}
+              </span>
+            </td>
+            <td>{{ r.fixed_by|default:"-" }}</td>
             <td>{% if r.resolved_at %}{{ r.resolved_at|date:"Y-m-d H:i" }}{% else %}-{% endif %}</td>
             <td>{{ r.created_at|date:"Y-m-d" }}</td>
-            <td>{{ r.description|truncatechars:60 }}</td>
             <td>
+              <div class="cell-title">{{ r.description|truncatechars:55 }}</div>
+              <div class="cell-sub">Request details</div>
+            </td>
+            <td class="table-actions">
               <a class="link" href="{% url 'admin_update_maintenance' r.id %}">Update</a>
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="5" class="muted">No requests found.</td></tr>
+          <tr><td colspan="9" class="empty-state">No requests found.</td></tr>
         {% endfor %}
       </tbody>
     </table>

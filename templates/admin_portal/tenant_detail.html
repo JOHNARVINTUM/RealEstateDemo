@@ -2,13 +2,50 @@
 {% load humanize %}
 {% block title %}Tenant{% endblock %}
 {% block content %}
-  <div class="page-header">
-    <h1>{{ tenant.full_name }}</h1>
-    <p class="muted">{{ tenant.user.email }} • {{ tenant.contact_no }}</p>
+
+  <!-- Breadcrumb -->
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="{% url 'admin_tenants' %}">Tenants</a>
+    <span class="breadcrumb-sep">›</span>
+    <span class="breadcrumb-current">{{ tenant.full_name }}</span>
+  </nav>
+
+  <div class="page-top">
+    <div class="page-header">
+      <h1>{{ tenant.full_name }}</h1>
+      <p class="muted">{{ tenant.user.email }} &bull; {{ tenant.contact_no|default:"No contact provided" }}</p>
+    </div>
+    <div class="page-actions">
+      <a class="action-btn" href="{% url 'admin_edit_tenant' tenant.id %}">Edit Tenant</a>
+      <a class="action-btn" href="{% url 'admin_create_lease' %}?tenant_id={{ tenant.user.id }}">Add Lease</a>
+    </div>
+  </div>
+
+  <div class="detail-grid">
+    <div class="detail-card">
+      <div class="detail-label">Email</div>
+      <div class="detail-value">{{ tenant.user.email }}</div>
+    </div>
+    <div class="detail-card">
+      <div class="detail-label">Contact</div>
+      <div class="detail-value">{{ tenant.contact_no|default:"-" }}</div>
+    </div>
+    <div class="detail-card">
+      <div class="detail-label">Lease Count</div>
+      <div class="detail-value">{{ leases|length }}</div>
+    </div>
   </div>
 
   <div class="panel">
-    <div class="panel-title">Leases</div>
+    <div class="section-head">
+      <div>
+        <h2 class="section-title">Lease History</h2>
+        <p class="section-copy">Review assigned units, monthly rent, due day, and current lease state for this tenant.</p>
+      </div>
+      {% if leases %}
+        <span class="result-count">{{ leases|length }} lease{% if leases|length != 1 %}s{% endif %}</span>
+      {% endif %}
+    </div>
     <div class="table-wrap">
       <table class="table">
         <thead>
@@ -17,27 +54,35 @@
             <th>Monthly Rent</th>
             <th>Due Day</th>
             <th>Start Date</th>
-            <th>Active</th>
+            <th>Status</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for l in leases %}
             <tr>
-              <td>{{ l.unit.number }}</td>
-              <td>₱{{ l.monthly_rent|floatformat:0|intcomma }}</td>
+              <td>
+                <div class="cell-title">{{ l.unit.number }}</div>
+                <div class="cell-sub">Assigned unit</div>
+              </td>
+              <td>PHP {{ l.monthly_rent|floatformat:0|intcomma }}</td>
               <td>{{ l.due_day }}</td>
               <td>{{ l.start_date }}</td>
-              <td>{% if l.is_active %}Yes{% else %}No{% endif %}</td>
               <td>
-                <a class="link" href="{% url 'admin_edit_lease' l.id %}">Edit</a> |
-                <form method="post" action="{% url 'admin_delete_lease' l.id %}" class="confirm-action" data-confirm="Delete lease for {{ l.unit.number }}?">
+                <span class="status-badge {% if l.is_active %}status-active{% else %}status-default{% endif %}">
+                  {% if l.is_active %}Active{% else %}Inactive{% endif %}
+                </span>
+              </td>
+              <td class="table-actions">
+                <a class="link" href="{% url 'admin_edit_lease' l.id %}">Edit</a>
+                <form method="post" action="{% url 'admin_delete_lease' l.id %}" class="confirm-action" data-confirm="Delete lease for unit {{ l.unit.number }}?">
                   {% csrf_token %}
-                  <button class="link" type="submit">Delete</button>
+                  <button class="link link-danger" type="submit">Delete</button>
                 </form>
               </td>
             </tr>
           {% empty %}
-            <tr><td colspan="5" class="muted">No leases found.</td></tr>
+            <tr><td colspan="6" class="empty-state">No leases found.</td></tr>
           {% endfor %}
         </tbody>
       </table>

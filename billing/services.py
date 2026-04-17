@@ -2,6 +2,9 @@ from datetime import date
 from decimal import Decimal
 import calendar
 
+from django.db import transaction
+from django.utils import timezone
+
 from billing.models import MonthlyBill
 from water.models import WaterBill
 
@@ -31,8 +34,15 @@ def months_between(start: date, end: date):
 
 def due_date_for_month(year: int, month: int, due_day: int) -> date:
     last_day = calendar.monthrange(year, month)[1]
-    day = min(due_day, last_day)
+    day = min(max(due_day, 1), last_day)
     return date(year, month, day)
+
+
+def normalized_monthly_rent(lease) -> Decimal:
+    rent = Decimal(lease.monthly_rent or 0)
+    if rent < Decimal("0.00"):
+        raise ValueError("Lease monthly rent cannot be negative.")
+    return rent.quantize(Decimal("0.01"))
 
 
 def compute_weekly_interest(base_rent: Decimal, due_date: date, today: date) -> tuple[Decimal, bool, int]:
@@ -77,7 +87,7 @@ def get_or_update_monthly_bill(lease, billing_month: date, today: date | None = 
     billing_month = month_start(billing_month)
 
     due_date = due_date_for_month(billing_month.year, billing_month.month, lease.due_day)
-    base_rent = Decimal(lease.monthly_rent)
+    base_rent = normalized_monthly_rent(lease)
     water_amount = Decimal(get_water_amount_for_month(lease.unit, billing_month))
 
     interest, is_late, weeks_late = compute_weekly_interest(base_rent, due_date, today)
@@ -126,6 +136,8 @@ def get_or_update_monthly_bill(lease, billing_month: date, today: date | None = 
 def ensure_bills_since_move_in(lease, today: date | None = None):
     if lease is None:
         return
+    if not getattr(lease, "is_active", True):
+        return
     if today is None:
         today = date.today()
 
@@ -141,6 +153,8 @@ def ensure_bills_up_to(lease, end_month: date, today: date | None = None):
     For advance payment previews/payments (creates future MonthlyBill rows).
     """
     if lease is None:
+        return
+    if not getattr(lease, "is_active", True):
         return
     if today is None:
         today = date.today()
@@ -169,3 +183,101 @@ def badge_for_bill(bill: MonthlyBill, today: date | None = None) -> str:
     if days_left <= 3:
         return "NEAR_DUE"
     return "UPCOMING"
+
+
+def parse_bill_ids(raw_bill_ids: str) -> list[int]:
+    seen = set()
+    bill_ids = []
+
+    for value in (raw_bill_ids or "").split(","):
+        value = value.strip()
+        if not value:
+            continue
+        try:
+            bill_id = int(value)
+        except ValueError:
+            continue
+        if bill_id in seen:
+            continue
+        seen.add(bill_id)
+        bill_ids.append(bill_id)
+
+    return bill_ids
+
+
+def serialize_bill_ids(bill_ids: list[int]) -> str:
+    return ",".join(str(bill_id) for bill_id in bill_ids)
+
+
+@transaction.atomic
+def set_bill_status(bill: MonthlyBill, *, status: str, payment_reference: str = "", paid_at=None) -> MonthlyBill:
+    bill = MonthlyBill.objects.select_for_update().get(pk=bill.pk)
+
+    if status == "PAID":
+        bill.status = "PAID"
+        bill.paid_at = paid_at or timezone.now()
+        bill.payment_reference = payment_reference
+    else:
+        bill.status = "UNPAID"
+        bill.paid_at = None
+        bill.payment_reference = ""
+
+    bill.save(update_fields=["status", "paid_at", "payment_reference"])
+    return bill
+
+
+@transaction.atomic
+def approve_manual_payment(payment):
+    from payments.models import ManualPayment
+
+    payment = ManualPayment.objects.select_for_update().select_related("user").get(pk=payment.pk)
+    if payment.status == "APPROVED":
+        return payment
+
+    payment.status = "APPROVED"
+    payment.save(update_fields=["status"])
+
+    bill_ids = parse_bill_ids(payment.bill_ids)
+    if not bill_ids:
+        return payment
+
+    bills = MonthlyBill.objects.select_for_update().filter(
+        pk__in=bill_ids,
+        lease__tenant=payment.user,
+    )
+
+    approved_at = timezone.now()
+    for bill in bills:
+        if bill.status == "PAID" and bill.payment_reference == payment.reference_code:
+            continue
+        bill.status = "PAID"
+        bill.paid_at = approved_at
+        bill.payment_reference = payment.reference_code
+        bill.save(update_fields=["status", "paid_at", "payment_reference"])
+
+    return payment
+
+
+@transaction.atomic
+def reject_manual_payment(payment):
+    from payments.models import ManualPayment
+
+    payment = ManualPayment.objects.select_for_update().get(pk=payment.pk)
+    if payment.status != "REJECTED":
+        payment.status = "REJECTED"
+        payment.save(update_fields=["status"])
+    return payment
+
+
+@transaction.atomic
+def remove_bill_references_from_payment_history(bill_id: int):
+    from payments.models import ManualPayment
+
+    for payment in ManualPayment.objects.select_for_update().exclude(bill_ids=""):
+        current_ids = parse_bill_ids(payment.bill_ids)
+        if bill_id not in current_ids:
+            continue
+
+        remaining_ids = [current_id for current_id in current_ids if current_id != bill_id]
+        payment.bill_ids = serialize_bill_ids(remaining_ids)
+        payment.save(update_fields=["bill_ids"])

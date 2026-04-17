@@ -1,0 +1,245 @@
+{% extends "admin_portal/base.html" %}
+{% block title %}{{ title|default:"Unit Form" }} - Admin Portal{% endblock %}
+
+{% block content %}
+  <!-- Breadcrumb -->
+  {% if back_url %}
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="{{ back_url }}">Back</a>
+    <span class="breadcrumb-sep">»</span>
+    <span class="breadcrumb-current">{{ title|default:"Unit Form" }}</span>
+  </nav>
+  {% endif %}
+
+  <div class="page-top">
+    <div class="page-header">
+      <h1>{{ title|default:"Unit Form" }}</h1>
+      <p class="muted">Use the form below to {{ action|default:"manage" }} unit information.</p>
+    </div>
+  </div>
+
+  <div class="panel confirm-card">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title">{{ title|default:"Unit Form" }}</h2>
+        <p class="section-copy">Complete the required fields carefully before saving changes.</p>
+      </div>
+    </div>
+    
+    <form method="post">
+      {% csrf_token %}
+      <div class="panel-body">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Unit Number -->
+          <div class="form-group">
+            <label for="id_number" class="form-label">
+              Unit Number <span class="text-red-500">*</span>
+            </label>
+            <input type="text" name="number" id="id_number" value="{{ form.number.value|default:'' }}" 
+                   class="form-control" placeholder="e.g., 101, A-201" required>
+            {% if form.number.errors %}
+              <div class="text-red-600 text-sm mt-1">
+                {{ form.number.errors.0 }}
+              </div>
+            {% endif %}
+            <small class="text-gray-500">e.g., 101, A-201</small>
+          </div>
+
+          <!-- Unit Type -->
+          <div class="form-group">
+            <label for="id_unit_type" class="form-label">
+              Unit Type <span class="text-red-500">*</span>
+            </label>
+            <select name="unit_type" id="id_unit_type" class="form-control" required>
+              <option value="">Select Unit Type</option>
+              <option value="STUDIO" {% if form.unit_type.value == 'STUDIO' %}selected{% endif %}>Studio</option>
+              <option value="1BR" {% if form.unit_type.value == '1BR' %}selected{% endif %}>1 Bedroom</option>
+              <option value="2BR" {% if form.unit_type.value == '2BR' %}selected{% endif %}>2 Bedrooms</option>
+              <option value="3BR" {% if form.unit_type.value == '3BR' %}selected{% endif %}>3 Bedrooms</option>
+              <option value="PENTHOUSE" {% if form.unit_type.value == 'PENTHOUSE' %}selected{% endif %}>Penthouse</option>
+            </select>
+            {% if form.unit_type.errors %}
+              <div class="text-red-600 text-sm mt-1">
+                {{ form.unit_type.errors.0 }}
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Floor Level -->
+          <div class="form-group">
+            <label for="id_floor_level" class="form-label">
+              Floor Level <span class="text-red-500">*</span>
+            </label>
+            <input type="number" name="floor_level" id="id_floor_level" 
+                   value="{{ form.floor_level.value|default:'' }}" 
+                   class="form-control" min="1" max="50" placeholder="Enter floor number" required>
+            {% if form.floor_level.errors %}
+              <div class="text-red-600 text-sm mt-1">
+                {{ form.floor_level.errors.0 }}
+              </div>
+            {% endif %}
+            <small class="text-gray-500">Floor number (1-50)</small>
+          </div>
+
+          <!-- Monthly Rent -->
+          <div class="form-group">
+            <label for="id_monthly_rent" class="form-label">
+              Monthly Rent <span class="text-red-500">*</span>
+            </label>
+            <input type="number" name="monthly_rent" id="id_monthly_rent" 
+                   value="{{ form.monthly_rent.value|default:'' }}" 
+                   class="form-control" min="1000" step="0.01" placeholder="Enter monthly rent" required>
+            {% if form.monthly_rent.errors %}
+              <div class="text-red-600 text-sm mt-1">
+                {{ form.monthly_rent.errors.0 }}
+              </div>
+            {% endif %}
+            <small class="text-gray-500">Monthly rental amount in PHP</small>
+          </div>
+
+          <!-- Status -->
+          <div class="form-group">
+            <label for="id_status" class="form-label">
+              Status <span class="text-red-500">*</span>
+            </label>
+            <select name="status" id="id_status" class="form-control" required>
+              <option value="">Select Status</option>
+              <option value="AVAILABLE" {% if form.status.value == 'AVAILABLE' %}selected{% endif %}>Available</option>
+              <option value="OCCUPIED" {% if form.status.value == 'OCCUPIED' %}selected{% endif %}>Occupied</option>
+              <option value="MAINTENANCE" {% if form.status.value == 'MAINTENANCE' %}selected{% endif %}>Under Maintenance</option>
+              <option value="RESERVED" {% if form.status.value == 'RESERVED' %}selected{% endif %}>Reserved</option>
+            </select>
+            {% if form.status.errors %}
+              <div class="text-red-600 text-sm mt-1">
+                {{ form.status.errors.0 }}
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="form-group mt-4">
+          <label for="id_description" class="form-label">
+            Description
+          </label>
+          <textarea name="description" id="id_description" class="form-control" 
+                    rows="3" placeholder="Describe the unit features, location, etc.">{{ form.description.value|default:'' }}</textarea>
+          {% if form.description.errors %}
+            <div class="text-red-600 text-sm mt-1">
+              {{ form.description.errors.0 }}
+            </div>
+          {% endif %}
+          <small class="text-gray-500">Describe the unit features, location, etc.</small>
+        </div>
+
+        <!-- Amenities -->
+        <div class="form-group mt-4">
+          <label for="id_amenities" class="form-label">
+            Amenities
+          </label>
+          <textarea name="amenities" id="id_amenities" class="form-control" 
+                    rows="2" placeholder="e.g., Air Conditioning, WiFi, Parking, Swimming Pool">{{ form.amenities.value|default:'' }}</textarea>
+          {% if form.amenities.errors %}
+            <div class="text-red-600 text-sm mt-1">
+              {{ form.amenities.errors.0 }}
+            </div>
+          {% endif %}
+          <small class="text-gray-500">e.g., Air Conditioning, WiFi, Parking, Swimming Pool (comma-separated)</small>
+        </div>
+      </div>
+      
+      <div class="panel-actions">
+        <button class="btn" type="submit">
+          <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          {{ action|default:"Save" }} Unit
+        </button>
+        {% if back_url %}
+          <a class="link" href="{{ back_url }}">
+            <svg class="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            Cancel
+          </a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+{% endblock %}
+
+<style>
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+.form-control {
+  width: 100%;
+  min-height: 46px;
+  border: 2px solid #d1d5db;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  background: #ffffff;
+  font-size: 0.875rem;
+  color: #1f2937;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+  display: block;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+textarea.form-control {
+  min-height: 100px;
+  height: auto;
+  resize: vertical;
+}
+
+.text-red-500 {
+  color: #ef4444;
+}
+
+.text-gray-500 {
+  color: #6b7280;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.grid {
+  display: grid;
+}
+
+.grid-cols-1 {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.grid-cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.gap-4 {
+  gap: 1rem;
+}
+
+.mt-4 {
+  margin-top: 1rem;
+}
+
+.text-red-600 {
+  color: #dc2626;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+</style>

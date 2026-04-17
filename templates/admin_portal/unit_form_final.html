@@ -1,0 +1,310 @@
+{% extends "admin_portal/base.html" %}
+{% load form_filters %}
+{% block title %}{{ title|default:"Unit Form" }} - Admin Portal{% endblock %}
+
+{% block content %}
+  <!-- Breadcrumb -->
+  {% if back_url %}
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="{{ back_url }}">Back</a>
+    <span class="breadcrumb-sep">»</span>
+    <span class="breadcrumb-current">{{ title|default:"Unit Form" }}</span>
+  </nav>
+  {% endif %}
+
+  <div class="page-top">
+    <div class="page-header">
+      <h1>{{ title|default:"Unit Form" }}</h1>
+      <p class="muted">Use the form below to {{ action|default:"manage" }} unit information.</p>
+    </div>
+  </div>
+
+  <div class="panel confirm-card">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title">{{ title|default:"Unit Form" }}</h2>
+        <p class="section-copy">Complete the required fields carefully before saving changes.</p>
+      </div>
+    </div>
+    
+    <form method="post" id="unit-form">
+      {% csrf_token %}
+      <div class="panel-body">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Unit Number -->
+          <div class="form-group">
+            <label for="{{ form.number.id_for_label }}" class="form-label">
+              {{ form.number.label }} <span class="text-red-500">*</span>
+            </label>
+            {{ form.number|add_class:"form-control" }}
+            {% if form.number.errors %}
+              <div class="text-red-600 text-sm mt-1">
+                {{ form.number.errors.0 }}
+              </div>
+            {% endif %}
+            <small class="text-gray-500">e.g., 101, A-201</small>
+          </div>
+
+          <!-- Unit Type -->
+          <div class="form-group">
+            <label for="{{ form.unit_type.id_for_label }}" class="form-label">
+              {{ form.unit_type.label }} <span class="text-red-500">*</span>
+            </label>
+            {{ form.unit_type|add_class:"form-control" }}
+            {% if form.unit_type.errors %}
+              <div class="text-red-600 text-sm mt-1">
+                {{ form.unit_type.errors.0 }}
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Floor Level -->
+          <div class="form-group">
+            <label for="{{ form.floor_level.id_for_label }}" class="form-label">
+              {{ form.floor_level.label }} <span class="text-red-500">*</span>
+            </label>
+            {{ form.floor_level|add_class:"form-control" }}
+            {% if form.floor_level.errors %}
+              <div class="text-red-600 text-sm mt-1">
+                {{ form.floor_level.errors.0 }}
+              </div>
+            {% endif %}
+            <small class="text-gray-500">Floor number (1-50)</small>
+          </div>
+
+          <!-- Monthly Rent -->
+          <div class="form-group">
+            <label for="{{ form.monthly_rent.id_for_label }}" class="form-label">
+              {{ form.monthly_rent.label }} <span class="text-red-500">*</span>
+            </label>
+            {{ form.monthly_rent|add_class:"form-control" }}
+            {% if form.monthly_rent.errors %}
+              <div class="text-red-600 text-sm mt-1">
+                {{ form.monthly_rent.errors.0 }}
+              </div>
+            {% endif %}
+            <small class="text-gray-500">Monthly rental amount in PHP</small>
+          </div>
+
+          <!-- Status -->
+          <div class="form-group">
+            <label for="{{ form.status.id_for_label }}" class="form-label">
+              {{ form.status.label }} <span class="text-red-500">*</span>
+            </label>
+            {{ form.status|add_class:"form-control" }}
+            {% if form.status.errors %}
+              <div class="text-red-600 text-sm mt-1">
+                {{ form.status.errors.0 }}
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="form-group mt-4">
+          <label for="{{ form.description.id_for_label }}" class="form-label">
+            {{ form.description.label }}
+          </label>
+          {{ form.description|add_class:"form-control" }}
+          {% if form.description.errors %}
+            <div class="text-red-600 text-sm mt-1">
+              {{ form.description.errors.0 }}
+            </div>
+          {% endif %}
+          <small class="text-gray-500">Describe the unit features, location, etc.</small>
+        </div>
+
+        <!-- Amenities -->
+        <div class="form-group mt-4">
+          <label for="{{ form.amenities.id_for_label }}" class="form-label">
+            {{ form.amenities.label }}
+          </label>
+          {{ form.amenities|add_class:"form-control" }}
+          {% if form.amenities.errors %}
+            <div class="text-red-600 text-sm mt-1">
+              {{ form.amenities.errors.0 }}
+            </div>
+            {% endif %}
+          <small class="text-gray-500">e.g., Air Conditioning, WiFi, Parking, Swimming Pool (comma-separated)</small>
+        </div>
+
+        <!-- Hidden size field to satisfy model requirements -->
+        <input type="hidden" name="size_sqm" value="25.00">
+      </div>
+      
+      <div class="panel-actions">
+        <button class="btn" type="submit">
+          <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          {{ action|default:"Save" }} Unit
+        </button>
+        {% if back_url %}
+          <a class="link" href="{{ back_url }}">
+            <svg class="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            Cancel
+          </a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+{% endblock %}
+
+<style>
+/* Base form styling */
+.form-control {
+  width: 100% !important;
+  min-height: 46px !important;
+  border: 2px solid #d1d5db !important;
+  border-radius: 0.5rem !important;
+  padding: 0.75rem !important;
+  background: #ffffff !important;
+  font-size: 0.875rem !important;
+  color: #1f2937 !important;
+  transition: border-color 0.2s, box-shadow 0.2s !important;
+  box-sizing: border-box !important;
+  display: block !important;
+}
+
+.form-control:focus {
+  outline: none !important;
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+textarea.form-control {
+  min-height: 100px !important;
+  height: auto !important;
+  resize: vertical !important;
+}
+
+/* Form group styling */
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+/* Grid layout */
+.grid {
+  display: grid;
+}
+
+.grid-cols-1 {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.grid-cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.gap-4 {
+  gap: 1rem;
+}
+
+.mt-4 {
+  margin-top: 1rem;
+}
+
+/* Error and helper text */
+.text-red-500 {
+  color: #ef4444;
+}
+
+.text-gray-500 {
+  color: #6b7280;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.text-red-600 {
+  color: #dc2626;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+/* Override any conflicting styles */
+input[type="text"],
+input[type="number"],
+select,
+textarea {
+  width: 100% !important;
+  min-height: 46px !important;
+  border: 2px solid #d1d5db !important;
+  border-radius: 0.5rem !important;
+  padding: 0.75rem !important;
+  background: #ffffff !important;
+  font-size: 0.875rem !important;
+  color: #1f2937 !important;
+  box-sizing: border-box !important;
+  display: block !important;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus,
+textarea:focus {
+  outline: none !important;
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Force styling on all form inputs
+  function styleFormInputs() {
+    const inputs = document.querySelectorAll('#unit-form input, #unit-form select, #unit-form textarea');
+    console.log('Styling', inputs.length, 'form inputs');
+    
+    inputs.forEach(input => {
+      // Force inline styles
+      input.style.width = '100%';
+      input.style.minHeight = '46px';
+      input.style.border = '2px solid #d1d5db';
+      input.style.borderRadius = '0.5rem';
+      input.style.padding = '0.75rem';
+      input.style.backgroundColor = '#ffffff';
+      input.style.fontSize = '0.875rem';
+      input.style.color = '#1f2937';
+      input.style.boxSizing = 'border-box';
+      input.style.display = 'block';
+      
+      // Special handling for textarea
+      if (input.tagName.toLowerCase() === 'textarea') {
+        input.style.minHeight = '100px';
+        input.style.height = 'auto';
+        input.style.resize = 'vertical';
+      }
+      
+      // Add focus/blur events
+      input.addEventListener('focus', function() {
+        this.style.borderColor = '#3b82f6';
+        this.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+      });
+      
+      input.addEventListener('blur', function() {
+        this.style.borderColor = '#d1d5db';
+        this.style.boxShadow = 'none';
+      });
+    });
+  }
+  
+  // Apply styling immediately
+  styleFormInputs();
+  
+  // Apply styling again after a short delay to catch any dynamically rendered inputs
+  setTimeout(styleFormInputs, 100);
+  
+  // Apply styling again after a longer delay for safety
+  setTimeout(styleFormInputs, 500);
+});
+</script>

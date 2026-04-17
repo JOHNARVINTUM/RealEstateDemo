@@ -1,19 +1,41 @@
 {% extends "admin_portal/base.html" %}
 {% block title %}Announcements{% endblock %}
-{% block page_actions %}
-  <a class="action-btn" href="{% url 'admin_create_announcement' %}">+ Add Announcement</a>
-{% endblock %}
 
 {% block content %}
-  <div class="page-header">
-    <h1>Announcements</h1>
-    <p class="muted">Messages shown to tenants</p>
+  <div class="page-top">
+    <div class="page-header">
+      <h1>Announcements</h1>
+      <p class="muted">Messages shown to tenants</p>
+    </div>
+    <div class="page-actions">
+      <a class="action-btn" href="{% url 'admin_create_announcement' %}">+ Add Announcement</a>
+    </div>
   </div>
 
-  <form class="toolbar" method="get">
-    <input class="input" name="q" value="{{ q }}" placeholder="Search title/content..." />
-    <button class="btn" type="submit">Search</button>
-  </form>
+  <section class="hero-panel compact">
+    <h2 class="hero-title">Announcement Center</h2>
+    <p class="hero-copy">Create and manage updates that appear to tenants so information stays timely, visible, and easy to maintain.</p>
+  </section>
+
+  <div class="filter-panel">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title">Search</h2>
+        <p class="section-copy">Search announcements by title or body content.</p>
+      </div>
+    </div>
+    <form class="toolbar" method="get">
+      <input class="input" name="q" value="{{ q }}" placeholder="Search title/content..." />
+      <button class="btn" type="submit">Search</button>
+      {% if q %}<a class="link" href="{% url 'admin_announcements' %}">Clear</a>{% endif %}
+    </form>
+  </div>
+
+  {% if items %}
+    <div class="section-head" style="margin-bottom:0.6rem;">
+      <span class="result-count">{{ items|length }} announcement{% if items|length != 1 %}s{% endif %}</span>
+    </div>
+  {% endif %}
 
   <div class="table-wrap">
     <table class="table">
@@ -27,18 +49,21 @@
       <tbody>
         {% for a in items %}
           <tr>
-            <td>{{ a.title }}</td>
-            <td>{{ a.created_at }}</td>
             <td>
-              <a class="link" href="{% url 'admin_edit_announcement' a.id %}">Edit</a> |
-              <form method="post" action="{% url 'admin_delete_announcement' a.id %}" class="confirm-action" data-confirm="Delete announcement {{ a.title }}?" style="display:inline;">
+              <div class="cell-title">{{ a.title }}</div>
+              <div class="cell-sub">Published announcement</div>
+            </td>
+            <td>{{ a.created_at }}</td>
+            <td class="table-actions">
+              <a class="link" href="{% url 'admin_edit_announcement' a.id %}">Edit</a>
+              <form method="post" action="{% url 'admin_delete_announcement' a.id %}" class="confirm-action" data-confirm="Delete announcement: {{ a.title }}?">
                 {% csrf_token %}
-                <button class="link" type="submit">Delete</button>
+                <button class="link link-danger" type="submit">Delete</button>
               </form>
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="3" class="muted">No announcements found.</td></tr>
+          <tr><td colspan="3" class="empty-state">No announcements found.</td></tr>
         {% endfor %}
       </tbody>
     </table>

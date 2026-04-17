@@ -1,0 +1,134 @@
+{% load static %}
+<aside class="sidebar w-72 bg-blue-950 text-white flex flex-col shadow-xl z-10 shrink-0">
+
+  <!-- Brand -->
+  <div class="px-6 py-8 border-b border-blue-900/50">
+    <div class="bg-white rounded-full w-24 h-24 mx-auto p-3 flex justify-center items-center shadow-lg mb-4 transition-all duration-300 opacity-80 hover:opacity-100 hover:shadow-xl cursor-pointer">
+      <img src="{% static 'img/RealEstateLogo.png' %}" alt="RealEstate360+ Logo"
+           class="w-full h-full object-contain transition-transform duration-300 hover:scale-105">
+    </div>
+    <div class="text-center">
+      <h2 class="text-lg font-bold tracking-wide text-white">RealEstate360<span class="text-green-500">+</span></h2>
+      <span class="text-[10px] text-blue-200 font-semibold tracking-widest uppercase bg-blue-900/50 px-3 py-1 rounded-full mt-2 inline-block">Admin Portal</span>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <nav class="px-4 py-6 space-y-1 flex-1" aria-label="Admin navigation">
+
+    <a href="{% url 'admin_dashboard' %}"
+       aria-current="{% if request.resolver_match.url_name == 'admin_dashboard' %}page{% endif %}"
+       class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200
+              {% if request.resolver_match.url_name == 'admin_dashboard' %}
+                bg-blue-900 border-l-4 border-green-500 font-semibold text-white shadow-md
+              {% else %}
+                text-blue-100 hover:bg-blue-900/50 hover:translate-x-1 hover:text-white
+              {% endif %}">
+      <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      </svg>
+      Dashboard
+    </a>
+
+    <a href="{% url 'admin_tenants' %}"
+       aria-current="{% if request.resolver_match.url_name in 'admin_tenants,admin_tenant_detail,admin_create_tenant_profile,admin_create_lease,admin_create_unit,admin_edit_tenant,admin_edit_lease' %}page{% endif %}"
+       class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200
+              {% if request.resolver_match.url_name == 'admin_tenants' or request.resolver_match.url_name == 'admin_tenant_detail' or request.resolver_match.url_name == 'admin_create_tenant_profile' or request.resolver_match.url_name == 'admin_create_lease' or request.resolver_match.url_name == 'admin_create_unit' or request.resolver_match.url_name == 'admin_edit_tenant' or request.resolver_match.url_name == 'admin_edit_lease' %}
+                bg-blue-900 border-l-4 border-green-500 font-semibold text-white shadow-md
+              {% else %}
+                text-blue-100 hover:bg-blue-900/50 hover:translate-x-1 hover:text-white
+              {% endif %}">
+      <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2C0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+      Tenants
+    </a>
+
+    <a href="{% url 'admin_billing' %}"
+       aria-current="{% if request.resolver_match.url_name == 'admin_billing' or request.resolver_match.url_name == 'admin_mark_bill_paid' or request.resolver_match.url_name == 'admin_mark_bill_unpaid' or request.resolver_match.url_name == 'admin_delete_bill' %}page{% endif %}"
+       class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200
+              {% if request.resolver_match.url_name == 'admin_billing' or request.resolver_match.url_name == 'admin_mark_bill_paid' or request.resolver_match.url_name == 'admin_mark_bill_unpaid' or request.resolver_match.url_name == 'admin_delete_bill' %}
+                bg-blue-900 border-l-4 border-green-500 font-semibold text-white shadow-md
+              {% else %}
+                text-blue-100 hover:bg-blue-900/50 hover:translate-x-1 hover:text-white
+              {% endif %}">
+      <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      Billing
+    </a>
+
+    <a href="{% url 'admin_payments' %}"
+       aria-current="{% if request.resolver_match.url_name == 'admin_payments' or request.resolver_match.url_name == 'admin_approve_payment' or request.resolver_match.url_name == 'admin_reject_payment' or request.resolver_match.url_name == 'admin_delete_payment' %}page{% endif %}"
+       class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200
+              {% if request.resolver_match.url_name == 'admin_payments' or request.resolver_match.url_name == 'admin_approve_payment' or request.resolver_match.url_name == 'admin_reject_payment' or request.resolver_match.url_name == 'admin_delete_payment' %}
+                bg-blue-900 border-l-4 border-green-500 font-semibold text-white shadow-md
+              {% else %}
+                text-blue-100 hover:bg-blue-900/50 hover:translate-x-1 hover:text-white
+              {% endif %}">
+      <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+      </svg>
+      Payments
+    </a>
+
+    <a href="{% url 'admin_maintenance' %}"
+       aria-current="{% if request.resolver_match.url_name == 'admin_maintenance' or request.resolver_match.url_name == 'admin_update_maintenance' %}page{% endif %}"
+       class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200
+              {% if request.resolver_match.url_name == 'admin_maintenance' or request.resolver_match.url_name == 'admin_update_maintenance' %}
+                bg-blue-900 border-l-4 border-green-500 font-semibold text-white shadow-md
+              {% else %}
+                text-blue-100 hover:bg-blue-900/50 hover:translate-x-1 hover:text-white
+              {% endif %}">
+      <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+      Maintenance
+    </a>
+
+    <a href="{% url 'admin_units' %}"
+       aria-current="{% if request.resolver_match.url_name == 'admin_units' or request.resolver_match.url_name == 'admin_unit_detail' or request.resolver_match.url_name == 'admin_create_unit' or request.resolver_match.url_name == 'admin_edit_unit' or request.resolver_match.url_name == 'admin_delete_unit' %}page{% endif %}"
+       class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200
+              {% if request.resolver_match.url_name == 'admin_units' or request.resolver_match.url_name == 'admin_unit_detail' or request.resolver_match.url_name == 'admin_create_unit' or request.resolver_match.url_name == 'admin_edit_unit' or request.resolver_match.url_name == 'admin_delete_unit' %}
+                bg-blue-900 border-l-4 border-green-500 font-semibold text-white shadow-md
+              {% else %}
+                text-blue-100 hover:bg-blue-900/50 hover:translate-x-1 hover:text-white
+              {% endif %}">
+      <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+      </svg>
+      Units
+    </a>
+
+    <a href="{% url 'admin_announcements' %}"
+       aria-current="{% if request.resolver_match.url_name == 'admin_announcements' or request.resolver_match.url_name == 'admin_create_announcement' or request.resolver_match.url_name == 'admin_edit_announcement' or request.resolver_match.url_name == 'admin_delete_announcement' %}page{% endif %}"
+       class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200
+              {% if request.resolver_match.url_name == 'admin_announcements' or request.resolver_match.url_name == 'admin_create_announcement' or request.resolver_match.url_name == 'admin_edit_announcement' or request.resolver_match.url_name == 'admin_delete_announcement' %}
+                bg-blue-900 border-l-4 border-green-500 font-semibold text-white shadow-md
+              {% else %}
+                text-blue-100 hover:bg-blue-900/50 hover:translate-x-1 hover:text-white
+              {% endif %}">
+      <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+      </svg>
+      Announcements
+    </a>
+
+  </nav>
+
+  <!-- Logout -->
+  <div class="px-4 py-6 border-t border-blue-900/50">
+    <form method="post" action="{% url 'logout' %}">
+      {% csrf_token %}
+      <button type="submit"
+              class="w-full text-left flex items-center gap-3 px-4 py-3 rounded-xl text-blue-200 hover:bg-red-500/10 hover:text-red-400 transition-all duration-200 font-medium">
+        <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+        </svg>
+        Logout
+      </button>
+    </form>
+  </div>
+
+</aside>

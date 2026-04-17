@@ -1,18 +1,37 @@
 {% extends "admin_portal/base.html" %}
 {% block title %}{{ title|default:"Form" }}{% endblock %}
 {% block content %}
-  <div class="page-header">
-    <h1>{{ title|default:"Form" }}</h1>
+
+  <!-- Breadcrumb -->
+  {% if back_url %}
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="{{ back_url }}">Back</a>
+    <span class="breadcrumb-sep">›</span>
+    <span class="breadcrumb-current">{{ title|default:"Form" }}</span>
+  </nav>
+  {% endif %}
+
+  <div class="page-top">
+    <div class="page-header">
+      <h1>{{ title|default:"Form" }}</h1>
+      <p class="muted">Use the form below to update the selected admin record.</p>
+    </div>
   </div>
 
-  <div class="panel">
+  <div class="panel confirm-card">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title">{{ title|default:"Form" }}</h2>
+        <p class="section-copy">Complete the required fields carefully before saving changes.</p>
+      </div>
+    </div>
     <form method="post">
       {% csrf_token %}
       <div class="panel-body">
         {{ form.as_p }}
       </div>
       <div class="panel-actions">
-        <button class="btn" type="submit">Save</button>
+        <button class="btn" type="submit">Save Changes</button>
         {% if back_url %}
           <a class="link" href="{{ back_url }}">Cancel</a>
         {% endif %}
@@ -20,4 +39,3 @@
     </form>
   </div>
 {% endblock %}
-

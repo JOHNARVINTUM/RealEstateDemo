@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'admin_portal/css/admin.css' %}">
+<style>
+  /* Enhanced Tenant Portal Styling */
+  
+  /* Form Field Styling */
+  .tenant-form select,
+  .tenant-form input[type="text"],
+  .tenant-form input[type="email"],
+  .tenant-form input[type="password"],
+  .tenant-form input[type="number"],
+  .tenant-form input[type="tel"],
+  .tenant-form textarea {
+    width: 100%;
+    border: 2px solid var(--color-gray-200);
+    border-radius: var(--radius-xl);
+    padding: var(--space-4) var(--space-5);
+    background-color: var(--color-gray-50);
+    transition: all var(--transition-normal);
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-800);
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
+  }
+  
+  .tenant-form select:focus,
+  .tenant-form input[type="text"]:focus,
+  .tenant-form input[type="email"]:focus,
+  .tenant-form input[type="password"]:focus,
+  .tenant-form input[type="number"]:focus,
+  .tenant-form input[type="tel"]:focus,
+  .tenant-form textarea:focus {
+    background-color: white;
+    border-color: var(--color-primary);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(23, 37, 84, 0.1);
+    transform: translateY(-1px);
+  }
+  
+  .tenant-form select:hover,
+  .tenant-form input:hover,
+  .tenant-form textarea:hover {
+    border-color: var(--color-gray-300);
+    background-color: white;
+  }
+  
+  /* Form Labels */
+  .tenant-form label {
+    display: block;
+    margin-bottom: var(--space-2);
+    color: var(--color-gray-700);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    letter-spacing: 0.025em;
+  }
+  
+  /* Form Buttons */
+  .tenant-form button[type="submit"] {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+    color: white;
+    border: none;
+    padding: var(--space-4) var(--space-8);
+    border-radius: var(--radius-xl);
+    font-weight: 600;
+    font-size: var(--font-size-base);
+    transition: all var(--transition-normal);
+    box-shadow: var(--shadow-md);
+    cursor: pointer;
+    letter-spacing: 0.025em;
+  }
+  
+  .tenant-form button[type="submit"]:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+  
+  .tenant-form button[type="submit"]:active {
+    transform: translateY(0);
+  }
+  
+  /* Error Messages */
+  .tenant-form .errorlist {
+    list-style: none;
+    padding: 0;
+    margin: var(--space-2) 0 0 0;
+  }
+  
+  .tenant-form .errorlist li {
+    background-color: var(--color-error-bg);
+    color: var(--color-error);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-lg);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    border-left: 3px solid var(--color-error);
+  }
+  
+  /* Success Messages */
+  .tenant-form .success-message {
+    background-color: var(--color-success-bg);
+    color: var(--color-success);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-lg);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    border-left: 3px solid var(--color-success);
+    margin-bottom: var(--space-4);
+  }
+  
+  /* Card Components */
+  .tenant-card {
+    background: white;
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-6);
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition-normal);
+  }
+  
+  .tenant-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+  }
+  
+  /* Status Badges */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  
+  .status-badge.success {
+    background-color: var(--color-success-bg);
+    color: var(--color-success);
+  }
+  
+  .status-badge.warning {
+    background-color: var(--color-warning-bg);
+    color: var(--color-warning);
+  }
+  
+  .status-badge.error {
+    background-color: var(--color-error-bg);
+    color: var(--color-error);
+  }
+  
+  .status-badge.info {
+    background-color: var(--color-info-bg);
+    color: var(--color-info);
+  }
+  
+  /* Enhanced Sidebar Navigation */
+  .tenant-sidebar {
+    background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  }
+  
+  .tenant-sidebar .nav-item {
+    transition: all var(--transition-normal);
+  }
+  
+  .tenant-sidebar .nav-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateX(4px);
+  }
+  
+  .tenant-sidebar .nav-item.active {
+    background: rgba(255, 255, 255, 0.15);
+    border-left: 4px solid var(--color-secondary);
+  }
+  
+  /* Loading States */
+  .loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.6;
+  }
+  
+  .loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid transparent;
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  
+  /* Responsive Improvements */
+  @media (max-width: 768px) {
+    .tenant-form select,
+    .tenant-form input,
+    .tenant-form textarea {
+      padding: var(--space-3) var(--space-4);
+      font-size: var(--font-size-base);
+    }
+    
+    .tenant-form button[type="submit"] {
+      padding: var(--space-3) var(--space-6);
+      font-size: var(--font-size-sm);
+    }
+    
+    .tenant-card {
+      padding: var(--space-4);
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex bg-slate-50 font-['Poppins',_sans-serif]">
+
+  {% include "includes/tenant_sidebar.html" %}
+
+  <main class="flex-1 px-4 py-6 overflow-y-auto">
+    <div class="max-w-6xl mx-auto animate-fade-in">
+      {% block tenant_content %}{% endblock %}
+    </div>
+  </main>
+
+</div>
+{% endblock %}

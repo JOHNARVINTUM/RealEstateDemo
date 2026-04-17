@@ -1,15 +1,22 @@
 from datetime import date
-
-from django.db.models import Sum, Q
-from django.shortcuts import render, get_object_or_404, redirect
-from django.urls import reverse
-from django.utils import timezone
 import logging
 
-from accounts.decorators import admin_required
-from rentals.models import Lease, Unit, TenantProfile
+from django.db.models import Sum, Q
+from django.db import transaction
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.urls import reverse
+from django.db.models import Q
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.core.paginator import Paginator
+from django.utils.timezone import now
+from datetime import timedelta
+import json
+from django.utils import timezone
+from rentals.models import Lease, Unit, TenantProfile, Notification
 from billing.models import MonthlyBill
-from billing.services import ensure_bills_since_move_in
+from billing.services import ensure_bills_since_move_in, set_bill_status, approve_manual_payment, reject_manual_payment
 from payments.models import ManualPayment
 from maintenance.models import MaintenanceRequest
 from announcements.models import Announcement
@@ -20,6 +27,7 @@ from .admin_portal_forms import TenantProfileEditForm
 from .admin_portal_forms import UnitForm
 from django.utils import timezone as dj_timezone
 from django.contrib import messages
+from .decorators import admin_required
 
 logger = logging.getLogger(__name__)
 
@@ -39,12 +47,21 @@ def admin_dashboard(request):
     )
     overdue_payments = MonthlyBill.objects.filter(status="UNPAID", due_date__lt=today).count()
 
+    # Get notifications for the current user
+    all_notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
+    notifications = all_notifications[:5]
+    unread_notifications = all_notifications.filter(is_read=False)
+    unread_count = unread_notifications.count()
+
     return render(request, "admin_portal/dashboard.html", {
         "total_tenants": total_tenants,
         "occupied_units": occupied_units,
         "vacant_units": max(vacant_units, 0),
         "total_revenue": total_revenue,
         "overdue_payments": overdue_payments,
+        "notifications": notifications,
+        "unread_notifications": unread_notifications,
+        "unread_count": unread_count,
     })
 
 
@@ -98,19 +115,202 @@ def admin_create_tenant_profile(request):
 
 
 @admin_required
+def admin_units(request):
+    """Admin portal: list all units with filtering."""
+    status_filter = request.GET.get('status', 'all')
+    search_query = request.GET.get('search', '')
+    
+    units = Unit.objects.filter(is_active=True).select_related()
+    
+    # Filter by status
+    if status_filter != 'all':
+        units = units.filter(status=status_filter)
+    
+    # Search functionality
+    if search_query:
+        units = units.filter(
+            Q(number__icontains=search_query) |
+            Q(unit_type__icontains=search_query) |
+            Q(description__icontains=search_query)
+        )
+    
+    # Get statistics
+    total_units = units.count()
+    available_units = units.filter(status='AVAILABLE').count()
+    occupied_units = units.filter(status='OCCUPIED').count()
+    maintenance_units = units.filter(status='MAINTENANCE').count()
+    
+    return render(request, "admin_portal/units.html", {
+        'units': units,
+        'status_filter': status_filter,
+        'search_query': search_query,
+        'total_units': total_units,
+        'available_units': available_units,
+        'occupied_units': occupied_units,
+        'maintenance_units': maintenance_units,
+    })
+
+
+@admin_required
+def admin_unit_detail(request, unit_id):
+    """Admin portal: view unit details."""
+    unit = get_object_or_404(Unit, id=unit_id, is_active=True)
+    current_tenant = unit.get_current_tenant()
+    
+    return render(request, "admin_portal/unit_detail.html", {
+        'unit': unit,
+        'current_tenant': current_tenant,
+        'amenities_list': unit.get_amenities_list(),
+    })
+
+
+@admin_required
 def admin_create_unit(request):
     """Admin portal: create a Unit row."""
-    form = UnitForm(request.POST or None)
+    if request.method == "POST":
+        # Debug: Print the POST data
+        print("POST data:", request.POST)
+        
+        form = UnitForm(request.POST)
+        
+        if form.is_valid():
+            try:
+                unit = form.save(commit=False)
+                unit.is_active = True
+                unit.save()
+                
+                # Create real-time notification for admin
+                try:
+                    Notification.create_notification(
+                        title=f"New Unit Created",
+                        message=f"Unit {unit.number} ({unit.get_unit_type_display()}) has been created successfully!",
+                        notification_type='UNIT',
+                        related_unit=unit
+                    )
+                except Exception as e:
+                    logger.exception(f"Failed to create unit creation notification: {e}")
+                
+                messages.success(request, f'Unit {unit.number} has been created successfully!')
+                return redirect("admin_units")
+            except Exception as e:
+                messages.error(request, f'Error creating unit: {str(e)}')
+                print("Form save error:", e)
+        else:
+            # Debug: Print form errors
+            print("Form errors:", form.errors)
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = UnitForm()
 
-    if request.method == "POST" and form.is_valid():
-        form.save()
-        return redirect("admin_tenants")
-
-    return render(request, "admin_portal/form.html", {
+    return render(request, "admin_portal/unit_form_final_working.html", {
         "title": "Add Unit",
+        "action": "Add",
         "form": form,
-        "back_url": reverse("admin_tenants"),
+        "back_url": reverse("admin_units"),
     })
+
+
+@admin_required
+def admin_edit_unit(request, unit_id):
+    """Admin portal: edit a Unit row."""
+    unit = get_object_or_404(Unit, id=unit_id, is_active=True)
+    
+    if request.method == "POST":
+        print("=== MANUAL FORM PROCESSING TEST ===")
+        print("Unit before update:", f"ID={unit.id}, Number={unit.number}, Rent={unit.monthly_rent}")
+        print("POST data:", request.POST)
+        
+        # Try manual processing first
+        try:
+            monthly_rent = request.POST.get('monthly_rent')
+            print(f"Monthly rent from POST: {monthly_rent}")
+            
+            if monthly_rent:
+                # Manual update bypassing Django form
+                unit.monthly_rent = float(monthly_rent)
+                unit.is_active = True
+                unit.save()
+                
+                print(f"Unit after manual save: PHP {unit.monthly_rent}")
+                unit.refresh_from_db()
+                print(f"Unit after refresh: PHP {unit.monthly_rent}")
+                
+                messages.success(request, f'Unit {unit.number} has been updated successfully!')
+                return redirect("admin_unit_detail", unit_id=unit.id)
+            else:
+                print("No monthly_rent in POST data")
+                
+        except Exception as e:
+            print(f"Manual processing error: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        print("=== FALLING BACK TO DJANGO FORM ===")
+        
+        # Fall back to Django form processing with debug
+        form = UnitForm(request.POST, instance=unit)
+        print("Form is valid:", form.is_valid())
+        
+        if form.is_valid():
+            try:
+                unit = form.save(commit=False)
+                unit.is_active = True
+                unit.save()
+                print("Django form save successful")
+                messages.success(request, f'Unit {unit.number} has been updated successfully!')
+                return redirect("admin_unit_detail", unit_id=unit.id)
+            except Exception as e:
+                print(f"Django form save error: {e}")
+        else:
+            print("Django form errors:", form.errors)
+            messages.error(request, 'Please correct the errors below.')
+        
+        print("=== END MANUAL PROCESSING TEST ===")
+    else:
+        form = UnitForm(instance=unit)
+    
+    return render(request, "admin_portal/unit_form_final_working.html", {
+        "title": "Edit Unit",
+        "action": "Edit",
+        "form": form,
+        "back_url": reverse("admin_unit_detail", args=[unit.id]),
+    })
+
+
+@admin_required
+def admin_delete_unit(request, unit_id):
+    """Admin portal: delete a Unit row (soft delete)."""
+    unit = get_object_or_404(Unit, id=unit_id)
+    
+    if request.method == "POST":
+        unit.is_active = False
+        unit.save()
+        messages.success(request, f'Unit {unit.number} has been deleted successfully!')
+        return redirect("admin_units")
+    
+    return render(request, "admin_portal/confirm.html", {
+        "title": "Delete Unit",
+        "message": f"Delete unit {unit.number}? This will mark it as inactive but preserve all historical data.",
+        "post_url": reverse("admin_delete_unit", args=[unit.id]),
+        "back_url": reverse("admin_unit_detail", args=[unit.id]),
+    })
+
+
+@admin_required
+def admin_toggle_unit_status(request, unit_id):
+    """Admin portal: toggle unit status."""
+    unit = get_object_or_404(Unit, id=unit_id, is_active=True)
+    
+    if request.method == "POST":
+        new_status = request.POST.get('status')
+        if new_status in ['AVAILABLE', 'OCCUPIED', 'MAINTENANCE', 'RESERVED']:
+            unit.status = new_status
+            unit.save()
+            messages.success(request, f'Unit {unit.number} status changed to {new_status}!')
+        
+        return redirect("admin_unit_detail", unit_id=unit.id)
+    
+    return redirect("admin_unit_detail", unit_id=unit.id)
 
 
 @admin_required
@@ -128,6 +328,29 @@ def admin_create_lease(request):
 
     if request.method == "POST" and form.is_valid():
         lease = form.save()
+        
+        # Create real-time notification for admin about new lease
+        try:
+            Notification.create_notification(
+                title=f"New Lease Created",
+                message=f"Lease created for {lease.tenant.email} in Unit {lease.unit.number} (Monthly Rent: ₱{lease.monthly_rent:,.2f})",
+                notification_type='LEASE',
+                related_tenant=lease.tenant,
+                related_unit=lease.unit
+            )
+        except Exception as e:
+            logger.exception(f"Failed to create lease notification: {e}")
+        
+        # Update unit status to OCCUPIED when lease is created
+        try:
+            unit = lease.unit
+            unit.status = 'OCCUPIED'
+            unit.save()
+            logger.info(f"Unit {unit.number} status updated to OCCUPIED for lease {lease.id}")
+        except Exception as e:
+            logger.exception(f"Failed to update unit status for lease {lease.id}: {e}")
+            # Don't block lease creation if unit status update fails
+        
         # create initial monthly bill rows from move-in until today
         try:
             ensure_bills_since_move_in(lease)
@@ -135,9 +358,11 @@ def admin_create_lease(request):
             # don't block creation if billing generation fails; admin can regenerate later
             logger.exception("ensure_bills_since_move_in failed for lease id %s", getattr(lease, 'id', None))
             messages.warning(request, "Failed to generate initial bills; you can regenerate later.")
+        
+        messages.success(request, f'Lease created successfully! Unit {lease.unit.number} is now occupied.')
         return redirect("admin_tenants")
 
-    return render(request, "admin_portal/form.html", {
+    return render(request, "admin_portal/lease_form.html", {
         "title": "Add Lease",
         "form": form,
         "back_url": reverse("admin_tenants"),
@@ -195,11 +420,25 @@ def admin_edit_lease(request, lease_id: int):
 def admin_delete_lease(request, lease_id: int):
     lease = get_object_or_404(Lease, pk=lease_id)
     if request.method == "POST":
+        # Store unit info before deleting lease
+        unit = lease.unit
+        unit_number = unit.number
+        
+        # Delete the lease
         lease.delete()
+        
+        # Update unit status back to AVAILABLE
+        try:
+            unit.status = 'AVAILABLE'
+            unit.save()
+            logger.info(f"Unit {unit_number} status updated to AVAILABLE after lease deletion")
+        except Exception as e:
+            logger.exception(f"Failed to update unit {unit_number} status after lease deletion: {e}")
+        
         return redirect("admin_tenants")
     return render(request, "admin_portal/confirm.html", {
         "title": "Delete Lease",
-        "message": f"Delete lease for {lease.tenant.email} -> {lease.unit.number}?",
+        "message": f"Delete lease for {lease.tenant.email} -> {lease.unit.number}? Unit will become available again.",
         "post_url": reverse("admin_delete_lease", args=[lease.id]),
         "back_url": reverse("admin_tenant_detail", args=[lease.tenant.id])
     })
@@ -209,9 +448,7 @@ def admin_delete_lease(request, lease_id: int):
 def admin_mark_bill_paid(request, bill_id: int):
     bill = get_object_or_404(MonthlyBill, pk=bill_id)
     if request.method == "POST":
-        bill.status = "PAID"
-        bill.paid_at = dj_timezone.now()
-        bill.save()
+        set_bill_status(bill, status="PAID", paid_at=dj_timezone.now())
         return redirect("admin_billing")
     return render(request, "admin_portal/confirm.html", {
         "title": "Mark Bill Paid",
@@ -225,10 +462,7 @@ def admin_mark_bill_paid(request, bill_id: int):
 def admin_mark_bill_unpaid(request, bill_id: int):
     bill = get_object_or_404(MonthlyBill, pk=bill_id)
     if request.method == "POST":
-        bill.status = "UNPAID"
-        bill.paid_at = None
-        bill.payment_reference = ""
-        bill.save()
+        set_bill_status(bill, status="UNPAID")
         return redirect("admin_billing")
     return render(request, "admin_portal/confirm.html", {
         "title": "Mark Bill Unpaid",
@@ -242,20 +476,7 @@ def admin_mark_bill_unpaid(request, bill_id: int):
 def admin_approve_payment(request, payment_id: int):
     p = get_object_or_404(ManualPayment, pk=payment_id)
     if request.method == "POST":
-        p.status = "APPROVED"
-        p.save()
-        # mark linked bills as paid if provided
-        if p.bill_ids:
-            for bid in [x.strip() for x in p.bill_ids.split(',') if x.strip()]:
-                try:
-                    b = MonthlyBill.objects.get(pk=int(bid))
-                    b.status = "PAID"
-                    b.paid_at = dj_timezone.now()
-                    b.payment_reference = p.reference_code
-                    b.save()
-                except Exception as e:
-                    logger.exception("Failed to mark bill %s paid from manual payment %s: %s", bid, p.id, e)
-                    continue
+        approve_manual_payment(p)
         return redirect("admin_payments")
     return render(request, "admin_portal/confirm.html", {
         "title": "Approve Payment",
@@ -269,8 +490,7 @@ def admin_approve_payment(request, payment_id: int):
 def admin_reject_payment(request, payment_id: int):
     p = get_object_or_404(ManualPayment, pk=payment_id)
     if request.method == "POST":
-        p.status = "REJECTED"
-        p.save()
+        reject_manual_payment(p)
         return redirect("admin_payments")
     return render(request, "admin_portal/confirm.html", {
         "title": "Reject Payment",
@@ -333,6 +553,87 @@ def admin_delete_announcement(request, ann_id: int):
 
 
 @admin_required
+def admin_notifications(request):
+    """Admin portal: view all notifications"""
+    # Admins should see all notifications, not just user-specific ones
+    notifications = Notification.objects.all().order_by('-created_at')
+    unread_count = notifications.filter(is_read=False).count()
+    
+    # Return JSON for AJAX requests (for auto-refresh)
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        from django.http import JsonResponse
+        return JsonResponse({
+            'unread_count': unread_count,
+            'notifications': [
+                {
+                    'id': n.id,
+                    'title': n.title,
+                    'message': n.message,
+                    'notification_type': n.notification_type,
+                    'is_read': n.is_read,
+                    'created_at': n.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                    'related_tenant': {
+                        'email': n.related_tenant.email if n.related_tenant else None,
+                        'name': n.related_tenant.tenantprofile.full_name if n.related_tenant and hasattr(n.related_tenant, 'tenantprofile') and n.related_tenant.tenantprofile else n.related_tenant.email if n.related_tenant else None
+                    } if n.related_tenant else None,
+                    'related_unit': {
+                        'number': n.related_unit.number if n.related_unit else None,
+                        'type': n.related_unit.get_unit_type_display() if n.related_unit else None
+                    } if n.related_unit else None
+                } for n in notifications
+            ]
+        })
+    
+    return render(request, "admin_portal/notifications.html", {
+        'notifications': notifications,
+        'unread_count': unread_count,
+    })
+
+
+@admin_required
+def admin_mark_notification_read(request, notification_id):
+    """Admin portal: mark notification as read"""
+    notification = get_object_or_404(Notification, id=notification_id, user=request.user)
+    notification.is_read = True
+    notification.save()
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': True})
+    
+    return redirect("admin_notifications")
+
+
+@admin_required
+def admin_mark_all_notifications_read(request):
+    """Admin portal: mark all notifications as read"""
+    Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': True})
+    
+    return redirect("admin_notifications")
+
+
+@admin_required
+def admin_delete_notification(request, notification_id):
+    """Admin portal: delete notification"""
+    notification = get_object_or_404(Notification, id=notification_id, user=request.user)
+    
+    if request.method == "POST":
+        notification_title = notification.title
+        notification.delete()
+        messages.success(request, f"Notification '{notification_title}' has been deleted successfully.")
+        return redirect("admin_notifications")
+    
+    return render(request, "admin_portal/confirm.html", {
+        "title": "Delete Notification",
+        "message": f"Delete notification '{notification.title}'?",
+        "post_url": reverse("admin_delete_notification", args=[notification.id]),
+        "back_url": reverse("admin_notifications"),
+    })
+
+
+@admin_required
 def admin_billing(request):
     q = request.GET.get("q", "").strip()
     status = request.GET.get("status", "").strip()
@@ -354,6 +655,21 @@ def admin_billing(request):
 
 
 @admin_required
+def admin_delete_bill(request, bill_id: int):
+    bill = get_object_or_404(MonthlyBill.objects.select_related("lease", "lease__tenant", "lease__unit"), pk=bill_id)
+    if request.method == "POST":
+        with transaction.atomic():
+            bill.delete()
+        return redirect("admin_billing")
+    return render(request, "admin_portal/confirm.html", {
+        "title": "Delete Billing Record",
+        "message": f"Delete billing record for {bill.lease.tenant.email} / {bill.lease.unit.number} / {bill.billing_month}? Linked payment history references will be cleaned up.",
+        "post_url": reverse("admin_delete_bill", args=[bill.id]),
+        "back_url": reverse("admin_billing"),
+    })
+
+
+@admin_required
 def admin_payments(request):
     q = request.GET.get("q", "").strip()
     status = request.GET.get("status", "").strip()
@@ -370,6 +686,21 @@ def admin_payments(request):
 
     payments = payments.order_by("-created_at")[:500]
     return render(request, "admin_portal/payments.html", {"payments": payments, "q": q, "status": status})
+
+
+@admin_required
+def admin_delete_payment(request, payment_id: int):
+    payment = get_object_or_404(ManualPayment.objects.select_related("user"), pk=payment_id)
+    if request.method == "POST":
+        with transaction.atomic():
+            payment.delete()
+        return redirect("admin_payments")
+    return render(request, "admin_portal/confirm.html", {
+        "title": "Delete Billing History",
+        "message": f"Delete payment history {payment.reference_code} for {payment.user.email}?",
+        "post_url": reverse("admin_delete_payment", args=[payment.id]),
+        "back_url": reverse("admin_payments"),
+    })
 
 
 @admin_required
@@ -421,5 +752,67 @@ def admin_create_announcement(request):
     })
 
 
+@require_http_methods(["GET"])
+def api_get_unit_data(request, unit_number):
+    """
+    API endpoint to get unit data for automatic price population
+    """
+    try:
+        unit = Unit.objects.get(number=unit_number.upper(), is_active=True)
+        data = {
+            'success': True,
+            'unit': {
+                'id': unit.id,
+                'number': unit.number,
+                'unit_type': unit.unit_type,
+                'floor_level': unit.floor_level,
+                'monthly_rent': str(unit.monthly_rent),
+                'status': unit.status,
+                'description': unit.description or '',
+                'amenities': unit.amenities or ''
+            }
+        }
+        return JsonResponse(data)
+    except Unit.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': f'Unit {unit_number} not found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
 
 
+@require_http_methods(["GET"])
+def api_get_unit_data_by_id(request, unit_id):
+    """
+    API endpoint to get unit data by ID for lease forms
+    """
+    try:
+        unit = Unit.objects.get(id=unit_id, is_active=True)
+        data = {
+            'success': True,
+            'unit': {
+                'id': unit.id,
+                'number': unit.number,
+                'unit_type': unit.unit_type,
+                'floor_level': unit.floor_level,
+                'monthly_rent': str(unit.monthly_rent),
+                'status': unit.status,
+                'description': unit.description or '',
+                'amenities': unit.amenities or ''
+            }
+        }
+        return JsonResponse(data)
+    except Unit.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': f'Unit with ID {unit_id} not found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

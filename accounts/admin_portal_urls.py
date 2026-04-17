@@ -7,6 +7,7 @@ from .admin_portal_views import (
     admin_payments,
     admin_maintenance,
     admin_announcements,
+    admin_notifications,
     admin_create_tenant_profile,
     admin_create_announcement,
     admin_create_lease,
@@ -19,9 +20,21 @@ from .admin_portal_views import (
     admin_delete_announcement,
     admin_mark_bill_paid,
     admin_mark_bill_unpaid,
+    admin_delete_bill,
     admin_approve_payment,
     admin_reject_payment,
+    admin_delete_payment,
     admin_update_maintenance,
+    admin_units,
+    admin_unit_detail,
+    admin_edit_unit,
+    admin_delete_unit,
+    admin_toggle_unit_status,
+    admin_mark_notification_read,
+    admin_mark_all_notifications_read,
+    admin_delete_notification,
+    api_get_unit_data,
+    api_get_unit_data_by_id,
 )
 
 urlpatterns = [
@@ -33,12 +46,29 @@ urlpatterns = [
     path("billing/", admin_billing, name="admin_billing"),
     path("billing/mark_paid/<int:bill_id>/", admin_mark_bill_paid, name="admin_mark_bill_paid"),
     path("billing/mark_unpaid/<int:bill_id>/", admin_mark_bill_unpaid, name="admin_mark_bill_unpaid"),
+    path("billing/<int:bill_id>/delete/", admin_delete_bill, name="admin_delete_bill"),
     path("payments/", admin_payments, name="admin_payments"),
     path("payments/<int:payment_id>/approve/", admin_approve_payment, name="admin_approve_payment"),
     path("payments/<int:payment_id>/reject/", admin_reject_payment, name="admin_reject_payment"),
+    path("payments/<int:payment_id>/delete/", admin_delete_payment, name="admin_delete_payment"),
     path("maintenance/", admin_maintenance, name="admin_maintenance"),
     path("maintenance/<int:req_id>/update/", admin_update_maintenance, name="admin_update_maintenance"),
     path("announcements/", admin_announcements, name="admin_announcements"),
+    
+    # Notifications
+    path("notifications/", admin_notifications, name="admin_notifications"),
+    path("notifications/<int:notification_id>/read/", admin_mark_notification_read, name="admin_mark_notification_read"),
+    path("notifications/mark-all-read/", admin_mark_all_notifications_read, name="admin_mark_all_notifications_read"),
+    path("notifications/<int:notification_id>/delete/", admin_delete_notification, name="admin_delete_notification"),
+    
+    # Unit Management
+    path("units/", admin_units, name="admin_units"),
+    path("units/<int:unit_id>/", admin_unit_detail, name="admin_unit_detail"),
+    path("units/<int:unit_id>/edit/", admin_edit_unit, name="admin_edit_unit"),
+    path("units/<int:unit_id>/delete/", admin_delete_unit, name="admin_delete_unit"),
+    path("units/<int:unit_id>/toggle-status/", admin_toggle_unit_status, name="admin_toggle_unit_status"),
+    path("api/unit/<str:unit_number>/", api_get_unit_data, name="api_get_unit_data"),
+    path("api/unit/by-id/<int:unit_id>/", api_get_unit_data_by_id, name="api_get_unit_data_by_id"),
 
     # Create pages
     path("tenants/add/", admin_create_tenant_profile, name="admin_create_tenant_profile"),

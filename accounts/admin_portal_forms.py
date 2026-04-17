@@ -80,7 +80,7 @@ class TenantProfileEditForm(forms.ModelForm):
 class LeaseForm(forms.ModelForm):
     class Meta:
         model = Lease
-        fields = ["tenant", "unit", "monthly_rent", "due_day", "start_date", "is_active"]
+        fields = ["tenant", "unit", "due_day", "start_date", "is_active"]
         widgets = {
             # use a text input with a CSS class so JS datepicker (flatpickr) can enhance it
             "start_date": forms.DateInput(attrs={"type": "text", "class": "flatpickr", "autocomplete": "off"}),
@@ -89,6 +89,7 @@ class LeaseForm(forms.ModelForm):
     def clean(self):
         cleaned = super().clean()
         unit = cleaned.get("unit")
+        
         if unit:
             qs = Lease.objects.filter(unit=unit, is_active=True)
             if self.instance and self.instance.pk:
@@ -97,6 +98,18 @@ class LeaseForm(forms.ModelForm):
                 raise ValidationError({"unit": "Selected unit already has an active lease."})
         return cleaned
 
+    def save(self, commit=True):
+        # Get the instance without saving yet
+        instance = super().save(commit=False)
+        
+        # Auto-populate monthly rent from unit
+        if instance.unit and not instance.monthly_rent:
+            instance.monthly_rent = instance.unit.monthly_rent
+        
+        if commit:
+            instance.save()
+        return instance
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # only allow selecting users with tenant role
@@ -104,6 +117,12 @@ class LeaseForm(forms.ModelForm):
             self.fields["tenant"].queryset = User.objects.filter(role="TENANT")
         except Exception as e:
             logger.exception("Failed to set tenant queryset: %s", e)
+        
+        # only allow selecting active units
+        try:
+            self.fields["unit"].queryset = Unit.objects.filter(is_active=True)
+        except Exception as e:
+            logger.exception("Failed to set unit queryset: %s", e)
 
 
 class UnitForm(forms.ModelForm):

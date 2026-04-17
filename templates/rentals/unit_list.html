@@ -1,0 +1,218 @@
+{% extends "tenant_base.html" %}
+{% load humanize %}
+
+{% block title %}Unit Management - RealEstate360+{% endblock %}
+
+{% block tenant_content %}
+
+<!-- Page Header -->
+<div class="mb-8">
+  <div class="flex items-start justify-between flex-wrap gap-4">
+    <div>
+      <h1 class="text-4xl font-extrabold text-gradient tracking-tight mb-2">Unit Management</h1>
+      <p class="text-gray-600 font-medium">Manage and monitor all property units</p>
+    </div>
+    <div class="flex gap-3">
+      <a href="{% url 'unit_create' %}" class="btn-primary">
+        <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+        </svg>
+        Add Unit
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+  <div class="tenant-card group">
+    <div class="flex items-start justify-between">
+      <div class="flex-1">
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Total Units</p>
+        <p class="text-3xl font-bold text-gradient">{{ total_units|intcomma }}</p>
+      </div>
+      <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
+        <svg class="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="tenant-card group">
+    <div class="flex items-start justify-between">
+      <div class="flex-1">
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Available</p>
+        <p class="text-3xl font-bold text-gradient">{{ available_units|intcomma }}</p>
+      </div>
+      <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
+        <svg class="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="tenant-card group">
+    <div class="flex items-start justify-between">
+      <div class="flex-1">
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Occupied</p>
+        <p class="text-3xl font-bold text-gradient">{{ occupied_units|intcomma }}</p>
+      </div>
+      <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
+        <svg class="w-6 h-6 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="tenant-card group">
+    <div class="flex items-start justify-between">
+      <div class="flex-1">
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Maintenance</p>
+        <p class="text-3xl font-bold text-gradient">{{ maintenance_units|intcomma }}</p>
+      </div>
+      <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-yellow-50 to-yellow-100 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
+        <svg class="w-6 h-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filters and Search -->
+<div class="tenant-card mb-6">
+  <form method="get" class="space-y-4">
+    <div class="flex flex-col lg:flex-row gap-4">
+      <div class="flex-1">
+        <label class="block text-sm font-semibold text-gray-700 mb-2">Search Units</label>
+        <div class="relative">
+          <input type="text" 
+                 name="search" 
+                 value="{{ search_query }}"
+                 placeholder="Search by unit number, type, or description..."
+                 class="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200">
+          <svg class="absolute left-3 top-3.5 w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+        </div>
+      </div>
+      
+      <div class="lg:w-48">
+        <label class="block text-sm font-semibold text-gray-700 mb-2">Status Filter</label>
+        <select name="status" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200">
+          <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Units</option>
+          <option value="AVAILABLE" {% if status_filter == 'AVAILABLE' %}selected{% endif %}>Available</option>
+          <option value="OCCUPIED" {% if status_filter == 'OCCUPIED' %}selected{% endif %}>Occupied</option>
+          <option value="MAINTENANCE" {% if status_filter == 'MAINTENANCE' %}selected{% endif %}>Under Maintenance</option>
+          <option value="RESERVED" {% if status_filter == 'RESERVED' %}selected{% endif %}>Reserved</option>
+        </select>
+      </div>
+      
+      <div class="flex items-end">
+        <button type="submit" class="btn-primary">
+          <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 3.293A1 1 0 013 4z"></path>
+          </svg>
+          Filter
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Units List -->
+<div class="space-y-4">
+  {% for unit in units %}
+    <div class="tenant-card hover:shadow-lg transition-all duration-300">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div class="flex-1">
+          <div class="flex items-start gap-4">
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br {% if unit.status == 'AVAILABLE' %}from-green-50 to-green-100{% elif unit.status == 'OCCUPIED' %}from-orange-50 to-orange-100{% elif unit.status == 'MAINTENANCE' %}from-yellow-50 to-yellow-100{% else %}from-blue-50 to-blue-100{% endif %} flex items-center justify-center shrink-0">
+              <svg class="w-8 h-8 {% if unit.status == 'AVAILABLE' %}text-green-600{% elif unit.status == 'OCCUPIED' %}text-orange-600{% elif unit.status == 'MAINTENANCE' %}text-yellow-600{% else %}text-blue-600{% endif %}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+              </svg>
+            </div>
+            
+            <div class="flex-1">
+              <div class="flex items-center gap-3 mb-2">
+                <h3 class="text-xl font-bold text-gradient">{{ unit.number }}</h3>
+                <span class="status-badge {% if unit.status == 'AVAILABLE' %}success{% elif unit.status == 'OCCUPIED' %}warning{% elif unit.status == 'MAINTENANCE' %}error{% else %}info{% endif %}">
+                  {{ unit.get_status_display }}
+                </span>
+              </div>
+              
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <span class="text-gray-500">Type:</span>
+                  <span class="font-semibold text-gray-800 ml-1">{{ unit.get_unit_type_display }}</span>
+                </div>
+                <div>
+                  <span class="text-gray-500">Floor:</span>
+                  <span class="font-semibold text-gray-800 ml-1">{{ unit.floor_level }}</span>
+                </div>
+                <div>
+                  <span class="text-gray-500">Size:</span>
+                  <span class="font-semibold text-gray-800 ml-1">{{ unit.size_sqm }}m²</span>
+                </div>
+                <div>
+                  <span class="text-gray-500">Rent:</span>
+                  <span class="font-semibold text-gray-800 ml-1">₱{{ unit.monthly_rent|floatformat:2|intcomma }}</span>
+                </div>
+              </div>
+              
+              {% if unit.description %}
+                <p class="text-gray-600 text-sm mt-2 line-clamp-2">{{ unit.description }}</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        
+        <div class="flex items-center gap-2 mt-4 lg:mt-0">
+          <a href="{% url 'unit_detail' unit.id %}" class="link">
+            <svg class="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+            </svg>
+            View
+          </a>
+          <a href="{% url 'unit_update' unit.id %}" class="link">
+            <svg class="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 0L21.828 15M15 11v-4"></path>
+            </svg>
+            Edit
+          </a>
+          <a href="{% url 'unit_delete' unit.id %}" class="link link-danger">
+            <svg class="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+            </svg>
+            Delete
+          </a>
+        </div>
+      </div>
+    </div>
+  {% empty %}
+    <div class="text-center py-16 bg-gradient-to-br from-slate-50 to-white rounded-2xl border border-dashed border-gray-200">
+      <div class="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <svg class="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+        </svg>
+      </div>
+      <h3 class="text-lg font-semibold text-gray-700 mb-2">No units found</h3>
+      <p class="text-sm text-gray-500 mb-4">
+        {% if search_query %}No units match your search criteria.{% else %}No units have been created yet.{% endif %}
+      </p>
+      <a href="{% url 'unit_create' %}" class="btn-primary">
+        <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+        </svg>
+        Add Your First Unit
+      </a>
+    </div>
+  {% endfor %}
+</div>
+
+{% endblock %}

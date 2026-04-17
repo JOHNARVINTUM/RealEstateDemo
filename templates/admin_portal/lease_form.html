@@ -1,0 +1,306 @@
+{% extends "admin_portal/base.html" %}
+{% load humanize %}
+{% block title %}{{ title|default:"Lease Form" }} - Admin Portal{% endblock %}
+
+{% block content %}
+  <!-- Breadcrumb -->
+  {% if back_url %}
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="{{ back_url }}">Back</a>
+    <span class="breadcrumb-sep">»</span>
+    <span class="breadcrumb-current">{{ title|default:"Lease Form" }}</span>
+  </nav>
+  {% endif %}
+
+  <div class="page-top">
+    <div class="page-header">
+      <h1>{{ title|default:"Lease Form" }}</h1>
+      <p class="muted">Create a lease agreement between tenant and unit.</p>
+    </div>
+  </div>
+
+  <div class="panel confirm-card">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title">{{ title|default:"Lease Form" }}</h2>
+        <p class="section-copy">Complete the required fields carefully before saving changes.</p>
+      </div>
+    </div>
+    
+    <form method="post" id="lease-form">
+      {% csrf_token %}
+      <div class="panel-body">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Tenant -->
+          <div class="form-group">
+            <label for="{{ form.tenant.id_for_label }}" class="form-label">
+              {{ form.tenant.label }} <span class="text-red-500">*</span>
+            </label>
+            <select id="{{ form.tenant.id_for_label }}" name="{{ form.tenant.name }}" class="styled-input" required>
+              <option value="">Select Tenant</option>
+              {% for tenant in form.tenant.field.queryset %}
+                <option value="{{ tenant.pk }}" {% if form.tenant.value == tenant.pk|stringformat:"s" %}selected{% endif %}>
+                  {{ tenant.email }} - {{ tenant.tenantprofile.full_name|default:tenant.email }}
+                </option>
+              {% endfor %}
+            </select>
+            {% if form.tenant.errors %}
+              <div class="text-red-600 text-sm mt-1">
+                {{ form.tenant.errors.0 }}
+              </div>
+            {% endif %}
+            <small class="text-gray-500">Select the tenant for this lease</small>
+          </div>
+
+          <!-- Unit -->
+          <div class="form-group">
+            <label for="{{ form.unit.id_for_label }}" class="form-label">
+              {{ form.unit.label }} <span class="text-red-500">*</span>
+            </label>
+            <select id="{{ form.unit.id_for_label }}" name="{{ form.unit.name }}" class="styled-input" required>
+              <option value="">Select Unit</option>
+              {% for unit in form.unit.field.queryset %}
+                <option value="{{ unit.pk }}" {% if form.unit.value == unit.pk|stringformat:"s" %}selected{% endif %}>
+                  Unit {{ unit.number }} - {{ unit.unit_type }} - PHP {{ unit.monthly_rent|floatformat:2|intcomma }}
+                </option>
+              {% endfor %}
+            </select>
+            {% if form.unit.errors %}
+              <div class="text-red-600 text-sm mt-1">
+                {{ form.unit.errors.0 }}
+              </div>
+            {% endif %}
+            <small class="text-gray-500">Select the unit for this lease (monthly rent will auto-populate)</small>
+          </div>
+
+          
+          <!-- Due Day -->
+          <div class="form-group">
+            <label for="{{ form.due_day.id_for_label }}" class="form-label">
+              {{ form.due_day.label }} <span class="text-red-500">*</span>
+            </label>
+            <input type="number" id="{{ form.due_day.id_for_label }}" name="{{ form.due_day.name }}" 
+                   class="styled-input" min="1" max="31" value="{{ form.due_day.value|default:1 }}" required>
+            {% if form.due_day.errors %}
+              <div class="text-red-600 text-sm mt-1">
+                {{ form.due_day.errors.0 }}
+              </div>
+            {% endif %}
+            <small class="text-gray-500">Day of month when rent is due (1-31)</small>
+          </div>
+        </div>
+
+        <!-- Start Date -->
+        <div class="form-group mt-4">
+          <label for="{{ form.start_date.id_for_label }}" class="form-label">
+            {{ form.start_date.label }} <span class="text-red-500">*</span>
+          </label>
+          <input type="text" id="{{ form.start_date.id_for_label }}" name="{{ form.start_date.name }}" 
+                   class="styled-input flatpickr" placeholder="Select start date" 
+                   value="{{ form.start_date.value|default:'' }}" required>
+            {% if form.start_date.errors %}
+              <div class="text-red-600 text-sm mt-1">
+                {{ form.start_date.errors.0 }}
+              </div>
+            {% endif %}
+            <small class="text-gray-500">Lease start date</small>
+        </div>
+
+        <!-- Is Active -->
+        <div class="form-group mt-4">
+          <label for="{{ form.is_active.id_for_label }}" class="form-label">
+            {{ form.is_active.label }}
+          </label>
+          <input type="checkbox" id="{{ form.is_active.id_for_label }}" name="{{ form.is_active.name }}" 
+                   class="styled-checkbox" {% if form.is_active.value %}checked{% endif %}>
+            {% if form.is_active.errors %}
+              <div class="text-red-600 text-sm mt-1">
+                {{ form.is_active.errors.0 }}
+              </div>
+            {% endif %}
+          <small class="text-gray-500">Activate this lease immediately</small>
+        </div>
+      </div>
+      
+      <div class="panel-actions">
+        <button class="btn" type="submit">
+          <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          Create Lease
+        </button>
+        {% if back_url %}
+          <a class="link" href="{{ back_url }}">
+            <svg class="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            Cancel
+          </a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+{% endblock %}
+
+<style>
+/* Form styling */
+.styled-input {
+  width: 100%;
+  min-height: 46px;
+  border: 2px solid #d1d5db;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  background: #ffffff;
+  font-size: 0.875rem;
+  color: #1f2937;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+  display: block;
+}
+
+.styled-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.styled-checkbox {
+  width: 20px;
+  height: 20px;
+  margin-right: 0.5rem;
+}
+
+/* Rent input styling */
+.rent-input-container {
+  position: relative;
+}
+
+.rent-input {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #059669;
+  background: #f9fafb;
+}
+
+.rent-input:focus {
+  background: #ffffff;
+  color: #059669;
+}
+
+.rent-input[readonly] {
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.rent-input::placeholder {
+  color: #6b7280;
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* Form group styling */
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+/* Grid layout */
+.grid {
+  display: grid;
+}
+
+.grid-cols-1 {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.grid-cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.gap-4 {
+  gap: 1rem;
+}
+
+.mt-4 {
+  margin-top: 1rem;
+}
+
+/* Error and helper text */
+.text-red-500 {
+  color: #ef4444;
+}
+
+.text-gray-500 {
+  color: #6b7280;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.text-red-600 {
+  color: #dc2626;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+/* Override any conflicting styles */
+select, input[type="text"], input[type="date"], input[type="number"], input[type="checkbox"] {
+  width: 100% !important;
+  min-height: 46px !important;
+  border: 2px solid #d1d5db !important;
+  border-radius: 0.5rem !important;
+  padding: 0.75rem !important;
+  background: #ffffff !important;
+  font-size: 0.875rem !important;
+  color: #1f2937 !important;
+  box-sizing: border-box !important;
+  display: block !important;
+}
+
+select:focus, input[type="text"]:focus, input[type="date"]:focus, input[type="number"]:focus {
+  outline: none !important;
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+input[type="checkbox"] {
+  width: 20px !important;
+  min-height: 20px !important;
+  height: 20px !important;
+}
+</style>
+
+<!-- Add Flatpickr CSS for date picker -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('Lease form loaded');
+  
+  // Initialize Flatpickr for date picker
+  const dateInput = document.querySelector('.flatpickr');
+  if (dateInput) {
+    flatpickr(dateInput, {
+      dateFormat: 'Y-m-d',
+      minDate: 'today',
+      allowInput: true
+    });
+    console.log('Date picker initialized');
+  } else {
+    console.log('Date input not found');
+  }
+  
+  // Monthly rent is auto-populated from unit selection in the backend
+  console.log('Lease form ready - monthly rent will be auto-populated from unit');
+});
+</script>
+
+<!-- Add Flatpickr JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>

@@ -1,0 +1,169 @@
+{% extends "tenant_base.html" %}
+{% load static %}
+
+{% block title %}{{ title }} Unit - RealEstate360+{% endblock %}
+
+{% block tenant_content %}
+
+<!-- Page Header -->
+<div class="mb-8">
+  <div class="flex items-start justify-between flex-wrap gap-4">
+    <div>
+      <h1 class="text-4xl font-extrabold text-gradient tracking-tight mb-2">{{ action }} Unit</h1>
+      <p class="text-gray-600 font-medium">
+        {% if action == 'Create' %}Add a new property unit to the system{% else %}Update unit information{% endif %}
+      </p>
+    </div>
+    <div class="flex gap-2">
+      <a href="{% url 'admin_units' %}" class="link">
+        <svg class="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+        </svg>
+        Back to Units
+      </a>
+      {% if unit %}
+      <a href="{% url 'unit_detail' unit.id %}" class="link">
+        <svg class="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+        </svg>
+        View Unit
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Unit Form -->
+<div class="max-w-4xl">
+  <div class="tenant-card">
+    <form method="post" class="tenant-form space-y-6">
+      {% csrf_token %}
+      
+      <!-- Basic Information -->
+      <div class="border-b border-gray-200 pb-6">
+        <h2 class="text-xl font-bold text-gradient mb-6 flex items-center gap-2">
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+          </svg>
+          Basic Information
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div>
+            {{ form.number.label_tag }}
+            {{ form.number }}
+            {% if form.number.errors %}
+              <div class="text-red-600 text-sm mt-1">
+                {{ form.number.errors.0 }}
+              </div>
+            {% endif %}
+          </div>
+          
+          <div>
+            {{ form.unit_type.label_tag }}
+            {{ form.unit_type }}
+            {% if form.unit_type.errors %}
+              <div class="text-red-600 text-sm mt-1">
+                {{ form.unit_type.errors.0 }}
+              </div>
+            {% endif %}
+          </div>
+          
+          <div>
+            {{ form.floor_level.label_tag }}
+            {{ form.floor_level }}
+            {% if form.floor_level.errors %}
+              <div class="text-red-600 text-sm mt-1">
+                {{ form.floor_level.errors.0 }}
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Unit Details -->
+      <div class="border-b border-gray-200 pb-6">
+        <h2 class="text-xl font-bold text-gradient mb-6 flex items-center gap-2">
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          </svg>
+          Unit Details
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            {{ form.monthly_rent.label_tag }}
+            {{ form.monthly_rent }}
+            {% if form.monthly_rent.errors %}
+              <div class="text-red-600 text-sm mt-1">
+                {{ form.monthly_rent.errors.0 }}
+              </div>
+            {% endif %}
+            <p class="text-xs text-gray-500 mt-1">Monthly rental amount in PHP</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status & Description -->
+      <div>
+        <h2 class="text-xl font-bold text-gradient mb-6 flex items-center gap-2">
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          Status & Description
+        </h2>
+        
+        <div class="space-y-6">
+          <div>
+            {{ form.status.label_tag }}
+            {{ form.status }}
+            {% if form.status.errors %}
+              <div class="text-red-600 text-sm mt-1">
+                {{ form.status.errors.0 }}
+              </div>
+            {% endif %}
+          </div>
+          
+          <div>
+            {{ form.description.label_tag }}
+            {{ form.description }}
+            {% if form.description.errors %}
+              <div class="text-red-600 text-sm mt-1">
+                {{ form.description.errors.0 }}
+              </div>
+            {% endif %}
+            <p class="text-xs text-gray-500 mt-1">Describe unit features, location, special characteristics, etc.</p>
+          </div>
+          
+          <div>
+            {{ form.amenities.label_tag }}
+            {{ form.amenities }}
+            {% if form.amenities.errors %}
+              <div class="text-red-600 text-sm mt-1">
+                {{ form.amenities.errors.0 }}
+              </div>
+            {% endif %}
+            <p class="text-xs text-gray-500 mt-1">List amenities separated by commas (e.g., Air Conditioning, WiFi, Parking)</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Form Actions -->
+      <div class="flex items-center gap-3 pt-6 border-t border-gray-200">
+        <button type="submit" class="btn-primary">
+          <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          {{ action }} Unit
+        </button>
+        
+        <a href="{% url 'admin_units' %}" class="link">
+          Cancel
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

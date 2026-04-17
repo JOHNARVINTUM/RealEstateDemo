@@ -1,22 +1,48 @@
 {% extends "admin_portal/base.html" %}
 {% block title %}{{ title|default:"Confirm" }}{% endblock %}
 {% block content %}
-  <div class="page-header">
-    <h1>{{ title|default:"Confirm" }}</h1>
+
+  {% if back_url %}
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="{{ back_url }}">Back</a>
+    <span class="breadcrumb-sep">›</span>
+    <span class="breadcrumb-current">{{ title|default:"Confirm" }}</span>
+  </nav>
+  {% endif %}
+
+  <div class="page-top">
+    <div class="page-header">
+      <h1>{{ title|default:"Confirm" }}</h1>
+      <p class="muted">Please review this action before continuing.</p>
+    </div>
   </div>
 
-  <div class="panel">
-    <div class="panel-body">
-      <p>{{ message }}</p>
+  <div class="panel confirm-card">
+    <div class="section-head">
+      <div style="display:flex;align-items:center;gap:0.75rem;">
+        <!-- Warning icon -->
+        <span style="display:flex;align-items:center;justify-content:center;width:2.2rem;height:2.2rem;border-radius:0.6rem;background:#fef3c7;">
+          <svg style="width:1.2rem;height:1.2rem;color:#b45309;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </span>
+        <div>
+          <h2 class="section-title">{{ title|default:"Confirm Action" }}</h2>
+          <p class="section-copy">This action may affect existing records. Review the note below before confirming.</p>
+        </div>
+      </div>
+    </div>
+    <div class="panel-body" style="margin-top:0.75rem;">
+      <p style="color:#334155;font-size:0.95rem;line-height:1.6;">{{ message }}</p>
     </div>
     <div class="panel-actions">
       <form method="post" action="{{ post_url }}">
         {% csrf_token %}
-        <button class="btn" type="submit">Confirm</button>
-        {% if back_url %}
-          <a class="link" href="{{ back_url }}">Cancel</a>
-        {% endif %}
+        <button class="btn" style="background:linear-gradient(135deg,#b91c1c,#dc2626);" type="submit">Confirm</button>
       </form>
+      {% if back_url %}
+        <a class="link" href="{{ back_url }}">Cancel</a>
+      {% endif %}
     </div>
   </div>
 {% endblock %}

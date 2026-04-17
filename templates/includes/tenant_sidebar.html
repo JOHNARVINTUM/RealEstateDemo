@@ -1,0 +1,111 @@
+{% load static %}
+<aside class="w-72 tenant-sidebar text-white flex flex-col shadow-xl z-10 shrink-0">
+
+  <!-- Brand -->
+  <div class="px-6 py-8 border-b border-white/10">
+    <div class="bg-white rounded-full w-24 h-24 mx-auto p-3 flex justify-center items-center shadow-lg mb-4 transition-all duration-300 opacity-90 hover:opacity-100 hover:shadow-xl cursor-pointer hover:scale-105">
+      <img src="{% static 'img/RealEstateLogo.png' %}" alt="RealEstate360+ Logo"
+           class="w-full h-full object-contain transition-transform duration-300">
+    </div>
+    <div class="text-center">
+      <h2 class="text-xl font-bold tracking-wide text-white">RealEstate360<span class="text-gradient" style="-webkit-text-fill-color: var(--color-secondary);">+</span></h2>
+      <span class="text-xs text-blue-200 font-semibold tracking-widest uppercase bg-white/10 px-3 py-1.5 rounded-full mt-3 inline-block backdrop-blur-sm">Tenant Portal</span>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <nav class="px-4 py-6 space-y-2 flex-1" aria-label="Tenant navigation">
+
+    <a href="{% url 'tenant_dashboard' %}"
+       aria-current="{% if request.resolver_match.url_name == 'tenant_dashboard' %}page{% endif %}"
+       class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200
+              {% if request.resolver_match.url_name == 'tenant_dashboard' %}
+                active
+              {% else %}
+                text-blue-100 hover:bg-white/5 hover:text-white
+              {% endif %}">
+      <!-- Dashboard icon -->
+      <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      </svg>
+      <span class="font-semibold">Dashboard</span>
+    </a>
+
+    <a href="{% url 'tenant_billing' %}"
+       aria-current="{% if request.resolver_match.url_name == 'tenant_billing' %}page{% endif %}"
+       class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200
+              {% if request.resolver_match.url_name == 'tenant_billing' %}
+                active
+              {% else %}
+                text-blue-100 hover:bg-white/5 hover:text-white
+              {% endif %}">
+      <!-- Billing icon -->
+      <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      <span class="font-semibold">View Billing</span>
+    </a>
+
+    <a href="{% url 'tenant_pay_advance' %}"
+       aria-current="{% if request.resolver_match.url_name == 'tenant_pay_advance' or request.resolver_match.url_name == 'manual_gcash' %}page{% endif %}"
+       class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200
+              {% if request.resolver_match.url_name == 'tenant_pay_advance' or request.resolver_match.url_name == 'manual_gcash' %}
+                active
+              {% else %}
+                text-blue-100 hover:bg-white/5 hover:text-white
+              {% endif %}">
+      <!-- Payment icon -->
+      <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+      </svg>
+      <span class="font-semibold">Make Payment</span>
+    </a>
+
+    <a href="{% url 'maintenance_list' %}"
+       aria-current="{% if request.resolver_match.url_name == 'maintenance_list' %}page{% endif %}"
+       class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200
+              {% if request.resolver_match.url_name == 'maintenance_list' %}
+                active
+              {% else %}
+                text-blue-100 hover:bg-white/5 hover:text-white
+              {% endif %}">
+      <!-- Maintenance icon -->
+      <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+      <span class="font-semibold">Maintenance</span>
+    </a>
+
+    <a href="{% url 'report_issue' %}"
+       aria-current="{% if request.resolver_match.url_name == 'report_issue' %}page{% endif %}"
+       class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200
+              {% if request.resolver_match.url_name == 'report_issue' %}
+                active
+              {% else %}
+                text-blue-100 hover:bg-white/5 hover:text-white
+              {% endif %}">
+      <!-- Report icon -->
+      <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      </svg>
+      <span class="font-semibold">Report Issue</span>
+    </a>
+
+  </nav>
+
+  <!-- Logout -->
+  <div class="px-4 py-6 border-t border-white/10">
+    <form method="post" action="{% url 'logout' %}">
+      {% csrf_token %}
+      <button type="submit"
+              class="w-full text-left flex items-center gap-3 px-4 py-3 rounded-xl text-blue-200 hover:bg-red-500/20 hover:text-red-300 transition-all duration-200 font-medium group">
+        <svg class="w-5 h-5 shrink-0 group-hover:rotate-12 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+        </svg>
+        <span class="font-semibold">Logout</span>
+      </button>
+    </form>
+  </div>
+
+</aside>

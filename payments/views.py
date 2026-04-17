@@ -5,6 +5,7 @@ from django.views.decorators.http import require_http_methods
 from django.contrib import messages
 
 from .models import ManualPayment
+from rentals.models import Notification
 
 @login_required
 @require_http_methods(["GET", "POST"])
@@ -26,11 +27,23 @@ def manual_gcash_payment(request):
             })
 
         # 3. FIX: Save the transaction WITH the required bill_ids
-        ManualPayment.objects.create(
+        payment = ManualPayment.objects.create(
             user=request.user,
             reference_code=reference_code,
             bill_ids=bill_ids,  # This stops the NOT NULL IntegrityError
         )
+        
+        # Create real-time notification for admin about new payment
+        try:
+            notification = Notification.create_notification(
+                title=f" New Payment Received",
+                message=f" {request.user.email} submitted a payment of {amount_to_pay} with reference code {reference_code}. Please review and approve this payment.",
+                notification_type='PAYMENT',
+                related_tenant=request.user
+            )
+        except Exception as e:
+            # Don't block payment submission if notification fails
+            logger.exception(f"Failed to create payment notification: {e}")
         
         messages.success(request, "Payment submitted! Please wait for admin verification.")
         return redirect("tenant_dashboard")

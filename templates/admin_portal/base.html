@@ -6,61 +6,70 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{% block title %}Admin Portal{% endblock %}</title>
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="{% static 'admin_portal/css/admin.css' %}">
-  <!-- flatpickr datepicker -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 </head>
 
 <body>
-  <div class="layout">
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-icon">🏢</div>
-        <div>
-          <div class="brand-name">RealEstate360+</div>
-          <div class="brand-sub">Admin Portal</div>
-        </div>
+  <div class="min-h-screen flex bg-slate-50 font-['Poppins',_sans-serif]">
+    {% include "admin_portal/includes/sidebar.html" %}
+
+    <main class="flex-1 px-4 py-6 overflow-y-auto">
+      <div class="content-shell">
+        <!-- Messages -->
+        {% if messages %}
+          <div class="mb-6">
+            {% for message in messages %}
+              <div class="alert alert-{{ message.tags }} mb-4 p-4 rounded-lg border-l-4" role="alert">
+                {% if message.tags == 'success' %}
+                  <div class="flex items-center">
+                    <svg class="w-5 h-5 text-green-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span class="text-green-700 font-medium">{{ message }}</span>
+                  </div>
+                {% elif message.tags == 'error' %}
+                  <div class="flex items-center">
+                    <svg class="w-5 h-5 text-red-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span class="text-red-700 font-medium">{{ message }}</span>
+                  </div>
+                {% elif message.tags == 'warning' %}
+                  <div class="flex items-center">
+                    <svg class="w-5 h-5 text-yellow-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                    <span class="text-yellow-700 font-medium">{{ message }}</span>
+                  </div>
+                {% else %}
+                  <div class="flex items-center">
+                    <svg class="w-5 h-5 text-blue-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span class="text-blue-700 font-medium">{{ message }}</span>
+                  </div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+        
+        {% block content %}{% endblock %}
       </div>
-
-      <nav class="nav">
-        <a class="nav-item {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}" href="{% url 'admin_dashboard' %}">Dashboard</a>
-        <a class="nav-item {% if request.resolver_match.url_name == 'admin_tenants' %}active{% endif %}" href="{% url 'admin_tenants' %}">Tenants</a>
-        <a class="nav-item {% if request.resolver_match.url_name == 'admin_billing' %}active{% endif %}" href="{% url 'admin_billing' %}">Billing</a>
-        <a class="nav-item {% if request.resolver_match.url_name == 'admin_payments' %}active{% endif %}" href="{% url 'admin_payments' %}">Payments</a>
-        <a class="nav-item {% if request.resolver_match.url_name == 'admin_maintenance' %}active{% endif %}" href="{% url 'admin_maintenance' %}">Maintenance</a>
-        <a class="nav-item {% if request.resolver_match.url_name == 'admin_announcements' %}active{% endif %}" href="{% url 'admin_announcements' %}">Announcements</a>
-      </nav>
-
-      <div class="sidebar-footer">
-        <form method="post" action="{% url 'logout' %}">
-          {% csrf_token %}
-          <button class="nav-item" type="submit" style="background:none;border:none;padding:0;cursor:pointer;">Logout</button>
-        </form>
-      </div>
-    </aside>
-
-    <main class="content">
-
-      <!-- Page Actions (Add Button Area) -->
-      <div class="page-actions">
-        {% block page_actions %}{% endblock %}
-      </div>
-
-    
-      <!-- Page Content -->
-      {% block content %}{% endblock %}
-
     </main>
   </div>
 
-  <!-- scripts -->
-  <!-- Confirmation modal -->
   <div id="confirmModal" aria-hidden="true">
     <div class="modal-overlay" aria-hidden="true"></div>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
       <h3 id="confirmTitle">Confirm action</h3>
       <p class="confirm-message">Are you sure?</p>
-      <div class="actions" style="margin-top:12px;">
+      <div class="actions">
         <button class="btn confirm-yes" type="button">Confirm</button>
         <button class="btn confirm-no" type="button">Cancel</button>
       </div>
@@ -70,18 +79,15 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="{% static 'admin_portal/js/charts.js' %}"></script>
   <script src="{% static 'admin_portal/js/admin-actions.js' %}"></script>
-  <!-- flatpickr -->
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script>
     (function(){
       try {
-        // initialize flatpickr on inputs with class 'flatpickr'
         flatpickr('.flatpickr', {
           dateFormat: 'Y-m-d',
           allowInput: true,
         });
       } catch(e) {
-        // fail silently if flatpickr not available
         console.warn('flatpickr init failed', e);
       }
     })();

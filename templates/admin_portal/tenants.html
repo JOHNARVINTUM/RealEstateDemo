@@ -1,22 +1,43 @@
 {% extends "admin_portal/base.html" %}
 {% block title %}Tenants{% endblock %}
-{% block page_actions %}
-  <a class="action-btn" href="{% url 'admin_create_tenant_profile' %}">+ Add Tenant</a>
-  <a class="action-btn" href="{% url 'admin_create_lease' %}">+ Add Lease</a>
-  <a class="action-btn" href="{% url 'admin_create_unit' %}">+ Add Unit</a>
-{% endblock %}
 
 {% block content %}
- 
-  <div class="page-header">
-    <h1>Tenants</h1>
-    <p class="muted">Search and manage tenant profiles</p>
+  <div class="page-top">
+    <div class="page-header">
+      <h1>Tenants</h1>
+      <p class="muted">Search and manage tenant profiles</p>
+    </div>
+    <div class="page-actions">
+      <a class="action-btn" href="{% url 'admin_create_tenant_profile' %}">+ Add Tenant</a>
+      <a class="action-btn" href="{% url 'admin_create_lease' %}">+ Add Lease</a>
+      <a class="action-btn" href="{% url 'admin_create_unit' %}">+ Add Unit</a>
+    </div>
   </div>
 
-  <form class="toolbar" method="get">
-    <input class="input" name="q" value="{{ q }}" placeholder="Search name, email, contact..." />
-    <button class="btn" type="submit">Search</button>
-  </form>
+  <section class="hero-panel compact">
+    <h2 class="hero-title">Tenant Records</h2>
+    <p class="hero-copy">Review profiles, confirm contact details, and jump into lease management without leaving this page.</p>
+  </section>
+
+  <div class="filter-panel">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title">Search</h2>
+        <p class="section-copy">Find tenants by full name, email address, or contact number.</p>
+      </div>
+    </div>
+    <form class="toolbar" method="get">
+      <input class="input" name="q" value="{{ q }}" placeholder="Search name, email, contact..." />
+      <button class="btn" type="submit">Search</button>
+      {% if q %}<a class="link" href="{% url 'admin_tenants' %}">Clear</a>{% endif %}
+    </form>
+  </div>
+
+  {% if tenants %}
+    <div class="section-head" style="margin-bottom:0.6rem;">
+      <span class="result-count">{{ tenants|length }} tenant{% if tenants|length != 1 %}s{% endif %} found</span>
+    </div>
+  {% endif %}
 
   <div class="table-wrap">
     <table class="table">
@@ -31,24 +52,27 @@
       <tbody>
         {% for t in tenants %}
           <tr>
-            <td>{{ t.full_name }}</td>
-            <td>{{ t.user.email }}</td>
-            <td>{{ t.contact_no }}</td>
             <td>
+              <div class="cell-title">{{ t.full_name }}</div>
+              <div class="cell-sub">Tenant profile</div>
+            </td>
+            <td>
+              <div class="cell-title">{{ t.user.email }}</div>
+              <div class="cell-sub">{{ t.user.username }}</div>
+            </td>
+            <td>{{ t.contact_no|default:"-" }}</td>
+            <td class="table-actions">
               <a class="link" href="{% url 'admin_tenant_detail' t.id %}">View</a>
-              |
               <a class="link" href="{% url 'admin_edit_tenant' t.id %}">Edit</a>
-              |
               <a class="link" href="{% url 'admin_create_lease' %}?tenant_id={{ t.user.id }}">Add Lease</a>
-              |
               <form method="post" action="{% url 'admin_delete_tenant' t.id %}" class="confirm-action" data-confirm="Delete tenant {{ t.full_name }}?">
                 {% csrf_token %}
-                <button class="link" type="submit">Delete</button>
+                <button class="link link-danger" type="submit">Delete</button>
               </form>
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="4" class="muted">No tenants found.</td></tr>
+          <tr><td colspan="4" class="empty-state">No tenants found.</td></tr>
         {% endfor %}
       </tbody>
     </table>

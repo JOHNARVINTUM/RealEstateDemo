@@ -1,21 +1,56 @@
 {% extends "admin_portal/base.html" %}
 {% block title %}Payments{% endblock %}
 {% block content %}
-  <div class="page-header">
-    <h1>Payments</h1>
-    <p class="muted">Manual payment submissions</p>
+  <div class="page-top">
+    <div class="page-header">
+      <h1>Payments</h1>
+      <p class="muted">Manual payment submissions</p>
+    </div>
   </div>
 
-  <form class="toolbar" method="get">
-    <input class="input" name="q" value="{{ q }}" placeholder="Search email, ref code, bill ids..." />
-    <select class="input" name="status">
-      <option value="">All</option>
-      <option value="PENDING" {% if status == "PENDING" %}selected{% endif %}>PENDING</option>
-      <option value="APPROVED" {% if status == "APPROVED" %}selected{% endif %}>APPROVED</option>
-      <option value="REJECTED" {% if status == "REJECTED" %}selected{% endif %}>REJECTED</option>
-    </select>
-    <button class="btn" type="submit">Filter</button>
-  </form>
+  <section class="hero-panel compact">
+    <h2 class="hero-title">Payment Queue</h2>
+    <p class="hero-copy">Review submitted payment references, confirm the linked bill set, and process pending requests with clear approve or reject actions.</p>
+  </section>
+
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat-pill">
+      <span class="stat-pill-value">{{ payments|length }}</span> Total
+    </div>
+    <div class="stat-pill" style="border-color:#fde68a;background:#fffbeb;">
+      <span class="stat-pill-value" style="color:#b45309;">{{ pending_count|default:0 }}</span>
+      <span style="color:#b45309;">Pending</span>
+    </div>
+    <div class="stat-pill" style="border-color:#bbf7d0;background:#f0fdf4;">
+      <span class="stat-pill-value" style="color:#15803d;">{{ approved_count|default:0 }}</span>
+      <span style="color:#15803d;">Approved</span>
+    </div>
+    <div class="stat-pill" style="border-color:#fecaca;background:#fff1f2;">
+      <span class="stat-pill-value" style="color:#b91c1c;">{{ rejected_count|default:0 }}</span>
+      <span style="color:#b91c1c;">Rejected</span>
+    </div>
+  </div>
+
+  <div class="filter-panel">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title">Filters</h2>
+        <p class="section-copy">Search by user email, payment reference, bill IDs, or approval state.</p>
+      </div>
+    </div>
+    <form class="toolbar" method="get">
+      <input class="input" name="q" value="{{ q }}" placeholder="Search email, ref code, bill ids..." />
+      <select class="input" name="status">
+        <option value="">All Statuses</option>
+        <option value="PENDING" {% if status == "PENDING" %}selected{% endif %}>Pending</option>
+        <option value="APPROVED" {% if status == "APPROVED" %}selected{% endif %}>Approved</option>
+        <option value="REJECTED" {% if status == "REJECTED" %}selected{% endif %}>Rejected</option>
+      </select>
+      <button class="btn" type="submit">Filter</button>
+      {% if q or status %}<a class="link" href="{% url 'admin_payments' %}">Clear</a>{% endif %}
+    </form>
+  </div>
 
   <div class="table-wrap">
     <table class="table">
@@ -32,29 +67,37 @@
       <tbody>
         {% for p in payments %}
           <tr>
-            <td>{{ p.user.email }}</td>
-            <td>{{ p.reference_code }}</td>
-            <td>{{ p.bill_ids }}</td>
-            <td>{{ p.status }}</td>
-            <td>{{ p.created_at }}</td>
             <td>
+              <div class="cell-title">{{ p.user.email }}</div>
+              <div class="cell-sub">Tenant payer</div>
+            </td>
+            <td>
+              <div class="cell-title">{{ p.reference_code }}</div>
+              <div class="cell-sub">Submitted reference</div>
+            </td>
+            <td>{{ p.bill_ids }}</td>
+            <td>
+              <span class="status-badge {% if p.status == 'APPROVED' %}status-approved{% elif p.status == 'REJECTED' %}status-rejected{% else %}status-pending{% endif %}">
+                {{ p.status }}
+              </span>
+            </td>
+            <td>{{ p.created_at }}</td>
+            <td class="table-actions">
               {% if p.status == "PENDING" %}
-                <form method="post" action="{% url 'admin_approve_payment' p.id %}" class="confirm-action" data-confirm="Approve payment {{ p.reference_code }}?" style="display:inline;">
+                <form method="post" action="{% url 'admin_approve_payment' p.id %}" class="confirm-action" data-confirm="Approve payment {{ p.reference_code }}?">
                   {% csrf_token %}
-                  <button class="link" type="submit">Approve</button>
+                  <button class="link link-success" type="submit">Approve</button>
                 </form>
-                |
-                <form method="post" action="{% url 'admin_reject_payment' p.id %}" class="confirm-action" data-confirm="Reject payment {{ p.reference_code }}?" style="display:inline;">
+                <form method="post" action="{% url 'admin_reject_payment' p.id %}" class="confirm-action" data-confirm="Reject payment {{ p.reference_code }}?">
                   {% csrf_token %}
-                  <button class="link" type="submit">Reject</button>
+                  <button class="link link-danger" type="submit">Reject</button>
                 </form>
-              {% else %}
-                -
               {% endif %}
+              <a class="link link-danger" href="{% url 'admin_delete_payment' p.id %}">Delete</a>
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="5" class="muted">No payments found.</td></tr>
+          <tr><td colspan="6" class="empty-state">No payments found.</td></tr>
         {% endfor %}
       </tbody>
     </table>

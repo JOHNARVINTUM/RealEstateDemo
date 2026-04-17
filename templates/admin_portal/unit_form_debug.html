@@ -1,0 +1,115 @@
+{% extends "admin_portal/base.html" %}
+{% block title %}{{ title|default:"Unit Form" }} - Admin Portal{% endblock %}
+
+{% block content %}
+  <div class="page-top">
+    <div class="page-header">
+      <h1>DEBUG: {{ title|default:"Unit Form" }}</h1>
+    </div>
+  </div>
+
+  <div class="panel confirm-card">
+    <div class="section-head">
+      <div>
+        <h2>DEBUG FORM - Simplified</h2>
+        <p>This form bypasses all styling to test data submission.</p>
+      </div>
+    </div>
+    
+    <form method="post" id="debug-form">
+      {% csrf_token %}
+      <div class="panel-body">
+        <h3>Current Unit Data:</h3>
+        <p>Number: {{ form.instance.number }}</p>
+        <p>Current Rent: {{ form.instance.monthly_rent }}</p>
+        <p>Unit ID: {{ form.instance.id }}</p>
+        
+        <hr>
+        
+        <h3>Form Fields (No CSS, No JavaScript):</h3>
+        
+        <div style="margin: 20px 0;">
+          <label>Unit Number:</label><br>
+          <input type="text" name="number" value="{{ form.instance.number }}" style="border: 1px solid black; padding: 5px;">
+        </div>
+        
+        <div style="margin: 20px 0;">
+          <label>Monthly Rent:</label><br>
+          <input type="number" name="monthly_rent" value="{{ form.instance.monthly_rent }}" style="border: 1px solid black; padding: 5px;">
+        </div>
+        
+        <div style="margin: 20px 0;">
+          <label>Unit Type:</label><br>
+          <select name="unit_type" style="border: 1px solid black; padding: 5px;">
+            <option value="STUDIO" {% if form.instance.unit_type == 'STUDIO' %}selected{% endif %}>Studio</option>
+            <option value="1BR" {% if form.instance.unit_type == '1BR' %}selected{% endif %}>1 Bedroom</option>
+            <option value="2BR" {% if form.instance.unit_type == '2BR' %}selected{% endif %}>2 Bedrooms</option>
+            <option value="3BR" {% if form.instance.unit_type == '3BR' %}selected{% endif %}>3 Bedrooms</option>
+            <option value="PENTHOUSE" {% if form.instance.unit_type == 'PENTHOUSE' %}selected{% endif %}>Penthouse</option>
+          </select>
+        </div>
+        
+        <div style="margin: 20px 0;">
+          <label>Floor Level:</label><br>
+          <input type="number" name="floor_level" value="{{ form.instance.floor_level }}" style="border: 1px solid black; padding: 5px;">
+        </div>
+        
+        <div style="margin: 20px 0;">
+          <label>Status:</label><br>
+          <select name="status" style="border: 1px solid black; padding: 5px;">
+            <option value="AVAILABLE" {% if form.instance.status == 'AVAILABLE' %}selected{% endif %}>Available</option>
+            <option value="OCCUPIED" {% if form.instance.status == 'OCCUPIED' %}selected{% endif %}>Occupied</option>
+            <option value="MAINTENANCE" {% if form.instance.status == 'MAINTENANCE' %}selected{% endif %}>Under Maintenance</option>
+            <option value="RESERVED" {% if form.instance.status == 'RESERVED' %}selected{% endif %}>Reserved</option>
+          </select>
+        </div>
+        
+        <div style="margin: 20px 0;">
+          <label>Description:</label><br>
+          <textarea name="description" style="border: 1px solid black; padding: 5px; width: 300px; height: 60px;">{{ form.instance.description }}</textarea>
+        </div>
+        
+        <div style="margin: 20px 0;">
+          <label>Amenities:</label><br>
+          <textarea name="amenities" style="border: 1px solid black; padding: 5px; width: 300px; height: 60px;">{{ form.instance.amenities }}</textarea>
+        </div>
+        
+        <input type="hidden" name="size_sqm" value="25.00">
+        
+        <hr>
+        
+        <div style="margin: 20px 0;">
+          <h4>Form Errors (if any):</h4>
+          {% if form.errors %}
+            {% for field, errors in form.errors.items %}
+              <p><strong>{{ field }}:</strong> {{ errors }}</p>
+            {% endfor %}
+          {% else %}
+            <p>No form errors</p>
+          {% endif %}
+        </div>
+      </div>
+      
+      <div class="panel-actions">
+        <button type="submit" style="background: blue; color: white; padding: 10px 20px; border: none;">
+          TEST SUBMIT
+        </button>
+        {% if back_url %}
+          <a href="{{ back_url }}" style="margin-left: 10px;">Cancel</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  <script>
+  // Add simple debugging
+  document.getElementById('debug-form').addEventListener('submit', function(e) {
+    console.log('=== DEBUG FORM SUBMISSION ===');
+    const formData = new FormData(this);
+    for (let [key, value] of formData.entries()) {
+      console.log(key + ': ' + value);
+    }
+    console.log('=== END DEBUG ===');
+  });
+  </script>
+{% endblock %}

@@ -118,9 +118,11 @@ class LeaseForm(forms.ModelForm):
         except Exception as e:
             logger.exception("Failed to set tenant queryset: %s", e)
         
-        # only allow selecting active units
+        # only allow selecting available units (active units without active leases)
         try:
-            self.fields["unit"].queryset = Unit.objects.filter(is_active=True)
+            # Get units that are active and don't have active leases
+            occupied_units = Lease.objects.filter(is_active=True).values_list('unit_id', flat=True)
+            self.fields["unit"].queryset = Unit.objects.filter(is_active=True).exclude(id__in=occupied_units)
         except Exception as e:
             logger.exception("Failed to set unit queryset: %s", e)
 

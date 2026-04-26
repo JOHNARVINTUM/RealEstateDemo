@@ -1,0 +1,213 @@
+{% extends "admin_portal/base.html" %}
+{% load humanize %}
+{% block title %}Tenant Risk Classification{% endblock %}
+{% block content %}
+  <div class="page-top">
+    <div class="page-header">
+      <h1>Tenant Risk Classification</h1>
+      <p class="muted">Payment behavior analysis and risk assessment</p>
+    </div>
+  </div>
+
+  <section class="hero-panel compact">
+    <h2 class="hero-title">Risk Assessment Dashboard</h2>
+    <p class="hero-copy">Monitor tenant payment patterns, identify potential risks, and make informed decisions about lease renewals and payment collections.</p>
+  </section>
+
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat-pill">
+      <span class="stat-pill-value">{{ total_tenants }}</span> Total Tenants
+    </div>
+    <div class="stat-pill" style="border-color:#bbf7d0;background:#f0fdf4;">
+      <span class="stat-pill-value" style="color:#15803d;">{{ low_risk_count }}</span>
+      <span style="color:#15803d;">Low Risk</span>
+    </div>
+    <div class="stat-pill" style="border-color:#fde68a;background:#fffbeb;">
+      <span class="stat-pill-value" style="color:#b45309;">{{ medium_risk_count }}</span>
+      <span style="color:#b45309;">Medium Risk</span>
+    </div>
+    <div class="stat-pill" style="border-color:#fecaca;background:#fff1f2;">
+      <span class="stat-pill-value" style="color:#b91c1c;">{{ high_risk_count }}</span>
+      <span style="color:#b91c1c;">High Risk</span>
+    </div>
+    <div class="stat-pill" style="border-color:#dbeafe;background:#eff6ff;">
+      <span class="stat-pill-value" style="color:#1e40af;">{{ new_tenant_count }}</span>
+      <span style="color:#1e40af;">New Tenants</span>
+    </div>
+  </div>
+
+  <div class="filter-panel">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title">Filters</h2>
+        <p class="section-copy">Filter tenants by risk level, name, or email address.</p>
+      </div>
+      <div class="section-actions">
+        <form method="post" action="{% url 'admin_update_tenant_risks' %}" style="display: inline;">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary" onclick="return confirm('Update all tenant risk classifications? This may take a moment.')">
+            Update Risk Scores
+          </button>
+        </form>
+      </div>
+    </div>
+    <form class="toolbar" method="get">
+      <input class="input" name="q" value="{{ q }}" placeholder="Search tenant name or email..." />
+      <select class="input" name="risk">
+        <option value="">All Risk Levels</option>
+        <option value="LOW" {% if risk == "LOW" %}selected{% endif %}>Low Risk</option>
+        <option value="MEDIUM" {% if risk == "MEDIUM" %}selected{% endif %}>Medium Risk</option>
+        <option value="HIGH" {% if risk == "HIGH" %}selected{% endif %}>High Risk</option>
+      </select>
+      <button class="btn" type="submit">Filter</button>
+      {% if q or risk %}<a class="link" href="{% url 'admin_tenant_risk' %}">Clear</a>{% endif %}
+    </form>
+  </div>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Tenant</th>
+          <th>Risk Level</th>
+          <th>Payment Score</th>
+          <th>Late Payments</th>
+          <th>Unpaid Bills</th>
+          <th>Last Payment</th>
+          <th>Risk Factors</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for risk in page_obj %}
+          <tr>
+            <td>
+              <div class="cell-title">{{ risk.tenant.tenantprofile.full_name|default:risk.tenant.email }}</div>
+              <div class="cell-sub">{{ risk.tenant.email }}</div>
+            </td>
+            <td>
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <span class="status-badge 
+                  {% if risk.risk_level == 'LOW' %}status-approved
+                  {% elif risk.risk_level == 'MEDIUM' %}status-pending
+                  {% else %}status-rejected{% endif %}">
+                  {{ risk.get_risk_level_display }}
+                </span>
+                {% if risk.is_new_tenant %}
+                  <span class="status-badge" style="background-color: #dbeafe; color: #1e40af; font-size: 0.75rem;">
+                    NEW TENANT
+                  </span>
+                {% endif %}
+              </div>
+            </td>
+            <td>
+              <div class="cell-title">{{ risk.payment_score }}/100</div>
+              <div class="cell-sub">
+                {% if risk.payment_score >= 80 %}
+                  <span style="color: #15803d;">Excellent</span>
+                {% elif risk.payment_score >= 60 %}
+                  <span style="color: #b45309;">Good</span>
+                {% elif risk.payment_score >= 40 %}
+                  <span style="color: #ea580c;">Fair</span>
+                {% else %}
+                  <span style="color: #b91c1c;">Poor</span>
+                {% endif %}
+              </div>
+            </td>
+            <td>{{ risk.late_payment_count }}</td>
+            <td>{{ risk.unpaid_bill_count }}</td>
+            <td>
+              {% if risk.last_payment_date %}
+                {{ risk.last_payment_date|date:"M d, Y" }}
+              {% else %}
+                <span class="muted">No payments</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="risk-factors">
+                {% if risk.risk_factors %}
+                  <div class="factor-item">
+                    <small>Timeliness: {{ risk.risk_factors.payment_timeliness|default:0 }}/100</small>
+                  </div>
+                  <div class="factor-item">
+                    <small>Consistency: {{ risk.risk_factors.payment_consistency|default:0 }}/100</small>
+                  </div>
+                  <div class="factor-item">
+                    <small>Current Status: {{ risk.risk_factors.current_payment_status|default:0 }}/100</small>
+                  </div>
+                {% else %}
+                  <span class="muted">Not calculated</span>
+                {% endif %}
+              </div>
+            </td>
+            <td class="table-actions">
+              <a class="link" href="{% url 'admin_tenant_detail' risk.tenant.id %}">View Details</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="8" class="empty-state">No tenant risk classifications found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if page_obj.has_other_pages %}
+    <div class="pagination">
+      {% if page_obj.has_previous %}
+        <a href="?page=1{% if q %}&q={{ q }}{% endif %}{% if risk %}&risk={{ risk }}{% endif %}" class="pagination-link">First</a>
+        <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if risk %}&risk={{ risk }}{% endif %}" class="pagination-link">Previous</a>
+      {% endif %}
+      
+      <span class="pagination-info">
+        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+      </span>
+      
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if risk %}&risk={{ risk }}{% endif %}" class="pagination-link">Next</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}{% if q %}&q={{ q }}{% endif %}{% if risk %}&risk={{ risk }}{% endif %}" class="pagination-link">Last</a>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <style>
+    .risk-factors {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    
+    .factor-item {
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+    
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 1rem;
+      padding: 1rem;
+    }
+    
+    .pagination-link {
+      padding: 0.5rem 1rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.375rem;
+      text-decoration: none;
+      color: #374151;
+      background: white;
+    }
+    
+    .pagination-link:hover {
+      background: #f9fafb;
+    }
+    
+    .pagination-info {
+      color: #6b7280;
+      font-size: 0.875rem;
+    }
+  </style>
+{% endblock %}

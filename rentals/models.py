@@ -120,4 +120,40 @@ class Notification(models.Model):
             related_tenant=related_tenant
         )
 
+class TenantRiskClassification(models.Model):
+    RISK_LEVELS = [
+        ('LOW', 'Low Risk'),
+        ('MEDIUM', 'Medium Risk'),
+        ('HIGH', 'High Risk'),
+    ]
+    
+    tenant = models.OneToOneField('accounts.User', on_delete=models.CASCADE, limit_choices_to={'role': 'TENANT'})
+    risk_level = models.CharField(max_length=10, choices=RISK_LEVELS, default='MEDIUM')
+    payment_score = models.IntegerField(default=50, help_text="Payment behavior score (0-100)")
+    late_payment_count = models.IntegerField(default=0, help_text="Number of late payments")
+    unpaid_bill_count = models.IntegerField(default=0, help_text="Current unpaid bills")
+    last_payment_date = models.DateTimeField(null=True, blank=True, help_text="Last successful payment date")
+    is_new_tenant = models.BooleanField(default=False, help_text="Tenant with less than 3 months of payment history")
+    risk_factors = models.JSONField(default=dict, help_text="JSON object storing risk factors")
+    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-risk_level', 'tenant__email']
+        verbose_name = "Tenant Risk Classification"
+        verbose_name_plural = "Tenant Risk Classifications"
+    
+    def __str__(self):
+        return f"{self.tenant.email} - {self.get_risk_level_display()}"
+    
+    def calculate_risk_level(self):
+        """Calculate risk level based on payment score and other factors"""
+        if self.payment_score >= 80:
+            self.risk_level = 'LOW'
+        elif self.payment_score >= 50:
+            self.risk_level = 'MEDIUM'
+        else:
+            self.risk_level = 'HIGH'
+        self.save()
+
 # Create your models here.

@@ -132,14 +132,203 @@
       <div class="section-head">
         <div>
           <h2 class="section-title">Monthly Rental Income Forecast</h2>
-          <p class="section-copy">Reserved for forecast visualizations and revenue trend planning.</p>
+          <p class="section-copy">Actual vs expected rental income with filtering options.</p>
+        </div>
+        <div class="section-actions">
+          <select id="monthFilter" class="form-select" style="padding: 8px; border-radius: 6px; border: 1px solid #ddd;">
+            <option value="12">Last 12 Months</option>
+            <option value="6">Last 6 Months</option>
+            <option value="3">Last 3 Months</option>
+            <option value="1">Last Month</option>
+          </select>
         </div>
       </div>
-      <canvas id="rentChart" height="110"></canvas>
+      <div style="height: 300px; width: 100%; position: relative;">
+        <canvas id="rentChart"></canvas>
+      </div>
       <div class="panel-foot">
-        Forecast placeholder. Real data can be connected next.
+        Showing actual payments received vs expected income from active leases
       </div>
     </div>
+  </section>
+
+  <!-- Debug: Check if data exists -->
+{% if monthly_income_data %}
+    <p style="color: red; font-size: 12px;">DEBUG: Found {{ monthly_income_data|length }} months of data</p>
+{% else %}
+    <p style="color: red; font-size: 12px;">DEBUG: No monthly_income_data found</p>
+{% endif %}
+
+{{ monthly_income_data|json_script:"monthly_income_data" }}
+{{ months_labels|json_script:"months_labels" }}
+
+<script>
+    // Monthly Rental Income Chart
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DEBUG: DOM loaded, starting chart initialization...');
+        
+        // Check if Chart is available
+        if (typeof Chart === 'undefined') {
+            console.error('DEBUG: Chart.js not loaded');
+            return;
+        }
+        
+        const rentCtx = document.getElementById('rentChart');
+        if (!rentCtx) {
+            console.error('DEBUG: Chart canvas not found');
+            return;
+        }
+        
+        console.log('DEBUG: Chart canvas found');
+        
+        // Parse Django data for JavaScript
+        const monthlyIncomeDataElement = document.getElementById('monthly_income_data');
+        const monthsLabelsElement = document.getElementById('months_labels');
+        const monthFilter = document.getElementById('monthFilter');
+        
+        if (!monthlyIncomeDataElement || !monthsLabelsElement || !monthFilter) {
+            console.error('DEBUG: Data elements or filter not found');
+            return;
+        }
+        
+        console.log('DEBUG: Raw data elements found');
+        
+        let chart = null;
+        let fullMonthlyData = [];
+        let fullMonthsLabels = [];
+        
+        try {
+            fullMonthlyData = JSON.parse(monthlyIncomeDataElement.textContent);
+            fullMonthsLabels = JSON.parse(monthsLabelsElement.textContent);
+            
+            console.log('DEBUG: Parsed data:', fullMonthlyData);
+            console.log('DEBUG: Parsed labels:', fullMonthsLabels);
+            
+            if (fullMonthlyData.length === 0 || fullMonthsLabels.length === 0) {
+                console.error('DEBUG: Empty data arrays');
+                return;
+            }
+            
+            // Function to create/update chart with filtered data
+            function updateChart(monthsToShow) {
+                console.log('DEBUG: updateChart called with monthsToShow:', monthsToShow);
+                console.log('DEBUG: fullMonthlyData length:', fullMonthlyData.length);
+                console.log('DEBUG: fullMonthsLabels length:', fullMonthsLabels.length);
+                
+                const endIndex = fullMonthlyData.length;
+                const startIndex = Math.max(0, endIndex - monthsToShow);
+                
+                const filteredData = fullMonthlyData.slice(startIndex, endIndex);
+                const filteredLabels = fullMonthsLabels.slice(startIndex, endIndex);
+                
+                console.log(`DEBUG: Showing ${monthsToShow} months, from index ${startIndex} to ${endIndex}`);
+                console.log('DEBUG: Filtered data:', filteredData);
+                console.log('DEBUG: Filtered labels:', filteredLabels);
+                console.log('DEBUG: Chart object exists:', !!chart);
+                
+                const chartData = {
+                    labels: filteredLabels,
+                    datasets: [{
+                        label: 'Actual Income',
+                        data: filteredData.map(item => item.actual),
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        tension: 0.1,
+                        fill: true
+                    }, {
+                        label: 'Expected Income',
+                        data: filteredData.map(item => item.expected),
+                        borderColor: 'rgb(255, 99, 132)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        tension: 0.1,
+                        fill: true
+                    }]
+                };
+                
+                // Clear any existing chart on this canvas
+                console.log('DEBUG: Clearing canvas...');
+                const existingChart = Chart.getChart(rentCtx);
+                if (existingChart) {
+                    console.log('DEBUG: Found existing chart, destroying it');
+                    existingChart.destroy();
+                }
+                
+                // Create new chart
+                console.log('DEBUG: Creating new chart');
+                chart = new Chart(rentCtx, {
+                    type: 'line',
+                    data: chartData,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        resizeDelay: 0,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            title: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '₱' + value.toLocaleString();
+                                    }
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    maxRotation: 45,
+                                    minRotation: 45
+                                }
+                            }
+                        }
+                    }
+                });
+                console.log('DEBUG: New chart created');
+                
+                console.log('DEBUG: Chart operation completed successfully');
+            }
+            
+            // Initialize chart with default 12 months
+            console.log('DEBUG: About to initialize chart with 12 months...');
+            updateChart(12);
+            console.log('DEBUG: Chart initialization completed');
+            
+            // Add event listener for filter change
+            monthFilter.addEventListener('change', function(e) {
+                e.preventDefault();
+                const selectedMonths = parseInt(this.value);
+                console.log('DEBUG: Filter changed to:', selectedMonths, 'months');
+                console.log('DEBUG: Filter element:', this);
+                console.log('DEBUG: Event object:', e);
+                updateChart(selectedMonths);
+            });
+            
+            // Also add click event as backup
+            monthFilter.addEventListener('click', function() {
+                console.log('DEBUG: Filter clicked');
+            });
+            
+            // Test initial filter
+            console.log('DEBUG: Initial filter value:', monthFilter.value);
+            console.log('DEBUG: Filter options:', Array.from(monthFilter.options).map(opt => opt.value));
+            
+            // Test manual filter change
+            console.log('DEBUG: Testing manual filter change...');
+            monthFilter.value = '6';
+            console.log('DEBUG: Changed filter to 6 months');
+            updateChart(6);
+            monthFilter.value = '12';  // Reset to default
+            
+        } catch (error) {
+            console.error('DEBUG: Error creating chart:', error);
+        }
+    });
+  </script>
   </section>
 
   <section class="grid-2">

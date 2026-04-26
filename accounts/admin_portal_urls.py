@@ -28,6 +28,8 @@ from .admin_portal_views import (
     admin_units,
     admin_unit_detail,
     admin_edit_unit,
+    admin_tenant_risk,
+    admin_update_tenant_risks,
     admin_delete_unit,
     admin_toggle_unit_status,
     admin_mark_notification_read,
@@ -54,6 +56,10 @@ urlpatterns = [
     path("maintenance/", admin_maintenance, name="admin_maintenance"),
     path("maintenance/<int:req_id>/update/", admin_update_maintenance, name="admin_update_maintenance"),
     path("announcements/", admin_announcements, name="admin_announcements"),
+    
+    # Tenant Risk Classification
+    path("tenant-risk/", admin_tenant_risk, name="admin_tenant_risk"),
+    path("tenant-risk/update/", admin_update_tenant_risks, name="admin_update_tenant_risks"),
     
     # Notifications
     path("notifications/", admin_notifications, name="admin_notifications"),

@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, timedelta
 import logging
 
 from django.db.models import Sum, Q
@@ -11,16 +11,16 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.core.paginator import Paginator
 from django.utils.timezone import now
-from datetime import timedelta
 import json
 from django.utils import timezone
-from rentals.models import Lease, Unit, TenantProfile, Notification
+from rentals.models import Lease, Unit, TenantProfile, Notification, TenantRiskClassification
 from billing.models import MonthlyBill
 from billing.services import ensure_bills_since_move_in, set_bill_status, approve_manual_payment, reject_manual_payment
 from payments.models import ManualPayment
 from maintenance.models import MaintenanceRequest
 from announcements.models import Announcement
 from maintenance.forms import AdminMaintenanceUpdateForm
+from rentals.services import TenantRiskService
 
 from .admin_portal_forms import TenantProfileForm, AnnouncementForm, LeaseForm
 from .admin_portal_forms import TenantProfileEditForm
@@ -47,8 +47,66 @@ def admin_dashboard(request):
     )
     overdue_payments = MonthlyBill.objects.filter(status="UNPAID", due_date__lt=today).count()
 
-    # Get notifications for the current user
-    all_notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
+    # Get monthly rental income data for the past 12 months including current month
+    monthly_income_data = []
+    months_labels = []
+    
+    # Debug: Check if we have any data
+    logger.info(f"DEBUG: Today is {today}")
+    logger.info(f"DEBUG: Total paid bills: {MonthlyBill.objects.filter(status='PAID').count()}")
+    logger.info(f"DEBUG: Active leases: {Lease.objects.filter(is_active=True).count()}")
+    
+    # Calculate months from 11 months ago to current month (inclusive)
+    current_month_start = today.replace(day=1)
+    
+    for i in range(12):
+        # Calculate month date: current month minus i months
+        if i == 0:
+            # Current month
+            month_date = current_month_start
+        else:
+            # Previous months
+            # Go back i months from current month
+            month_year = current_month_start.year
+            month_month = current_month_start.month - i
+            
+            # Adjust year if month goes below 1
+            while month_month <= 0:
+                month_month += 12
+                month_year -= 1
+            
+            month_date = datetime(month_year, month_month, 1).date()
+        
+        # Get paid bills for this month
+        month_revenue = (
+            MonthlyBill.objects.filter(
+                status="PAID",
+                paid_at__year=month_date.year,
+                paid_at__month=month_date.month
+            ).aggregate(total=Sum("total_due"))["total"] or 0
+        )
+        
+        # Get expected revenue from active leases
+        expected_revenue = (
+            Lease.objects.filter(is_active=True)
+            .aggregate(total=Sum("monthly_rent"))["total"] or 0
+        )
+        
+        monthly_income_data.append({
+            'month': month_date.strftime('%b %Y'),
+            'actual': float(month_revenue),
+            'expected': float(expected_revenue)
+        })
+        months_labels.append(month_date.strftime('%b'))
+        
+        # Debug: Log each month's data
+        logger.info(f"DEBUG: {month_date.strftime('%b %Y')} - Actual: {month_revenue}, Expected: {expected_revenue}")
+    
+    logger.info(f"DEBUG: Final monthly_income_data: {monthly_income_data}")
+    logger.info(f"DEBUG: Final months_labels: {months_labels}")
+
+    # Get notifications for admin (all notifications, not just user-specific)
+    all_notifications = Notification.objects.all().order_by('-created_at')
     notifications = all_notifications[:5]
     unread_notifications = all_notifications.filter(is_read=False)
     unread_count = unread_notifications.count()
@@ -62,6 +120,8 @@ def admin_dashboard(request):
         "notifications": notifications,
         "unread_notifications": unread_notifications,
         "unread_count": unread_count,
+        "monthly_income_data": monthly_income_data,
+        "months_labels": months_labels,
     })
 
 
@@ -593,7 +653,7 @@ def admin_notifications(request):
 @admin_required
 def admin_mark_notification_read(request, notification_id):
     """Admin portal: mark notification as read"""
-    notification = get_object_or_404(Notification, id=notification_id, user=request.user)
+    notification = get_object_or_404(Notification, id=notification_id)
     notification.is_read = True
     notification.save()
     
@@ -651,7 +711,46 @@ def admin_billing(request):
         )
 
     bills = bills.order_by("-billing_month")[:500]
-    return render(request, "admin_portal/billing.html", {"bills": bills, "q": q, "status": status})
+    
+    # Calculate paid bills count for statistics
+    if status == "PAID":
+        paid_bills_count = bills.count()
+    elif status == "UNPAID":
+        paid_bills_count = 0
+    else:
+        # Count paid bills from all bills (before filtering)
+        all_bills = MonthlyBill.objects.select_related("lease", "lease__unit", "lease__tenant")
+        if q:
+            all_bills = all_bills.filter(
+                Q(lease__tenant__email__icontains=q) |
+                Q(lease__unit__number__icontains=q) |
+                Q(payment_reference__icontains=q)
+            )
+        paid_bills_count = all_bills.filter(status="PAID").count()
+    
+    # Calculate unpaid bills count
+    if status == "PAID":
+        unpaid_bills_count = 0
+    elif status == "UNPAID":
+        unpaid_bills_count = bills.count()
+    else:
+        # Count unpaid bills from all bills (before filtering)
+        all_bills = MonthlyBill.objects.select_related("lease", "lease__unit", "lease__tenant")
+        if q:
+            all_bills = all_bills.filter(
+                Q(lease__tenant__email__icontains=q) |
+                Q(lease__unit__number__icontains=q) |
+                Q(payment_reference__icontains=q)
+            )
+        unpaid_bills_count = all_bills.filter(status="UNPAID").count()
+    
+    return render(request, "admin_portal/billing.html", {
+        "bills": bills, 
+        "q": q, 
+        "status": status,
+        "paid_bills_count": paid_bills_count,
+        "unpaid_bills_count": unpaid_bills_count
+    })
 
 
 @admin_required
@@ -685,7 +784,41 @@ def admin_payments(request):
         )
 
     payments = payments.order_by("-created_at")[:500]
-    return render(request, "admin_portal/payments.html", {"payments": payments, "q": q, "status": status})
+    
+    # Calculate payment status counts
+    all_payments = ManualPayment.objects.select_related("user")
+    if q:
+        all_payments = all_payments.filter(
+            Q(user__email__icontains=q) |
+            Q(reference_code__icontains=q) |
+            Q(bill_ids__icontains=q)
+        )
+    
+    if status == "PENDING":
+        pending_count = payments.count()
+        approved_count = 0
+        rejected_count = 0
+    elif status == "APPROVED":
+        pending_count = 0
+        approved_count = payments.count()
+        rejected_count = 0
+    elif status == "REJECTED":
+        pending_count = 0
+        approved_count = 0
+        rejected_count = payments.count()
+    else:
+        pending_count = all_payments.filter(status="PENDING").count()
+        approved_count = all_payments.filter(status="APPROVED").count()
+        rejected_count = all_payments.filter(status="REJECTED").count()
+    
+    return render(request, "admin_portal/payments.html", {
+        "payments": payments, 
+        "q": q, 
+        "status": status,
+        "pending_count": pending_count,
+        "approved_count": approved_count,
+        "rejected_count": rejected_count
+    })
 
 
 @admin_required
@@ -701,6 +834,64 @@ def admin_delete_payment(request, payment_id: int):
         "post_url": reverse("admin_delete_payment", args=[payment.id]),
         "back_url": reverse("admin_payments"),
     })
+
+
+@admin_required
+def admin_tenant_risk(request):
+    """Tenant Risk Classification view"""
+    q = request.GET.get("q", "").strip()
+    risk_filter = request.GET.get("risk", "").strip()
+    
+    # Get all tenant risk classifications
+    risk_classifications = TenantRiskClassification.objects.select_related('tenant').all()
+    
+    # Apply filters
+    if risk_filter in ("LOW", "MEDIUM", "HIGH"):
+        risk_classifications = risk_classifications.filter(risk_level=risk_filter)
+    
+    if q:
+        risk_classifications = risk_classifications.filter(
+            Q(tenant__email__icontains=q) |
+            Q(tenant__tenantprofile__full_name__icontains=q)
+        )
+    
+    # Pagination
+    paginator = Paginator(risk_classifications, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Calculate statistics
+    total_tenants = risk_classifications.count()
+    low_risk_count = TenantRiskClassification.objects.filter(risk_level='LOW').count()
+    medium_risk_count = TenantRiskClassification.objects.filter(risk_level='MEDIUM').count()
+    high_risk_count = TenantRiskClassification.objects.filter(risk_level='HIGH').count()
+    new_tenant_count = TenantRiskClassification.objects.filter(is_new_tenant=True).count()
+    
+    context = {
+        'page_obj': page_obj,
+        'q': q,
+        'risk': risk_filter,
+        'total_tenants': total_tenants,
+        'low_risk_count': low_risk_count,
+        'medium_risk_count': medium_risk_count,
+        'high_risk_count': high_risk_count,
+        'new_tenant_count': new_tenant_count,
+    }
+    
+    return render(request, "admin_portal/tenant_risk.html", context)
+
+
+@admin_required
+def admin_update_tenant_risks(request):
+    """Update all tenant risk classifications"""
+    if request.method == 'POST':
+        try:
+            updated_count = TenantRiskService.update_all_tenant_risks()
+            messages.success(request, f'Successfully updated risk classifications for {updated_count} tenants.')
+        except Exception as e:
+            messages.error(request, f'Error updating risk classifications: {e}')
+    
+    return redirect('admin_tenant_risk')
 
 
 @admin_required

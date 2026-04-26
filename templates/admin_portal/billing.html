@@ -20,8 +20,12 @@
       <span class="stat-pill-value">{{ bills|length }}</span> Total Bills
     </div>
     <div class="stat-pill status-paid" style="border-color:#bbf7d0;background:#f0fdf4;">
-      <span class="stat-pill-value" style="color:#15803d;">{{ bills|dictsort:"status"|dictsortreversed:"status"|length }}</span>
+      <span class="stat-pill-value" style="color:#15803d;">{{ paid_bills_count }}</span>
       <span style="color:#15803d;">Paid</span>
+    </div>
+    <div class="stat-pill status-unpaid" style="border-color:#fecaca;background:#fef2f2;">
+      <span class="stat-pill-value" style="color:#dc2626;">{{ unpaid_bills_count }}</span>
+      <span style="color:#dc2626;">Unpaid</span>
     </div>
   </div>
 

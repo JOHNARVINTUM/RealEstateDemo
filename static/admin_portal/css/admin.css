@@ -1310,3 +1310,183 @@ main::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
   font-weight: 800;
   color: var(--primary);
 }
+
+/* Attachments Styles */
+.attachments-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.attachment-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.attachment-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.attachment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: var(--panel-soft);
+  border-bottom: 1px solid var(--border);
+}
+
+.attachment-type {
+  display: flex;
+  align-items: center;
+}
+
+.attachment-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.attachment-contract {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.attachment-valid_id {
+  background: var(--warning-soft);
+  color: #d97706;
+}
+
+.attachment-other {
+  background: var(--danger-soft);
+  color: #dc2626;
+}
+
+.attachment-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.attachment-actions .btn {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.attachment-content {
+  padding: 1rem;
+}
+
+.attachment-info {
+  margin-bottom: 0.75rem;
+}
+
+.attachment-filename {
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.25rem;
+  word-break: break-all;
+}
+
+.attachment-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.attachment-size,
+.attachment-date {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.attachment-description {
+  margin: 0.75rem 0;
+  padding: 0.5rem;
+  background: var(--panel-soft);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: var(--muted);
+  border-left: 3px solid var(--border);
+}
+
+.attachment-uploader {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.attachment-preview {
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.attachment-thumbnail {
+  max-width: 100%;
+  max-height: 150px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  object-fit: cover;
+  transition: transform 0.2s ease;
+}
+
+.attachment-thumbnail:hover {
+  transform: scale(1.02);
+}
+
+.attachment-preview-placeholder {
+  display: none;
+  justify-content: center;
+  align-items: center;
+  height: 150px;
+  background: var(--panel-soft);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.attachment-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 80px;
+  background: var(--panel-soft);
+  border-radius: 8px;
+  margin-top: 1rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .attachments-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .attachment-header {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+  
+  .attachment-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  .attachment-meta {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+}

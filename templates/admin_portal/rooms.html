@@ -1,0 +1,282 @@
+{% extends "admin_portal/base.html" %}
+{% load humanize %}
+
+{% block title %}Rooms - Admin Portal{% endblock %}
+
+<div class="content-header">
+  <div class="flex justify-between items-center">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Rooms</h1>
+      <p class="text-sm text-gray-500 mt-1">
+        Manage room inventory and availability
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats Bar -->
+<div class="stats-bar">
+  <div class="stat-pill">
+    <span class="stat-pill-value">{{ total_rooms }}</span> Total Rooms
+  </div>
+  <div class="stat-pill" style="border-color:#bbf7d0;background:#f0fdf4;">
+    <span class="stat-pill-value" style="color:#15803d;">{{ available_rooms }}</span>
+    <span style="color:#15803d;">Available</span>
+  </div>
+  <div class="stat-pill" style="border-color:#fecaca;background:#fff1f2;">
+    <span class="stat-pill-value" style="color:#b91c1c;">{{ occupied_rooms }}</span>
+    <span style="color:#b91c1c;">Occupied</span>
+  </div>
+  <div class="stat-pill" style="border-color:#fde68a;background:#fffbeb;">
+    <span class="stat-pill-value" style="color:#b45309;">{{ maintenance_rooms }}</span>
+    <span style="color:#b45309;">Maintenance</span>
+  </div>
+</div>
+
+<div class="filter-panel">
+  <div class="section-head">
+    <div>
+      <h2 class="section-title">Filters</h2>
+      <p class="section-copy">Filter rooms by status or search by name.</p>
+    </div>
+  </div>
+  
+  <div class="panel-body">
+    <form method="get" class="filter-form">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Status Filter -->
+        <div>
+          <label class="form-label">Status</label>
+          <select name="status" class="styled-input">
+            <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Status</option>
+            <option value="AVAILABLE" {% if status_filter == 'AVAILABLE' %}selected{% endif %}>Available</option>
+            <option value="OCCUPIED" {% if status_filter == 'OCCUPIED' %}selected{% endif %}>Occupied</option>
+            <option value="MAINTENANCE" {% if status_filter == 'MAINTENANCE' %}selected{% endif %}>Under Maintenance</option>
+          </select>
+        </div>
+        
+        <!-- Search -->
+        <div>
+          <label class="form-label">Search</label>
+          <input type="text" name="search" class="styled-input" placeholder="Search rooms..." value="{{ search_query }}">
+        </div>
+        
+        <!-- Submit -->
+        <div class="flex items-end">
+          <button type="submit" class="btn btn-primary w-full">Apply Filters</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Rooms Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  {% for room in page_obj %}
+    <div class="room-card">
+      <div class="room-image">
+        <img src="{{ room.get_image_url }}" alt="{{ room.name }}" class="w-full h-48 object-cover">
+        <div class="room-status-badge status-{{ room.status|lower }}">
+          {{ room.get_status_display }}
+        </div>
+      </div>
+      
+      <div class="room-content">
+        <div class="room-header">
+          <h3 class="room-title">{{ room.name }}</h3>
+          <div class="room-price">PHP {{ room.price|floatformat:2|intcomma }}/month</div>
+        </div>
+        
+        {% if room.description %}
+          <p class="room-description">{{ room.description|truncatewords:20 }}</p>
+        {% endif %}
+        
+        <div class="room-footer">
+          <div class="room-meta">
+            <span class="text-sm text-gray-500">
+              Added {{ room.created_at|timesince }} ago
+            </span>
+          </div>
+          <a href="{% url 'admin_room_detail' room.id %}" class="btn btn-sm btn-primary">
+            View Details
+          </a>
+        </div>
+      </div>
+    </div>
+  {% empty %}
+    <div class="col-span-full">
+      <div class="empty-state">
+        <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+        </svg>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No rooms found</h3>
+        <p class="text-gray-500">
+          {% if search_query or status_filter != 'all' %}
+            No rooms match your current filters. Try adjusting your search criteria.
+          {% else %}
+            No rooms have been added yet.
+          {% endif %}
+        </p>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+  <div class="pagination-wrapper">
+    <div class="pagination">
+      {% if page_obj.has_previous %}
+        <a href="?page=1{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="pagination-link">«</a>
+        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="pagination-link">‹</a>
+      {% endif %}
+      
+      <span class="pagination-info">
+        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+      </span>
+      
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="pagination-link">›</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="pagination-link">»</a>
+      {% endif %}
+    </div>
+  </div>
+{% endif %}
+
+<style>
+/* Room Card Styles */
+.room-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.room-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.room-image {
+  position: relative;
+}
+
+.room-status-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-available {
+  background-color: #bbf7d0;
+  color: #15803d;
+}
+
+.status-occupied {
+  background-color: #fecaca;
+  color: #b91c1c;
+}
+
+.status-maintenance {
+  background-color: #fde68a;
+  color: #b45309;
+}
+
+.room-content {
+  padding: 20px;
+}
+
+.room-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.room-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.room-price {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #059669;
+  white-space: nowrap;
+}
+
+.room-description {
+  color: #6b7280;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.room-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.room-meta {
+  flex: 1;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+/* Grid Layout */
+.grid {
+  display: grid;
+}
+
+.grid-cols-1 {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.grid-cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.grid-cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.gap-4 {
+  gap: 1rem;
+}
+
+.gap-6 {
+  gap: 1.5rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .grid-cols-2 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+  
+  .grid-cols-3 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .grid-cols-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+</style>

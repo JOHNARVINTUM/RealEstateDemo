@@ -163,15 +163,26 @@ def tenant_billing(request):
 
     ensure_bills_since_move_in(lease)
 
-    current_bill = MonthlyBill.objects.filter(
-        lease=lease,
-        status="UNPAID",
-    ).order_by("billing_month").first()
+    # Get filter parameters
+    month_filter = request.GET.get("month", "").strip()
+    year_filter = request.GET.get("year", "").strip()
+
+    # Start with all bills for this tenant
+    bills_query = MonthlyBill.objects.filter(lease=lease).order_by("-billing_month")
+
+    # Apply filters
+    if month_filter and month_filter.isdigit():
+        bills_query = bills_query.filter(billing_month__month=int(month_filter))
+
+    if year_filter and year_filter.isdigit():
+        bills_query = bills_query.filter(billing_month__year=int(year_filter))
+
+    current_bill = bills_query.filter(status="UNPAID").order_by("billing_month").first()
 
     if current_bill:
         current_bill = get_or_update_monthly_bill(lease, current_bill.billing_month)
 
-    all_bills = MonthlyBill.objects.filter(lease=lease, status="UNPAID").order_by("billing_month")
+    all_bills = bills_query.filter(status="UNPAID").order_by("billing_month")
     ongoing_rows = []
     today = date.today()
 
@@ -219,11 +230,25 @@ def tenant_billing(request):
             "total_amount": total_paid,
         })
 
+    # Generate month and year choices
+    from django.utils import timezone
+    current_year = timezone.now().year
+    month_choices = [
+        (1, 'January'), (2, 'February'), (3, 'March'), (4, 'April'),
+        (5, 'May'), (6, 'June'), (7, 'July'), (8, 'August'),
+        (9, 'September'), (10, 'October'), (11, 'November'), (12, 'December')
+    ]
+    year_choices = list(range(current_year - 3, current_year + 2))  # Last 3 years and next year
+
     return render(request, "billing/tenant_billing.html", {
         "lease": lease,
         "current_bill": current_bill,
         "ongoing_rows": ongoing_rows,
         "transactions": transactions,
+        "month_filter": month_filter,
+        "year_filter": year_filter,
+        "month_choices": month_choices,
+        "year_choices": year_choices,
     })
 
 
@@ -304,5 +329,26 @@ def tenant_pay_advance(request):
         return redirect(f"{url}?amount={total_amount}&bill_ids={bill_ids}")
 
     return render(request, "billing/tenant_pay_advance.html", context)
+
+
+@login_required
+def mark_unit_welcome_seen(request):
+    """Mark the unit welcome popup as seen for the current tenant"""
+    if request.method == "POST":
+        try:
+            # Get the tenant's profile
+            tenant_profile = get_object_or_404(TenantProfile, user=request.user)
+            tenant_profile.has_seen_unit_welcome = True
+            tenant_profile.save()
+            
+            from django.http import JsonResponse
+            return JsonResponse({"success": True, "message": "Welcome popup marked as seen"})
+        except Exception as e:
+            from django.http import JsonResponse
+            return JsonResponse({"success": False, "message": str(e)})
+    
+    # Only accept POST requests
+    from django.http import JsonResponse
+    return JsonResponse({"success": False, "message": "Method not allowed"})
 
 

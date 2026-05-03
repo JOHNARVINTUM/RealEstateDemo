@@ -135,6 +135,10 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
+# Media files (uploaded images)
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
 GCASH_NUMBER = "09219429053"
 GCASH_NAME = "John Arvin Tumbagahon"
 GCASH_QR_URL = "/static/img/qr.jpg"

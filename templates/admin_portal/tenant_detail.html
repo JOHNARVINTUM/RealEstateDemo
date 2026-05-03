@@ -7,12 +7,12 @@
   <nav class="breadcrumb" aria-label="Breadcrumb">
     <a href="{% url 'admin_tenants' %}">Tenants</a>
     <span class="breadcrumb-sep">›</span>
-    <span class="breadcrumb-current">{{ tenant.full_name }}</span>
+    <span class="breadcrumb-current">{{ tenant.first_name }} {{ tenant.last_name }}</span>
   </nav>
 
   <div class="page-top">
     <div class="page-header">
-      <h1>{{ tenant.full_name }}</h1>
+      <h1>{{ tenant.first_name }} {{ tenant.last_name }}</h1>
       <p class="muted">{{ tenant.user.email }} &bull; {{ tenant.contact_no|default:"No contact provided" }}</p>
     </div>
     <div class="page-actions">
@@ -34,6 +34,130 @@
       <div class="detail-label">Lease Count</div>
       <div class="detail-value">{{ leases|length }}</div>
     </div>
+  </div>
+
+  <!-- Attachments Section -->
+  <div class="panel">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title">Documents & Attachments</h2>
+        <p class="section-copy">View tenant's contract, valid ID, and other uploaded documents.</p>
+      </div>
+      {% if attachments %}
+        <span class="result-count">{{ attachments|length }} attachment{% if attachments|length != 1 %}s{% endif %}</span>
+      {% endif %}
+    </div>
+    
+    {% if attachments %}
+      <div class="attachments-grid">
+        {% for attachment in attachments %}
+          <div class="attachment-card">
+            <div class="attachment-header">
+              <div class="attachment-type">
+                <span class="attachment-badge attachment-{{ attachment.attachment_type|lower }}">
+                  {{ attachment.get_attachment_type_display }}
+                </span>
+              </div>
+              <div class="attachment-actions">
+                <a href="{% url 'admin_view_attachment' attachment.id %}" 
+                   class="btn btn-sm btn-primary" 
+                   target="_blank"
+                   title="View {{ attachment.filename }}">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                  </svg>
+                  View
+                </a>
+                <form method="post" action="{% url 'admin_delete_attachment' attachment.id %}" class="inline">
+                  {% csrf_token %}
+                  <button type="submit" 
+                          class="btn btn-sm btn-outline-danger"
+                          onclick="return confirm('Delete {{ attachment.filename }}?')"
+                          title="Delete {{ attachment.filename }}">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                    Delete
+                  </button>
+                </form>
+              </div>
+            </div>
+            
+            <div class="attachment-content">
+              <div class="attachment-info">
+                <div class="attachment-filename">{{ attachment.filename }}</div>
+                <div class="attachment-meta">
+                  <span class="attachment-size">{{ attachment.get_file_size_display }}</span>
+                  <span class="attachment-date">{{ attachment.uploaded_at|date:"M d, Y H:i" }}</span>
+                </div>
+              </div>
+              
+              {% if attachment.description %}
+                <div class="attachment-description">
+                  <small>{{ attachment.description }}</small>
+                </div>
+              {% endif %}
+              
+              {% if attachment.uploaded_by %}
+                <div class="attachment-uploader">
+                  <small class="text-muted">Uploaded by: {{ attachment.uploaded_by.email }}</small>
+                </div>
+              {% endif %}
+            </div>
+            
+            <!-- Preview for images -->
+            {% if attachment.is_image %}
+              <div class="attachment-preview">
+                <a href="{% url 'admin_view_attachment' attachment.id %}" target="_blank">
+                  <img src="{% url 'admin_view_attachment' attachment.id %}" 
+                       alt="{{ attachment.filename }}" 
+                       class="attachment-thumbnail"
+                       onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                  <div class="attachment-preview-placeholder">
+                    <svg class="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                  </div>
+                </a>
+              </div>
+            {% else %}
+              <div class="attachment-icon">
+                {% if attachment.is_pdf %}
+                  <svg class="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                  </svg>
+                {% else %}
+                  <svg class="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                  </svg>
+                {% endif %}
+              </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">
+          <svg class="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          </svg>
+        </div>
+        <div class="empty-title">No attachments found</div>
+        <div class="empty-description">
+          This tenant hasn't uploaded any contracts, valid IDs, or other documents yet.
+        </div>
+        <div class="empty-actions">
+          <a href="{% url 'admin_edit_tenant' tenant.id %}" class="btn btn-primary">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Add Documents
+          </a>
+        </div>
+      </div>
+    {% endif %}
   </div>
 
   <div class="panel">

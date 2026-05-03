@@ -13,7 +13,7 @@ from .admin_portal_views import (
     admin_create_lease,
     admin_create_unit,
     admin_edit_tenant,
-    admin_delete_tenant,
+        admin_delete_tenant,
     admin_edit_lease,
     admin_delete_lease,
     admin_edit_announcement,
@@ -37,6 +37,9 @@ from .admin_portal_views import (
     admin_delete_notification,
     api_get_unit_data,
     api_get_unit_data_by_id,
+    admin_tenant_attachments,
+    admin_view_attachment,
+    admin_delete_attachment,
 )
 
 urlpatterns = [
@@ -45,6 +48,9 @@ urlpatterns = [
     path("tenants/<int:tenant_id>/", admin_tenant_detail, name="admin_tenant_detail"),
     path("tenants/<int:tenant_id>/edit/", admin_edit_tenant, name="admin_edit_tenant"),
     path("tenants/<int:tenant_id>/delete/", admin_delete_tenant, name="admin_delete_tenant"),
+    path("tenants/<int:tenant_id>/attachments/", admin_tenant_attachments, name="admin_tenant_attachments"),
+    path("attachments/<int:attachment_id>/view/", admin_view_attachment, name="admin_view_attachment"),
+    path("attachments/<int:attachment_id>/delete/", admin_delete_attachment, name="admin_delete_attachment"),
     path("billing/", admin_billing, name="admin_billing"),
     path("billing/mark_paid/<int:bill_id>/", admin_mark_bill_paid, name="admin_mark_bill_paid"),
     path("billing/mark_unpaid/<int:bill_id>/", admin_mark_bill_unpaid, name="admin_mark_bill_unpaid"),
@@ -85,5 +91,6 @@ urlpatterns = [
     path("announcements/add/", admin_create_announcement, name="admin_create_announcement"),
     path("announcements/<int:ann_id>/edit/", admin_edit_announcement, name="admin_edit_announcement"),
     path("announcements/<int:ann_id>/delete/", admin_delete_announcement, name="admin_delete_announcement"),
-   
+    
+       
 ]

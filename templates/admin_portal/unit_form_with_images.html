@@ -1,0 +1,464 @@
+{% extends "admin_portal/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }} - Admin Portal{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="flex justify-between items-center">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">{{ title }}</h1>
+      <p class="text-sm text-gray-500 mt-1">
+        {% if action == "Add" %}Create a new unit{% else %}Edit unit details{% endif %}
+      </p>
+    </div>
+    <a href="{{ back_url }}" class="btn btn-secondary">
+      <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+      </svg>
+      Back
+    </a>
+  </div>
+</div>
+
+<div class="max-w-4xl mx-auto">
+  <form method="post" enctype="multipart/form-data" class="space-y-6">
+    {% csrf_token %}
+    
+    <!-- Basic Unit Information -->
+    <div class="bg-white rounded-lg shadow">
+      <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+        <h3 class="text-lg leading-6 font-medium text-gray-900">Basic Information</h3>
+      </div>
+      <div class="px-4 py-5 sm:p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label for="{{ form.number.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+              Unit Number <span class="text-red-500">*</span>
+            </label>
+            {{ form.number }}
+            {% if form.number.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ form.number.errors }}</p>
+            {% endif %}
+          </div>
+          
+          <div>
+            <label for="{{ form.unit_type.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+              Unit Type <span class="text-red-500">*</span>
+            </label>
+            {{ form.unit_type }}
+            {% if form.unit_type.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ form.unit_type.errors }}</p>
+            {% endif %}
+          </div>
+          
+          <div>
+            <label for="{{ form.floor_level.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+              Floor Level <span class="text-red-500">*</span>
+            </label>
+            {{ form.floor_level }}
+            {% if form.floor_level.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ form.floor_level.errors }}</p>
+            {% endif %}
+          </div>
+          
+          <div>
+            <label for="{{ form.size_sqm.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+              Size (sqm) <span class="text-red-500">*</span>
+            </label>
+            {{ form.size_sqm }}
+            {% if form.size_sqm.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ form.size_sqm.errors }}</p>
+            {% endif %}
+          </div>
+          
+          <div>
+            <label for="{{ form.monthly_rent.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+              Monthly Rent (PHP) <span class="text-red-500">*</span>
+            </label>
+            {{ form.monthly_rent }}
+            {% if form.monthly_rent.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ form.monthly_rent.errors }}</p>
+            {% endif %}
+          </div>
+          
+          <div>
+            <label for="{{ form.status.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+              Status <span class="text-red-500">*</span>
+            </label>
+            {{ form.status }}
+            {% if form.status.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ form.status.errors }}</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Additional Details -->
+    <div class="bg-white rounded-lg shadow">
+      <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+        <h3 class="text-lg leading-6 font-medium text-gray-900">Additional Details</h3>
+      </div>
+      <div class="px-4 py-5 sm:p-6">
+        <div class="space-y-6">
+          <div>
+            <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+              Description
+            </label>
+            {{ form.description }}
+            {% if form.description.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ form.description.errors }}</p>
+            {% endif %}
+            <p class="mt-1 text-sm text-gray-500">Describe the unit features, layout, and highlights</p>
+          </div>
+          
+          <div>
+            <label for="{{ form.amenities.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+              Amenities
+            </label>
+            {{ form.amenities }}
+            {% if form.amenities.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ form.amenities.errors }}</p>
+            {% endif %}
+            <p class="mt-1 text-sm text-gray-500">List amenities separated by commas (e.g., Air Conditioning, WiFi, Parking)</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Image Gallery -->
+    <div class="bg-white rounded-lg shadow">
+      <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+        <h3 class="text-lg leading-6 font-medium text-gray-900">Unit Gallery</h3>
+        <p class="text-sm text-gray-500 mt-1">Upload up to 5 images. First image will be set as primary by default.</p>
+      </div>
+      <div class="px-4 py-5 sm:p-6">
+        <div class="mb-6">
+          <label for="images" class="block text-sm font-medium text-gray-700 mb-2">Upload Images</label>
+          <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
+            <svg class="mx-auto h-8 w-8 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+            </svg>
+            <input type="file" name="images" id="images" multiple accept="image/*" class="sr-only" onchange="handleImagePreview(event)">
+            <label for="images" class="cursor-pointer">
+              <span class="text-sm font-medium text-gray-700">Click to upload or drag and drop</span>
+              <p class="text-xs text-gray-500 mt-1">PNG, JPG, GIF, WebP up to 5MB each. Maximum 5 images.</p>
+            </label>
+          </div>
+        </div>
+        
+        <!-- Image Preview Container -->
+        <div id="imagePreviewContainer" class="mb-6">
+          <div id="previewGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </div>
+        
+        <!-- Existing images (for edit mode) -->
+        {% if action == "Edit" and unit_images %}
+          <div class="mb-6">
+            <h4 class="text-sm font-medium text-gray-700 mb-3">Current Images</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="existingImagesGrid">
+              {% for image in unit_images %}
+                <div class="relative group border rounded-lg overflow-hidden" data-image-id="{{ image.id }}">
+                  <img src="{{ image.image.url }}" alt="Unit image" class="w-full h-48 object-cover">
+                  <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity flex items-center justify-center">
+                    <button type="button" onclick="removeExistingImage('{{ image.id }}')" class="opacity-0 group-hover:opacity-100 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-all">
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                      </svg>
+                    </button>
+                  </div>
+                  <div class="p-2 bg-gray-50">
+                    <input type="text" name="caption_{{ image.id }}" value="{{ image.caption }}" placeholder="Image caption" class="w-full text-sm border rounded px-2 py-1 mb-2">
+                    <div class="flex items-center">
+                      <input type="radio" name="primary_image" value="{{ image.id }}" {% if image.is_primary %}checked{% endif %} class="mr-2">
+                      <label class="text-xs text-gray-600">Primary image</label>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+        
+        <!-- Hidden input for deleted images -->
+        <input type="hidden" id="deletedImages" name="deleted_images" value="">
+      </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="flex justify-end space-x-3">
+      <a href="{{ back_url }}" class="btn btn-secondary">
+        Cancel
+      </a>
+      <button type="submit" class="btn btn-primary">
+        {% if action == "Add" %}
+          <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg>
+          Create Unit
+        {% else %}
+          <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          Update Unit
+        {% endif %}
+      </button>
+    </div>
+  </form>
+</div>
+
+<style>
+/* Form styling */
+input[type="text"], 
+input[type="number"], 
+input[type="email"],
+input[type="tel"],
+select,
+textarea {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.15s ease-in-out;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #2563eb;
+}
+
+.btn-secondary {
+  background-color: #f3f4f6;
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+.btn-secondary:hover {
+  background-color: #e5e7eb;
+}
+
+/* Image upload styling */
+.image-preview-item {
+  position: relative;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.image-preview-item img {
+  transition: transform 0.2s ease;
+}
+
+.image-preview-item:hover img {
+  transform: scale(1.05);
+}
+
+/* Responsive grid */
+.grid {
+  display: grid;
+}
+
+.grid-cols-1 {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.grid-cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.grid-cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (min-width: 768px) {
+  .md\:grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .lg\:grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.gap-4 {
+  gap: 1rem;
+}
+
+.space-y-6 > * + * {
+  margin-top: 1.5rem;
+}
+
+.space-x-3 > * + * {
+  margin-left: 0.75rem;
+}
+</style>
+
+<script>
+let deletedImageIds = [];
+let uploadedFiles = [];
+
+function handleImagePreview(event) {
+  const files = event.target.files;
+  const previewGrid = document.getElementById('previewGrid');
+  const maxImages = 5;
+  
+  // Count existing images
+  const existingImages = document.querySelectorAll('#existingImagesGrid [data-image-id]').length;
+  const totalImages = existingImages + uploadedFiles.length + files.length;
+  
+  if (totalImages > maxImages) {
+    alert(`You can only upload a maximum of ${maxImages} images. You currently have ${existingImages + uploadedFiles.length} images.`);
+    event.target.value = '';
+    return;
+  }
+  
+  // Clear previous previews
+  previewGrid.innerHTML = '';
+  uploadedFiles = [];
+  
+  // Create preview for each file
+  Array.from(files).forEach((file, index) => {
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const previewDiv = document.createElement('div');
+        previewDiv.className = 'relative group border rounded-lg overflow-hidden';
+        previewDiv.innerHTML = `
+          <img src="${e.target.result}" alt="Preview" class="w-full h-48 object-cover">
+          <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity flex items-center justify-center">
+            <button type="button" onclick="removePreview(${index})" class="opacity-0 group-hover:opacity-100 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-all">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="p-2 bg-gray-50">
+            <input type="text" name="new_caption_${index}" placeholder="Image caption" class="w-full text-sm border rounded px-2 py-1 mb-2">
+            <div class="flex items-center">
+              <input type="radio" name="primary_image" value="new_${index}" class="mr-2">
+              <label class="text-xs text-gray-600">Primary image</label>
+            </div>
+          </div>
+        `;
+        
+        previewGrid.appendChild(previewDiv);
+        uploadedFiles.push({file: file, index: index});
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+}
+
+function removePreview(index) {
+  const previewGrid = document.getElementById('previewGrid');
+  const fileInput = document.getElementById('images');
+  
+  // Remove from uploaded files array
+  uploadedFiles = uploadedFiles.filter(f => f.index !== index);
+  
+  // Recreate previews for remaining files
+  const remainingFiles = uploadedFiles.map(f => f.file);
+  const dataTransfer = new DataTransfer();
+  remainingFiles.forEach(file => dataTransfer.items.add(file));
+  fileInput.files = dataTransfer.files;
+  
+  // Trigger preview update
+  handleImagePreview({target: {files: fileInput.files}});
+}
+
+function removeExistingImage(imageId) {
+  const imageDiv = document.querySelector(`[data-image-id="${imageId}"]`);
+  if (imageDiv) {
+    imageDiv.remove();
+    deletedImageIds.push(imageId);
+    document.getElementById('deletedImages').value = deletedImageIds.join(',');
+  }
+}
+
+// Handle form submission - validate image count and prepare data
+document.querySelector('form').addEventListener('submit', function(e) {
+  const fileInput = document.getElementById('images');
+  const existingImages = document.querySelectorAll('#existingImagesGrid [data-image-id]').length;
+  const newImages = fileInput.files.length;
+  const totalImages = existingImages + newImages;
+  
+  if (totalImages > 5) {
+    e.preventDefault();
+    alert(`You can only have a maximum of 5 images per unit. You currently have ${existingImages} images and are trying to upload ${newImages} new images.`);
+    return false;
+  }
+  
+  // Add caption data for new images to form
+  uploadedFiles.forEach((fileData, index) => {
+    const captionInput = document.querySelector(`input[name="new_caption_${index}"]`);
+    if (captionInput) {
+      const hiddenInput = document.createElement('input');
+      hiddenInput.type = 'hidden';
+      hiddenInput.name = `image_caption_${index}`;
+      hiddenInput.value = captionInput.value;
+      e.target.appendChild(hiddenInput);
+    }
+  });
+});
+
+// Drag and drop functionality
+const dropZone = document.querySelector('.border-dashed');
+if (dropZone) {
+  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, preventDefaults, false);
+  });
+  
+  function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropZone.addEventListener(eventName, () => {
+      dropZone.classList.add('border-blue-500', 'bg-blue-50');
+    });
+  });
+  
+  ['dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, () => {
+      dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+    });
+  });
+  
+  dropZone.addEventListener('drop', (e) => {
+    const files = e.dataTransfer.files;
+    const fileInput = document.getElementById('images');
+    fileInput.files = files;
+    handleImagePreview({target: {files: files}});
+  });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,253 @@
+{% extends "admin_portal/base.html" %}
+{% load humanize %}
+
+{% block title %}{{ room.name }} - Room Details - Admin Portal{% endblock %}
+
+<div class="content-header">
+  <div class="flex justify-between items-center">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">{{ room.name }}</h1>
+      <p class="text-sm text-gray-500 mt-1">
+        Room details and management
+      </p>
+    </div>
+    <div class="flex gap-2">
+      <a href="{% url 'admin_rooms' %}" class="btn btn-secondary">
+        <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+        </svg>
+        Back to Rooms
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <!-- Main Content -->
+  <div class="lg:col-span-2">
+    <!-- Room Image -->
+    <div class="panel">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Room Image</h2>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="room-image-container">
+          <img src="{{ room.get_image_url }}" alt="{{ room.name }}" class="w-full h-64 object-cover rounded-lg">
+        </div>
+      </div>
+    </div>
+
+    <!-- Room Details -->
+    <div class="panel">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Room Information</h2>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label class="form-label">Room Name</label>
+            <div class="form-value">{{ room.name }}</div>
+          </div>
+          
+          <div>
+            <label class="form-label">Status</label>
+            <div class="form-value">
+              <span class="status-badge status-{{ room.status|lower }}">
+                {{ room.get_status_display }}
+              </span>
+            </div>
+          </div>
+          
+          <div>
+            <label class="form-label">Monthly Price</label>
+            <div class="form-value">PHP {{ room.price|floatformat:2|intcomma }}</div>
+          </div>
+          
+          <div>
+            <label class="form-label">Created</label>
+            <div class="form-value">{{ room.created_at|date:"F d, Y g:i A" }}</div>
+          </div>
+        </div>
+        
+        {% if room.description %}
+          <div class="mt-6">
+            <label class="form-label">Description</label>
+            <div class="form-value">{{ room.description|linebreaks }}</div>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="lg:col-span-1">
+    <!-- Quick Actions -->
+    <div class="panel">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Quick Actions</h2>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="space-y-3">
+          <button class="btn btn-primary w-full">
+            <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+            </svg>
+            Edit Room
+          </button>
+          
+          <button class="btn btn-secondary w-full">
+            <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            Change Image
+          </button>
+          
+          {% if room.status == 'AVAILABLE' %}
+            <button class="btn btn-success w-full">
+              <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </button>
+          {% elif room.status == 'OCCUPIED' %}
+            <button class="btn btn-warning w-full">
+              <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+              </svg>
+              Mark Available
+            </button>
+          {% elif room.status == 'MAINTENANCE' %}
+            <button class="btn btn-success w-full">
+              <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              Complete Maintenance
+            </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Status History -->
+    <div class="panel">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Status Information</h2>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="space-y-4">
+          <div>
+            <label class="form-label">Current Status</label>
+            <div class="form-value">
+              <span class="status-badge status-{{ room.status|lower }}">
+                {{ room.get_status_display }}
+              </span>
+            </div>
+          </div>
+          
+          <div>
+            <label class="form-label">Last Updated</label>
+            <div class="form-value">{{ room.updated_at|date:"F d, Y g:i A" }}</div>
+          </div>
+          
+          <div>
+            <label class="form-label">Time Since Update</label>
+            <div class="form-value">{{ room.updated_at|timesince }} ago</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Room Detail Styles */
+.room-image-container {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.status-badge {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: inline-block;
+}
+
+.status-available {
+  background-color: #bbf7d0;
+  color: #15803d;
+}
+
+.status-occupied {
+  background-color: #fecaca;
+  color: #b91c1c;
+}
+
+.status-maintenance {
+  background-color: #fde68a;
+  color: #b45309;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+.form-value {
+  color: #1f2937;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* Grid Layout */
+.grid {
+  display: grid;
+}
+
+.grid-cols-1 {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.grid-cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.grid-cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.gap-6 {
+  gap: 1.5rem;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .grid-cols-3 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1025px) {
+  .lg\:col-span-2 {
+    grid-column: span 2 / span 2;
+  }
+  
+  .lg\:col-span-1 {
+    grid-column: span 1 / span 1;
+  }
+}
+</style>

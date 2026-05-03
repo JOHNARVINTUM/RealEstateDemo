@@ -1,0 +1,539 @@
+{% extends "admin_portal/base.html" %}
+{% load static %}
+
+{% block title %}Edit Tenant - {{ tenant.full_name }}{% endblock %}
+
+{% block content %}
+<div class="page-top">
+    <div class="page-header">
+        <h1>Edit Tenant</h1>
+        <p class="muted">Comprehensive tenant account management</p>
+    </div>
+    <a href="{{ back_url }}" class="btn btn-secondary">← Back</a>
+</div>
+
+<section class="hero-panel compact">
+    <h2 class="hero-title">Edit {{ tenant.first_name }} {{ tenant.last_name }}</h2>
+    <p class="hero-copy">Modify all aspects of the tenant's account including login credentials, role, and profile information.</p>
+</section>
+
+<div class="form-container">
+    <form method="post" class="comprehensive-form" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <!-- Account Information Section -->
+        <div class="form-section">
+            <h3 class="section-title">
+                <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                </svg>
+                Account Information
+            </h3>
+            <p class="section-description">Login credentials and system access settings</p>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.email.id_for_label }}" class="form-label">
+                        {{ form.email.label }} <span class="required">*</span>
+                    </label>
+                    {{ form.email }}
+                    {% if form.email.help_text %}
+                        <small class="form-help">{{ form.email.help_text }}</small>
+                    {% endif %}
+                    {% if form.email.errors %}
+                        <div class="form-error">
+                            {% for error in form.email.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.username.id_for_label }}" class="form-label">
+                        {{ form.username.label }}
+                    </label>
+                    {{ form.username }}
+                    {% if form.username.help_text %}
+                        <small class="form-help">{{ form.username.help_text }}</small>
+                    {% endif %}
+                    {% if form.username.errors %}
+                        <div class="form-error">
+                            {% for error in form.username.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.role.id_for_label }}" class="form-label">
+                        {{ form.role.label }} <span class="required">*</span>
+                    </label>
+                    {{ form.role }}
+                    {% if form.role.help_text %}
+                        <small class="form-help">{{ form.role.help_text }}</small>
+                    {% endif %}
+                    {% if form.role.errors %}
+                        <div class="form-error">
+                            {% for error in form.role.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        {{ form.is_active }}
+                        <label for="{{ form.is_active.id_for_label }}" class="checkbox-label">
+                            {{ form.is_active.label }}
+                        </label>
+                    </div>
+                    {% if form.is_active.help_text %}
+                        <small class="form-help">{{ form.is_active.help_text }}</small>
+                    {% endif %}
+                    {% if form.is_active.errors %}
+                        <div class="form-error">
+                            {% for error in form.is_active.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Password Section -->
+        <div class="form-section">
+            <h3 class="section-title">
+                <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 11-8 0v4h8z"></path>
+                </svg>
+                Password Settings
+            </h3>
+            <p class="section-description">Change the tenant's password (leave blank to keep current)</p>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.new_password.id_for_label }}" class="form-label">
+                        {{ form.new_password.label }}
+                    </label>
+                    {{ form.new_password }}
+                    {% if form.new_password.help_text %}
+                        <small class="form-help">{{ form.new_password.help_text }}</small>
+                    {% endif %}
+                    {% if form.new_password.errors %}
+                        <div class="form-error">
+                            {% for error in form.new_password.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.confirm_password.id_for_label }}" class="form-label">
+                        {{ form.confirm_password.label }}
+                    </label>
+                    {{ form.confirm_password }}
+                    {% if form.confirm_password.help_text %}
+                        <small class="form-help">{{ form.confirm_password.help_text }}</small>
+                    {% endif %}
+                    {% if form.confirm_password.errors %}
+                        <div class="form-error">
+                            {% for error in form.confirm_password.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Information Section -->
+        <div class="form-section">
+            <h3 class="section-title">
+                <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                </svg>
+                Profile Information
+            </h3>
+            <p class="section-description">Personal details and contact information</p>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.first_name.id_for_label }}" class="form-label">
+                        {{ form.first_name.label }} <span class="required">*</span>
+                    </label>
+                    {{ form.first_name }}
+                    {% if form.first_name.help_text %}
+                        <small class="form-help">{{ form.first_name.help_text }}</small>
+                    {% endif %}
+                    {% if form.first_name.errors %}
+                        <div class="form-error">
+                            {% for error in form.first_name.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.last_name.id_for_label }}" class="form-label">
+                        {{ form.last_name.label }} <span class="required">*</span>
+                    </label>
+                    {{ form.last_name }}
+                    {% if form.last_name.help_text %}
+                        <small class="form-help">{{ form.last_name.help_text }}</small>
+                    {% endif %}
+                    {% if form.last_name.errors %}
+                        <div class="form-error">
+                            {% for error in form.last_name.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.contact_no.id_for_label }}" class="form-label">
+                        {{ form.contact_no.label }}
+                    </label>
+                    {{ form.contact_no }}
+                    {% if form.contact_no.help_text %}
+                        <small class="form-help">{{ form.contact_no.help_text }}</small>
+                    {% endif %}
+                    {% if form.contact_no.errors %}
+                        <div class="form-error">
+                            {% for error in form.contact_no.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Document Attachments -->
+        <div class="form-section">
+            <h3 class="section-title">
+                <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Document Attachments
+            </h3>
+            <p class="section-description">Upload contract documents, valid IDs, and other tenant files. Optional but recommended.</p>
+            
+            <div class="form-grid">
+                <!-- Contract Document -->
+                <div class="form-group">
+                    <label for="{{ form.contract_file.id_for_label }}" class="form-label">
+                        {{ form.contract_file.label }}
+                    </label>
+                    {{ form.contract_file }}
+                    {% if form.contract_file.help_text %}
+                        <small class="form-help">{{ form.contract_file.help_text }}</small>
+                    {% endif %}
+                    {% if form.contract_file.errors %}
+                        <div class="form-error">
+                            {% for error in form.contract_file.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Contract Description -->
+                <div class="form-group">
+                    <label for="{{ form.contract_description.id_for_label }}" class="form-label">
+                        {{ form.contract_description.label }}
+                    </label>
+                    {{ form.contract_description }}
+                    {% if form.contract_description.help_text %}
+                        <small class="form-help">{{ form.contract_description.help_text }}</small>
+                    {% endif %}
+                    {% if form.contract_description.errors %}
+                        <div class="form-error">
+                            {% for error in form.contract_description.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Valid ID -->
+                <div class="form-group">
+                    <label for="{{ form.valid_id_file.id_for_label }}" class="form-label">
+                        {{ form.valid_id_file.label }}
+                    </label>
+                    {{ form.valid_id_file }}
+                    {% if form.valid_id_file.help_text %}
+                        <small class="form-help">{{ form.valid_id_file.help_text }}</small>
+                    {% endif %}
+                    {% if form.valid_id_file.errors %}
+                        <div class="form-error">
+                            {% for error in form.valid_id_file.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Valid ID Description -->
+                <div class="form-group">
+                    <label for="{{ form.valid_id_description.id_for_label }}" class="form-label">
+                        {{ form.valid_id_description.label }}
+                    </label>
+                    {{ form.valid_id_description }}
+                    {% if form.valid_id_description.help_text %}
+                        <small class="form-help">{{ form.valid_id_description.help_text }}</small>
+                    {% endif %}
+                    {% if form.valid_id_description.errors %}
+                        <div class="form-error">
+                            {% for error in form.valid_id_description.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Status Information -->
+        <div class="form-section status-section">
+            <h3 class="section-title">
+                <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                Current Status
+            </h3>
+            <div class="status-grid">
+                <div class="status-item">
+                    <span class="status-label">Current Email:</span>
+                    <span class="status-value">{{ tenant.user.email }}</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Current Username:</span>
+                    <span class="status-value">{{ tenant.user.username }}</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Current Name:</span>
+                    <span class="status-value">{{ tenant.first_name }} {{ tenant.last_name }}</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Current Role:</span>
+                    <span class="status-value">{{ tenant.user.get_role_display }}</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Account Status:</span>
+                    <span class="status-value {% if tenant.user.is_active %}active{% else %}inactive{% endif %}">
+                        {% if tenant.user.is_active %}Active{% else %}Inactive{% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Errors -->
+        {% if form.non_field_errors %}
+            <div class="form-section error-section">
+                <div class="form-error">
+                    {% for error in form.non_field_errors %}
+                        <span>{{ error }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Action Buttons -->
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+                <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                Save Changes
+            </button>
+            <a href="{{ back_url }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<style>
+.comprehensive-form {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.form-section {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    font-size: 18px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+.section-description {
+    color: #6b7280;
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-label {
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 6px;
+    font-size: 14px;
+}
+
+.required {
+    color: #ef4444;
+}
+
+.form-group input,
+.form-group select {
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-help {
+    color: #6b7280;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.form-error {
+    color: #ef4444;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+
+.checkbox-label {
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 0;
+}
+
+.status-section {
+    background: #f9fafb;
+}
+
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+}
+
+.status-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+
+.status-label {
+    font-weight: 500;
+    color: #6b7280;
+}
+
+.status-value {
+    font-weight: 600;
+    color: #374151;
+}
+
+.status-value.active {
+    color: #059669;
+}
+
+.status-value.inactive {
+    color: #dc2626;
+}
+
+.error-section {
+    background: #fef2f2;
+    border-color: #fecaca;
+}
+
+.form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding: 24px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 500;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background: #3b82f6;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #2563eb;
+}
+
+.btn-secondary {
+    background: #6b7280;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #4b5563;
+}
+</style>
+{% endblock %}

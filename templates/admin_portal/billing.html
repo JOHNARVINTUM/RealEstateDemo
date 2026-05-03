@@ -38,13 +38,25 @@
     </div>
     <form class="toolbar" method="get">
       <input class="input" name="q" value="{{ q }}" placeholder="Search tenant email, unit, ref..." />
+      <select class="input" name="month">
+        <option value="">All Months</option>
+        {% for month_num, month_name in month_choices %}
+          <option value="{{ month_num }}" {% if month_filter == month_num|stringformat:"s" %}selected{% endif %}>{{ month_name }}</option>
+        {% endfor %}
+      </select>
+      <select class="input" name="year">
+        <option value="">All Years</option>
+        {% for year in year_choices %}
+          <option value="{{ year }}" {% if year_filter == year|stringformat:"s" %}selected{% endif %}>{{ year }}</option>
+        {% endfor %}
+      </select>
       <select class="input" name="status">
         <option value="">All Statuses</option>
         <option value="PAID" {% if status == "PAID" %}selected{% endif %}>Paid</option>
         <option value="UNPAID" {% if status == "UNPAID" %}selected{% endif %}>Unpaid</option>
       </select>
       <button class="btn" type="submit">Filter</button>
-      {% if q or status %}<a class="link" href="{% url 'admin_billing' %}">Clear</a>{% endif %}
+      {% if q or status or month_filter or year_filter %}<a class="link" href="{% url 'admin_billing' %}">Clear</a>{% endif %}
     </form>
   </div>
 

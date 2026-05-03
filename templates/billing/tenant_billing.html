@@ -11,6 +11,42 @@
     <p class="text-gray-500 mt-1 font-medium text-sm">View your current bill, ongoing billing, and payment history</p>
   </div>
 
+  <!-- Billing Filters -->
+  <div class="bg-white rounded-xl border border-gray-200 p-4 mb-6 shadow-sm">
+    <form method="get" class="flex flex-wrap gap-3 items-end">
+      <div class="flex-1 min-w-[140px]">
+        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Month</label>
+        <select name="month" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+          <option value="">All Months</option>
+          {% for month_num, month_name in month_choices %}
+            <option value="{{ month_num }}" {% if month_filter == month_num|stringformat:"s" %}selected{% endif %}>{{ month_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      
+      <div class="flex-1 min-w-[100px]">
+        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Year</label>
+        <select name="year" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+          <option value="">All Years</option>
+          {% for year in year_choices %}
+            <option value="{{ year }}" {% if year_filter == year|stringformat:"s" %}selected{% endif %}>{{ year }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      
+      <div class="flex gap-2">
+        <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors text-sm">
+          Filter
+        </button>
+        {% if month_filter or year_filter %}
+          <a href="{% url 'tenant_billing' %}" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-lg transition-colors text-sm">
+            Clear
+          </a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
   <!-- Current Bill Card -->
   <div class="rounded-2xl border-l-4 border-l-green-500 border-y border-r border-gray-200 bg-gradient-to-br from-white to-slate-50 p-6 shadow-sm hover:shadow-md transition-shadow mb-8">
     <div class="flex items-start gap-4">

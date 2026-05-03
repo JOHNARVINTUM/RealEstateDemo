@@ -23,7 +23,7 @@
     <div class="section-head">
       <div>
         <h2 class="section-title">Search</h2>
-        <p class="section-copy">Find tenants by full name, email address, or contact number.</p>
+        <p class="section-copy">Find tenants by first name, last name, email address, or contact number.</p>
       </div>
     </div>
     <form class="toolbar" method="get">
@@ -43,7 +43,7 @@
     <table class="table">
       <thead>
         <tr>
-          <th>Full Name</th>
+          <th>Name</th>
           <th>Email</th>
           <th>Contact</th>
           <th>Actions</th>
@@ -53,7 +53,7 @@
         {% for t in tenants %}
           <tr>
             <td>
-              <div class="cell-title">{{ t.full_name }}</div>
+              <div class="cell-title">{{ t.first_name }} {{ t.last_name }}</div>
               <div class="cell-sub">Tenant profile</div>
             </td>
             <td>
@@ -65,7 +65,7 @@
               <a class="link" href="{% url 'admin_tenant_detail' t.id %}">View</a>
               <a class="link" href="{% url 'admin_edit_tenant' t.id %}">Edit</a>
               <a class="link" href="{% url 'admin_create_lease' %}?tenant_id={{ t.user.id }}">Add Lease</a>
-              <form method="post" action="{% url 'admin_delete_tenant' t.id %}" class="confirm-action" data-confirm="Delete tenant {{ t.full_name }}?">
+              <form method="post" action="{% url 'admin_delete_tenant' t.id %}" class="confirm-action" data-confirm="Delete tenant {{ t.first_name }} {{ t.last_name }}?">
                 {% csrf_token %}
                 <button class="link link-danger" type="submit">Delete</button>
               </form>

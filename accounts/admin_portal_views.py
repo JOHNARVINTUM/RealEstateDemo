@@ -7,13 +7,13 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.urls import reverse
 from django.db.models import Q
-from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
+from django.http import JsonResponse, HttpResponse
+from django.views.decorators.http import require_http_methods, require_GET
 from django.core.paginator import Paginator
 from django.utils.timezone import now
 import json
 from django.utils import timezone
-from rentals.models import Lease, Unit, TenantProfile, Notification, TenantRiskClassification
+from rentals.models import Lease, Unit, TenantProfile, Notification, TenantRiskClassification, Room, TenantAttachment
 from billing.models import MonthlyBill
 from billing.services import ensure_bills_since_move_in, set_bill_status, approve_manual_payment, reject_manual_payment
 from payments.models import ManualPayment
@@ -24,7 +24,9 @@ from rentals.services import TenantRiskService
 
 from .admin_portal_forms import TenantProfileForm, AnnouncementForm, LeaseForm
 from .admin_portal_forms import TenantProfileEditForm
+from .admin_portal_forms import ComprehensiveTenantEditForm
 from .admin_portal_forms import UnitForm
+from rentals.models import UnitImage
 from django.utils import timezone as dj_timezone
 from django.contrib import messages
 from .decorators import admin_required
@@ -132,13 +134,14 @@ def admin_tenants(request):
     tenants = TenantProfile.objects.select_related("user")
     if q:
         tenants = tenants.filter(
-            Q(full_name__icontains=q) |
+            Q(first_name__icontains=q) |
+            Q(last_name__icontains=q) |
             Q(contact_no__icontains=q) |
             Q(user__email__icontains=q) |
             Q(user__username__icontains=q)
         )
 
-    tenants = tenants.order_by("full_name")[:500]
+    tenants = tenants.order_by("first_name", "last_name")[:500]
     return render(request, "admin_portal/tenants.html", {"tenants": tenants, "q": q})
 
 
@@ -146,7 +149,8 @@ def admin_tenants(request):
 def admin_tenant_detail(request, tenant_id: int):
     tenant = get_object_or_404(TenantProfile.objects.select_related("user"), pk=tenant_id)
     leases = Lease.objects.select_related("unit", "tenant").filter(tenant=tenant.user).order_by("-start_date")
-    return render(request, "admin_portal/tenant_detail.html", {"tenant": tenant, "leases": leases})
+    attachments = TenantAttachment.objects.filter(tenant=tenant.user).select_related('uploaded_by').order_by('-uploaded_at')
+    return render(request, "admin_portal/tenant_detail.html", {"tenant": tenant, "leases": leases, "attachments": attachments})
 
 
 @admin_required
@@ -154,10 +158,10 @@ def admin_create_tenant_profile(request):
     """
     Admin portal: create a TenantProfile row (linked to an existing User).
     """
-    form = TenantProfileForm(request.POST or None)
+    form = TenantProfileForm(request.POST or None, request.FILES or None)
 
     if request.method == "POST" and form.is_valid():
-        tenant_profile = form.save()
+        tenant_profile = form.save(uploaded_by=request.user)
         # after creating a tenant, redirect admin to create a lease for that tenant
         try:
             tenant_id = tenant_profile.user.id
@@ -216,10 +220,12 @@ def admin_unit_detail(request, unit_id):
     """Admin portal: view unit details."""
     unit = get_object_or_404(Unit, id=unit_id, is_active=True)
     current_tenant = unit.get_current_tenant()
+    unit_images = unit.get_all_images()
     
     return render(request, "admin_portal/unit_detail.html", {
         'unit': unit,
         'current_tenant': current_tenant,
+        'unit_images': unit_images,
         'amenities_list': unit.get_amenities_list(),
     })
 
@@ -228,9 +234,6 @@ def admin_unit_detail(request, unit_id):
 def admin_create_unit(request):
     """Admin portal: create a Unit row."""
     if request.method == "POST":
-        # Debug: Print the POST data
-        print("POST data:", request.POST)
-        
         form = UnitForm(request.POST)
         
         if form.is_valid():
@@ -238,6 +241,9 @@ def admin_create_unit(request):
                 unit = form.save(commit=False)
                 unit.is_active = True
                 unit.save()
+                
+                # Handle image uploads
+                handle_image_uploads(request, unit)
                 
                 # Create real-time notification for admin
                 try:
@@ -254,15 +260,13 @@ def admin_create_unit(request):
                 return redirect("admin_units")
             except Exception as e:
                 messages.error(request, f'Error creating unit: {str(e)}')
-                print("Form save error:", e)
+                logger.exception("Error creating unit")
         else:
-            # Debug: Print form errors
-            print("Form errors:", form.errors)
             messages.error(request, 'Please correct the errors below.')
     else:
         form = UnitForm()
 
-    return render(request, "admin_portal/unit_form_final_working.html", {
+    return render(request, "admin_portal/unit_form_with_images.html", {
         "title": "Add Unit",
         "action": "Add",
         "form": form,
@@ -276,64 +280,34 @@ def admin_edit_unit(request, unit_id):
     unit = get_object_or_404(Unit, id=unit_id, is_active=True)
     
     if request.method == "POST":
-        print("=== MANUAL FORM PROCESSING TEST ===")
-        print("Unit before update:", f"ID={unit.id}, Number={unit.number}, Rent={unit.monthly_rent}")
-        print("POST data:", request.POST)
-        
-        # Try manual processing first
-        try:
-            monthly_rent = request.POST.get('monthly_rent')
-            print(f"Monthly rent from POST: {monthly_rent}")
-            
-            if monthly_rent:
-                # Manual update bypassing Django form
-                unit.monthly_rent = float(monthly_rent)
-                unit.is_active = True
-                unit.save()
-                
-                print(f"Unit after manual save: PHP {unit.monthly_rent}")
-                unit.refresh_from_db()
-                print(f"Unit after refresh: PHP {unit.monthly_rent}")
-                
-                messages.success(request, f'Unit {unit.number} has been updated successfully!')
-                return redirect("admin_unit_detail", unit_id=unit.id)
-            else:
-                print("No monthly_rent in POST data")
-                
-        except Exception as e:
-            print(f"Manual processing error: {e}")
-            import traceback
-            traceback.print_exc()
-        
-        print("=== FALLING BACK TO DJANGO FORM ===")
-        
-        # Fall back to Django form processing with debug
         form = UnitForm(request.POST, instance=unit)
-        print("Form is valid:", form.is_valid())
         
         if form.is_valid():
             try:
                 unit = form.save(commit=False)
                 unit.is_active = True
                 unit.save()
-                print("Django form save successful")
+                
+                # Handle image uploads and deletions
+                handle_image_uploads(request, unit)
+                handle_image_deletions(request, unit)
+                
                 messages.success(request, f'Unit {unit.number} has been updated successfully!')
                 return redirect("admin_unit_detail", unit_id=unit.id)
             except Exception as e:
-                print(f"Django form save error: {e}")
+                messages.error(request, f'Error updating unit: {str(e)}')
+                logger.exception("Error updating unit")
         else:
-            print("Django form errors:", form.errors)
             messages.error(request, 'Please correct the errors below.')
-        
-        print("=== END MANUAL PROCESSING TEST ===")
     else:
         form = UnitForm(instance=unit)
     
-    return render(request, "admin_portal/unit_form_final_working.html", {
+    return render(request, "admin_portal/unit_form_with_images.html", {
         "title": "Edit Unit",
         "action": "Edit",
         "form": form,
         "back_url": reverse("admin_unit_detail", args=[unit.id]),
+        "unit_images": unit.get_all_images(),
     })
 
 
@@ -401,6 +375,40 @@ def admin_create_lease(request):
         except Exception as e:
             logger.exception(f"Failed to create lease notification: {e}")
         
+        # Create welcome notification for tenant with unit details
+        try:
+            tenant_name = lease.tenant.tenantprofile.full_name if hasattr(lease.tenant, 'tenantprofile') else lease.tenant.email
+            welcome_message = f"""
+Welcome to your new home! 
+
+Unit Details:
+• Unit Number: {lease.unit.number}
+• Unit Type: {lease.unit.get_unit_type_display()}
+• Floor Level: {lease.unit.floor_level}
+• Size: {lease.unit.size_sqm} sqm
+• Monthly Rent: ₱{lease.monthly_rent:,.2f}
+• Lease Start Date: {lease.start_date.strftime('%B %d, %Y')}
+
+Your unit features: {lease.unit.description or 'Modern living space with premium amenities.'}
+
+Amenities included: {lease.unit.amenities or 'Contact admin for full amenities list.'}
+
+Please make sure to pay your monthly rent on time (due day: {lease.due_day} of each month). 
+You can access your tenant portal to view bills, make payments, and request maintenance.
+
+Welcome aboard! 
+"""
+            
+            Notification.create_notification(
+                title=f"Welcome to Your New Unit {lease.unit.number}!",
+                message=welcome_message,
+                notification_type='SYSTEM',
+                related_tenant=lease.tenant,
+                related_unit=lease.unit
+            )
+        except Exception as e:
+            logger.exception(f"Failed to create welcome notification for tenant: {e}")
+        
         # Update unit status to OCCUPIED when lease is created
         try:
             unit = lease.unit
@@ -411,6 +419,17 @@ def admin_create_lease(request):
             logger.exception(f"Failed to update unit status for lease {lease.id}: {e}")
             # Don't block lease creation if unit status update fails
         
+        # Reset tenant's welcome popup flag so they see the welcome message
+        try:
+            from rentals.models import TenantProfile
+            tenant_profile = TenantProfile.objects.get(user=lease.tenant)
+            tenant_profile.has_seen_unit_welcome = False
+            tenant_profile.save()
+            logger.info(f"Reset welcome popup flag for tenant {lease.tenant.email}")
+        except Exception as e:
+            logger.exception(f"Failed to reset welcome popup flag for tenant {lease.tenant.email}: {e}")
+            # Don't block lease creation if flag reset fails
+        
         # create initial monthly bill rows from move-in until today
         try:
             ensure_bills_since_move_in(lease)
@@ -419,7 +438,7 @@ def admin_create_lease(request):
             logger.exception("ensure_bills_since_move_in failed for lease id %s", getattr(lease, 'id', None))
             messages.warning(request, "Failed to generate initial bills; you can regenerate later.")
         
-        messages.success(request, f'Lease created successfully! Unit {lease.unit.number} is now occupied.')
+        messages.success(request, f'Lease created successfully! Unit {lease.unit.number} is now occupied. Welcome notification sent to tenant.')
         return redirect("admin_tenants")
 
     return render(request, "admin_portal/lease_form.html", {
@@ -432,13 +451,46 @@ def admin_create_lease(request):
 @admin_required
 def admin_edit_tenant(request, tenant_id: int):
     tenant = get_object_or_404(TenantProfile, pk=tenant_id)
-    form = TenantProfileEditForm(request.POST or None, instance=tenant)
+    form = ComprehensiveTenantEditForm(tenant, request.POST or None, request.FILES or None)
+    
     if request.method == "POST" and form.is_valid():
-        form.save()
-        return redirect("admin_tenant_detail", tenant_id=tenant.id)
-    return render(request, "admin_portal/form.html", {
+        try:
+            updated_tenant = form.save(uploaded_by=request.user)
+            
+            # Create notification about tenant account changes
+            try:
+                changes_made = []
+                if tenant.user.email != form.cleaned_data['email']:
+                    changes_made.append("email")
+                if tenant.user.username != form.cleaned_data['username']:
+                    changes_made.append("username")
+                if tenant.user.role != form.cleaned_data['role']:
+                    changes_made.append("role")
+                if form.cleaned_data.get('new_password'):
+                    changes_made.append("password")
+                
+                if changes_made:
+                    from notifications.models import Notification
+                    change_list = ", ".join(changes_made)
+                    Notification.create_notification(
+                        title=f"Tenant Account Updated",
+                        message=f"Admin updated {updated_tenant.first_name} {updated_tenant.last_name}'s account: {change_list}",
+                        notification_type='SYSTEM',
+                        related_tenant=updated_tenant.user
+                    )
+            except Exception as e:
+                logger.exception(f"Failed to create tenant update notification: {e}")
+            
+            messages.success(request, f'Tenant {updated_tenant.first_name} {updated_tenant.last_name} has been updated successfully!')
+            return redirect("admin_tenant_detail", tenant_id=tenant.id)
+        except Exception as e:
+            messages.error(request, f'Error updating tenant: {str(e)}')
+            logger.exception("Error updating tenant")
+    
+    return render(request, "admin_portal/comprehensive_tenant_edit.html", {
         "title": "Edit Tenant",
         "form": form,
+        "tenant": tenant,
         "back_url": reverse("admin_tenant_detail", args=[tenant.id]),
     })
 
@@ -488,20 +540,6 @@ def admin_delete_lease(request, lease_id: int):
         lease.delete()
         
         # Update unit status back to AVAILABLE
-        try:
-            unit.status = 'AVAILABLE'
-            unit.save()
-            logger.info(f"Unit {unit_number} status updated to AVAILABLE after lease deletion")
-        except Exception as e:
-            logger.exception(f"Failed to update unit {unit_number} status after lease deletion: {e}")
-        
-        return redirect("admin_tenants")
-    return render(request, "admin_portal/confirm.html", {
-        "title": "Delete Lease",
-        "message": f"Delete lease for {lease.tenant.email} -> {lease.unit.number}? Unit will become available again.",
-        "post_url": reverse("admin_delete_lease", args=[lease.id]),
-        "back_url": reverse("admin_tenant_detail", args=[lease.tenant.id])
-    })
 
 
 @admin_required
@@ -589,7 +627,7 @@ def admin_edit_announcement(request, ann_id: int):
     ann = get_object_or_404(Announcement, pk=ann_id)
     form = AnnouncementForm(request.POST or None, instance=ann)
     if request.method == "POST" and form.is_valid():
-        form.save()
+        form.save(uploaded_by=request.user)
         return redirect("admin_announcements")
     return render(request, "admin_portal/form.html", {
         "title": "Edit Announcement",
@@ -697,6 +735,8 @@ def admin_delete_notification(request, notification_id):
 def admin_billing(request):
     q = request.GET.get("q", "").strip()
     status = request.GET.get("status", "").strip()
+    month_filter = request.GET.get("month", "").strip()
+    year_filter = request.GET.get("year", "").strip()
 
     bills = MonthlyBill.objects.select_related("lease", "lease__unit", "lease__tenant")
 
@@ -709,6 +749,14 @@ def admin_billing(request):
             Q(lease__unit__number__icontains=q) |
             Q(payment_reference__icontains=q)
         )
+
+    # Apply month filter
+    if month_filter and month_filter.isdigit():
+        bills = bills.filter(billing_month__month=int(month_filter))
+
+    # Apply year filter
+    if year_filter and year_filter.isdigit():
+        bills = bills.filter(billing_month__year=int(year_filter))
 
     bills = bills.order_by("-billing_month")[:500]
     
@@ -744,10 +792,24 @@ def admin_billing(request):
             )
         unpaid_bills_count = all_bills.filter(status="UNPAID").count()
     
+    # Generate month and year choices
+    from django.utils import timezone
+    current_year = timezone.now().year
+    month_choices = [
+        (1, 'January'), (2, 'February'), (3, 'March'), (4, 'April'),
+        (5, 'May'), (6, 'June'), (7, 'July'), (8, 'August'),
+        (9, 'September'), (10, 'October'), (11, 'November'), (12, 'December')
+    ]
+    year_choices = list(range(current_year - 3, current_year + 2))  # Last 3 years and next year
+    
     return render(request, "admin_portal/billing.html", {
         "bills": bills, 
         "q": q, 
         "status": status,
+        "month_filter": month_filter,
+        "year_filter": year_filter,
+        "month_choices": month_choices,
+        "year_choices": year_choices,
         "paid_bills_count": paid_bills_count,
         "unpaid_bills_count": unpaid_bills_count
     })
@@ -1007,3 +1069,173 @@ def api_get_unit_data_by_id(request, unit_id):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+@admin_required
+def admin_rooms(request):
+    """Admin portal: list all rooms with filtering."""
+    status_filter = request.GET.get('status', 'all')
+    search_query = request.GET.get('search', '')
+    
+    rooms = Room.objects.all()
+    
+    # Filter by status
+    if status_filter != 'all':
+        rooms = rooms.filter(status=status_filter)
+    
+    # Search functionality
+    if search_query:
+        rooms = rooms.filter(
+            Q(name__icontains=search_query) |
+            Q(description__icontains=search_query)
+        )
+    
+    # Get statistics
+    total_rooms = rooms.count()
+    available_rooms = rooms.filter(status='AVAILABLE').count()
+    occupied_rooms = rooms.filter(status='OCCUPIED').count()
+    maintenance_rooms = rooms.filter(status='MAINTENANCE').count()
+    
+    # Pagination
+    paginator = Paginator(rooms, 12)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    return render(request, "admin_portal/rooms.html", {
+        'page_obj': page_obj,
+        'status_filter': status_filter,
+        'search_query': search_query,
+        'total_rooms': total_rooms,
+        'available_rooms': available_rooms,
+        'occupied_rooms': occupied_rooms,
+        'maintenance_rooms': maintenance_rooms,
+    })
+
+
+@admin_required
+def admin_room_detail(request, room_id):
+    """Admin portal: view room details."""
+    room = get_object_or_404(Room, id=room_id)
+    
+    return render(request, "admin_portal/room_detail.html", {
+        'room': room,
+    })
+
+
+def handle_image_uploads(request, unit):
+    """Handle image uploads for a unit"""
+    # Get uploaded files directly from request.FILES
+    images = request.FILES.getlist('images')
+    
+    for i, image_file in enumerate(images):
+        if image_file:
+            # Get caption from form data
+            caption_key = f'image_caption_{i}'
+            caption = request.POST.get(caption_key, '')
+            
+            # Check if this should be primary image
+            primary_image_value = request.POST.get('primary_image')
+            is_primary = primary_image_value == f'new_{i}'
+            
+            # Create UnitImage instance
+            unit_image = UnitImage(
+                unit=unit,
+                image=image_file,
+                caption=caption,
+                is_primary=is_primary,
+                order=i
+            )
+            unit_image.save()
+
+
+def handle_image_deletions(request, unit):
+    """Handle image deletions for a unit"""
+    deleted_images = request.POST.get('deleted_images', '')
+    if deleted_images:
+        deleted_image_ids = [int(id_str) for id_str in deleted_images.split(',') if id_str.strip().isdigit()]
+        
+        # Delete the specified images
+        UnitImage.objects.filter(id__in=deleted_image_ids, unit=unit).delete()
+    
+    # Handle caption updates for existing images
+    for key, value in request.POST.items():
+        if key.startswith('caption_') and value:
+            try:
+                image_id = int(key.replace('caption_', ''))
+                unit_image = UnitImage.objects.get(id=image_id, unit=unit)
+                unit_image.caption = value
+                unit_image.save()
+            except (ValueError, UnitImage.DoesNotExist):
+                continue
+    
+    # Handle primary image selection
+    primary_image_id = request.POST.get('primary_image')
+    if primary_image_id:
+        try:
+            # Remove primary flag from all images
+            UnitImage.objects.filter(unit=unit).update(is_primary=False)
+            
+            # Set primary flag on selected image
+            unit_image = UnitImage.objects.get(id=int(primary_image_id), unit=unit)
+            unit_image.is_primary = True
+            unit_image.save()
+        except (ValueError, UnitImage.DoesNotExist):
+            pass
+
+
+@admin_required
+def admin_tenant_attachments(request, tenant_id: int):
+    """Admin portal: view and manage tenant attachments with image preview"""
+    tenant = get_object_or_404(TenantProfile.objects.select_related("user"), pk=tenant_id)
+    attachments = TenantAttachment.objects.filter(tenant=tenant.user).select_related('uploaded_by').order_by('-uploaded_at')
+    
+    return render(request, "admin_portal/tenant_attachments.html", {
+        "tenant": tenant,
+        "attachments": attachments,
+    })
+
+
+@admin_required
+@require_GET
+def admin_view_attachment(request, attachment_id: int):
+    """Admin portal: view attachment file with image preview support"""
+    attachment = get_object_or_404(TenantAttachment, pk=attachment_id)
+    
+    if not attachment.file:
+        return HttpResponse("File not found", status=404)
+    
+    # Serve the file for download or preview
+    response = HttpResponse(attachment.file.read(), content_type='application/octet-stream')
+    
+    # Set appropriate content type for images
+    if attachment.is_image:
+        response['Content-Type'] = f'image/{attachment.file_extension[1:]}'
+    elif attachment.is_pdf:
+        response['Content-Type'] = 'application/pdf'
+    
+    # Set filename for download
+    response['Content-Disposition'] = f'inline; filename="{attachment.filename}"'
+    
+    return response
+
+
+@admin_required
+def admin_delete_attachment(request, attachment_id: int):
+    """Admin portal: delete tenant attachment"""
+    attachment = get_object_or_404(TenantAttachment, pk=attachment_id)
+    tenant_id = attachment.tenant.tenantprofile.id
+    
+    if request.method == "POST":
+        # Delete the file and the attachment record
+        if attachment.file:
+            attachment.file.delete()
+        attachment.delete()
+        messages.success(request, f"Attachment '{attachment.filename}' has been deleted successfully.")
+        return redirect("admin_tenant_attachments", tenant_id=tenant_id)
+    
+    return render(request, "admin_portal/confirm.html", {
+        "title": "Delete Attachment",
+        "message": f"Delete attachment '{attachment.filename}'? This cannot be undone.",
+        "post_url": reverse("admin_delete_attachment", args=[attachment.id]),
+        "back_url": reverse("admin_tenant_attachments", args=[tenant_id]),
+    })

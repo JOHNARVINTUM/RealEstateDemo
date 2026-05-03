@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+import os
 
 class Unit(models.Model):
     UNIT_TYPES = [
@@ -60,17 +61,53 @@ class Unit(models.Model):
                 return None
         return None
 
+    def get_primary_image(self):
+        """Get primary image or first image as fallback"""
+        primary_image = self.images.filter(is_primary=True).first()
+        if primary_image:
+            return primary_image
+        return self.images.first()
+    
+    def get_image_url(self):
+        """Return primary image URL or placeholder"""
+        primary_image = self.get_primary_image()
+        if primary_image and primary_image.image:
+            return primary_image.image.url
+        return "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+    
+    def get_all_images(self):
+        """Get all images ordered by primary first then by order"""
+        return self.images.all().order_by('-is_primary', 'order', 'created_at')
+    
+    def get_image_count(self):
+        """Get total number of images"""
+        return self.images.count()
+
 class TenantProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    full_name = models.CharField(max_length=120)
+    first_name = models.CharField(max_length=60)
+    last_name = models.CharField(max_length=60)
     contact_no = models.CharField(max_length=30, blank=True)
+    has_seen_unit_welcome = models.BooleanField(default=False, help_text="Track if tenant has seen the unit welcome popup")
+    created_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, related_name='created_tenants', help_text="Admin who created this tenant profile")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.full_name
+        return f"{self.first_name} {self.last_name}"
+    
+    @property
+    def full_name(self):
+        """Get the full name as a property for backward compatibility"""
+        return f"{self.first_name} {self.last_name}"
+    
+    def get_first_name(self):
+        """Get the first name for display purposes"""
+        return self.first_name if self.first_name else "User"
 
 class Lease(models.Model):
     tenant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, limit_choices_to={"role": "TENANT"})
-    unit = models.OneToOneField(Unit, on_delete=models.PROTECT)  # one active tenant per unit
+    unit = models.ForeignKey(Unit, on_delete=models.PROTECT)  # one active tenant per unit
     monthly_rent = models.DecimalField(max_digits=10, decimal_places=2)
     due_day = models.PositiveSmallIntegerField(default=5)  # e.g. due every 5th
     start_date = models.DateField()
@@ -155,5 +192,116 @@ class TenantRiskClassification(models.Model):
         else:
             self.risk_level = 'HIGH'
         self.save()
+
+class UnitImage(models.Model):
+    """Model for unit gallery images"""
+    unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='images')
+    image = models.ImageField(upload_to='units/', help_text="Unit image")
+    caption = models.CharField(max_length=200, blank=True, help_text="Image caption (optional)")
+    is_primary = models.BooleanField(default=False, help_text="Set as primary/featured image")
+    created_at = models.DateTimeField(auto_now_add=True)
+    order = models.PositiveSmallIntegerField(default=0, help_text="Display order")
+    
+    class Meta:
+        ordering = ['order', 'created_at']
+        verbose_name = "Unit Image"
+        verbose_name_plural = "Unit Images"
+    
+    def __str__(self):
+        return f"Image for {self.unit.number} - {self.id}"
+    
+    def save(self, *args, **kwargs):
+        # Ensure only one primary image per unit
+        if self.is_primary:
+            UnitImage.objects.filter(unit=self.unit, is_primary=True).update(is_primary=False)
+        super().save(*args, **kwargs)
+
+
+class TenantAttachment(models.Model):
+    """Model for tenant attachments like contracts and valid IDs"""
+    ATTACHMENT_TYPES = [
+        ('CONTRACT', 'Contract'),
+        ('VALID_ID', 'Valid ID'),
+        ('OTHER', 'Other Document'),
+    ]
+    
+    tenant = models.ForeignKey('accounts.User', on_delete=models.CASCADE, limit_choices_to={'role': 'TENANT'})
+    attachment_type = models.CharField(max_length=20, choices=ATTACHMENT_TYPES, default='OTHER')
+    file = models.FileField(upload_to='tenant_attachments/', help_text="Upload contract or valid ID")
+    description = models.CharField(max_length=200, blank=True, help_text="Brief description of the attachment")
+    uploaded_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, related_name='uploaded_attachments')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-uploaded_at']
+        verbose_name = "Tenant Attachment"
+        verbose_name_plural = "Tenant Attachments"
+    
+    def __str__(self):
+        return f"{self.tenant.email} - {self.get_attachment_type_display()} - {self.file.name}"
+    
+    @property
+    def filename(self):
+        """Return just the filename without path"""
+        return os.path.basename(self.file.name) if self.file else ""
+    
+    @property
+    def file_extension(self):
+        """Return file extension"""
+        if self.file:
+            return os.path.splitext(self.file.name)[1].lower()
+        return ""
+    
+    @property
+    def is_image(self):
+        """Check if file is an image"""
+        image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
+        return self.file_extension in image_extensions
+    
+    @property
+    def is_pdf(self):
+        """Check if file is a PDF"""
+        return self.file_extension == '.pdf'
+    
+    def get_file_size_display(self):
+        """Return human-readable file size"""
+        if self.file:
+            size = self.file.size
+            for unit in ['B', 'KB', 'MB', 'GB']:
+                if size < 1024.0:
+                    return f"{size:.1f} {unit}"
+                size /= 1024.0
+            return f"{size:.1f} TB"
+        return "0 B"
+
+
+class Room(models.Model):
+    STATUS_CHOICES = [
+        ('AVAILABLE', 'Available'),
+        ('OCCUPIED', 'Occupied'),
+        ('MAINTENANCE', 'Under Maintenance'),
+    ]
+    
+    name = models.CharField(max_length=100, unique=True, help_text="Room name/number")
+    price = models.DecimalField(max_digits=10, decimal_places=2, help_text="Room price per month")
+    description = models.TextField(blank=True, help_text="Room description and features")
+    image = models.ImageField(upload_to='rooms/', blank=True, null=True, help_text="Room image")
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='AVAILABLE', help_text="Room status")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['name']
+        verbose_name = "Room"
+        verbose_name_plural = "Rooms"
+    
+    def __str__(self):
+        return f"{self.name} - {self.get_status_display()}"
+    
+    def get_image_url(self):
+        """Return room image URL or placeholder"""
+        if self.image:
+            return self.image.url
+        return "https://via.placeholder.com/400x300/6366f1/ffffff?text=Room+Image"
 
 # Create your models here.

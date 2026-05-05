@@ -7,10 +7,17 @@ class MonthlyBill(models.Model):
         ("UNPAID", "Unpaid"),
         ("PAID", "Paid"),
     ]
+    
+    BILL_TYPE_CHOICES = [
+        ("RENT", "Rent"),
+        ("WATER", "Water"),
+        ("PENALTY", "Penalty"),
+    ]
 
     lease = models.ForeignKey("rentals.Lease", on_delete=models.CASCADE, related_name="monthly_bills")
     billing_month = models.DateField()  # recommended: month-start date (e.g., 2026-02-01)
     due_date = models.DateField(null=True, blank=True)
+    bill_type = models.CharField(max_length=20, choices=BILL_TYPE_CHOICES, default="RENT")
 
     base_rent = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     water_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)

@@ -156,25 +156,39 @@ def admin_tenant_detail(request, tenant_id: int):
 @admin_required
 def admin_create_tenant_profile(request):
     """
-    Admin portal: create a TenantProfile row (linked to an existing User).
+    Admin portal: create a TenantProfile row with auto-generated password and email notification.
     """
     form = TenantProfileForm(request.POST or None, request.FILES or None)
 
     if request.method == "POST" and form.is_valid():
-        tenant_profile = form.save(uploaded_by=request.user)
-        # after creating a tenant, redirect admin to create a lease for that tenant
         try:
-            tenant_id = tenant_profile.user.id
-            return redirect(f"{reverse('admin_create_lease')}?tenant_id={tenant_id}")
+            tenant_profile = form.save(uploaded_by=request.user)
+            
+            # Success message with information about auto-generated password and email
+            tenant_name = f"{tenant_profile.first_name} {tenant_profile.last_name}"
+            success_message = f"Tenant {tenant_name} has been created successfully! "
+            success_message += "An auto-generated password has been created and credentials email has been sent to {tenant_profile.user.email}."
+            
+            messages.success(request, success_message)
+            
+            # after creating a tenant, redirect admin to create a lease for that tenant
+            try:
+                tenant_id = tenant_profile.user.id
+                return redirect(f"{reverse('admin_create_lease')}?tenant_id={tenant_id}")
+            except Exception as e:
+                logger.exception("Failed to redirect to create lease for tenant %s: %s", getattr(tenant_profile.user, 'id', None), e)
+                messages.warning(request, "Tenant created but could not prefill lease form. Redirecting to tenants list.")
+                return redirect("admin_tenants")
+                
         except Exception as e:
-            logger.exception("Failed to redirect to create lease for tenant %s: %s", getattr(tenant_profile.user, 'id', None), e)
-            messages.warning(request, "Tenant created but could not prefill lease form. Redirecting to tenants list.")
-            return redirect("admin_tenants")
+            logger.exception("Failed to create tenant profile: %s", e)
+            messages.error(request, f"Error creating tenant: {str(e)}")
 
     return render(request, "admin_portal/form.html", {
         "title": "Add Tenant",
         "form": form,
         "back_url": reverse("admin_tenants"),
+        "help_text": "Password will be automatically generated based on the tenant's name and sent via email."
     })
 
 

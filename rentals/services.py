@@ -1,6 +1,8 @@
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Count, Q, Avg, Max, F
+from django.core.mail import send_mail
+from django.conf import settings
 from rentals.models import TenantRiskClassification, Lease
 from billing.models import MonthlyBill
 from payments.models import ManualPayment
@@ -325,3 +327,161 @@ class TenantRiskService:
         
         logger.info(f"Updated risk classifications for {updated_count} tenants")
         return updated_count
+
+
+def generate_tenant_password(first_name, last_name):
+    """
+    Generate password based on tenant's full name.
+    
+    Format: First letters of first and middle names (if any) in uppercase + 
+    full last name in lowercase (or original casing as stored)
+    
+    Examples:
+    - John Doe -> JDoe
+    - John Michael Smith -> JMSmith
+    - Maria Garcia -> MGarcia
+    - John Andrew Michael Smith -> JAMSmith
+    """
+    if not first_name or not last_name:
+        raise ValueError("Both first_name and last_name are required")
+    
+    # Clean and split first name into parts to handle middle names
+    first_name_clean = first_name.strip()
+    last_name_clean = last_name.strip()
+    
+    if not first_name_clean or not last_name_clean:
+        raise ValueError("First name and last name cannot be empty or whitespace only")
+    
+    # Split first name into parts to handle middle names (split by whitespace, not hyphens)
+    name_parts = first_name_clean.split()
+    
+    # Get first letter of each part of the first name (including middle names)
+    # Filter out any empty parts that might result from multiple spaces
+    initials = ''.join([part[0].upper() for part in name_parts if part and len(part) > 0])
+    
+    if not initials:
+        raise ValueError("Unable to generate initials from first name")
+    
+    # Combine with last name (preserve original casing, but strip whitespace)
+    password = initials + last_name_clean
+    
+    # Ensure password is not too short (minimum 6 characters)
+    if len(password) < 6:
+        # Add random digits to make it more secure if too short
+        import secrets
+        # Calculate how many digits needed to reach minimum 6 characters
+        digits_needed = 6 - len(password)
+        password += ''.join(str(secrets.randbelow(10)) for _ in range(digits_needed))
+    
+    return password
+
+
+def send_tenant_credentials_email(tenant_email, tenant_name, password):
+    """
+    Send email with tenant login credentials
+    
+    Args:
+        tenant_email: Tenant's email address
+        tenant_name: Tenant's full name
+        password: Generated password
+    """
+    subject = "Welcome to REALESTATE360+ - Your Account Credentials"
+    
+    message = f"""
+Dear {tenant_name},
+
+Welcome to REALESTATE360+! Your tenant account has been successfully created.
+
+Below are your login credentials:
+
+Email: {tenant_email}
+Password: {password}
+
+You can now log in to your tenant portal to:
+- View your billing statements
+- Make payments
+- Request maintenance
+- Access announcements and updates
+
+Please keep your credentials secure and do not share them with others.
+
+If you have any questions or need assistance, please contact our support team.
+
+Best regards,
+REALESTATE360+ Team
+"""
+    
+    try:
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'REALESTATE360+ <noreply@realestate360.com>'),
+            recipient_list=[tenant_email],
+            fail_silently=False,
+        )
+        logger.info(f"Credentials email sent successfully to {tenant_email}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send credentials email to {tenant_email}: {str(e)}")
+        return False
+
+
+def create_tenant_with_credentials(first_name, last_name, email, contact_no=None, uploaded_by=None):
+    """
+    Create a new tenant with auto-generated password and send credentials email
+    
+    Args:
+        first_name: Tenant's first name (may include middle names)
+        last_name: Tenant's last name
+        email: Tenant's email address
+        contact_no: Optional contact number
+        uploaded_by: Admin user who created the tenant
+    
+    Returns:
+        tuple: (tenant_profile, generated_password, email_sent_status)
+    """
+    from django.contrib.auth import get_user_model
+    from .models import TenantProfile
+    
+    User = get_user_model()
+    
+    try:
+        # Generate password
+        password = generate_tenant_password(first_name, last_name)
+        
+        # Generate username from full name
+        full_name = f"{first_name} {last_name}"
+        username = User.generate_username_from_name(full_name)
+        
+        # Create user account
+        user = User.objects.create_user(
+            email=email,
+            username=username,
+            password=password
+        )
+        user.role = "TENANT"
+        user.save()
+        
+        # Create tenant profile
+        tenant_profile = TenantProfile.objects.create(
+            user=user,
+            first_name=first_name,
+            last_name=last_name,
+            contact_no=contact_no or '',
+            send_credentials=True,  # Default to True for new tenants
+            password_change_required=False,  # Default to False for new tenants
+            created_by=uploaded_by
+        )
+        
+        # Send credentials email
+        email_sent = send_tenant_credentials_email(
+            tenant_email=email,
+            tenant_name=full_name,
+            password=password
+        )
+        
+        return tenant_profile, password, email_sent
+        
+    except Exception as e:
+        logger.error(f"Failed to create tenant with credentials: {str(e)}")
+        raise

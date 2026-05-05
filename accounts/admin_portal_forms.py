@@ -2,7 +2,9 @@ import logging
 from django import forms
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from rentals.models import TenantProfile, Lease, Unit, UnitImage, TenantAttachment
+from rentals.services import generate_tenant_password, send_tenant_credentials_email
 from announcements.models import Announcement
 from billing.models import MonthlyBill
 
@@ -13,8 +15,7 @@ logger = logging.getLogger(__name__)
 class TenantProfileForm(forms.ModelForm):
     # Create a new tenant user with profile
     email = forms.EmailField(required=True, label="Email address")
-    password1 = forms.CharField(required=True, widget=forms.PasswordInput, label="Password")
-    password2 = forms.CharField(required=True, widget=forms.PasswordInput, label="Confirm password")
+    # Password fields removed - passwords will be auto-generated and sent via email
     
     # File upload fields for attachments (optional)
     contract_file = forms.FileField(
@@ -75,18 +76,10 @@ class TenantProfileForm(forms.ModelForm):
     def clean(self):
         cleaned = super().clean()
         email = cleaned.get("email")
-        pw1 = cleaned.get("password1")
-        pw2 = cleaned.get("password2")
 
         # Email is required
         if not email:
             raise ValidationError("Email address is required.")
-
-        # Passwords are required and must match
-        if not pw1 or not pw2:
-            raise ValidationError("Please provide and confirm a password.")
-        if pw1 != pw2:
-            raise ValidationError("Passwords do not match.")
         
         # Email must be unique
         if User.objects.filter(email=email).exists():
@@ -97,9 +90,18 @@ class TenantProfileForm(forms.ModelForm):
     def save(self, commit=True, uploaded_by=None):
         # Always create a new user with the provided information
         email = self.cleaned_data.get("email")
-        pw = self.cleaned_data.get("password1")
         first_name = self.cleaned_data.get("first_name", "")
         last_name = self.cleaned_data.get("last_name", "")
+
+        # Generate password based on tenant name
+        try:
+            generated_password = generate_tenant_password(first_name, last_name)
+        except ValueError as e:
+            logger.error(f"Password generation failed: {e}")
+            # Fallback to secure random password if generation fails
+            import secrets
+            import string
+            generated_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(12))
 
         # Generate username from first and last name
         if first_name and last_name:
@@ -108,50 +110,157 @@ class TenantProfileForm(forms.ModelForm):
         else:
             username = User.generate_username_from_name(email)
 
-        # Create user with generated username
-        user = User.objects.create_user(email=email, username=username, password=pw)
-        user.role = "TENANT"
-        user.save()
+        # Use database transaction to ensure atomicity
+        with transaction.atomic():
+            # Create user with generated username and password
+            user = User.objects.create_user(email=email, username=username, password=generated_password)
+            user.role = "TENANT"
+            user.save()
 
-        instance = super().save(commit=False)
-        instance.user = user
-        instance.created_by = uploaded_by
-        if commit:
-            instance.save()
+            instance = super().save(commit=False)
+            instance.user = user
+            instance.created_by = uploaded_by
+            if commit:
+                instance.save()
+                
+                # Handle file uploads
+                contract_file = self.cleaned_data.get('contract_file')
+                if contract_file:
+                    TenantAttachment.objects.create(
+                        tenant=user,
+                        attachment_type='CONTRACT',
+                        file=contract_file,
+                        description=self.cleaned_data.get('contract_description', ''),
+                        uploaded_by=uploaded_by
+                    )
+                
+                valid_id_file = self.cleaned_data.get('valid_id_file')
+                if valid_id_file:
+                    TenantAttachment.objects.create(
+                        tenant=user,
+                        attachment_type='VALID_ID',
+                        file=valid_id_file,
+                        description=self.cleaned_data.get('valid_id_description', ''),
+                        uploaded_by=uploaded_by
+                    )
+                
+                # Send credentials email to tenant (with edge case handling)
+                email_sent = False
+                email_valid = True
+                
+                # Validate email format using Django's email validation
+                from django.core.validators import validate_email
+                from django.core.exceptions import ValidationError as DjangoValidationError
+                
+                try:
+                    validate_email(email)
+                except DjangoValidationError:
+                    logger.warning(f"Invalid email format: {email}")
+                    email_valid = False
+                    email_sent = False
+                
+                # Send credentials email only if email is valid
+                if email_valid:
+                    try:
+                        email_sent = send_tenant_credentials_email(
+                            tenant_email=email,
+                            tenant_name=full_name,
+                            password=generated_password
+                        )
+                        if email_sent:
+                            logger.info(f"Credentials email sent successfully to {email}")
+                        else:
+                            logger.warning(f"Failed to send credentials email to {email}")
+                    except Exception as e:
+                        logger.exception(f"Error sending credentials email to {email}: {e}")
+                        email_sent = False
+                
+                # Create tenant welcome notification with unit details (prevent duplicates)
+                unit_details = ""  # Initialize outside try block
+                try:
+                    # Check if welcome notification already exists for this tenant
+                    from rentals.models import Notification
+                    existing_notification = Notification.objects.filter(
+                        recipient_type='TENANT',
+                        user=instance.user,
+                        title="Welcome to REALESTATE360+"
+                    ).first()
+                    
+                    if not existing_notification:
+                        # Get tenant's lease information if available
+                        lease_info = ""
+                        try:
+                            from rentals.models import Lease
+                            lease = Lease.objects.filter(tenant=instance.user, is_active=True).first()
+                            if lease:
+                                unit_details = f"""
+Unit Details:
+- Unit Number: {lease.unit.number}
+- Unit Type: {lease.unit.get_unit_type_display()}
+- Floor Level: {lease.unit.floor_level}
+- Size: {lease.unit.size_sqm} sqm
+- Monthly Rent: ₱{lease.monthly_rent:,.2f}
+- Lease Start Date: {lease.start_date}
+"""
+                        except Exception as lease_error:
+                            logger.warning(f"Could not fetch lease details for tenant notification: {lease_error}")
+                        
+                        # Create tenant welcome notification
+                        welcome_message = f"""Welcome to REALESTATE360+!
+
+Your tenant account has been successfully created.
+
+{unit_details}
+You can now access your tenant portal to:
+- View your billing statements
+- Make payments online
+- Request maintenance services
+- Access announcements and updates
+
+Monthly Rent Reminder: Your rent is due on the {lease.due_day if lease else '5th'} of each month.
+
+Please keep your login credentials secure and do not share them with others."""
+                        
+                        Notification.create_tenant_notification(
+                            title="Welcome to REALESTATE360+",
+                            message=welcome_message,
+                            notification_type='SYSTEM',
+                            tenant_user=instance.user,
+                            related_unit=lease.unit if lease else None
+                        )
+                    else:
+                        logger.info(f"Welcome notification already exists for tenant {instance.user.email}")
+                    
+                    # Create admin confirmation notification (prevent duplicates)
+                    admin_title = f"New Tenant Added - {instance.first_name} {instance.last_name}"
+                    existing_admin_notification = Notification.objects.filter(
+                        recipient_type='ADMIN',
+                        user=uploaded_by,
+                        title=admin_title
+                    ).first()
+                    
+                    if not existing_admin_notification:
+                        admin_message = f"""New tenant has been successfully added:
+
+Tenant Name: {instance.first_name} {instance.last_name}
+Email: {email}
+{unit_details}
+Status: Account created and credentials sent
+
+Email notification: {'Sent successfully' if email_sent else 'Failed to send - contact support'}"""
+                        
+                        Notification.create_admin_notification(
+                            title=admin_title,
+                            message=admin_message,
+                            notification_type='SYSTEM',
+                            admin_user=uploaded_by
+                        )
+                    else:
+                        logger.info(f"Admin notification already exists for tenant creation")
+                    
+                except Exception as e:
+                    logger.exception("Failed to create notifications: %s", e)
             
-            # Handle file uploads
-            contract_file = self.cleaned_data.get('contract_file')
-            if contract_file:
-                TenantAttachment.objects.create(
-                    tenant=user,
-                    attachment_type='CONTRACT',
-                    file=contract_file,
-                    description=self.cleaned_data.get('contract_description', ''),
-                    uploaded_by=uploaded_by
-                )
-            
-            valid_id_file = self.cleaned_data.get('valid_id_file')
-            if valid_id_file:
-                TenantAttachment.objects.create(
-                    tenant=user,
-                    attachment_type='VALID_ID',
-                    file=valid_id_file,
-                    description=self.cleaned_data.get('valid_id_description', ''),
-                    uploaded_by=uploaded_by
-                )
-            
-            # Generate welcome notification for the new tenant
-            try:
-                welcome_message = f"Welcome to our property management system! Your account has been successfully created."
-                Notification.create_notification(
-                    title="Welcome to RealEstate Portal!",
-                    message=welcome_message,
-                    notification_type='SYSTEM',
-                    related_tenant=instance
-                )
-            except Exception as e:
-                logger.exception("Failed to create welcome notification: %s", e)
-        
         return instance
 
 

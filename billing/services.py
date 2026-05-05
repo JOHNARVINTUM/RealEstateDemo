@@ -103,6 +103,7 @@ def get_or_update_monthly_bill(lease, billing_month: date, today: date | None = 
             "interest": interest,
             "total_due": total_due,
             "status": "UNPAID",
+            "bill_type": "RENT",
         },
     )
 

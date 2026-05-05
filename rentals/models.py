@@ -89,6 +89,8 @@ class TenantProfile(models.Model):
     last_name = models.CharField(max_length=60)
     contact_no = models.CharField(max_length=30, blank=True)
     has_seen_unit_welcome = models.BooleanField(default=False, help_text="Track if tenant has seen the unit welcome popup")
+    send_credentials = models.BooleanField(default=True, help_text="Whether to send login credentials via email")
+    password_change_required = models.BooleanField(default=False, help_text="Whether tenant should change password on first login")
     created_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, related_name='created_tenants', help_text="Admin who created this tenant profile")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -119,18 +121,22 @@ class Lease(models.Model):
 class Notification(models.Model):
     NOTIFICATION_TYPES = [
         ('INFO', 'Information'),
-        ('WARNING', 'Warning'),
-        ('SUCCESS', 'Success'),
-        ('ERROR', 'Error'),
-        ('LEASE', 'Lease Related'),
-        ('PAYMENT', 'Payment Related'),
-        ('MAINTENANCE', 'Maintenance Related'),
+        ('SYSTEM', 'System'),
+        ('BILLING', 'Billing'),
+        ('MAINTENANCE', 'Maintenance'),
         ('UNIT', 'Unit Related'),
+    ]
+    
+    RECIPIENT_TYPES = [
+        ('ADMIN', 'Admin'),
+        ('TENANT', 'Tenant'),
+        ('SPECIFIC_USER', 'Specific User'),
     ]
     
     title = models.CharField(max_length=200)
     message = models.TextField()
     notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, default='INFO')
+    recipient_type = models.CharField(max_length=20, choices=RECIPIENT_TYPES, default='SPECIFIC_USER', help_text="Type of recipient for role-based filtering")
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     
@@ -146,15 +152,40 @@ class Notification(models.Model):
         return f"{self.title} - {self.get_notification_type_display()}"
     
     @classmethod
-    def create_notification(cls, title, message, notification_type='INFO', user=None, related_unit=None, related_tenant=None):
+    def create_notification(cls, title, message, notification_type='INFO', user=None, related_unit=None, related_tenant=None, recipient_type='SPECIFIC_USER'):
         """Helper method to create notifications"""
         return cls.objects.create(
             title=title,
             message=message,
             notification_type=notification_type,
+            recipient_type=recipient_type,
             user=user,
             related_unit=related_unit,
             related_tenant=related_tenant
+        )
+    
+    @classmethod
+    def create_tenant_notification(cls, title, message, notification_type='SYSTEM', tenant_user=None, related_unit=None):
+        """Helper method to create tenant-specific notifications"""
+        return cls.create_notification(
+            title=title,
+            message=message,
+            notification_type=notification_type,
+            user=tenant_user,
+            related_unit=related_unit,
+            related_tenant=tenant_user,
+            recipient_type='TENANT'
+        )
+    
+    @classmethod
+    def create_admin_notification(cls, title, message, notification_type='SYSTEM', admin_user=None):
+        """Helper method to create admin-specific notifications"""
+        return cls.create_notification(
+            title=title,
+            message=message,
+            notification_type=notification_type,
+            user=admin_user,
+            recipient_type='ADMIN'
         )
 
 class TenantRiskClassification(models.Model):

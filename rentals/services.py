@@ -1,9 +1,9 @@
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, date
 from django.db.models import Count, Q, Avg, Max, F
 from django.core.mail import send_mail
 from django.conf import settings
-from rentals.models import TenantRiskClassification, Lease
+from rentals.models import TenantRiskClassification, Lease, CalendarEvent
 from billing.models import MonthlyBill
 from payments.models import ManualPayment
 import logging
@@ -424,6 +424,225 @@ REALESTATE360+ Team
     except Exception as e:
         logger.error(f"Failed to send credentials email to {tenant_email}: {str(e)}")
         return False
+
+
+class LeaseSchedulingService:
+    """Service for generating lease calendar events and managing payment schedules"""
+    
+    def generate_lease_events(self, lease):
+        """
+        Generate all calendar events for a lease
+        
+        Args:
+            lease: Lease instance
+            
+        Returns:
+            list: Created calendar events
+        """
+        from django.db import transaction
+        
+        events_created = []
+        
+        with transaction.atomic():
+            # Delete existing events for this lease to avoid duplicates
+            CalendarEvent.objects.filter(lease=lease).delete()
+            
+            # Generate one-time events
+            events_created.extend(self._generate_one_time_events(lease))
+            
+            # Generate recurring rent events
+            events_created.extend(self._generate_rent_events(lease))
+            
+            logger.info(f"Generated {len(events_created)} calendar events for lease {lease.id}")
+        
+        return events_created
+    
+    def _generate_one_time_events(self, lease):
+        """Generate one-time events (security deposit, advance payment, contract dates)"""
+        events = []
+        
+        # Security deposit event
+        if lease.security_deposit > 0:
+            events.append(CalendarEvent.objects.create(
+                lease=lease,
+                tenant=lease.tenant,
+                event_type='SECURITY_DEPOSIT',
+                event_date=lease.start_date,
+                amount=lease.security_deposit,
+                status='PENDING'
+            ))
+        
+        # Advance payment event
+        if lease.advance_months > 0:
+            advance_amount = lease.advance_payment_amount
+            if advance_amount > 0:
+                events.append(CalendarEvent.objects.create(
+                    lease=lease,
+                    tenant=lease.tenant,
+                    event_type='ADVANCE_PAYMENT',
+                    event_date=lease.start_date,
+                    amount=advance_amount,
+                    status='PENDING'
+                ))
+        
+        # Contract start event
+        events.append(CalendarEvent.objects.create(
+            lease=lease,
+            tenant=lease.tenant,
+            event_type='CONTRACT_START',
+            event_date=lease.start_date,
+            amount=None,
+            status='PENDING'
+        ))
+        
+        # Contract end event (if end_date is set)
+        if lease.end_date:
+            events.append(CalendarEvent.objects.create(
+                lease=lease,
+                tenant=lease.tenant,
+                event_type='CONTRACT_END',
+                event_date=lease.end_date,
+                amount=None,
+                status='PENDING'
+            ))
+        
+        return events
+    
+    def _generate_rent_events(self, lease):
+        """Generate recurring rent events"""
+        events = []
+        
+        # Calculate first rent due date (after advance payment period)
+        first_rent_date = lease.first_rent_due_date
+        
+        # Determine end date for rent generation
+        end_date = lease.end_date
+        if not end_date:
+            # Default to 12 months from first rent date
+            end_date = first_rent_date.replace(year=first_rent_date.year + 1)
+        
+        # Generate rent events from first_rent_date to end_date (max 12 months)
+        current_date = first_rent_date
+        months_generated = 0
+        max_months = 12
+        
+        while current_date <= end_date and months_generated < max_months:
+            events.append(CalendarEvent.objects.create(
+                lease=lease,
+                tenant=lease.tenant,
+                event_type='RENT_DUE',
+                event_date=current_date,
+                amount=lease.monthly_rent,
+                status='PENDING'
+            ))
+            
+            # Move to next month
+            if current_date.month == 12:
+                next_year = current_date.year + 1
+                next_month = 1
+            else:
+                next_year = current_date.year
+                next_month = current_date.month + 1
+            
+            # Adjust for invalid dates (e.g., February 30th)
+            import calendar
+            last_day_of_month = calendar.monthrange(next_year, next_month)[1]
+            adjusted_due_day = min(lease.due_day, last_day_of_month)
+            current_date = date(next_year, next_month, adjusted_due_day)
+            
+            months_generated += 1
+        
+        return events
+    
+    def get_upcoming_events(self, tenant=None, limit=10):
+        """Get upcoming pending events for dashboard"""
+        return CalendarEvent.get_upcoming_events(tenant=tenant, limit=limit)
+    
+    def get_payment_schedule_preview(self, lease_data):
+        """
+        Generate a preview of payment schedule without saving events
+        
+        Args:
+            lease_data: Dictionary with lease information
+            
+        Returns:
+            dict: Payment schedule preview
+        """
+        from datetime import date, timedelta
+        import calendar
+        
+        monthly_rent = lease_data.get('monthly_rent', 0)
+        advance_months = lease_data.get('advance_months', 2)
+        security_deposit = lease_data.get('security_deposit', monthly_rent)
+        start_date = lease_data.get('start_date')
+        due_day = lease_data.get('due_day', 5)
+        
+        if not start_date:
+            return None
+        
+        # Calculate amounts
+        advance_payment_amount = monthly_rent * advance_months
+        total_move_in_cost = security_deposit + advance_payment_amount
+        
+        # Generate upcoming events preview
+        events = []
+        
+        # Initial payments
+        events.append({
+            'date': start_date,
+            'type': 'Security Deposit',
+            'amount': security_deposit
+        })
+        
+        if advance_months > 0:
+            events.append({
+                'date': start_date,
+                'type': 'Advance Payment',
+                'amount': advance_payment_amount
+            })
+        
+        # Calculate first rent due date
+        first_rent_month = start_date
+        for _ in range(advance_months):
+            if first_rent_month.month == 12:
+                first_rent_month = date(first_rent_month.year + 1, 1, 1)
+            else:
+                first_rent_month = date(first_rent_month.year, first_rent_month.month + 1, 1)
+        
+        last_day_of_month = calendar.monthrange(first_rent_month.year, first_rent_month.month)[1]
+        adjusted_due_day = min(due_day, last_day_of_month)
+        first_rent_date = date(first_rent_month.year, first_rent_month.month, adjusted_due_day)
+        
+        # Add next few rent payments (up to 6 months for preview)
+        current_date = first_rent_date
+        for i in range(min(6, 12 - advance_months)):
+            events.append({
+                'date': current_date,
+                'type': 'Rent Due',
+                'amount': monthly_rent
+            })
+            
+            # Move to next month
+            if current_date.month == 12:
+                next_year = current_date.year + 1
+                next_month = 1
+            else:
+                next_year = current_date.year
+                next_month = current_date.month + 1
+            
+            # Adjust for invalid dates (e.g., February 31st)
+            last_day_of_month = calendar.monthrange(next_year, next_month)[1]
+            adjusted_due_day = min(due_day, last_day_of_month)
+            current_date = date(next_year, next_month, adjusted_due_day)
+        
+        return {
+            'monthly_rent': monthly_rent,
+            'advance_months': advance_months,
+            'advance_payment_amount': advance_payment_amount,
+            'security_deposit': security_deposit,
+            'total_move_in_cost': total_move_in_cost,
+            'events': events
+        }
 
 
 def create_tenant_with_credentials(first_name, last_name, email, contact_no=None, uploaded_by=None):

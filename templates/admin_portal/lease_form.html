@@ -1,6 +1,97 @@
 {% extends "admin_portal/base.html" %}
 {% load humanize %}
+{% load static %}
+
 {% block title %}{{ title|default:"Lease Form" }} - Admin Portal{% endblock %}
+
+{% block extra_head %}
+<script>
+// Define functions immediately to ensure they're available for inline handlers
+function handleUnitSelection(selectElement) {
+    console.log('Unit selection changed - inline handler');
+    const selectedOption = selectElement.options[selectElement.selectedIndex];
+    const monthlyRentInput = document.querySelector('input[name="monthly_rent"]') || document.getElementById('id_monthly_rent');
+    const securityDepositInput = document.querySelector('input[name="security_deposit"]') || document.getElementById('id_security_deposit');
+    
+    if (selectedOption && selectedOption.value && monthlyRentInput) {
+        const optionText = selectedOption.textContent;
+        const rentMatch = optionText.match(/PHP\s+([\d,]+\.?\d*)/);
+        console.log('Rent match result:', rentMatch);
+        
+        if (rentMatch) {
+            const rent = rentMatch[1].replace(/,/g, '');
+            monthlyRentInput.value = rent;
+            console.log(' Monthly rent set to:', rent);
+            
+            // Auto-populate security deposit if empty
+            if (securityDepositInput && !securityDepositInput.value) {
+                securityDepositInput.value = rent;
+                console.log(' Security deposit set to:', rent);
+            }
+            
+            // Update schedule preview
+            updateSchedulePreviewInline();
+        }
+    }
+}
+
+function updateSchedulePreviewInline() {
+    console.log('Updating schedule preview - inline handler');
+    const previewContainer = document.getElementById('lease-schedule-preview');
+    if (!previewContainer) {
+        console.log(' Preview container not found');
+        return;
+    }
+    
+    const monthlyRentInput = document.querySelector('input[name="monthly_rent"]') || document.getElementById('id_monthly_rent');
+    const advanceMonthsInput = document.querySelector('input[name="advance_months"]') || document.getElementById('id_advance_months');
+    const securityDepositInput = document.querySelector('input[name="security_deposit"]') || document.getElementById('id_security_deposit');
+    const startDateInput = document.querySelector('input[name="start_date"]') || document.getElementById('id_start_date');
+    
+    const monthlyRent = parseFloat(monthlyRentInput?.value || 0);
+    const advanceMonths = parseInt(advanceMonthsInput?.value || 2);
+    const securityDeposit = parseFloat(securityDepositInput?.value || monthlyRent);
+    const startDate = startDateInput?.value;
+    
+    console.log('Form values:', { monthlyRent, advanceMonths, securityDeposit, startDate });
+    
+    if (monthlyRent > 0 && startDate) {
+        previewContainer.style.display = 'block';
+        
+        const advancePaymentAmount = monthlyRent * advanceMonths;
+        const totalMoveInCost = securityDeposit + advancePaymentAmount;
+        
+        // Update preview elements
+        const elements = {
+            'monthly_rent': '₱' + monthlyRent.toLocaleString('en-PH', {minimumFractionDigits: 2}),
+            'advance_months': advanceMonths,
+            'advance_payment_amount': '₱' + advancePaymentAmount.toLocaleString('en-PH', {minimumFractionDigits: 2}),
+            'security_deposit': '₱' + securityDeposit.toLocaleString('en-PH', {minimumFractionDigits: 2}),
+            'total_move_in_cost': '₱' + totalMoveInCost.toLocaleString('en-PH', {minimumFractionDigits: 2})
+        };
+        
+        Object.keys(elements).forEach(key => {
+            const element = previewContainer.querySelector(`[data-preview="${key}"]`);
+            if (element) {
+                element.textContent = elements[key];
+                console.log(' Updated element:', key, elements[key]);
+            }
+        });
+        
+        // Update pluralization
+        const pluralElement = previewContainer.querySelector('[data-preview="advance_months_plural"]');
+        if (pluralElement) pluralElement.textContent = advanceMonths === 1 ? '' : 's';
+        
+        console.log(' Schedule preview updated successfully');
+    } else {
+        previewContainer.style.display = 'none';
+        console.log(' Preview hidden - missing required values');
+    }
+}
+
+console.log('Lease form functions defined in head section');
+</script>
+{% endblock %}
 
 {% block content %}
   <!-- Breadcrumb -->
@@ -57,7 +148,7 @@
             <label for="{{ form.unit.id_for_label }}" class="form-label">
               {{ form.unit.label }} <span class="text-red-500">*</span>
             </label>
-            <select id="{{ form.unit.id_for_label }}" name="{{ form.unit.name }}" class="styled-input" required>
+            <select id="{{ form.unit.id_for_label }}" name="{{ form.unit.name }}" class="styled-input" required onchange="handleUnitSelection(this)">
               <option value="">Select Unit</option>
               {% for unit in form.unit.field.queryset %}
                 <option value="{{ unit.pk }}" {% if form.unit.value == unit.pk|stringformat:"s" %}selected{% endif %}>
@@ -74,13 +165,30 @@
           </div>
 
           
+          <!-- Monthly Rent -->
+          <div class="form-group">
+            <label for="{{ form.monthly_rent.id_for_label }}" class="form-label">
+              {{ form.monthly_rent.label }} <span class="text-red-500">*</span>
+            </label>
+            <input type="number" id="{{ form.monthly_rent.id_for_label }}" name="{{ form.monthly_rent.name }}" 
+                   class="styled-input rent-input" step="0.01" min="0" 
+                   value="{{ form.monthly_rent.value|default:'' }}" placeholder="0.00" required
+                   oninput="updateSchedulePreviewInline()">
+            {% if form.monthly_rent.errors %}
+              <div class="text-red-600 text-sm mt-1">
+                {{ form.monthly_rent.errors.0 }}
+              </div>
+            {% endif %}
+            <small class="text-gray-500">Monthly rent amount (will auto-populate from unit selection)</small>
+          </div>
+
           <!-- Due Day -->
           <div class="form-group">
             <label for="{{ form.due_day.id_for_label }}" class="form-label">
               {{ form.due_day.label }} <span class="text-red-500">*</span>
             </label>
             <input type="number" id="{{ form.due_day.id_for_label }}" name="{{ form.due_day.name }}" 
-                   class="styled-input" min="1" max="31" value="{{ form.due_day.value|default:1 }}" required>
+                   class="styled-input" min="1" max="31" value="{{ form.due_day.value|default:5 }}" required>
             {% if form.due_day.errors %}
               <div class="text-red-600 text-sm mt-1">
                 {{ form.due_day.errors.0 }}
@@ -90,35 +198,106 @@
           </div>
         </div>
 
-        <!-- Start Date -->
-        <div class="form-group mt-4">
-          <label for="{{ form.start_date.id_for_label }}" class="form-label">
-            {{ form.start_date.label }} <span class="text-red-500">*</span>
-          </label>
-          <input type="text" id="{{ form.start_date.id_for_label }}" name="{{ form.start_date.name }}" 
-                   class="styled-input flatpickr" placeholder="Select start date" 
-                   value="{{ form.start_date.value|default:'' }}" required>
-            {% if form.start_date.errors %}
-              <div class="text-red-600 text-sm mt-1">
-                {{ form.start_date.errors.0 }}
-              </div>
-            {% endif %}
-            <small class="text-gray-500">Lease start date</small>
+        <!-- Payment Details Section -->
+        <div class="payment-section mt-6">
+          <h3 class="text-lg font-semibold text-gray-800 mb-4">
+            <i class="fas fa-money-bill-wave mr-2"></i>
+            Payment Details
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Security Deposit -->
+            <div class="form-group">
+              <label for="{{ form.security_deposit.id_for_label }}" class="form-label">
+                {{ form.security_deposit.label }}
+              </label>
+              <input type="number" id="{{ form.security_deposit.id_for_label }}" name="{{ form.security_deposit.name }}" 
+                     class="styled-input" step="0.01" min="0" 
+                     value="{{ form.security_deposit.value|default:'' }}" placeholder="0.00"
+                     oninput="updateSchedulePreviewInline()">
+              {% if form.security_deposit.errors %}
+                <div class="text-red-600 text-sm mt-1">
+                  {{ form.security_deposit.errors.0 }}
+                </div>
+              {% endif %}
+              <small class="text-gray-500">Security deposit amount (defaults to 1 month rent)</small>
+            </div>
+
+            <!-- Advance Months -->
+            <div class="form-group">
+              <label for="{{ form.advance_months.id_for_label }}" class="form-label">
+                {{ form.advance_months.label }}
+              </label>
+              <input type="number" id="{{ form.advance_months.id_for_label }}" name="{{ form.advance_months.name }}" 
+                     class="styled-input" min="0" max="12" 
+                     value="{{ form.advance_months.value|default:2 }}"
+                     oninput="updateSchedulePreviewInline()">
+              {% if form.advance_months.errors %}
+                <div class="text-red-600 text-sm mt-1">
+                  {{ form.advance_months.errors.0 }}
+                </div>
+              {% endif %}
+              <small class="text-gray-500">Number of months for advance payment (default: 2)</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lease Dates Section -->
+        <div class="dates-section mt-6">
+          <h3 class="text-lg font-semibold text-gray-800 mb-4">
+            <i class="fas fa-calendar-alt mr-2"></i>
+            Lease Dates
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Start Date -->
+            <div class="form-group">
+              <label for="{{ form.start_date.id_for_label }}" class="form-label">
+                {{ form.start_date.label }} <span class="text-red-500">*</span>
+              </label>
+              <input type="text" id="{{ form.start_date.id_for_label }}" name="{{ form.start_date.name }}" 
+                     class="styled-input flatpickr" placeholder="Select start date" 
+                     value="{{ form.start_date.value|default:'' }}" required
+                     onchange="updateSchedulePreviewInline()">
+              {% if form.start_date.errors %}
+                <div class="text-red-600 text-sm mt-1">
+                  {{ form.start_date.errors.0 }}
+                </div>
+              {% endif %}
+              <small class="text-gray-500">Lease start date</small>
+            </div>
+
+            <!-- End Date -->
+            <div class="form-group">
+              <label for="{{ form.end_date.id_for_label }}" class="form-label">
+                {{ form.end_date.label }}
+              </label>
+              <input type="text" id="{{ form.end_date.id_for_label }}" name="{{ form.end_date.name }}" 
+                     class="styled-input flatpickr" placeholder="Select end date (optional)" 
+                     value="{{ form.end_date.value|default:'' }}">
+              {% if form.end_date.errors %}
+                <div class="text-red-600 text-sm mt-1">
+                  {{ form.end_date.errors.0 }}
+                </div>
+              {% endif %}
+              <small class="text-gray-500">Lease end date (optional)</small>
+            </div>
+          </div>
         </div>
 
         <!-- Is Active -->
-        <div class="form-group mt-4">
+        <div class="form-group mt-6">
           <label for="{{ form.is_active.id_for_label }}" class="form-label">
             {{ form.is_active.label }}
           </label>
           <input type="checkbox" id="{{ form.is_active.id_for_label }}" name="{{ form.is_active.name }}" 
-                   class="styled-checkbox" {% if form.is_active.value %}checked{% endif %}>
-            {% if form.is_active.errors %}
-              <div class="text-red-600 text-sm mt-1">
-                {{ form.is_active.errors.0 }}
-              </div>
-            {% endif %}
-          <small class="text-gray-500">Activate this lease immediately</small>
+                 class="styled-checkbox" {% if form.is_active.value %}checked{% endif %}>
+          {% if form.is_active.errors %}
+            <div class="text-red-600 text-sm mt-1">
+              {{ form.is_active.errors.0 }}
+            </div>
+          {% endif %}
+          <small class="text-gray-500">Activate this lease immediately (will be set automatically based on start date)</small>
         </div>
       </div>
       
@@ -139,6 +318,9 @@
         {% endif %}
       </div>
     </form>
+    
+    <!-- Include Schedule Preview -->
+    {% include "admin_portal/lease_schedule_preview.html" %}
   </div>
 {% endblock %}
 
@@ -281,24 +463,27 @@ input[type="checkbox"] {
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
 
 <script>
+// Initialize date pickers only
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('Lease form loaded');
-  
-  // Initialize Flatpickr for date picker
-  const dateInput = document.querySelector('.flatpickr');
-  if (dateInput) {
-    flatpickr(dateInput, {
-      dateFormat: 'Y-m-d',
-      minDate: 'today',
-      allowInput: true
+    console.log('DOM loaded - initializing date pickers');
+    
+    // Initialize date pickers
+    const dateInputs = document.querySelectorAll('.flatpickr');
+    dateInputs.forEach(input => {
+        if (window.flatpickr) {
+            flatpickr(input, {
+                dateFormat: 'Y-m-d',
+                minDate: 'today',
+                allowInput: true,
+                onChange: function(selectedDates, dateStr, instance) {
+                    console.log('Date changed:', dateStr);
+                    updateSchedulePreviewInline();
+                }
+            });
+        }
     });
-    console.log('Date picker initialized');
-  } else {
-    console.log('Date input not found');
-  }
-  
-  // Monthly rent is auto-populated from unit selection in the backend
-  console.log('Lease form ready - monthly rent will be auto-populated from unit');
+    
+    console.log('✅ Lease form initialization complete');
 });
 </script>
 

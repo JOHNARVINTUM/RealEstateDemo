@@ -2,6 +2,8 @@ from django.urls import path
 from .admin_portal_views import (
     admin_dashboard,
     admin_tenants,
+    debug_lease_form,
+    simple_debug,
     admin_tenant_detail,
     admin_billing,
     admin_payments,
@@ -81,7 +83,9 @@ urlpatterns = [
     path("units/<int:unit_id>/toggle-status/", admin_toggle_unit_status, name="admin_toggle_unit_status"),
     path("api/unit/<str:unit_number>/", api_get_unit_data, name="api_get_unit_data"),
     path("api/unit/by-id/<int:unit_id>/", api_get_unit_data_by_id, name="api_get_unit_data_by_id"),
-
+    path("debug-lease-form/", debug_lease_form, name="debug_lease_form"),
+    path("simple-debug/", simple_debug, name="simple_debug"),
+    
     # Create pages
     path("tenants/add/", admin_create_tenant_profile, name="admin_create_tenant_profile"),
     path("leases/add/", admin_create_lease, name="admin_create_lease"),

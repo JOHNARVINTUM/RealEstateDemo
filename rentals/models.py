@@ -113,10 +113,60 @@ class Lease(models.Model):
     monthly_rent = models.DecimalField(max_digits=10, decimal_places=2)
     due_day = models.PositiveSmallIntegerField(default=5)  # e.g. due every 5th
     start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True, help_text="Lease end date (optional)")
+    security_deposit = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Security deposit amount")
+    advance_months = models.PositiveSmallIntegerField(default=2, help_text="Number of months for advance payment")
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.tenant.email} -> {self.unit.number}"
+
+    @property
+    def advance_payment_amount(self):
+        """Calculate advance payment amount"""
+        return self.monthly_rent * self.advance_months
+    
+    @property
+    def total_move_in_cost(self):
+        """Calculate total move-in cost"""
+        return self.security_deposit + self.advance_payment_amount
+    
+    @property
+    def first_rent_due_date(self):
+        """Calculate first rent due date after advance payment period"""
+        from datetime import date, timedelta
+        import calendar
+        
+        # Calculate first rent month (start_date + advance_months)
+        first_rent_month = self.start_date
+        for _ in range(self.advance_months):
+            # Move to next month
+            if first_rent_month.month == 12:
+                first_rent_month = date(first_rent_month.year + 1, 1, 1)
+            else:
+                first_rent_month = date(first_rent_month.year, first_rent_month.month + 1, 1)
+        
+        # Adjust due_day to be valid for the month
+        last_day_of_month = calendar.monthrange(first_rent_month.year, first_rent_month.month)[1]
+        adjusted_due_day = min(self.due_day, last_day_of_month)
+        
+        return date(first_rent_month.year, first_rent_month.month, adjusted_due_day)
+    
+    def save(self, *args, **kwargs):
+        """Override save to handle smart status setting"""
+        from django.utils import timezone
+        
+        # Set smart status based on start date
+        if self.start_date <= timezone.now().date():
+            self.is_active = True
+        else:
+            self.is_active = False
+        
+        # Auto-populate security deposit if not set
+        if self.security_deposit == 0 and self.monthly_rent:
+            self.security_deposit = self.monthly_rent
+        
+        super().save(*args, **kwargs)
 
 class Notification(models.Model):
     NOTIFICATION_TYPES = [
@@ -334,5 +384,77 @@ class Room(models.Model):
         if self.image:
             return self.image.url
         return "https://via.placeholder.com/400x300/6366f1/ffffff?text=Room+Image"
+
+class CalendarEvent(models.Model):
+    """Calendar events for lease payments and important dates"""
+    
+    EVENT_TYPES = [
+        ('RENT_DUE', 'Rent Due'),
+        ('ADVANCE_PAYMENT', 'Advance Payment'),
+        ('SECURITY_DEPOSIT', 'Security Deposit'),
+        ('CONTRACT_START', 'Contract Start'),
+        ('CONTRACT_END', 'Contract End'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('PAID', 'Paid'),
+        ('OVERDUE', 'Overdue'),
+    ]
+    
+    lease = models.ForeignKey('Lease', on_delete=models.CASCADE, related_name='calendar_events')
+    tenant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, limit_choices_to={"role": "TENANT"})
+    event_type = models.CharField(max_length=20, choices=EVENT_TYPES)
+    event_date = models.DateField()
+    amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['event_date']
+        indexes = [
+            models.Index(fields=['event_date', 'status']),
+            models.Index(fields=['tenant', 'event_date']),
+            models.Index(fields=['lease', 'event_type']),
+        ]
+    
+    def __str__(self):
+        return f"{self.get_event_type_display()} - {self.event_date} - {self.tenant.email}"
+    
+    @classmethod
+    def get_upcoming_events(cls, tenant=None, limit=10):
+        """Get upcoming pending events for dashboard and notifications"""
+        from django.utils import timezone
+        
+        queryset = cls.objects.filter(
+            event_date__gte=timezone.now().date(),
+            status='PENDING'
+        ).order_by('event_date')
+        
+        if tenant:
+            queryset = queryset.filter(tenant=tenant)
+        
+        return queryset[:limit]
+    
+    @classmethod
+    def update_overdue_events(cls):
+        """Update status of overdue events"""
+        from django.utils import timezone
+        
+        today = timezone.now().date()
+        overdue_events = cls.objects.filter(
+            event_date__lt=today,
+            status='PENDING'
+        )
+        
+        count = overdue_events.update(status='OVERDUE')
+        return count
+    
+    def mark_as_paid(self):
+        """Mark event as paid"""
+        self.status = 'PAID'
+        self.save()
+
 
 # Create your models here.

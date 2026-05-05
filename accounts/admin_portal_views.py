@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 import logging
 
 from django.db.models import Sum, Q
@@ -18,6 +18,26 @@ from billing.models import MonthlyBill
 from billing.services import ensure_bills_since_move_in, set_bill_status, approve_manual_payment, reject_manual_payment
 from payments.models import ManualPayment
 from maintenance.models import MaintenanceRequest
+
+
+def debug_lease_form(request):
+    """Debug view for testing lease form JavaScript"""
+    from django.template import loader
+    
+    # Get available units for testing
+    units = Unit.objects.filter(is_active=True)
+    
+    # Get tenants for testing
+    tenants = TenantProfile.objects.select_related('user')
+    
+    return render(request, 'admin_portal/debug_lease_form.html', {
+        'units': units,
+        'tenants': tenants
+    })
+
+def simple_debug(request):
+    """Simple debug view without Django template inheritance"""
+    return render(request, 'admin_portal/simple_debug.html')
 from announcements.models import Announcement
 from maintenance.forms import AdminMaintenanceUpdateForm
 from rentals.services import TenantRiskService
@@ -29,7 +49,15 @@ from .admin_portal_forms import UnitForm
 from rentals.models import UnitImage
 from django.utils import timezone as dj_timezone
 from django.contrib import messages
-from .decorators import admin_required
+from django.contrib.auth.decorators import user_passes_test
+
+def admin_required(view_func):
+    """
+    Decorator to ensure user is authenticated and has ADMIN role
+    """
+    def check(user):
+        return user.is_authenticated and (getattr(user, "role", "") == "ADMIN" or user.is_superuser)
+    return user_passes_test(check)(view_func)
 
 logger = logging.getLogger(__name__)
 
@@ -49,14 +77,10 @@ def admin_dashboard(request):
     )
     overdue_payments = MonthlyBill.objects.filter(status="UNPAID", due_date__lt=today).count()
 
+    
     # Get monthly rental income data for the past 12 months including current month
     monthly_income_data = []
     months_labels = []
-    
-    # Debug: Check if we have any data
-    logger.info(f"DEBUG: Today is {today}")
-    logger.info(f"DEBUG: Total paid bills: {MonthlyBill.objects.filter(status='PAID').count()}")
-    logger.info(f"DEBUG: Active leases: {Lease.objects.filter(is_active=True).count()}")
     
     # Calculate months from 11 months ago to current month (inclusive)
     current_month_start = today.replace(day=1)
@@ -79,8 +103,8 @@ def admin_dashboard(request):
             
             month_date = datetime(month_year, month_month, 1).date()
         
-        # Get paid bills for this month
-        month_revenue = (
+        # Get paid bills for this month (actual revenue)
+        actual_revenue = (
             MonthlyBill.objects.filter(
                 status="PAID",
                 paid_at__year=month_date.year,
@@ -96,16 +120,14 @@ def admin_dashboard(request):
         
         monthly_income_data.append({
             'month': month_date.strftime('%b %Y'),
-            'actual': float(month_revenue),
+            'actual': float(actual_revenue),
             'expected': float(expected_revenue)
         })
         months_labels.append(month_date.strftime('%b'))
-        
-        # Debug: Log each month's data
-        logger.info(f"DEBUG: {month_date.strftime('%b %Y')} - Actual: {month_revenue}, Expected: {expected_revenue}")
     
-    logger.info(f"DEBUG: Final monthly_income_data: {monthly_income_data}")
-    logger.info(f"DEBUG: Final months_labels: {months_labels}")
+    # Reverse to show oldest to newest
+    monthly_income_data.reverse()
+    months_labels.reverse()
 
     # Get notifications for admin (all notifications, not just user-specific)
     all_notifications = Notification.objects.all().order_by('-created_at')
@@ -364,8 +386,10 @@ def admin_toggle_unit_status(request, unit_id):
 @admin_required
 def admin_create_lease(request):
     """
-    Admin portal: create a Lease row (linking a tenant to a unit).
+    Admin portal: create a Lease row (linking a tenant to a unit) with enhanced payment scheduling.
     """
+    from rentals.services import LeaseSchedulingService
+    
     # allow pre-filling tenant via ?tenant_id=... when redirected from tenant creation
     initial = {}
     tenant_id = request.GET.get("tenant_id")
@@ -373,92 +397,145 @@ def admin_create_lease(request):
         initial["tenant"] = tenant_id
 
     form = LeaseForm(request.POST or None, initial=initial)
+    schedule_preview = None
 
-    if request.method == "POST" and form.is_valid():
-        lease = form.save()
-        
-        # Create real-time notification for admin about new lease
-        try:
-            Notification.create_notification(
-                title=f"New Lease Created",
-                message=f"Lease created for {lease.tenant.email} in Unit {lease.unit.number} (Monthly Rent: ₱{lease.monthly_rent:,.2f})",
-                notification_type='LEASE',
-                related_tenant=lease.tenant,
-                related_unit=lease.unit
-            )
-        except Exception as e:
-            logger.exception(f"Failed to create lease notification: {e}")
-        
-        # Create welcome notification for tenant with unit details
-        try:
-            tenant_name = lease.tenant.tenantprofile.full_name if hasattr(lease.tenant, 'tenantprofile') else lease.tenant.email
-            welcome_message = f"""
-Welcome to your new home! 
+    if request.method == "POST":
+        if form.is_valid():
+            try:
+                lease = form.save()
+                
+                # Create real-time notification for admin about new lease
+                try:
+                    Notification.create_notification(
+                        title=f"New Lease Created",
+                        message=f"""Lease created for {lease.tenant.email} in Unit {lease.unit.number}
 
-Unit Details:
+Lease Details:
+• Monthly Rent: ₱{lease.monthly_rent:,.2f}
+• Advance Payment: ₱{lease.advance_payment_amount:,.2f} ({lease.advance_months} months)
+• Security Deposit: ₱{lease.security_deposit:,.2f}
+• Total Move-in Cost: ₱{lease.total_move_in_cost:,.2f}
+• Lease Start: {lease.start_date.strftime('%B %d, %Y')}
+• First Rent Due: {lease.first_rent_due_date.strftime('%B %d, %Y')}""",
+                        notification_type='LEASE',
+                        related_tenant=lease.tenant,
+                        related_unit=lease.unit
+                    )
+                except Exception as e:
+                    logger.exception(f"Failed to create lease notification: {e}")
+                
+                # Create enhanced welcome notification for tenant with payment details
+                try:
+                    tenant_name = lease.tenant.tenantprofile.full_name if hasattr(lease.tenant, 'tenantprofile') else lease.tenant.email
+                    welcome_message = f"""Welcome to your new home at REALESTATE360+!
+
+Your lease has been successfully created. Here are your payment details:
+
+Unit Information:
 • Unit Number: {lease.unit.number}
 • Unit Type: {lease.unit.get_unit_type_display()}
 • Floor Level: {lease.unit.floor_level}
 • Size: {lease.unit.size_sqm} sqm
+
+Payment Schedule:
 • Monthly Rent: ₱{lease.monthly_rent:,.2f}
+• Security Deposit: ₱{lease.security_deposit:,.2f} (due on move-in)
+• Advance Payment: ₱{lease.advance_payment_amount:,.2f} ({lease.advance_months} months prepaid)
+• Total Move-in Cost: ₱{lease.total_move_in_cost:,.2f}
 • Lease Start Date: {lease.start_date.strftime('%B %d, %Y')}
+• First Regular Rent Due: {lease.first_rent_due_date.strftime('%B %d, %Y')}
 
 Your unit features: {lease.unit.description or 'Modern living space with premium amenities.'}
-
 Amenities included: {lease.unit.amenities or 'Contact admin for full amenities list.'}
 
-Please make sure to pay your monthly rent on time (due day: {lease.due_day} of each month). 
+Payment Due Dates:
+• Rent is due on the {lease.due_day} of each month
+• Your advance payment covers the first {lease.advance_months} months
+• Regular rent payments start {lease.first_rent_due_date.strftime('%B %d, %Y')}
+
 You can access your tenant portal to view bills, make payments, and request maintenance.
 
-Welcome aboard! 
-"""
-            
-            Notification.create_notification(
-                title=f"Welcome to Your New Unit {lease.unit.number}!",
-                message=welcome_message,
-                notification_type='SYSTEM',
-                related_tenant=lease.tenant,
-                related_unit=lease.unit
-            )
-        except Exception as e:
-            logger.exception(f"Failed to create welcome notification for tenant: {e}")
-        
-        # Update unit status to OCCUPIED when lease is created
-        try:
-            unit = lease.unit
-            unit.status = 'OCCUPIED'
-            unit.save()
-            logger.info(f"Unit {unit.number} status updated to OCCUPIED for lease {lease.id}")
-        except Exception as e:
-            logger.exception(f"Failed to update unit status for lease {lease.id}: {e}")
-            # Don't block lease creation if unit status update fails
-        
-        # Reset tenant's welcome popup flag so they see the welcome message
-        try:
-            from rentals.models import TenantProfile
-            tenant_profile = TenantProfile.objects.get(user=lease.tenant)
-            tenant_profile.has_seen_unit_welcome = False
-            tenant_profile.save()
-            logger.info(f"Reset welcome popup flag for tenant {lease.tenant.email}")
-        except Exception as e:
-            logger.exception(f"Failed to reset welcome popup flag for tenant {lease.tenant.email}: {e}")
-            # Don't block lease creation if flag reset fails
-        
-        # create initial monthly bill rows from move-in until today
-        try:
-            ensure_bills_since_move_in(lease)
-        except Exception:
-            # don't block creation if billing generation fails; admin can regenerate later
-            logger.exception("ensure_bills_since_move_in failed for lease id %s", getattr(lease, 'id', None))
-            messages.warning(request, "Failed to generate initial bills; you can regenerate later.")
-        
-        messages.success(request, f'Lease created successfully! Unit {lease.unit.number} is now occupied. Welcome notification sent to tenant.')
-        return redirect("admin_tenants")
+Welcome aboard! We're excited to have you as part of our community!"""
+                    
+                    Notification.create_notification(
+                        title=f"Welcome to Your New Unit {lease.unit.number}!",
+                        message=welcome_message,
+                        notification_type='SYSTEM',
+                        related_tenant=lease.tenant,
+                        related_unit=lease.unit
+                    )
+                except Exception as e:
+                    logger.exception(f"Failed to create welcome notification for tenant: {e}")
+                
+                # Update unit status to OCCUPIED when lease is created
+                try:
+                    unit = lease.unit
+                    unit.status = 'OCCUPIED'
+                    unit.save()
+                    logger.info(f"Unit {unit.number} status updated to OCCUPIED for lease {lease.id}")
+                except Exception as e:
+                    logger.exception(f"Failed to update unit status for lease {lease.id}: {e}")
+                    # Don't block lease creation if unit status update fails
+                
+                # Reset tenant's welcome popup flag so they see the welcome message
+                try:
+                    from rentals.models import TenantProfile
+                    tenant_profile = TenantProfile.objects.get(user=lease.tenant)
+                    tenant_profile.has_seen_unit_welcome = False
+                    tenant_profile.save()
+                    logger.info(f"Reset welcome popup flag for tenant {lease.tenant.email}")
+                except Exception as e:
+                    logger.exception(f"Failed to reset welcome popup flag for tenant {lease.tenant.email}: {e}")
+                    # Don't block lease creation if flag reset fails
+                
+                # create initial monthly bill rows from move-in until today
+                try:
+                    ensure_bills_since_move_in(lease)
+                except Exception:
+                    # don't block creation if billing generation fails; admin can regenerate later
+                    logger.exception("ensure_bills_since_move_in failed for lease id %s", getattr(lease, 'id', None))
+                    messages.warning(request, "Failed to generate initial bills; you can regenerate later.")
+                
+                # Success message with payment summary
+                success_message = f'''Lease created successfully! 
+
+Payment Summary:
+• Unit {lease.unit.number} is now occupied
+• Monthly Rent: ₱{lease.monthly_rent:,.2f}
+• Security Deposit: ₱{lease.security_deposit:,.2f}
+• Advance Payment: ₱{lease.advance_payment_amount:,.2f}
+• Total Move-in Cost: ₱{lease.total_move_in_cost:,.2f}
+• Calendar events generated: {lease.calendar_events.count()} events
+
+Welcome notification sent to tenant with complete payment schedule.'''
+                
+                messages.success(request, success_message)
+                return redirect("admin_tenants")
+                
+            except Exception as e:
+                logger.exception(f"Error creating lease: {e}")
+                messages.error(request, f'Error creating lease: {str(e)}')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        # Generate schedule preview for GET request
+        if request.GET.get('preview') == '1':
+            # Get sample data for preview
+            service = LeaseSchedulingService()
+            sample_data = {
+                'monthly_rent': 17000,
+                'advance_months': 2,
+                'security_deposit': 17000,
+                'start_date': date.today(),
+                'due_day': 5,
+            }
+            schedule_preview = service.get_payment_schedule_preview(sample_data)
 
     return render(request, "admin_portal/lease_form.html", {
         "title": "Add Lease",
         "form": form,
         "back_url": reverse("admin_tenants"),
+        "schedule_preview": schedule_preview,
     })
 
 

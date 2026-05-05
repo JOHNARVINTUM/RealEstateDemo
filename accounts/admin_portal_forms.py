@@ -468,37 +468,114 @@ class TenantProfileEditForm(forms.ModelForm):
 
 
 class LeaseForm(forms.ModelForm):
+    # Additional fields for payment calculations
+    end_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={"type": "text", "class": "flatpickr", "autocomplete": "off"}),
+        help_text="Lease end date (optional)"
+    )
+    
     class Meta:
         model = Lease
-        fields = ["tenant", "unit", "due_day", "start_date", "is_active"]
+        fields = ["tenant", "unit", "monthly_rent", "due_day", "start_date", "end_date", "security_deposit", "advance_months", "is_active"]
         widgets = {
-            # use a text input with a CSS class so JS datepicker (flatpickr) can enhance it
             "start_date": forms.DateInput(attrs={"type": "text", "class": "flatpickr", "autocomplete": "off"}),
+            "end_date": forms.DateInput(attrs={"type": "text", "class": "flatpickr", "autocomplete": "off"}),
+            "monthly_rent": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
+            "security_deposit": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
+            "advance_months": forms.NumberInput(attrs={"min": "0", "max": "12"}),
         }
 
     def clean(self):
         cleaned = super().clean()
         unit = cleaned.get("unit")
+        start_date = cleaned.get("start_date")
+        end_date = cleaned.get("end_date")
+        monthly_rent = cleaned.get("monthly_rent")
+        security_deposit = cleaned.get("security_deposit")
+        advance_months = cleaned.get("advance_months")
         
+        # Validate unit availability
         if unit:
             qs = Lease.objects.filter(unit=unit, is_active=True)
             if self.instance and self.instance.pk:
                 qs = qs.exclude(pk=self.instance.pk)
             if qs.exists():
                 raise ValidationError({"unit": "Selected unit already has an active lease."})
+        
+        # Validate date logic
+        if start_date and end_date:
+            if start_date > end_date:
+                raise ValidationError({"end_date": "End date must be after start date."})
+        
+        # Validate payment fields
+        if monthly_rent and monthly_rent <= 0:
+            raise ValidationError({"monthly_rent": "Monthly rent must be greater than 0."})
+        
+        if security_deposit and security_deposit < 0:
+            raise ValidationError({"security_deposit": "Security deposit cannot be negative."})
+        
+        if advance_months is not None and (advance_months < 0 or advance_months > 12):
+            raise ValidationError({"advance_months": "Advance months must be between 0 and 12."})
+        
         return cleaned
 
     def save(self, commit=True):
         # Get the instance without saving yet
         instance = super().save(commit=False)
         
-        # Auto-populate monthly rent from unit
+        # Auto-populate monthly rent from unit if not provided
         if instance.unit and not instance.monthly_rent:
             instance.monthly_rent = instance.unit.monthly_rent
         
+        # Auto-populate security deposit if not provided
+        if not instance.security_deposit and instance.monthly_rent:
+            instance.security_deposit = instance.monthly_rent
+        
+        # Set smart status based on start date
+        from django.utils import timezone
+        if instance.start_date <= timezone.now().date():
+            instance.is_active = True
+        else:
+            instance.is_active = False
+        
         if commit:
             instance.save()
+            # Generate calendar events after lease is saved
+            self._generate_calendar_events(instance)
+        
         return instance
+    
+    def _generate_calendar_events(self, lease):
+        """Generate calendar events for the lease"""
+        from rentals.services import LeaseSchedulingService
+        
+        try:
+            service = LeaseSchedulingService()
+            service.generate_lease_events(lease)
+        except Exception as e:
+            logger.error(f"Failed to generate calendar events for lease {lease.id}: {e}")
+    
+    def get_payment_summary(self):
+        """Get payment summary for preview"""
+        cleaned_data = getattr(self, 'cleaned_data', {})
+        if not cleaned_data:
+            return None
+        
+        monthly_rent = cleaned_data.get('monthly_rent', 0)
+        advance_months = cleaned_data.get('advance_months', 2)
+        security_deposit = cleaned_data.get('security_deposit', monthly_rent)
+        
+        advance_payment_amount = monthly_rent * advance_months
+        total_move_in_cost = security_deposit + advance_payment_amount
+        
+        return {
+            'monthly_rent': monthly_rent,
+            'advance_months': advance_months,
+            'advance_payment_amount': advance_payment_amount,
+            'security_deposit': security_deposit,
+            'total_move_in_cost': total_move_in_cost
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

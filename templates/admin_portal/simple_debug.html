@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .btn { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; margin: 5px; }
+        .form-group { margin: 10px 0; }
+        input, select { padding: 5px; margin: 5px; }
+        .debug-output { background: #f5f5f5; padding: 10px; margin: 10px 0; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <h1>Simple JavaScript Debug Test</h1>
+    
+    <div class="debug-output" id="debug-output">
+        Debug output will appear here...
+    </div>
+    
+    <div class="form-group">
+        <label>Unit:</label>
+        <select id="unit-select">
+            <option value="">Select Unit</option>
+            <option value="1">Unit C202 - STUDIO - PHP 17,000.00</option>
+            <option value="2">Unit C203 - STUDIO - PHP 18,000.00</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label>Monthly Rent:</label>
+        <input type="number" id="monthly-rent" placeholder="0.00">
+    </div>
+    
+    <div class="form-group">
+        <label>Security Deposit:</label>
+        <input type="number" id="security-deposit" placeholder="0.00">
+    </div>
+    
+    <div class="form-group">
+        <label>Advance Months:</label>
+        <input type="number" id="advance-months" value="2">
+    </div>
+    
+    <div class="form-group">
+        <label>Start Date:</label>
+        <input type="date" id="start-date">
+    </div>
+    
+    <button class="btn" onclick="testBasic()">Test Basic JS</button>
+    <button class="btn" onclick="testAutoPop()">Test Auto-Population</button>
+    <button class="btn" onclick="testSchedule()">Test Schedule</button>
+    <button class="btn" onclick="clearOutput()">Clear Output</button>
+
+<script>
+function log(message) {
+    const output = document.getElementById('debug-output');
+    const timestamp = new Date().toLocaleTimeString();
+    output.innerHTML += '<div>' + timestamp + ': ' + message + '</div>';
+    console.log(message);
+}
+
+function testBasic() {
+    log('=== Basic JavaScript Test ===');
+    log('✅ JavaScript is working!');
+    log('✅ DOM is accessible!');
+    log('✅ Functions are callable!');
+}
+
+function testAutoPop() {
+    log('=== Testing Auto-Population ===');
+    
+    const unitSelect = document.getElementById('unit-select');
+    const monthlyRentInput = document.getElementById('monthly-rent');
+    
+    log('Unit select found: ' + !!unitSelect);
+    log('Monthly rent input found: ' + !!monthlyRentInput);
+    
+    if (unitSelect && monthlyRentInput) {
+        log('Current unit selection: ' + unitSelect.selectedIndex);
+        
+        // Select first unit
+        if (unitSelect.options.length > 1) {
+            unitSelect.selectedIndex = 1;
+            const selectedOption = unitSelect.options[1];
+            log('Selected option: ' + selectedOption.textContent);
+            
+            const optionText = selectedOption.textContent;
+            const rentMatch = optionText.match(/PHP\s+([\d,]+\.?\d*)/);
+            log('Rent match result: ' + JSON.stringify(rentMatch));
+            
+            if (rentMatch) {
+                const rent = rentMatch[1].replace(/,/g, '');
+                monthlyRentInput.value = rent;
+                log('✅ Auto-populated rent: ' + rent);
+                
+                // Auto-populate security deposit
+                const securityDepositInput = document.getElementById('security-deposit');
+                if (securityDepositInput) {
+                    securityDepositInput.value = rent;
+                    log('✅ Auto-populated security deposit: ' + rent);
+                }
+            } else {
+                log('❌ No rent match found in: ' + optionText);
+            }
+        } else {
+            log('❌ No unit options available');
+        }
+    } else {
+        log('❌ Form elements not found');
+    }
+}
+
+function testSchedule() {
+    log('=== Testing Schedule Preview ===');
+    
+    const monthlyRent = parseFloat(document.getElementById('monthly-rent').value) || 0;
+    const advanceMonths = parseInt(document.getElementById('advance-months').value) || 2;
+    const securityDeposit = parseFloat(document.getElementById('security-deposit').value) || monthlyRent;
+    const startDate = document.getElementById('start-date').value;
+    
+    log('Form values:');
+    log('  Monthly Rent: ' + monthlyRent);
+    log('  Advance Months: ' + advanceMonths);
+    log('  Security Deposit: ' + securityDeposit);
+    log('  Start Date: ' + startDate);
+    
+    if (monthlyRent > 0 && startDate) {
+        const advancePaymentAmount = monthlyRent * advanceMonths;
+        const totalMoveInCost = securityDeposit + advancePaymentAmount;
+        
+        log('Calculated values:');
+        log('  Advance Payment: ₱' + advancePaymentAmount.toLocaleString('en-PH', {minimumFractionDigits: 2}));
+        log('  Total Move-in Cost: ₱' + totalMoveInCost.toLocaleString('en-PH', {minimumFractionDigits: 2}));
+        log('✅ Schedule calculation successful!');
+    } else {
+        log('❌ Missing required values');
+    }
+}
+
+function clearOutput() {
+    document.getElementById('debug-output').innerHTML = 'Debug output cleared...';
+}
+
+// Test on page load
+document.addEventListener('DOMContentLoaded', function() {
+    log('=== Page Loaded ===');
+    log('✅ DOM Content Loaded event fired');
+    log('✅ Debug script loaded successfully');
+    
+    // Test basic DOM access
+    const allInputs = document.querySelectorAll('input, select, button');
+    log('Found ' + allInputs.length + ' form elements');
+    
+    // Test button accessibility
+    const buttons = document.querySelectorAll('button');
+    log('Found ' + buttons.length + ' buttons');
+    buttons.forEach((btn, index) => {
+        log('  Button ' + (index + 1) + ': ' + btn.textContent);
+    });
+});
+
+// Immediate test
+log('=== Script Loading ===');
+log('✅ Script is executing immediately');
+</script>
+</body>
+</html>

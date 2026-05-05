@@ -1,0 +1,109 @@
+{% extends "admin_portal/base.html" %}
+{% load humanize %}
+{% block title %}Lease Form Test{% endblock %}
+
+{% block content %}
+  <div class="page-top">
+    <div class="page-header">
+      <h1>JavaScript Test - Lease Form</h1>
+    </div>
+  </div>
+
+  <div class="panel confirm-card">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title">Debug Console Test</h2>
+      </div>
+    </div>
+    
+    <div class="panel-body">
+      <div class="form-group">
+        <label class="form-label">Test Console Output</label>
+        <div id="console-output" style="background: #f8f9fa; border: 1px solid #dee2e6; padding: 10px; border-radius: 5px; font-family: monospace; height: 200px; overflow-y: auto;">
+          Console output will appear here...
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Test Unit Select</label>
+        <select id="test-unit-select" class="styled-input">
+          <option value="">Select Unit</option>
+          <option value="1">Unit C202 - STUDIO - PHP 17,000.00</option>
+          <option value="2">Unit C203 - STUDIO - PHP 17,000.00</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Test Monthly Rent</label>
+        <input type="number" id="test-monthly-rent" class="styled-input" placeholder="0.00">
+      </div>
+      
+      <div class="form-group">
+        <button type="button" class="btn" onclick="testAutoPopulation()">Test Auto-Population</button>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+<script>
+// Custom console logger
+function log(message) {
+  const output = document.getElementById('console-output');
+  if (output) {
+    output.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': ' + message + '</div>';
+    output.scrollTop = output.scrollHeight;
+  }
+  console.log(message);
+}
+
+// Test function
+function testAutoPopulation() {
+  log('Testing auto-population...');
+  
+  const unitSelect = document.getElementById('test-unit-select');
+  const monthlyRentInput = document.getElementById('test-monthly-rent');
+  
+  log('Unit select found: ' + !!unitSelect);
+  log('Monthly rent input found: ' + !!monthlyRentInput);
+  
+  if (unitSelect && monthlyRentInput) {
+    const selectedOption = unitSelect.options[unitSelect.selectedIndex];
+    log('Selected option: ' + selectedOption.textContent);
+    
+    if (selectedOption.value) {
+      const optionText = selectedOption.textContent;
+      const rentMatch = optionText.match(/PHP\s+([\d,]+\.?\d*)/);
+      log('Rent match result: ' + JSON.stringify(rentMatch));
+      
+      if (rentMatch) {
+        const rent = rentMatch[1].replace(/,/g, '');
+        monthlyRentInput.value = rent;
+        log('Auto-populated rent: ' + rent);
+      } else {
+        log('No rent match found in: ' + optionText);
+      }
+    }
+  }
+}
+
+// Initial test
+document.addEventListener('DOMContentLoaded', function() {
+  log('DOM Content Loaded - JavaScript working!');
+  log('Document ready state: ' + document.readyState);
+  
+  // Test element access
+  const selects = document.querySelectorAll('select');
+  const inputs = document.querySelectorAll('input');
+  log('Found selects: ' + selects.length);
+  log('Found inputs: ' + inputs.length);
+  
+  // Add event listener
+  const unitSelect = document.getElementById('test-unit-select');
+  if (unitSelect) {
+    unitSelect.addEventListener('change', testAutoPopulation);
+    log('Event listener added to unit select');
+  } else {
+    log('Unit select not found!');
+  }
+});
+</script>

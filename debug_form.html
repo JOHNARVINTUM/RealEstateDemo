@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Form Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        select, input { margin: 10px 0; padding: 5px; width: 200px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Form Debug Test</h1>
+    
+    <div class="debug-section">
+        <h3>Basic Test</h3>
+        <button onclick="testBasic()">Test Basic JavaScript</button>
+        <div id="basic-output"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h3>Form Field Test</h3>
+        <select id="unit-select">
+            <option value="">Select Unit</option>
+            <option value="1">Unit C202 - STUDIO - PHP 17,000.00</option>
+        </select>
+        <input type="number" id="monthly-rent" placeholder="Monthly Rent">
+        <button onclick="testFormFields()">Test Form Fields</button>
+        <div id="form-output"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h3>Console Log</h3>
+        <div id="console-log" style="background: #f5f5f5; padding: 10px; height: 200px; overflow-y: auto; font-family: monospace;"></div>
+    </div>
+
+<script>
+// Custom logger
+function log(message) {
+    const consoleLog = document.getElementById('console-log');
+    const timestamp = new Date().toLocaleTimeString();
+    consoleLog.innerHTML += timestamp + ': ' + message + '<br>';
+    consoleLog.scrollTop = consoleLog.scrollHeight;
+    console.log(message);
+}
+
+function testBasic() {
+    log('Basic JavaScript test successful!');
+    document.getElementById('basic-output').innerHTML = '<span style="color: green;">✅ JavaScript is working!</span>';
+}
+
+function testFormFields() {
+    log('Testing form field access...');
+    
+    const unitSelect = document.getElementById('unit-select');
+    const monthlyRentInput = document.getElementById('monthly-rent');
+    
+    log('Unit select found: ' + !!unitSelect);
+    log('Monthly rent input found: ' + !!monthlyRentInput);
+    
+    if (unitSelect && monthlyRentInput) {
+        log('Adding event listener...');
+        unitSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            log('Unit changed: ' + selectedOption.textContent);
+            
+            if (selectedOption.value) {
+                const optionText = selectedOption.textContent;
+                const rentMatch = optionText.match(/PHP\s+([\d,]+\.?\d*)/);
+                log('Rent match: ' + JSON.stringify(rentMatch));
+                
+                if (rentMatch) {
+                    const rent = rentMatch[1].replace(/,/g, '');
+                    monthlyRentInput.value = rent;
+                    log('Auto-populated rent: ' + rent);
+                    document.getElementById('form-output').innerHTML = '<span style="color: green;">✅ Rent populated: ₱' + rent + '</span>';
+                } else {
+                    log('No rent match found');
+                }
+            }
+        });
+        
+        document.getElementById('form-output').innerHTML = '<span style="color: blue;">✅ Event listeners added</span>';
+    } else {
+        log('Form elements not found!');
+        document.getElementById('form-output').innerHTML = '<span style="color: red;">❌ Form elements not found</span>';
+    }
+}
+
+// Test on load
+document.addEventListener('DOMContentLoaded', function() {
+    log('DOM Content Loaded');
+    testBasic();
+    testFormFields();
+});
+</script>
+</body>
+</html>

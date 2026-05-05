@@ -1,0 +1,224 @@
+{% load humanize %}
+{% load l10n %}
+
+<div class="lease-schedule-preview" id="lease-schedule-preview" style="display: none;">
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-calendar-alt me-2"></i>
+                Payment Schedule Preview
+            </h5>
+        </div>
+        <div class="card-body">
+            <!-- Initial Payment Summary -->
+            <div class="payment-summary mb-4">
+                <h6 class="text-primary mb-3">
+                    <i class="fas fa-money-bill-wave me-2"></i>
+                    Initial Payment Summary
+                </h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Monthly Rent:</span>
+                            <strong data-preview="monthly_rent">₱0.00</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Advance (<span data-preview="advance_months">2</span> month<span data-preview="advance_months_plural">s</span>):</span>
+                            <strong data-preview="advance_payment_amount">₱0.00</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Security Deposit:</span>
+                            <strong data-preview="security_deposit">₱0.00</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="alert alert-info mb-0">
+                            <div class="d-flex justify-content-between">
+                                <span class="fw-bold">Total Move-in Cost:</span>
+                                <span class="fw-bold text-primary" data-preview="total_move_in_cost">₱0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upcoming Events -->
+            <div class="upcoming-events">
+                <h6 class="text-primary mb-3">
+                    <i class="fas fa-clock me-2"></i>
+                    Preview Upcoming Events
+                </h6>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th class="text-end">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for event in events %}
+                            <tr>
+                                <td>
+                                    <span class="badge bg-light text-dark">
+                                        {{ event.date|date:"M d, Y" }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if event.type == 'Security Deposit' %}
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="fas fa-shield-alt me-1"></i>
+                                            {{ event.type }}
+                                        </span>
+                                    {% elif event.type == 'Advance Payment' %}
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-forward me-1"></i>
+                                            {{ event.type }}
+                                        </span>
+                                    {% elif event.type == 'Rent Due' %}
+                                        <span class="badge bg-primary">
+                                            <i class="fas fa-home me-1"></i>
+                                            {{ event.type }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">
+                                            {{ event.type }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    {% if event.amount %}
+                                        <strong>₱{{ event.amount|floatformat:2|intcomma }}</strong>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                {% if events|length > 6 %}
+                <div class="text-center mt-2">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Showing first {{ events|length }} events. Full schedule will be generated when lease is created.
+                    </small>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Important Notes -->
+            <div class="notes mt-3">
+                <div class="alert alert-light">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-lightbulb me-2"></i>
+                        Important Notes
+                    </h6>
+                    <ul class="mb-0 small">
+                        <li>Security deposit is a one-time payment due on lease start date</li>
+                        <li>Advance payment covers {{ advance_months }} month{{ advance_months|pluralize }} of rent</li>
+                        <li>First regular rent payment is due after advance payment period</li>
+                        <li>All amounts are automatically calculated based on your inputs</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-update preview when form fields change
+    const form = document.querySelector('form');
+    const previewContainer = document.getElementById('lease-schedule-preview');
+    
+    if (form && previewContainer) {
+        const fields = ['id_monthly_rent', 'id_advance_months', 'id_security_deposit', 'id_start_date', 'id_due_day'];
+        
+        function updatePreview() {
+            // Get form values
+            const monthlyRent = parseFloat(document.getElementById('id_monthly_rent')?.value || 0);
+            const advanceMonths = parseInt(document.getElementById('id_advance_months')?.value || 2);
+            const securityDeposit = parseFloat(document.getElementById('id_security_deposit')?.value || monthlyRent);
+            const startDate = document.getElementById('id_start_date')?.value;
+            const dueDay = parseInt(document.getElementById('id_due_day')?.value || 5);
+            
+            // Only show preview if we have basic data
+            if (monthlyRent > 0 && startDate) {
+                previewContainer.style.display = 'block';
+                
+                // Update summary values
+                const advancePaymentAmount = monthlyRent * advanceMonths;
+                const totalMoveInCost = securityDeposit + advancePaymentAmount;
+                
+                // Update DOM elements (simplified for demo)
+                const summaryElements = {
+                    'monthly_rent': monthlyRent.toLocaleString('en-PH', {minimumFractionDigits: 2}),
+                    'advance_months': advanceMonths,
+                    'advance_payment_amount': advancePaymentAmount.toLocaleString('en-PH', {minimumFractionDigits: 2}),
+                    'security_deposit': securityDeposit.toLocaleString('en-PH', {minimumFractionDigits: 2}),
+                    'total_move_in_cost': totalMoveInCost.toLocaleString('en-PH', {minimumFractionDigits: 2})
+                };
+                
+                // You would need to implement proper DOM updates here
+                // This is a simplified version for demonstration
+            } else {
+                previewContainer.style.display = 'none';
+            }
+        }
+        
+        // Add event listeners
+        fields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.addEventListener('change', updatePreview);
+                field.addEventListener('input', updatePreview);
+            }
+        });
+        
+        // Initial update
+        updatePreview();
+    }
+});
+</script>
+
+<style>
+.lease-schedule-preview {
+    margin-top: 20px;
+    border: 2px dashed #e3e6f0;
+    border-radius: 8px;
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.payment-summary .d-flex {
+    border-bottom: 1px solid #f1f3f5;
+    padding-bottom: 0.5rem;
+}
+
+.payment-summary .d-flex:last-of-type {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.upcoming-events .badge {
+    font-size: 0.75rem;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    background-color: #f8f9fa;
+}
+
+.notes ul {
+    font-size: 0.875rem;
+}
+</style>

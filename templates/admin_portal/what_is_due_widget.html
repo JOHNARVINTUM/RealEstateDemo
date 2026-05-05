@@ -1,0 +1,190 @@
+{% load humanize %}
+
+<div class="what-is-due-widget">
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-calendar-check me-2"></i>
+                What's Due
+            </h5>
+        </div>
+        <div class="card-body">
+            <!-- Summary Stats -->
+            <div class="row mb-4">
+                <div class="col-md-3 col-6 mb-3">
+                    <div class="text-center">
+                        <div class="h4 mb-1 text-primary">{{ due_today }}</div>
+                        <small class="text-muted">Due Today</small>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <div class="text-center">
+                        <div class="h4 mb-1 text-warning">{{ due_this_week }}</div>
+                        <small class="text-muted">Due This Week</small>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <div class="text-center">
+                        <div class="h4 mb-1 text-danger">{{ overdue_events_count }}</div>
+                        <small class="text-muted">Overdue</small>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <div class="text-center">
+                        <div class="h4 mb-1 text-success">₱{{ total_due_amount|floatformat:0|intcomma }}</div>
+                        <small class="text-muted">Total Due</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upcoming Events List -->
+            {% if upcoming_events %}
+                <div class="upcoming-events-list">
+                    <h6 class="text-muted mb-3">Upcoming Events</h6>
+                    <div class="list-group list-group-flush">
+                        {% for event in upcoming_events %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <div class="d-flex align-items-center">
+                                    <!-- Event Icon -->
+                                    <div class="event-icon me-3">
+                                        {% if event.event_type == 'RENT_DUE' %}
+                                            <span class="badge bg-primary rounded-circle p-2">
+                                                <i class="fas fa-home"></i>
+                                            </span>
+                                        {% elif event.event_type == 'SECURITY_DEPOSIT' %}
+                                            <span class="badge bg-warning text-dark rounded-circle p-2">
+                                                <i class="fas fa-shield-alt"></i>
+                                            </span>
+                                        {% elif event.event_type == 'ADVANCE_PAYMENT' %}
+                                            <span class="badge bg-info rounded-circle p-2">
+                                                <i class="fas fa-forward"></i>
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary rounded-circle p-2">
+                                                <i class="fas fa-calendar"></i>
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Event Details -->
+                                    <div>
+                                        <div class="fw-semibold">{{ event.get_event_type_display }}</div>
+                                        <small class="text-muted">
+                                            {{ event.tenant.email }} • Unit {{ event.lease.unit.number }}
+                                        </small>
+                                    </div>
+                                </div>
+                                
+                                <!-- Date and Amount -->
+                                <div class="text-end">
+                                    <div class="small text-muted">{{ event.event_date|date:"M d" }}</div>
+                                    {% if event.amount %}
+                                        <div class="fw-semibold">₱{{ event.amount|floatformat:0|intcomma }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-check-circle text-success fa-3x mb-3"></i>
+                    <h6 class="text-muted">All Caught Up!</h6>
+                    <p class="text-muted small">No upcoming payments due.</p>
+                </div>
+            {% endif %}
+
+            <!-- Action Buttons -->
+            <div class="mt-4">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'admin:rentals_calendarevent_changelist' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-list me-2"></i>
+                        View All Events
+                    </a>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="refreshWhatIsDue()">
+                        <i class="fas fa-sync-alt me-2"></i>
+                        Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.what-is-due-widget .card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border-radius: 0.5rem;
+}
+
+.what-is-due-widget .card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 0.5rem 0.5rem 0 0;
+    border: none;
+}
+
+.event-icon .badge {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.list-group-item {
+    border-bottom: 1px solid #f1f3f5;
+}
+
+.list-group-item:last-child {
+    border-bottom: none;
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fa;
+    transition: background-color 0.2s ease;
+}
+
+.h4 {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+@media (max-width: 768px) {
+    .what-is-due-widget .col-md-3 {
+        margin-bottom: 1rem;
+    }
+}
+</style>
+
+<script>
+function refreshWhatIsDue() {
+    // Add loading state
+    const widget = document.querySelector('.what-is-due-widget');
+    const cardBody = widget.querySelector('.card-body');
+    
+    // Show loading
+    cardBody.style.opacity = '0.5';
+    
+    // Refresh the page (simple approach for now)
+    setTimeout(() => {
+        window.location.reload();
+    }, 500);
+}
+
+// Auto-refresh every 5 minutes
+setInterval(refreshWhatIsDue, 300000);
+
+// Add click handlers for event items
+document.addEventListener('DOMContentLoaded', function() {
+    const eventItems = document.querySelectorAll('.list-group-item');
+    eventItems.forEach(item => {
+        item.style.cursor = 'pointer';
+        item.addEventListener('click', function() {
+            // Could navigate to event details in the future
+            console.log('Event clicked:', this);
+        });
+    });
+});
+</script>

@@ -1,0 +1,321 @@
+{% extends "admin_portal/base.html" %}
+{% load humanize %}
+
+{% block title %}Debug Lease Form{% endblock %}
+
+{% block extra_head %}
+<script>
+console.log('DEBUG SCRIPT LOADING - HEAD SECTION!');
+</script>
+{% endblock %}
+
+{% block content %}
+  <script>
+    console.log('DEBUG SCRIPT LOADING - CONTENT BLOCK!');
+    alert('JavaScript is working! If you see this, JS is loading correctly.');
+  </script>
+  
+  <div class="page-top">
+    <div class="page-header">
+      <h1>Debug Lease Form</h1>
+      <p class="muted">Testing JavaScript functionality for lease creation form</p>
+    </div>
+  </div>
+
+  <div class="panel confirm-card">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title">Lease Form Debug</h2>
+        <p class="section-copy">Testing auto-population and schedule preview functionality</p>
+      </div>
+    </div>
+    
+    <div class="panel-body">
+      <form method="post" id="lease-form">
+        {% csrf_token %}
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Unit Selection -->
+          <div class="form-group">
+            <label class="form-label">Unit</label>
+            <select name="unit" id="unit-select" class="styled-input" required>
+              <option value="">Select Unit</option>
+              {% for unit in units %}
+                <option value="{{ unit.pk }}">
+                  Unit {{ unit.number }} - {{ unit.unit_type }} - PHP {{ unit.monthly_rent|floatformat:2|intcomma }}
+                </option>
+              {% endfor %}
+            </select>
+            <small class="text-gray-500">Select unit to test auto-population</small>
+          </div>
+
+          <!-- Monthly Rent -->
+          <div class="form-group">
+            <label class="form-label">Monthly Rent</label>
+            <input type="number" name="monthly_rent" id="monthly-rent" class="styled-input" step="0.01" min="0" placeholder="0.00" required>
+            <small class="text-gray-500">Should auto-populate when unit is selected</small>
+          </div>
+        </div>
+
+        <!-- Security Deposit -->
+        <div class="form-group">
+          <label class="form-label">Security Deposit</label>
+          <input type="number" name="security_deposit" id="security-deposit" class="styled-input" step="0.01" min="0" placeholder="0.00">
+          <small class="text-gray-500">Should auto-populate to 1 month rent</small>
+        </div>
+
+        <!-- Advance Months -->
+        <div class="form-group">
+          <label class="form-label">Advance Months</label>
+          <input type="number" name="advance_months" id="advance-months" class="styled-input" min="0" max="12" value="2">
+          <small class="text-gray-500">Number of months for advance payment</small>
+        </div>
+
+        <!-- Start Date -->
+        <div class="form-group">
+          <label class="form-label">Start Date</label>
+          <input type="text" name="start_date" id="start-date" class="styled-input flatpickr" placeholder="Select start date" required>
+          <small class="text-gray-500">Lease start date</small>
+        </div>
+
+        <!-- Due Day -->
+        <div class="form-group">
+          <label class="form-label">Due Day</label>
+          <input type="number" name="due_day" id="due-day" class="styled-input" min="1" max="31" value="5">
+          <small class="text-gray-500">Day of month when rent is due (1-31)</small>
+        </div>
+      </div>
+      
+      <div class="panel-actions">
+        <button type="button" class="btn" id="test-auto-population-btn">Test Auto-Population</button>
+        <button type="button" class="btn" id="test-schedule-preview-btn">Test Schedule Preview</button>
+        <button type="button" class="btn" id="simple-test-btn">Simple Test</button>
+      </div>
+    </form>
+    
+    <!-- Include Schedule Preview -->
+    {% include "admin_portal/lease_schedule_preview.html" %}
+  </div>
+{% endblock %}
+
+<!-- Add Flatpickr CSS and JS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<script>
+console.log('DEBUG SCRIPT LOADED!');
+
+// Test functions - Global scope
+window.testAutoPopulation = function() {
+    console.log('=== Testing Auto-Population ===');
+    const unitSelect = document.getElementById('unit-select');
+    const monthlyRentInput = document.getElementById('monthly-rent');
+    
+    if (unitSelect && monthlyRentInput) {
+        console.log('Unit select found:', !!unitSelect);
+        console.log('Monthly rent input found:', !!monthlyRentInput);
+        
+        // Simulate selecting first unit
+        if (unitSelect.options.length > 1) {
+            unitSelect.selectedIndex = 1;
+            const selectedOption = unitSelect.options[1];
+            console.log('Selected option:', selectedOption.textContent);
+            
+            const optionText = selectedOption.textContent;
+            const rentMatch = optionText.match(/PHP\s+([\d,]+\.?\d*)/);
+            
+            if (rentMatch) {
+                const rent = rentMatch[1].replace(/,/g, '');
+                monthlyRentInput.value = rent;
+                console.log('✅ Auto-populated monthly rent:', rent);
+                alert('✅ Auto-population successful! Rent set to: ₱' + rent);
+            } else {
+                console.log('❌ No rent match found in:', optionText);
+            }
+        }
+    } else {
+        console.log('❌ Form elements not found');
+    }
+};
+
+window.testSchedulePreview = function() {
+    console.log('=== Testing Schedule Preview ===');
+    const monthlyRent = parseFloat(document.getElementById('monthly-rent').value) || 0;
+    const advanceMonths = parseInt(document.getElementById('advance-months').value) || 2;
+    const securityDeposit = parseFloat(document.getElementById('security-deposit').value) || monthlyRent;
+    const startDate = document.getElementById('start-date').value;
+    
+    console.log('Form values:', { monthlyRent, advanceMonths, securityDeposit, startDate });
+    
+    if (monthlyRent > 0 && startDate) {
+        const advancePaymentAmount = monthlyRent * advanceMonths;
+        const totalMoveInCost = securityDeposit + advancePaymentAmount;
+        
+        console.log('Calculated values:', {
+            advancePaymentAmount,
+            totalMoveInCost
+        });
+        
+        // Try to update preview
+        const previewContainer = document.getElementById('lease-schedule-preview');
+        if (previewContainer) {
+            previewContainer.style.display = 'block';
+            
+            const elements = {
+                'monthly_rent': '₱' + monthlyRent.toLocaleString('en-PH', {minimumFractionDigits: 2}),
+                'advance_months': advanceMonths,
+                'advance_payment_amount': '₱' + advancePaymentAmount.toLocaleString('en-PH', {minimumFractionDigits: 2}),
+                'security_deposit': '₱' + securityDeposit.toLocaleString('en-PH', {minimumFractionDigits: 2}),
+                'total_move_in_cost': '₱' + totalMoveInCost.toLocaleString('en-PH', {minimumFractionDigits: 2})
+            };
+            
+            Object.keys(elements).forEach(key => {
+                const element = previewContainer.querySelector(`[data-preview="${key}"]`);
+                if (element) {
+                    element.textContent = elements[key];
+                    console.log('✅ Updated element:', key, elements[key]);
+                } else {
+                    console.log('❌ Element not found:', key);
+                }
+            });
+            
+            alert('✅ Schedule preview updated successfully!');
+        } else {
+            console.log('❌ Preview container not found');
+        }
+    } else {
+        console.log('❌ Monthly rent or start date missing');
+    }
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Debug form DOM loaded');
+    
+    // Initialize date pickers
+    const dateInputs = document.querySelectorAll('.flatpickr');
+    dateInputs.forEach(input => {
+        if (window.flatpickr) {
+            flatpickr(input, {
+                dateFormat: 'Y-m-d',
+                minDate: 'today',
+                allowInput: true
+            });
+        }
+    });
+    
+    // Add event listeners to test buttons
+    const autoPopBtn = document.getElementById('test-auto-population-btn');
+    const schedulePreviewBtn = document.getElementById('test-schedule-preview-btn');
+    const simpleTestBtn = document.getElementById('simple-test-btn');
+    
+    console.log('Buttons found:', {
+        autoPopBtn: !!autoPopBtn,
+        schedulePreviewBtn: !!schedulePreviewBtn,
+        simpleTestBtn: !!simpleTestBtn
+    });
+    
+    if (autoPopBtn) {
+        console.log('Adding event listener to auto-population button');
+        autoPopBtn.addEventListener('click', function() {
+            console.log('=== Testing Auto-Population ===');
+            const unitSelect = document.getElementById('unit-select');
+            const monthlyRentInput = document.getElementById('monthly-rent');
+            
+            if (unitSelect && monthlyRentInput) {
+                console.log('Unit select found:', !!unitSelect);
+                console.log('Monthly rent input found:', !!monthlyRentInput);
+                
+                // Simulate selecting first unit
+                if (unitSelect.options.length > 1) {
+                    unitSelect.selectedIndex = 1;
+                    const selectedOption = unitSelect.options[1];
+                    console.log('Selected option:', selectedOption.textContent);
+                    
+                    const optionText = selectedOption.textContent;
+                    const rentMatch = optionText.match(/PHP\s+([\d,]+\.?\d*)/);
+                    
+                    if (rentMatch) {
+                        const rent = rentMatch[1].replace(/,/g, '');
+                        monthlyRentInput.value = rent;
+                        console.log('✅ Auto-populated monthly rent:', rent);
+                        alert('✅ Auto-population successful! Rent set to: ₱' + rent);
+                    } else {
+                        console.log('❌ No rent match found in:', optionText);
+                    }
+                }
+            } else {
+                console.log('❌ Form elements not found');
+            }
+        });
+    }
+    
+    if (schedulePreviewBtn) {
+        console.log('Adding event listener to schedule preview button');
+        schedulePreviewBtn.addEventListener('click', function() {
+            console.log('=== Testing Schedule Preview ===');
+            const monthlyRent = parseFloat(document.getElementById('monthly-rent').value) || 0;
+            const advanceMonths = parseInt(document.getElementById('advance-months').value) || 2;
+            const securityDeposit = parseFloat(document.getElementById('security-deposit').value) || monthlyRent;
+            const startDate = document.getElementById('start-date').value;
+            
+            console.log('Form values:', { monthlyRent, advanceMonths, securityDeposit, startDate });
+            
+            if (monthlyRent > 0 && startDate) {
+                const advancePaymentAmount = monthlyRent * advanceMonths;
+                const totalMoveInCost = securityDeposit + advancePaymentAmount;
+                
+                console.log('Calculated values:', {
+                    advancePaymentAmount,
+                    totalMoveInCost
+                });
+                
+                // Try to update preview
+                const previewContainer = document.getElementById('lease-schedule-preview');
+                if (previewContainer) {
+                    previewContainer.style.display = 'block';
+                    
+                    const elements = {
+                        'monthly_rent': '₱' + monthlyRent.toLocaleString('en-PH', {minimumFractionDigits: 2}),
+                        'advance_months': advanceMonths,
+                        'advance_payment_amount': '₱' + advancePaymentAmount.toLocaleString('en-PH', {minimumFractionDigits: 2}),
+                        'security_deposit': '₱' + securityDeposit.toLocaleString('en-PH', {minimumFractionDigits: 2}),
+                        'total_move_in_cost': '₱' + totalMoveInCost.toLocaleString('en-PH', {minimumFractionDigits: 2})
+                    };
+                    
+                    Object.keys(elements).forEach(key => {
+                        const element = previewContainer.querySelector(`[data-preview="${key}"]`);
+                        if (element) {
+                            element.textContent = elements[key];
+                            console.log('✅ Updated element:', key, elements[key]);
+                        } else {
+                            console.log('❌ Element not found:', key);
+                        }
+                    });
+                    
+                    alert('✅ Schedule preview updated successfully!');
+                } else {
+                    console.log('❌ Preview container not found');
+                }
+            } else {
+                console.log('❌ Monthly rent or start date missing');
+            }
+        });
+    }
+    
+    if (simpleTestBtn) {
+        console.log('Adding event listener to simple test button');
+        simpleTestBtn.addEventListener('click', function() {
+            console.log('Simple test button clicked!');
+            alert('Simple test button is working!');
+        });
+    } else {
+        console.log('Simple test button not found!');
+    }
+});
+</script>
+
+<!-- Add Flatpickr CSS and JS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>

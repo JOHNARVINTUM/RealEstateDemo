@@ -42,87 +42,112 @@
                 </div>
             </div>
 
-            <!-- Upcoming Events -->
+            <!-- Month-by-Month Payment Schedule -->
+            <div class="monthly-schedule mb-4">
+                <h6 class="text-primary mb-3">
+                    <i class="fas fa-calendar-alt me-2"></i>
+                    Monthly Payment Schedule
+                </h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered" id="monthly-schedule-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Month</th>
+                                <th>Due Date</th>
+                                <th>Payment Type</th>
+                                <th class="text-end">Amount</th>
+                                <th class="text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="monthly-schedule-body">
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td colspan="3" class="text-end fw-bold">Total for 12 Months:</td>
+                                <td class="text-end fw-bold text-primary" id="total-12-months">₱0.00</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Upcoming Events Summary -->
             <div class="upcoming-events">
                 <h6 class="text-primary mb-3">
                     <i class="fas fa-clock me-2"></i>
-                    Preview Upcoming Events
+                    Key Payment Milestones
                 </h6>
-                <div class="table-responsive">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Type</th>
-                                <th class="text-end">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for event in events %}
-                            <tr>
-                                <td>
-                                    <span class="badge bg-light text-dark">
-                                        {{ event.date|date:"M d, Y" }}
-                                    </span>
-                                </td>
-                                <td>
-                                    {% if event.type == 'Security Deposit' %}
-                                        <span class="badge bg-warning text-dark">
-                                            <i class="fas fa-shield-alt me-1"></i>
-                                            {{ event.type }}
-                                        </span>
-                                    {% elif event.type == 'Advance Payment' %}
-                                        <span class="badge bg-info">
-                                            <i class="fas fa-forward me-1"></i>
-                                            {{ event.type }}
-                                        </span>
-                                    {% elif event.type == 'Rent Due' %}
-                                        <span class="badge bg-primary">
-                                            <i class="fas fa-home me-1"></i>
-                                            {{ event.type }}
-                                        </span>
-                                    {% else %}
-                                        <span class="badge bg-secondary">
-                                            {{ event.type }}
-                                        </span>
-                                    {% endif %}
-                                </td>
-                                <td class="text-end">
-                                    {% if event.amount %}
-                                        <strong>₱{{ event.amount|floatformat:2|intcomma }}</strong>
-                                    {% else %}
-                                        <span class="text-muted">—</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card bg-warning bg-opacity-10 border-warning">
+                            <div class="card-body p-3">
+                                <h6 class="card-title text-warning">
+                                    <i class="fas fa-shield-alt me-2"></i>Move-in Cost
+                                </h6>
+                                <p class="card-text">
+                                    <strong class="text-warning" id="milestone-security">₱0.00</strong><br>
+                                    <small class="text-muted">Security Deposit + Advance</small>
+                                </p>
+                                <small class="text-muted">Due: <span id="milestone-movein-date">—</span></small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-info bg-opacity-10 border-info">
+                            <div class="card-body p-3">
+                                <h6 class="card-title text-info">
+                                    <i class="fas fa-forward me-2"></i>Advance Period
+                                </h6>
+                                <p class="card-text">
+                                    <strong class="text-info" id="milestone-advance">₱0.00</strong><br>
+                                    <small class="text-muted">Prepaid <span id="milestone-advance-months">0</span> months</small>
+                                </p>
+                                <small class="text-muted">No rent due during this period</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-primary bg-opacity-10 border-primary">
+                            <div class="card-body p-3">
+                                <h6 class="card-title text-primary">
+                                    <i class="fas fa-home me-2"></i>First Rent Due
+                                </h6>
+                                <p class="card-text">
+                                    <strong class="text-primary" id="milestone-first-rent">₱0.00</strong><br>
+                                    <small class="text-muted">Regular monthly rent</small>
+                                </p>
+                                <small class="text-muted">Due: <span id="milestone-first-rent-date">—</span></small>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                
-                {% if events|length > 6 %}
-                <div class="text-center mt-2">
-                    <small class="text-muted">
-                        <i class="fas fa-info-circle me-1"></i>
-                        Showing first {{ events|length }} events. Full schedule will be generated when lease is created.
-                    </small>
-                </div>
-                {% endif %}
             </div>
 
             <!-- Important Notes -->
             <div class="notes mt-3">
-                <div class="alert alert-light">
+                <div class="alert alert-light border">
                     <h6 class="alert-heading">
                         <i class="fas fa-lightbulb me-2"></i>
-                        Important Notes
+                        Understanding Your Payment Schedule
                     </h6>
-                    <ul class="mb-0 small">
-                        <li>Security deposit is a one-time payment due on lease start date</li>
-                        <li>Advance payment covers {{ advance_months }} month{{ advance_months|pluralize }} of rent</li>
-                        <li>First regular rent payment is due after advance payment period</li>
-                        <li>All amounts are automatically calculated based on your inputs</li>
-                    </ul>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="mb-0 small">
+                                <li><strong>Month 1 (Move-in):</strong> Pay security deposit + advance payment + 1st month rent</li>
+                                <li><strong>Advance Period:</strong> Months covered by advance payment show as "PAID"</li>
+                                <li><strong>Due Dates:</strong> All payments are due on day <span id="note-due-day">5</span> of each month</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="mb-0 small">
+                                <li><strong>Regular Rent:</strong> Starts after advance period ends</li>
+                                <li><strong>Status Colors:</strong> 🟡 Move-in | 🟢 Prepaid | 🔵 Due</li>
+                                <li><strong>Total:</strong> Shows sum of all payments for the next 12 months</li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -134,37 +159,116 @@ document.addEventListener('DOMContentLoaded', function() {
     // Auto-update preview when form fields change
     const form = document.querySelector('form');
     const previewContainer = document.getElementById('lease-schedule-preview');
+    const monthlyScheduleBody = document.getElementById('monthly-schedule-body');
     
     if (form && previewContainer) {
         const fields = ['id_monthly_rent', 'id_advance_months', 'id_security_deposit', 'id_start_date', 'id_due_day'];
+        
+        function formatCurrency(amount) {
+            return '₱' + amount.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+        
+        function formatDate(date) {
+            return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+        
+        function calculateDueDate(startDate, monthOffset, dueDay) {
+            const date = new Date(startDate);
+            date.setMonth(date.getMonth() + monthOffset);
+            
+            // Set the due day, but handle months with fewer days
+            const lastDayOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+            date.setDate(Math.min(dueDay, lastDayOfMonth));
+            
+            return date;
+        }
         
         function updatePreview() {
             // Get form values
             const monthlyRent = parseFloat(document.getElementById('id_monthly_rent')?.value || 0);
             const advanceMonths = parseInt(document.getElementById('id_advance_months')?.value || 2);
             const securityDeposit = parseFloat(document.getElementById('id_security_deposit')?.value || monthlyRent);
-            const startDate = document.getElementById('id_start_date')?.value;
+            const startDateInput = document.getElementById('id_start_date')?.value;
             const dueDay = parseInt(document.getElementById('id_due_day')?.value || 5);
             
             // Only show preview if we have basic data
-            if (monthlyRent > 0 && startDate) {
+            if (monthlyRent > 0 && startDateInput) {
                 previewContainer.style.display = 'block';
                 
-                // Update summary values
+                const startDate = new Date(startDateInput);
                 const advancePaymentAmount = monthlyRent * advanceMonths;
                 const totalMoveInCost = securityDeposit + advancePaymentAmount;
                 
-                // Update DOM elements (simplified for demo)
-                const summaryElements = {
-                    'monthly_rent': monthlyRent.toLocaleString('en-PH', {minimumFractionDigits: 2}),
-                    'advance_months': advanceMonths,
-                    'advance_payment_amount': advancePaymentAmount.toLocaleString('en-PH', {minimumFractionDigits: 2}),
-                    'security_deposit': securityDeposit.toLocaleString('en-PH', {minimumFractionDigits: 2}),
-                    'total_move_in_cost': totalMoveInCost.toLocaleString('en-PH', {minimumFractionDigits: 2})
-                };
+                // Update summary values
+                document.querySelector('[data-preview="monthly_rent"]').textContent = formatCurrency(monthlyRent);
+                document.querySelector('[data-preview="advance_months"]').textContent = advanceMonths;
+                document.querySelector('[data-preview="advance_months_plural"]').textContent = advanceMonths === 1 ? '' : 's';
+                document.querySelector('[data-preview="advance_payment_amount"]').textContent = formatCurrency(advancePaymentAmount);
+                document.querySelector('[data-preview="security_deposit"]').textContent = formatCurrency(securityDeposit);
+                document.querySelector('[data-preview="total_move_in_cost"]').textContent = formatCurrency(totalMoveInCost);
                 
-                // You would need to implement proper DOM updates here
-                // This is a simplified version for demonstration
+                // Update milestone cards
+                document.getElementById('milestone-security').textContent = formatCurrency(totalMoveInCost);
+                document.getElementById('milestone-movein-date').textContent = formatDate(startDate);
+                document.getElementById('milestone-advance').textContent = formatCurrency(advancePaymentAmount);
+                document.getElementById('milestone-advance-months').textContent = advanceMonths;
+                document.getElementById('milestone-first-rent').textContent = formatCurrency(monthlyRent);
+                
+                // Calculate first rent due date (after advance period)
+                const firstRentDueDate = calculateDueDate(startDate, advanceMonths, dueDay);
+                document.getElementById('milestone-first-rent-date').textContent = formatDate(firstRentDueDate);
+                
+                // Update notes section due day
+                const noteDueDay = document.getElementById('note-due-day');
+                if (noteDueDay) {
+                    noteDueDay.textContent = dueDay;
+                }
+                
+                // Generate monthly schedule table (12 months)
+                let scheduleHTML = '';
+                let total12Months = 0;
+                
+                for (let i = 0; i < 12; i++) {
+                    const monthNumber = i + 1;
+                    const dueDate = calculateDueDate(startDate, i, dueDay);
+                    
+                    let paymentType = '';
+                    let amount = monthlyRent;
+                    let statusBadge = '';
+                    
+                    if (i < advanceMonths) {
+                        // During advance period
+                        if (i === 0) {
+                            // First month - includes move-in costs
+                            paymentType = 'Move-in + 1st Month';
+                            amount = totalMoveInCost;
+                            statusBadge = '<span class="badge bg-warning text-dark">Move-in</span>';
+                        } else {
+                            paymentType = 'Prepaid (Advance)';
+                            amount = 0; // Already paid in advance
+                            statusBadge = '<span class="badge bg-success">Prepaid</span>';
+                        }
+                    } else {
+                        // Regular rent payments
+                        paymentType = 'Monthly Rent';
+                        statusBadge = '<span class="badge bg-primary">Due</span>';
+                        total12Months += amount;
+                    }
+                    
+                    scheduleHTML += `
+                        <tr>
+                            <td><strong>Month ${monthNumber}</strong></td>
+                            <td>${formatDate(dueDate)}</td>
+                            <td>${paymentType}</td>
+                            <td class="text-end fw-bold">${amount > 0 ? formatCurrency(amount) : '<span class="text-success">PAID</span>'}</td>
+                            <td class="text-center">${statusBadge}</td>
+                        </tr>
+                    `;
+                }
+                
+                monthlyScheduleBody.innerHTML = scheduleHTML;
+                document.getElementById('total-12-months').textContent = formatCurrency(total12Months + totalMoveInCost);
+                
             } else {
                 previewContainer.style.display = 'none';
             }

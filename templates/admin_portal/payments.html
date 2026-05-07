@@ -1,4 +1,5 @@
 {% extends "admin_portal/base.html" %}
+{% load humanize %}
 {% block title %}Payments{% endblock %}
 {% block content %}
   <div class="page-top">
@@ -57,8 +58,11 @@
       <thead>
         <tr>
           <th>User</th>
-          <th>Reference</th>
-          <th>Bill IDs</th>
+          <th>Method</th>
+          <th>Amount</th>
+          <th>Type</th>
+          <th>Reference / Schedule</th>
+          <th>Bills</th>
           <th>Status</th>
           <th>Date</th>
           <th>Actions</th>
@@ -72,8 +76,37 @@
               <div class="cell-sub">Tenant payer</div>
             </td>
             <td>
-              <div class="cell-title">{{ p.reference_code }}</div>
-              <div class="cell-sub">Submitted reference</div>
+              {% if p.payment_method == "GCASH" %}
+                <span class="status-badge" style="background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd;">GCash QR</span>
+              {% else %}
+                <span class="status-badge" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;">F2F Cash</span>
+              {% endif %}
+            </td>
+            <td>
+              <strong style="color:#059669;">₱{{ p.amount|floatformat:2|intcomma }}</strong>
+            </td>
+            <td>
+              {% if p.payment_type == "full" %}
+                <span class="muted">Full</span>
+              {% elif p.payment_type == "rent_only" %}
+                <span class="muted">Rent Only</span>
+              {% elif p.payment_type == "water_only" %}
+                <span class="muted">Water Only</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if p.payment_method == "GCASH" %}
+                <div class="cell-title">{{ p.reference_code }}</div>
+                <div class="cell-sub">GCash ref</div>
+              {% else %}
+                <div class="cell-title">{{ p.preferred_date|date:"M d, Y"|default:"No date" }}</div>
+                <div class="cell-sub">{{ p.preferred_time|time:"g:i A"|default:"No time" }}</div>
+                {% if p.tenant_note %}
+                  <div class="cell-sub" style="margin-top:4px;color:#6b7280;" title="{{ p.tenant_note }}">
+                    📝 {{ p.tenant_note|truncatechars:20 }}
+                  </div>
+                {% endif %}
+              {% endif %}
             </td>
             <td>{{ p.bill_ids }}</td>
             <td>
@@ -81,14 +114,31 @@
                 {{ p.status }}
               </span>
             </td>
-            <td>{{ p.created_at }}</td>
+            <td>{{ p.created_at|date:"M d, Y H:i" }}</td>
             <td class="table-actions">
               {% if p.status == "PENDING" %}
-                <form method="post" action="{% url 'admin_approve_payment' p.id %}" class="confirm-action" data-confirm="Approve payment {{ p.reference_code }}?">
-                  {% csrf_token %}
-                  <button class="link link-success" type="submit">Approve</button>
-                </form>
-                <form method="post" action="{% url 'admin_reject_payment' p.id %}" class="confirm-action" data-confirm="Reject payment {{ p.reference_code }}?">
+                {% if p.payment_method == "GCASH" %}
+                  <form method="post" action="{% url 'admin_approve_payment' p.id %}" class="confirm-action" data-confirm="Approve ₱{{ p.amount|floatformat:2|intcomma }} GCash payment from {{ p.user.email }}?&#10;&#10;Reference: {{ p.reference_code }}&#10;Type: {{ p.payment_type }}&#10;Bills: {{ p.bill_ids }}">
+                    {% csrf_token %}
+                    <button class="link link-success" type="submit">Approve</button>
+                  </form>
+                {% else %}
+                  {# F2F Cash: Two-step process #}
+                  {% if not p.schedule_confirmed %}
+                    {# Step 1: Confirm the schedule first #}
+                    <form method="post" action="{% url 'admin_confirm_schedule' p.id %}" class="confirm-action" data-confirm="Confirm F2F schedule for {{ p.user.email }}?&#10;&#10;Date: {{ p.preferred_date|date:'M d, Y' }}&#10;Time: {{ p.preferred_time|time:'g:i A' }}&#10;Tenant will be notified.">
+                      {% csrf_token %}
+                      <button class="link" type="submit" style="color:#2563eb;border-color:#bfdbfe;background:#eff6ff;">Confirm Schedule</button>
+                    </form>
+                  {% else %}
+                    {# Step 2: Schedule confirmed, now mark payment received #}
+                    <form method="post" action="{% url 'admin_approve_payment' p.id %}" class="confirm-action" data-confirm="Confirm cash payment RECEIVED from {{ p.user.email }}?&#10;&#10;Amount: ₱{{ p.amount|floatformat:2|intcomma }}&#10;Scheduled: {{ p.preferred_date|date:'M d, Y' }} {{ p.preferred_time|time:'g:i A' }}&#10;Bills: {{ p.bill_ids }}">
+                      {% csrf_token %}
+                      <button class="link link-success" type="submit">Confirm Received</button>
+                    </form>
+                  {% endif %}
+                {% endif %}
+                <form method="post" action="{% url 'admin_reject_payment' p.id %}" class="confirm-action" data-confirm="Reject ₱{{ p.amount|floatformat:2|intcomma }} payment from {{ p.user.email }}?">
                   {% csrf_token %}
                   <button class="link link-danger" type="submit">Reject</button>
                 </form>
@@ -97,7 +147,7 @@
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="6" class="empty-state">No payments found.</td></tr>
+          <tr><td colspan="9" class="empty-state">No payments found.</td></tr>
         {% endfor %}
       </tbody>
     </table>

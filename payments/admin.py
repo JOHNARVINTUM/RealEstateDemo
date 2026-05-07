@@ -4,8 +4,8 @@ from billing.services import approve_manual_payment
 
 @admin.register(ManualPayment)
 class ManualPaymentAdmin(admin.ModelAdmin):
-    list_display = ("user", "reference_code", "status", "created_at")
-    list_filter = ("status", "created_at")
+    list_display = ("user", "payment_method", "amount", "payment_type", "status", "created_at")
+    list_filter = ("status", "payment_method", "payment_type", "created_at")
     search_fields = ("user__email", "reference_code", "bill_ids")
     ordering = ("-created_at",)
     list_select_related = ("user",)

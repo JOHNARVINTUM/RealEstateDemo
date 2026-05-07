@@ -5,6 +5,7 @@ from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import models
+from django.db.models import F
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
@@ -121,13 +122,31 @@ def tenant_dashboard(request):
     if lease:
         ensure_bills_since_move_in(lease)
 
-        current_balance = MonthlyBill.objects.filter(
-            lease=lease,
-            status="UNPAID",
-        ).order_by("billing_month").first()
-
-        if current_balance:
-            current_balance = get_or_update_monthly_bill(lease, current_balance.billing_month)
+        # Get all bills with unpaid balances (including partial payments)
+        all_bills = MonthlyBill.objects.filter(lease=lease).order_by("billing_month")
+        
+        # Calculate total unpaid balance across all bills (for summary)
+        total_unpaid_rent = sum(b.rent_balance for b in all_bills if b.rent_balance > 0)
+        total_unpaid_water = sum(b.water_balance for b in all_bills if b.water_balance > 0)
+        total_balance_due = total_unpaid_rent + total_unpaid_water
+        
+        # Get first bill with remaining balance - total_balance is the source of truth
+        current_balance = None
+        for bill in all_bills:
+            if bill.total_balance > 0:
+                current_balance = get_or_update_monthly_bill(lease, bill.billing_month)
+                break
+        
+        # If no unpaid bills, show the next month's bill (for preview)
+        if current_balance is None:
+            # Get the last bill to find the next month
+            last_bill = all_bills.last()
+            if last_bill:
+                next_month_date = add_months(last_bill.billing_month, 1)
+                current_balance = MonthlyBill.objects.filter(
+                    lease=lease, 
+                    billing_month=next_month_date
+                ).first()
 
         today_start = month_start(date.today())
         next_month = add_months(today_start, 1)
@@ -138,13 +157,22 @@ def tenant_dashboard(request):
             next_billing_month = next_bill.billing_month
             next_due_date = next_bill.due_date
 
+    # Get tenant's recent payments (pending and approved)
+    recent_payments = []
+    if request.user.is_authenticated:
+        recent_payments = ManualPayment.objects.filter(
+            user=request.user
+        ).order_by("-created_at")[:5]
+    
     context = {
         "profile": profile,
         "lease": lease,
         "announcements": announcements,
         "current_balance": current_balance,
+        "total_balance_due": total_balance_due if lease else None,
         "next_due_date": next_due_date,
         "next_billing_month": next_billing_month,
+        "recent_payments": recent_payments,
     }
     return render(request, "rentals/tenant_dashboard.html", context)
 
@@ -167,8 +195,10 @@ def tenant_billing(request):
     month_filter = request.GET.get("month", "").strip()
     year_filter = request.GET.get("year", "").strip()
 
-    # Start with all bills for this tenant
-    bills_query = MonthlyBill.objects.filter(lease=lease).order_by("-billing_month")
+    # Start with all bills for this tenant (include PARTIALLY_PAID)
+    bills_query = MonthlyBill.objects.filter(
+        lease=lease
+    ).exclude(status="PAID").order_by("-billing_month")
 
     # Apply filters
     if month_filter and month_filter.isdigit():
@@ -177,12 +207,16 @@ def tenant_billing(request):
     if year_filter and year_filter.isdigit():
         bills_query = bills_query.filter(billing_month__year=int(year_filter))
 
-    current_bill = bills_query.filter(status="UNPAID").order_by("billing_month").first()
+    current_bill = bills_query.filter(status__in=["UNPAID", "PARTIALLY_PAID"]).order_by("billing_month").first()
 
+    water_reading = None
     if current_bill:
         current_bill = get_or_update_monthly_bill(lease, current_bill.billing_month)
+        # Fetch water reading details if available
+        if current_bill.source_water_reading:
+            water_reading = current_bill.source_water_reading
 
-    all_bills = bills_query.filter(status="UNPAID").order_by("billing_month")
+    all_bills = bills_query.filter(status__in=["UNPAID", "PARTIALLY_PAID"]).order_by("billing_month")
     ongoing_rows = []
     today = date.today()
 
@@ -199,10 +233,14 @@ def tenant_billing(request):
         if display_status == "UPCOMING":
             continue
 
+        # Get water reading for this ongoing bill if exists
+        bill_water = bill.source_water_reading if bill.source_water_reading else None
+        
         ongoing_rows.append({
             "month_label": bill.billing_month.strftime("%B %Y"),
             "rent": bill.base_rent,
             "water": bill.water_amount,
+            "water_reading": bill_water,
             "penalty": bill.interest,
             "total": bill.total_due,
             "due_date": bill.due_date,
@@ -221,13 +259,18 @@ def tenant_billing(request):
             continue
 
         bills_paid = MonthlyBill.objects.filter(id__in=bill_id_list)
-        total_paid = sum((bill.total_due or Decimal("0.00")) for bill in bills_paid)
+        
+        # Use stored amount if available, otherwise calculate from bills (for old payments)
+        if payment.amount and payment.amount > 0:
+            total_amount = payment.amount
+        else:
+            total_amount = sum((bill.total_due or Decimal("0.00")) for bill in bills_paid)
 
         transactions.append({
             "paid_at": payment.created_at,
             "reference": payment.reference_code,
             "months_paid": bills_paid.count(),
-            "total_amount": total_paid,
+            "total_amount": total_amount,
         })
 
     # Generate month and year choices
@@ -243,6 +286,7 @@ def tenant_billing(request):
     return render(request, "billing/tenant_billing.html", {
         "lease": lease,
         "current_bill": current_bill,
+        "water_reading": water_reading,
         "ongoing_rows": ongoing_rows,
         "transactions": transactions,
         "month_filter": month_filter,
@@ -256,7 +300,7 @@ def tenant_billing(request):
 def tenant_pay_advance(request):
     """
     View to handle the Make Payment page.
-    It reads the dropdown selection and calculates pending + advance bills.
+    Supports partial payments: rent only, water only, or full payment.
     """
     lease = Lease.objects.filter(tenant=request.user, is_active=True).first()
 
@@ -269,64 +313,109 @@ def tenant_pay_advance(request):
     except ValueError:
         months_to_pay = 1
 
+    # Get payment type from request (rent_only, water_only, full)
+    payment_type = request.GET.get("payment_type", "full")
+
     ensure_bills_since_move_in(lease)
 
     today = date.today()
-    all_unpaid_qs = MonthlyBill.objects.filter(lease=lease, status="UNPAID").order_by("billing_month")
+    
+    # For partial payments, include bills that have balance for that type
+    # Get all bills ordered by month
+    all_bills_qs = MonthlyBill.objects.filter(lease=lease).order_by("billing_month")
+    
+    if payment_type == "rent_only":
+        # Filter to bills with unpaid rent, then slice
+        bills_with_unpaid_rent = [b for b in all_bills_qs if b.rent_balance > 0]
+        bills_to_process = bills_with_unpaid_rent[:months_to_pay]
+    elif payment_type == "water_only":
+        # Filter to bills with unpaid water, then slice
+        bills_with_unpaid_water = [b for b in all_bills_qs if b.water_balance > 0]
+        bills_to_process = bills_with_unpaid_water[:months_to_pay]
+    else:
+        # Full payment - include UNPAID and PARTIALLY_PAID bills (total_balance > 0)
+        all_unpaid_qs = MonthlyBill.objects.filter(
+            lease=lease, status__in=["UNPAID", "PARTIALLY_PAID"]
+        ).order_by("billing_month")
+        bills_to_process = list(all_unpaid_qs[:months_to_pay])
 
-    unpaid_count = all_unpaid_qs.filter(due_date__lte=today).count()
+    # Count truly unpaid bills for warning
+    unpaid_count = MonthlyBill.objects.filter(
+        lease=lease, status="UNPAID", due_date__lte=today
+    ).count()
     has_pending = unpaid_count > 0
 
     preview_rows = []
+    total_rent = Decimal("0.00")
+    total_water = Decimal("0.00")
+    total_penalty = Decimal("0.00")
     total_amount = Decimal("0.00")
-    bills_to_process = list(all_unpaid_qs[:months_to_pay])
-
-    if len(bills_to_process) < months_to_pay:
-        if all_unpaid_qs.exists():
-            last_month = all_unpaid_qs.last().billing_month
-            current_future_month = add_months(last_month, 1)
-        else:
-            current_future_month = month_start(today)
-            if MonthlyBill.objects.filter(
-                lease=lease,
-                billing_month=current_future_month,
-                status="PAID",
-            ).exists():
-                current_future_month = add_months(current_future_month, 1)
-
-        extra_months = months_to_pay - len(bills_to_process)
-        for _ in range(extra_months):
-            ensure_bills_up_to(lease, current_future_month)
-            future_bill = MonthlyBill.objects.get(lease=lease, billing_month=current_future_month)
-            bills_to_process.append(future_bill)
-            current_future_month = add_months(current_future_month, 1)
 
     for bill in bills_to_process:
         bill = get_or_update_monthly_bill(lease, bill.billing_month)
-        preview_rows.append({
+        
+        # Calculate what tenant will actually pay based on payment type
+        if payment_type == "rent_only":
+            pay_rent = bill.rent_balance
+            pay_water = Decimal("0.00")
+            pay_penalty = Decimal("0.00")  # Penalty only on full payment
+            display_rent = float(pay_rent)
+            display_water = 0
+        elif payment_type == "water_only":
+            pay_rent = Decimal("0.00")
+            pay_water = bill.water_balance
+            pay_penalty = Decimal("0.00")
+            display_rent = 0
+            display_water = float(pay_water)
+        else:
+            # Full payment - pay all remaining balances including interest
+            pay_rent = bill.rent_balance
+            pay_water = bill.water_balance
+            pay_penalty = bill.interest  # Include late interest in full payment
+            # For display, show full bill amounts
+            display_rent = float(bill.base_rent)
+            display_water = float(bill.water_amount or 0)
+        
+        row = {
+            "bill_id": bill.id,
             "month_label": bill.billing_month.strftime("%B %Y"),
-            "rent": bill.base_rent,
-            "water": bill.water_amount,
-            "penalty": bill.interest,
-            "total": bill.total_due,
+            "rent": float(bill.base_rent),
+            "water": float(bill.water_amount or 0),
+            "penalty": float(bill.interest or 0),
+            "pay_rent": float(pay_rent),
+            "pay_water": float(pay_water),
+            "pay_penalty": float(pay_penalty),
+            "pay_total": float(pay_rent + pay_water + pay_penalty),
+            "display_rent": display_rent,
+            "display_water": display_water,
             "due_date": bill.due_date,
-        })
-        total_amount += bill.total_due
+        }
+        preview_rows.append(row)
+
+    total_rent = sum(row["display_rent"] if payment_type == "full" else row["pay_rent"] for row in preview_rows)
+    total_water = sum(row["display_water"] if payment_type == "full" else row["pay_water"] for row in preview_rows)
+    total_penalty = sum(row["pay_penalty"] for row in preview_rows)
+    total_amount = sum(row["pay_total"] for row in preview_rows)
 
     context = {
         "lease": lease,
         "months_options": [1, 2, 3, 4, 5, 6, 12],
         "months_to_pay": months_to_pay,
+        "payment_type": payment_type,
         "has_pending": has_pending,
         "unpaid_count": unpaid_count,
+        "total_rent": total_rent,
+        "total_water": total_water,
+        "total_penalty": total_penalty,
         "total_amount": total_amount,
         "preview_rows": preview_rows,
     }
 
     if request.method == "POST":
         url = reverse("manual_gcash_payment")
-        bill_ids = ",".join(str(bill.id) for bill in bills_to_process if bill.id)
-        return redirect(f"{url}?amount={total_amount}&bill_ids={bill_ids}")
+        # Pass payment type to payment processor
+        bill_ids = ",".join(str(row["bill_id"]) for row in preview_rows)
+        return redirect(f"{url}?amount={total_amount}&bill_ids={bill_ids}&payment_type={payment_type}")
 
     return render(request, "billing/tenant_pay_advance.html", context)
 

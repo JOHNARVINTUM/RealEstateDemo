@@ -51,24 +51,138 @@
         </div>
       </form>
 
-      <!-- Total + Pay button -->
+      <!-- Payment Type Selector & Total -->
       <div class="w-full lg:max-w-sm rounded-2xl border-l-4 border-l-green-500 border-y border-r border-gray-200 bg-gradient-to-br from-white to-slate-50 p-6 shadow-sm">
-        <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Amount (Preview)</div>
+        <!-- Payment Type Selector -->
+        <div class="mb-4">
+          <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Payment Type</label>
+          <div class="grid grid-cols-3 gap-2">
+            <a href="?months_to_pay={{ months_to_pay }}&payment_type=rent_only" 
+               class="px-3 py-2 text-xs font-semibold rounded-lg text-center transition-all
+                      {% if payment_type == 'rent_only' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+              Rent Only
+            </a>
+            <a href="?months_to_pay={{ months_to_pay }}&payment_type=water_only"
+               class="px-3 py-2 text-xs font-semibold rounded-lg text-center transition-all
+                      {% if payment_type == 'water_only' %}bg-cyan-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+              Water Only
+            </a>
+            <a href="?months_to_pay={{ months_to_pay }}&payment_type=full"
+               class="px-3 py-2 text-xs font-semibold rounded-lg text-center transition-all
+                      {% if payment_type == 'full' or not payment_type %}bg-green-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+              Full Payment
+            </a>
+          </div>
+        </div>
+
+        <!-- Amount Breakdown -->
+        <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+          {% if payment_type == 'rent_only' %}
+            Total Rent Due
+          {% elif payment_type == 'water_only' %}
+            Total Water Due
+          {% else %}
+            Total Amount (Preview)
+          {% endif %}
+        </div>
         <div class="text-4xl font-extrabold text-blue-950 mt-2 tracking-tight">
           ₱{{ total_amount|default:"0.00"|floatformat:2|intcomma }}
         </div>
-        <form method="post" class="mt-6">
-          {% csrf_token %}
-          <button type="submit"
-                  class="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold text-base shadow-md hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-            </svg>
-            Pay via GCash
-          </button>
-        </form>
+        
+        <!-- Breakdown -->
+        <div class="mt-3 text-sm text-gray-600 space-y-1">
+          {% if payment_type == 'rent_only' %}
+          <div class="flex justify-between text-blue-600">
+            <span>Rent to Pay:</span>
+            <span class="font-bold">₱{{ total_rent|floatformat:2|intcomma }}</span>
+          </div>
+          <div class="flex justify-between text-gray-400">
+            <span>Water:</span>
+            <span class="font-medium">₱0.00 (not included)</span>
+          </div>
+          {% elif payment_type == 'water_only' %}
+          <div class="flex justify-between text-gray-400">
+            <span>Rent:</span>
+            <span class="font-medium">₱0.00 (not included)</span>
+          </div>
+          <div class="flex justify-between text-cyan-600">
+            <span>Water to Pay:</span>
+            <span class="font-bold">₱{{ total_water|floatformat:2|intcomma }}</span>
+          </div>
+          {% else %}
+          <div class="flex justify-between">
+            <span>Rent:</span>
+            <span class="font-medium">₱{{ total_rent|floatformat:2|intcomma }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Water:</span>
+            <span class="font-medium">₱{{ total_water|floatformat:2|intcomma }}</span>
+          </div>
+          {% if total_penalty > 0 %}
+          <div class="flex justify-between text-red-500">
+            <span>Penalty:</span>
+            <span class="font-medium">₱{{ total_penalty|floatformat:2|intcomma }}</span>
+          </div>
+          {% endif %}
+          {% endif %}
+        </div>
+
+        <!-- Payment Method Selection -->
+        <div class="mt-6 space-y-3">
+          <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Choose Payment Method</p>
+          
+          <!-- GCash QR Option -->
+          <form method="post" action="{% url 'manual_gcash_payment' %}">
+            {% csrf_token %}
+            <input type="hidden" name="bill_ids" value="{% for row in preview_rows %}{{ row.bill_id }}{% if not forloop.last %},{% endif %}{% endfor %}">
+            <input type="hidden" name="payment_type" value="{{ payment_type|default:'full' }}">
+            <input type="hidden" name="amount" value="{{ total_amount }}">
+            <button type="submit"
+                    class="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl 
+                           {% if payment_type == 'rent_only' %}bg-blue-600 hover:bg-blue-700
+                           {% elif payment_type == 'water_only' %}bg-cyan-600 hover:bg-cyan-700
+                           {% else %}bg-blue-600 hover:bg-blue-700{% endif %} 
+                           text-white font-bold text-base shadow-md hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+              {% if payment_type == 'rent_only' %}
+                Pay Rent via GCash
+              {% elif payment_type == 'water_only' %}
+                Pay Water via GCash
+              {% else %}
+                Pay with GCash QR
+              {% endif %}
+            </button>
+          </form>
+          
+          <!-- F2F Cash Option -->
+          <form method="post" action="{% url 'f2f_cash_payment' %}">
+            {% csrf_token %}
+            <input type="hidden" name="bill_ids" value="{% for row in preview_rows %}{{ row.bill_id }}{% if not forloop.last %},{% endif %}{% endfor %}">
+            <input type="hidden" name="payment_type" value="{{ payment_type|default:'full' }}">
+            <input type="hidden" name="amount" value="{{ total_amount }}">
+            <button type="submit"
+                    class="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl 
+                           bg-amber-500 hover:bg-amber-600
+                           text-white font-bold text-base shadow-md hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              {% if payment_type == 'rent_only' %}
+                Pay Rent in Cash (F2F)
+              {% elif payment_type == 'water_only' %}
+                Pay Water in Cash (F2F)
+              {% else %}
+                Pay Face-to-Face Cash
+              {% endif %}
+            </button>
+          </form>
+        </div>
+        
         <div class="text-xs font-medium text-gray-400 mt-3 text-center">
-          Next: Scan QR or number, then submit GCash reference.
+          GCash: Instant transfer & verification.<br>
+          F2F: Schedule appointment with admin.
         </div>
       </div>
 
@@ -96,7 +210,7 @@
             <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Rent</th>
             <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Water</th>
             <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Penalty</th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">To Pay</th>
             <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Due Date</th>
           </tr>
         </thead>
@@ -104,12 +218,22 @@
           {% for r in preview_rows %}
             <tr class="hover:bg-slate-50 transition-colors duration-150">
               <td class="px-6 py-4 text-sm font-medium text-blue-950">{{ r.month_label }}</td>
-              <td class="px-6 py-4 text-sm text-gray-600">₱{{ r.rent|floatformat:2|intcomma }}</td>
-              <td class="px-6 py-4 text-sm text-gray-600">₱{{ r.water|default:"0.00"|floatformat:2|intcomma }}</td>
-              <td class="px-6 py-4 text-sm text-red-500">
-                {% if r.penalty and r.penalty != 0 %}₱{{ r.penalty|floatformat:2|intcomma }}{% else %}-{% endif %}
+              <td class="px-6 py-4 text-sm text-gray-600">
+                <span class="{% if r.pay_rent == 0 %}text-gray-400{% endif %}">₱{{ r.rent|floatformat:2|intcomma }}</span>
+                {% if r.pay_rent > 0 and r.pay_rent < r.rent %}
+                  <br><span class="text-xs text-blue-600">→ Pay ₱{{ r.pay_rent|floatformat:2 }}</span>
+                {% endif %}
               </td>
-              <td class="px-6 py-4 text-sm font-bold text-blue-950">₱{{ r.total|floatformat:2|intcomma }}</td>
+              <td class="px-6 py-4 text-sm text-gray-600">
+                <span class="{% if r.pay_water == 0 %}text-gray-400{% endif %}">₱{{ r.water|default:"0.00"|floatformat:2|intcomma }}</span>
+                {% if r.pay_water > 0 and r.pay_water < r.water %}
+                  <br><span class="text-xs text-cyan-600">→ Pay ₱{{ r.pay_water|floatformat:2 }}</span>
+                {% endif %}
+              </td>
+              <td class="px-6 py-4 text-sm text-red-500">
+                {% if r.pay_penalty and r.pay_penalty != 0 %}₱{{ r.pay_penalty|floatformat:2|intcomma }}{% else %}-{% endif %}
+              </td>
+              <td class="px-6 py-4 text-sm font-bold text-blue-950">₱{{ r.pay_total|floatformat:2|intcomma }}</td>
               <td class="px-6 py-4 text-sm text-gray-600">
                 {% if r.due_date %}{{ r.due_date|date:"F j, Y" }}{% else %}-{% endif %}
               </td>

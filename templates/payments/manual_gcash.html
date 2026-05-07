@@ -83,6 +83,7 @@
         {% csrf_token %}
         <input type="hidden" name="amount" value="{{ amount_to_pay }}">
         <input type="hidden" name="bill_ids" value="{{ bill_ids }}">
+        <input type="hidden" name="payment_type" value="{{ payment_type|default:'full' }}">
 
         <div>
           <label class="block text-sm font-bold text-blue-900 mb-2 uppercase tracking-wide">GCash Reference Number</label>

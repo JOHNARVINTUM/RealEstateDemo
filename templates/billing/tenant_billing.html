@@ -74,8 +74,40 @@
               <span class="text-gray-600 font-medium">Water Utility</span>
               <span class="font-bold text-blue-950">
                 ₱{% if current_bill %}{{ current_bill.water_amount|default:"0.00"|floatformat:2|intcomma }}{% else %}0.00{% endif %}
+                {% if water_reading %}
+                  <button onclick="toggleWaterDetails()" class="ml-2 text-blue-500 hover:text-blue-700 text-xs underline" type="button">ⓘ View Details</button>
+                {% endif %}
               </span>
             </div>
+            {% if water_reading %}
+            <div id="waterDetails" class="hidden bg-blue-50 p-3 rounded-lg mt-2 mb-2">
+              <p class="text-xs font-semibold text-blue-800 uppercase tracking-wider mb-2">Water Usage Details</p>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Previous Reading:</span>
+                  <span class="font-medium">{{ water_reading.previous_reading|floatformat:2 }} m³</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Current Reading:</span>
+                  <span class="font-medium">{{ water_reading.current_reading|floatformat:2 }} m³</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Consumption:</span>
+                  <span class="font-medium">{{ water_reading.consumption|floatformat:2 }} m³</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Rate:</span>
+                  <span class="font-medium">₱{{ water_reading.rate_per_cu_m|floatformat:2 }}/m³</span>
+                </div>
+              </div>
+              <div class="mt-2 pt-2 border-t border-blue-200">
+                <div class="flex justify-between text-sm">
+                  <span class="text-gray-600">Calculation:</span>
+                  <span class="font-bold text-blue-900">{{ water_reading.consumption|floatformat:2 }} × ₱{{ water_reading.rate_per_cu_m|floatformat:2 }} = ₱{{ water_reading.computed_amount|floatformat:2 }}</span>
+                </div>
+              </div>
+            </div>
+            {% endif %}
             <div class="flex justify-between py-2 text-sm">
               <span class="text-gray-600 font-medium">Penalty</span>
               <span class="font-bold text-red-500">
@@ -90,9 +122,11 @@
             </div>
           </div>
 
-          <!-- Payment Details -->
+          <!-- Payment Status -->
           <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Payment Details</p>
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Payment Status</p>
+            
+            <!-- Due Date -->
             <div class="flex items-center gap-4 py-3 border-b border-gray-50">
               <div class="w-10 h-10 rounded-lg bg-slate-50 border border-gray-100 flex items-center justify-center">
                 <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -106,26 +140,65 @@
                 </div>
               </div>
             </div>
-            <div class="flex items-center gap-4 py-3 mt-1">
-              {% if current_bill and current_bill.paid_at %}
-                <div class="w-10 h-10 rounded-lg bg-green-50 border border-green-100 flex items-center justify-center">
-                  <svg class="w-5 h-5 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            
+            <!-- Rent Status -->
+            <div class="flex items-center gap-4 py-3 border-b border-gray-50">
+              {% if current_bill and current_bill.is_rent_paid %}
+                <div class="w-10 h-10 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M20 6 9 17l-5-5"></path>
                   </svg>
                 </div>
                 <div>
-                  <div class="text-xs text-gray-500 font-medium">Payment Date</div>
-                  <div class="font-bold text-green-600 mt-0.5">{{ current_bill.paid_at|date:"F j, Y" }}</div>
+                  <div class="text-xs text-gray-500 font-medium">Rent Status</div>
+                  <div class="font-bold text-blue-600 mt-0.5">PAID {% if current_bill.rent_paid_at %}{{ current_bill.rent_paid_at|date:"F j, Y" }}{% endif %}</div>
                 </div>
               {% else %}
-                <div class="w-10 h-10 rounded-lg bg-red-50 border border-red-100 flex items-center justify-center">
-                  <svg class="w-5 h-5 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                <div class="w-10 h-10 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
                 <div>
-                  <div class="text-xs text-gray-500 font-medium">Payment Date</div>
-                  <div class="font-bold text-red-500 mt-0.5">Not Paid Yet</div>
+                  <div class="text-xs text-gray-500 font-medium">Rent Status</div>
+                  <div class="font-bold text-orange-600 mt-0.5">
+                    {% if current_bill.rent_paid > 0 %}
+                      PARTIAL (Paid ₱{{ current_bill.rent_paid|floatformat:2 }} / ₱{{ current_bill.base_rent|floatformat:2 }})
+                    {% else %}
+                      UNPAID (₱{{ current_bill.rent_balance|floatformat:2 }})
+                    {% endif %}
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+            
+            <!-- Water Status -->
+            <div class="flex items-center gap-4 py-3">
+              {% if current_bill and current_bill.is_water_paid %}
+                <div class="w-10 h-10 rounded-lg bg-cyan-50 border border-cyan-100 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-cyan-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 6 9 17l-5-5"></path>
+                  </svg>
+                </div>
+                <div>
+                  <div class="text-xs text-gray-500 font-medium">Water Status</div>
+                  <div class="font-bold text-cyan-600 mt-0.5">PAID {% if current_bill.water_paid_at %}{{ current_bill.water_paid_at|date:"F j, Y" }}{% endif %}</div>
+                </div>
+              {% else %}
+                <div class="w-10 h-10 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <div class="text-xs text-gray-500 font-medium">Water Status</div>
+                  <div class="font-bold text-orange-600 mt-0.5">
+                    {% if current_bill.water_paid > 0 %}
+                      PARTIAL (Paid ₱{{ current_bill.water_paid|floatformat:2 }} / ₱{{ current_bill.water_amount|floatformat:2 }})
+                    {% else %}
+                      UNPAID (₱{{ current_bill.water_balance|floatformat:2 }})
+                    {% endif %}
+                  </div>
                 </div>
               {% endif %}
             </div>
@@ -168,7 +241,12 @@
             <tr class="hover:bg-slate-50 transition-colors duration-150">
               <td class="px-6 py-4 text-sm font-medium text-blue-950">{{ r.month_label }}</td>
               <td class="px-6 py-4 text-sm text-gray-600">₱{{ r.rent|floatformat:2|intcomma }}</td>
-              <td class="px-6 py-4 text-sm text-gray-600">₱{{ r.water|floatformat:2|intcomma }}</td>
+              <td class="px-6 py-4 text-sm text-gray-600">
+                ₱{{ r.water|floatformat:2|intcomma }}
+                {% if r.water_reading %}
+                  <br><span class="text-xs text-blue-500">{{ r.water_reading.consumption|floatformat:1 }}m³ × ₱{{ r.water_reading.rate_per_cu_m|floatformat:1 }}</span>
+                {% endif %}
+              </td>
               <td class="px-6 py-4 text-sm text-red-500">
                 {% if r.penalty and r.penalty != 0 %}₱{{ r.penalty|floatformat:2|intcomma }}{% else %}-{% endif %}
               </td>
@@ -250,5 +328,16 @@
       </table>
     </div>
   </div>
+
+  <script>
+    function toggleWaterDetails() {
+      const details = document.getElementById('waterDetails');
+      if (details.classList.contains('hidden')) {
+        details.classList.remove('hidden');
+      } else {
+        details.classList.add('hidden');
+      }
+    }
+  </script>
 
 {% endblock %}

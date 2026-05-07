@@ -25,6 +25,7 @@ from .admin_portal_views import (
     admin_delete_bill,
     admin_approve_payment,
     admin_reject_payment,
+    admin_confirm_schedule,
     admin_delete_payment,
     admin_update_maintenance,
     admin_units,
@@ -43,6 +44,12 @@ from .admin_portal_views import (
     admin_view_attachment,
     admin_delete_attachment,
 )
+from .admin_portal_views_water import (
+    admin_water,
+    admin_water_process,
+    admin_water_rate,
+    admin_water_recompute,
+)
 
 urlpatterns = [
     path("dashboard/", admin_dashboard, name="admin_dashboard"),
@@ -57,9 +64,17 @@ urlpatterns = [
     path("billing/mark_paid/<int:bill_id>/", admin_mark_bill_paid, name="admin_mark_bill_paid"),
     path("billing/mark_unpaid/<int:bill_id>/", admin_mark_bill_unpaid, name="admin_mark_bill_unpaid"),
     path("billing/<int:bill_id>/delete/", admin_delete_bill, name="admin_delete_bill"),
+    
+    # Water Management
+    path("water/", admin_water, name="admin_water"),
+    path("water/process/", admin_water_process, name="admin_water_process"),
+    path("water/rate/", admin_water_rate, name="admin_water_rate"),
+    path("water/recompute/", admin_water_recompute, name="admin_water_recompute"),
+    
     path("payments/", admin_payments, name="admin_payments"),
     path("payments/<int:payment_id>/approve/", admin_approve_payment, name="admin_approve_payment"),
     path("payments/<int:payment_id>/reject/", admin_reject_payment, name="admin_reject_payment"),
+    path("payments/<int:payment_id>/confirm-schedule/", admin_confirm_schedule, name="admin_confirm_schedule"),
     path("payments/<int:payment_id>/delete/", admin_delete_payment, name="admin_delete_payment"),
     path("maintenance/", admin_maintenance, name="admin_maintenance"),
     path("maintenance/<int:req_id>/update/", admin_update_maintenance, name="admin_update_maintenance"),

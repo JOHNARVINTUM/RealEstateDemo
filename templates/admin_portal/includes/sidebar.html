@@ -58,6 +58,20 @@
       Billing
     </a>
 
+    <a href="{% url 'admin_water' %}"
+       aria-current="{% if request.resolver_match.url_name == 'admin_water' %}page{% endif %}"
+       class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200
+              {% if request.resolver_match.url_name == 'admin_water' %}
+                bg-blue-900 border-l-4 border-green-500 font-semibold text-white shadow-md
+              {% else %}
+                text-blue-100 hover:bg-blue-900/50 hover:translate-x-1 hover:text-white
+              {% endif %}">
+      <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M20 14.66V20a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2h2.34M20 14.66a3 3 0 01-3.5-1.34A3 3 0 0113.66 20M20 14.66V10a2 2 0 00-2-2h-2.34M10 2v2.34a3 3 0 01-1.34 3.5A3 3 0 012.34 10H10m0-8h4a2 2 0 012 2v8.5a3.5 3.5 0 01-3.5 3.5h-5A3.5 3.5 0 016 12.5V4a2 2 0 012-2z" />
+      </svg>
+      Water
+    </a>
+
     <a href="{% url 'admin_payments' %}"
        aria-current="{% if request.resolver_match.url_name == 'admin_payments' or request.resolver_match.url_name == 'admin_approve_payment' or request.resolver_match.url_name == 'admin_reject_payment' or request.resolver_match.url_name == 'admin_delete_payment' %}page{% endif %}"
        class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200

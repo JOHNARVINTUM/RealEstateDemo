@@ -11,32 +11,58 @@
 
   <section class="hero-panel compact">
     <h2 class="hero-title">Billing Ledger</h2>
-    <p class="hero-copy">Track each bill by tenant, due date, payment status, and reference number. Use filters before taking actions from the ledger.</p>
+    <p class="hero-copy">Track each bill by tenant, due date, payment status, and reference number. Active tab shows current and past bills. Upcoming tab shows advance/future bills.</p>
   </section>
 
   <!-- Stats Bar -->
   <div class="stats-bar">
-    <div class="stat-pill">
-      <span class="stat-pill-value">{{ bills|length }}</span> Total Bills
-    </div>
-    <div class="stat-pill status-paid" style="border-color:#bbf7d0;background:#f0fdf4;">
-      <span class="stat-pill-value" style="color:#15803d;">{{ paid_bills_count }}</span>
+    <div class="stat-pill" style="border-color:#e2e8f0;background:#f8fafc;">
+      <span class="stat-pill-value">{{ paid_count }}</span>
       <span style="color:#15803d;">Paid</span>
     </div>
-    <div class="stat-pill status-unpaid" style="border-color:#fecaca;background:#fef2f2;">
-      <span class="stat-pill-value" style="color:#dc2626;">{{ unpaid_bills_count }}</span>
+    <div class="stat-pill" style="border-color:#fecaca;background:#fef2f2;">
+      <span class="stat-pill-value" style="color:#dc2626;">{{ unpaid_count }}</span>
       <span style="color:#dc2626;">Unpaid</span>
+    </div>
+    <div class="stat-pill" style="border-color:#fed7aa;background:#fff7ed;">
+      <span class="stat-pill-value" style="color:#ea580c;">{{ overdue_count }}</span>
+      <span style="color:#ea580c;">Overdue</span>
+    </div>
+    <div class="stat-pill" style="border-color:#fef08a;background:#fefce8;">
+      <span class="stat-pill-value" style="color:#ca8a04;">{{ partial_count }}</span>
+      <span style="color:#ca8a04;">Partial</span>
+    </div>
+    <div class="stat-pill" style="border-color:#e2e8f0;background:#f8fafc;">
+      <span class="stat-pill-value" style="color:#64748b;">{{ upcoming_count }}</span>
+      <span style="color:#64748b;">Upcoming</span>
     </div>
   </div>
 
+  <!-- Tab Switcher -->
+  <div style="display:flex;gap:0;border-bottom:2px solid #e2e8f0;margin-bottom:1.5rem;">
+    <a href="?tab=active&q={{ q }}&month={{ month_filter }}&year={{ year_filter }}"
+       style="padding:0.65rem 1.4rem;font-weight:600;font-size:0.9rem;text-decoration:none;border-bottom:3px solid {% if active_tab == 'active' %}#2563eb{% else %}transparent{% endif %};color:{% if active_tab == 'active' %}#2563eb{% else %}#64748b{% endif %};margin-bottom:-2px;">
+      Active Bills
+      <span style="margin-left:6px;background:{% if active_tab == 'active' %}#dbeafe{% else %}#f1f5f9{% endif %};color:{% if active_tab == 'active' %}#1d4ed8{% else %}#64748b{% endif %};padding:2px 8px;border-radius:999px;font-size:0.75rem;">{{ unpaid_count }}</span>
+    </a>
+    <a href="?tab=upcoming&q={{ q }}&month={{ month_filter }}&year={{ year_filter }}"
+       style="padding:0.65rem 1.4rem;font-weight:600;font-size:0.9rem;text-decoration:none;border-bottom:3px solid {% if active_tab == 'upcoming' %}#2563eb{% else %}transparent{% endif %};color:{% if active_tab == 'upcoming' %}#2563eb{% else %}#64748b{% endif %};margin-bottom:-2px;">
+      Upcoming Bills
+      <span style="margin-left:6px;background:{% if active_tab == 'upcoming' %}#dbeafe{% else %}#f1f5f9{% endif %};color:{% if active_tab == 'upcoming' %}#1d4ed8{% else %}#64748b{% endif %};padding:2px 8px;border-radius:999px;font-size:0.75rem;">{{ upcoming_count }}</span>
+    </a>
+  </div>
+
+  <!-- Filters (active tab only) -->
+  {% if active_tab == "active" %}
   <div class="filter-panel">
     <div class="section-head">
       <div>
         <h2 class="section-title">Filters</h2>
-        <p class="section-copy">Find bills by tenant email, unit number, payment reference, or bill status.</p>
+        <p class="section-copy">Filter active bills by tenant, unit, reference, or payment state.</p>
       </div>
     </div>
     <form class="toolbar" method="get">
+      <input type="hidden" name="tab" value="active" />
       <input class="input" name="q" value="{{ q }}" placeholder="Search tenant email, unit, ref..." />
       <select class="input" name="month">
         <option value="">All Months</option>
@@ -51,15 +77,51 @@
         {% endfor %}
       </select>
       <select class="input" name="status">
-        <option value="">All Statuses</option>
-        <option value="PAID" {% if status == "PAID" %}selected{% endif %}>Paid</option>
-        <option value="UNPAID" {% if status == "UNPAID" %}selected{% endif %}>Unpaid</option>
+        <option value="">All</option>
+        <option value="UNPAID" {% if status_filter == "UNPAID" %}selected{% endif %}>Unpaid (incl. Partial)</option>
+        <option value="OVERDUE" {% if status_filter == "OVERDUE" %}selected{% endif %}>Overdue</option>
+        <option value="PARTIAL" {% if status_filter == "PARTIAL" %}selected{% endif %}>Partially Paid</option>
+        <option value="PAID" {% if status_filter == "PAID" %}selected{% endif %}>Paid</option>
       </select>
       <button class="btn" type="submit">Filter</button>
-      {% if q or status or month_filter or year_filter %}<a class="link" href="{% url 'admin_billing' %}">Clear</a>{% endif %}
+      {% if q or status_filter or month_filter or year_filter %}
+        <a class="link" href="{% url 'admin_billing' %}?tab=active">Clear</a>
+      {% endif %}
     </form>
   </div>
+  {% else %}
+  <!-- Upcoming tab: search only -->
+  <div class="filter-panel">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title">Search</h2>
+        <p class="section-copy">Upcoming advance bills are view-only. Search by tenant or unit.</p>
+      </div>
+    </div>
+    <form class="toolbar" method="get">
+      <input type="hidden" name="tab" value="upcoming" />
+      <input class="input" name="q" value="{{ q }}" placeholder="Search tenant email or unit..." />
+      <select class="input" name="month">
+        <option value="">All Months</option>
+        {% for month_num, month_name in month_choices %}
+          <option value="{{ month_num }}" {% if month_filter == month_num|stringformat:"s" %}selected{% endif %}>{{ month_name }}</option>
+        {% endfor %}
+      </select>
+      <select class="input" name="year">
+        <option value="">All Years</option>
+        {% for year in year_choices %}
+          <option value="{{ year }}" {% if year_filter == year|stringformat:"s" %}selected{% endif %}>{{ year }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn" type="submit">Search</button>
+      {% if q or month_filter or year_filter %}
+        <a class="link" href="{% url 'admin_billing' %}?tab=upcoming">Clear</a>
+      {% endif %}
+    </form>
+  </div>
+  {% endif %}
 
+  <!-- Bills Table -->
   <div class="table-wrap">
     <table class="table">
       <thead>
@@ -67,16 +129,17 @@
           <th>Tenant</th>
           <th>Unit</th>
           <th>Month</th>
-          <th>Due</th>
-          <th>Total</th>
-          <th>Status</th>
+          <th>Due Date</th>
+          <th>Original</th>
+          <th>Remaining</th>
+          <th>State</th>
           <th>Paid At</th>
           <th>Reference</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
-        {% for b in bills %}
+        {% for b in display_bills %}
           <tr>
             <td>
               <div class="cell-title">{{ b.lease.tenant.email }}</div>
@@ -86,33 +149,70 @@
               <div class="cell-title">{{ b.lease.unit.number }}</div>
               <div class="cell-sub">Unit</div>
             </td>
-            <td>{{ b.billing_month }}</td>
-            <td>{{ b.due_date }}</td>
-            <td>PHP {{ b.total_due|floatformat:0|intcomma }}</td>
+            <td>{{ b.billing_month|date:"M Y" }}</td>
+            <td>{{ b.due_date|default:"-" }}</td>
+
+            <!-- Original amount -->
+            <td>₱{{ b.total_due|floatformat:0|intcomma }}</td>
+
+            <!-- Remaining balance (source of truth) -->
             <td>
-              <span class="status-badge {% if b.status == 'PAID' %}status-paid{% else %}status-unpaid{% endif %}">
-                {{ b.status }}
-              </span>
-            </td>
-            <td>{{ b.paid_at|default:"-" }}</td>
-            <td>{{ b.payment_reference|default:"-" }}</td>
-            <td class="table-actions">
-              {% if b.status == "UNPAID" %}
-                <form method="post" action="{% url 'admin_mark_bill_paid' b.id %}" class="confirm-action" data-confirm="Mark bill #{{ b.id }} as PAID?">
-                  {% csrf_token %}
-                  <button class="link link-success" type="submit">Mark Paid</button>
-                </form>
+              {% if b.total_balance > 0 %}
+                <strong style="color:#dc2626;">₱{{ b.total_balance|floatformat:0|intcomma }}</strong>
               {% else %}
-                <form method="post" action="{% url 'admin_mark_bill_unpaid' b.id %}" class="confirm-action" data-confirm="Mark bill #{{ b.id }} as UNPAID?">
-                  {% csrf_token %}
-                  <button class="link link-warn" type="submit">Mark Unpaid</button>
-                </form>
+                <span class="muted">—</span>
+              {% endif %}
+            </td>
+
+            <!-- State badge driven by billing_state -->
+            <td>
+              {% if b.billing_state == "PAID" %}
+                <span class="status-badge" style="background:#dcfce7;color:#15803d;border:1px solid #bbf7d0;">PAID</span>
+              {% elif b.billing_state == "OVERDUE" %}
+                <span class="status-badge" style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;">OVERDUE</span>
+              {% elif b.billing_state == "DUE" %}
+                <span class="status-badge" style="background:#ffedd5;color:#ea580c;border:1px solid #fdba74;">DUE</span>
+              {% elif b.billing_state == "UPCOMING" %}
+                <span class="status-badge" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;">UPCOMING</span>
+              {% endif %}
+              {% if b.status == "PARTIALLY_PAID" and b.billing_state != "PAID" %}
+                <span class="status-badge" style="background:#fef9c3;color:#a16207;border:1px solid #fde68a;margin-left:4px;">PARTIAL</span>
+              {% endif %}
+            </td>
+
+            <td>{{ b.paid_at|date:"M d, Y"|default:"-" }}</td>
+            <td>{{ b.payment_reference|default:"-" }}</td>
+
+            <!-- Action buttons -->
+            <td class="table-actions">
+              {% if active_tab == "upcoming" %}
+                <span class="muted" style="font-size:0.8rem;">Advance bill</span>
+              {% else %}
+                {% if b.total_balance > 0 %}
+                  <form method="post" action="{% url 'admin_mark_bill_paid' b.id %}" class="confirm-action" data-confirm="Mark bill #{{ b.id }} as PAID? This clears the remaining balance.">
+                    {% csrf_token %}
+                    <button class="link link-success" type="submit">Mark Paid</button>
+                  </form>
+                {% else %}
+                  <form method="post" action="{% url 'admin_mark_bill_unpaid' b.id %}" class="confirm-action" data-confirm="Reset bill #{{ b.id }} to UNPAID?">
+                    {% csrf_token %}
+                    <button class="link link-warn" type="submit">Mark Unpaid</button>
+                  </form>
+                {% endif %}
               {% endif %}
               <a class="link link-danger" href="{% url 'admin_delete_bill' b.id %}">Delete</a>
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="9" class="empty-state">No bills found.</td></tr>
+          <tr>
+            <td colspan="10" class="empty-state">
+              {% if active_tab == "upcoming" %}
+                No upcoming bills found. Future bills appear here when generated by advance payments.
+              {% else %}
+                No active bills found matching your filters.
+              {% endif %}
+            </td>
+          </tr>
         {% endfor %}
       </tbody>
     </table>

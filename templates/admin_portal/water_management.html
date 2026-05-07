@@ -1,0 +1,230 @@
+{% extends "admin_portal/base.html" %}
+{% load humanize %}
+{% block title %}Water Management{% endblock %}
+{% block content %}
+  <div class="page-top">
+    <div class="page-header">
+      <h1>Water Management</h1>
+      <p class="muted">Track and manage water meter readings</p>
+    </div>
+  </div>
+
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat-pill">
+      <span class="stat-pill-value">{{ total_units }}</span> Total Units
+    </div>
+    <div class="stat-pill" style="border-color:#bbf7d0;background:#f0fdf4;">
+      <span class="stat-pill-value" style="color:#15803d;">{{ filled_count }}</span>
+      <span style="color:#15803d;">Done</span>
+    </div>
+    <div class="stat-pill" style="border-color:#fecaca;background:#fef2f2;">
+      <span class="stat-pill-value" style="color:#dc2626;">{{ missing_count }}</span>
+      <span style="color:#dc2626;">Missing</span>
+    </div>
+    {% if current_rate %}
+    <div class="stat-pill" style="border-color:#bfdbfe;background:#eff6ff;">
+      <span class="stat-pill-value" style="color:#1d4ed8;">₱{{ current_rate }}</span>
+      <span style="color:#1d4ed8;">Rate/m³</span>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Month Selector -->
+  <div class="filter-panel">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title">Select Month</h2>
+        <p class="section-copy">Choose the month to view or enter water readings.</p>
+      </div>
+    </div>
+    <form class="toolbar" method="get">
+      <select class="input" name="month">
+        {% for m_num, m_name in month_choices %}
+          <option value="{{ m_num }}" {% if month == m_num %}selected{% endif %}>{{ m_name }}</option>
+        {% endfor %}
+      </select>
+      <select class="input" name="year">
+        {% for y in year_choices %}
+          <option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn" type="submit">View</button>
+    </form>
+  </div>
+
+  <!-- Search Bar -->
+  <div class="filter-panel" style="margin-top: 1rem;">
+    <form method="get" class="toolbar">
+      <input type="hidden" name="month" value="{{ month }}">
+      <input type="hidden" name="year" value="{{ year }}">
+      <input type="text" name="search" class="input" placeholder="Search by unit number or tenant name..." value="{{ search }}" style="flex:1;">
+      <button type="submit" class="btn">Search</button>
+      {% if search %}
+        <a href="?month={{ month }}&year={{ year }}" class="btn btn-secondary" style="background:#f3f4f6;color:#6b7280;">Clear</a>
+      {% endif %}
+    </form>
+  </div>
+
+  <!-- Water Rate Management -->
+  <div class="filter-panel" style="margin-top: 1rem;">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title">Water Rate Settings</h2>
+        <p class="section-copy">Set the rate per cubic meter. This applies to all units.</p>
+      </div>
+    </div>
+    <form class="toolbar" method="post" action="{% url 'admin_water_rate' %}">
+      {% csrf_token %}
+      <div style="display:flex;gap:1rem;align-items:center;">
+        <div>
+          <label style="display:block;font-size:12px;color:#6b7280;margin-bottom:4px;">Effective Date</label>
+          <input type="date" name="effective_date" class="input" value="{{ today|date:'Y-m-d' }}" required>
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:#6b7280;margin-bottom:4px;">Rate per m³ (₱)</label>
+          <input type="number" name="rate_per_cu_m" class="input" step="0.01" min="0" value="{{ current_rate|default:'45.00' }}" required>
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:#6b7280;margin-bottom:4px;">Notes</label>
+          <input type="text" name="notes" class="input" placeholder="Optional notes" style="width:200px;">
+        </div>
+        <button class="btn btn-primary" type="submit" style="margin-top:20px;">
+          {% if current_rate %}Update Rate{% else %}Set Rate{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Rate Warning -->
+  {% if not current_rate %}
+    <div class="alert alert-warning" style="margin: 1rem 0; padding: 1rem; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px;">
+      <strong>⚠️ No Water Rate Set</strong><br>
+      Please set a water rate above before entering readings.
+    </div>
+  {% endif %}
+
+  <!-- Bulk Entry Form -->
+  <section class="hero-panel compact">
+    <h2 class="hero-title">Water Readings - {{ month_name }} {{ year }}</h2>
+    <p class="hero-copy">Enter current readings for each unit. Previous readings are auto-filled from last month.</p>
+  </section>
+
+  <form method="post" action="{% url 'admin_water_process' %}">
+    {% csrf_token %}
+    <input type="hidden" name="month" value="{{ month }}">
+    <input type="hidden" name="year" value="{{ year }}">
+
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Unit</th>
+            <th>Tenant</th>
+            <th>Previous (m³)</th>
+            <th>Current (m³)</th>
+            <th>Usage</th>
+            <th>Amount</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in readings_data %}
+          <tr class="{% if row.has_reading %}row-done{% else %}row-missing{% endif %}">
+            <input type="hidden" name="lease_ids" value="{{ row.lease_id }}">
+            <td>
+              {{ row.unit_number }}
+              {% if row.is_first_billing %}
+                <span style="display:inline-block;margin-left:4px;padding:2px 6px;background:#dcfce7;color:#166534;font-size:10px;border-radius:4px;font-weight:600;">First Bill</span>
+              {% endif %}
+            </td>
+            <td>{{ row.tenant_name }}</td>
+            <td>
+              <span class="previous-reading">{{ row.previous_reading }}</span>
+            </td>
+            <td>
+              <input type="number" 
+                     name="reading_{{ row.lease_id }}" 
+                     class="input reading-input" 
+                     value="{{ row.current_reading|default:'' }}"
+                     step="0.01"
+                     min="0"
+                     placeholder="Enter reading"
+                     {% if row.bill_paid %}readonly{% endif %}
+                     data-previous="{{ row.previous_reading }}"
+                     data-rate="{{ rate }}"
+                     onchange="calculateRow(this)">
+            </td>
+            <td>
+              <span class="usage-display" id="usage_{{ row.lease_id }}">
+                {% if row.has_reading %}{{ row.usage }}{% else %}-{% endif %}
+              </span>
+            </td>
+            <td>
+              <span class="amount-display" id="amount_{{ row.lease_id }}">
+                {% if row.has_reading %}₱{{ row.amount|intcomma }}{% else %}-{% endif %}
+              </span>
+            </td>
+            <td>
+              {% if row.bill_paid %}
+                <span class="badge" style="background:#dcfce7;color:#166534;padding:4px 8px;border-radius:4px;font-size:12px;">Paid</span>
+              {% elif row.has_reading %}
+                <span class="badge" style="background:#dbeafe;color:#1e40af;padding:4px 8px;border-radius:4px;font-size:12px;">Done</span>
+              {% else %}
+                <span class="badge" style="background:#fee2e2;color:#991b1b;padding:4px 8px;border-radius:4px;font-size:12px;">Missing</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" style="text-align:center;padding:2rem;">
+              No active leases found for this period.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="actions-bar" style="margin-top:1.5rem;display:flex;gap:1rem;align-items:center;">
+      <button type="submit" class="btn btn-primary" {% if not current_rate %}disabled{% endif %}>
+        💾 Save Readings & Compute Bills
+      </button>
+      {% if not current_rate %}
+        <span style="color:#dc2626;">Set water rate first to enable saving</span>
+      {% endif %}
+    </div>
+  </form>
+
+  <style>
+    .row-done { background: #f0fdf4; }
+    .row-missing { background: #fef2f2; }
+    .reading-input { width: 120px; text-align: right; }
+    .previous-reading { color: #6b7280; font-size: 14px; }
+    .usage-display, .amount-display { font-weight: 500; }
+  </style>
+
+  <script>
+    function calculateRow(input) {
+      const current = parseFloat(input.value) || 0;
+      const previous = parseFloat(input.dataset.previous) || 0;
+      const rate = parseFloat(input.dataset.rate) || 0;
+      const leaseId = input.name.replace('reading_', '');
+      
+      if (current > 0) {
+        const usage = Math.max(0, current - previous);
+        const amount = usage * rate;
+        
+        document.getElementById('usage_' + leaseId).textContent = usage.toFixed(2);
+        document.getElementById('amount_' + leaseId).textContent = '₱' + amount.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        
+        // Update row styling
+        input.closest('tr').className = 'row-done';
+      } else {
+        document.getElementById('usage_' + leaseId).textContent = '-';
+        document.getElementById('amount_' + leaseId).textContent = '-';
+        input.closest('tr').className = 'row-missing';
+      }
+    }
+  </script>
+{% endblock %}

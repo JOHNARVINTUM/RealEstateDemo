@@ -34,6 +34,7 @@ urlpatterns = [
     path("maintenance/", include("maintenance.urls")), 
 
     path("payments/", include("payments.urls")),
+    path("water/", include("water.urls")),
     path("admin-portal/dashboard/", admin_dashboard, name="admin_dashboard"),
     path("admin-portal/", include("accounts.admin_portal_urls")),
 

@@ -3,6 +3,7 @@ from decimal import Decimal
 import calendar
 
 from django.db import transaction
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from billing.models import MonthlyBill
@@ -88,7 +89,20 @@ def get_or_update_monthly_bill(lease, billing_month: date, today: date | None = 
 
     due_date = due_date_for_month(billing_month.year, billing_month.month, lease.due_day)
     base_rent = normalized_monthly_rent(lease)
-    water_amount = Decimal(get_water_amount_for_month(lease.unit, billing_month))
+    
+    # Check if bill exists with system-computed water (from WaterReading)
+    existing_bill = MonthlyBill.objects.filter(
+        lease=lease, 
+        billing_month=billing_month,
+        water_computed_from_system=True
+    ).first()
+    
+    if existing_bill:
+        # Preserve system-computed water amount
+        water_amount = existing_bill.water_amount
+    else:
+        # Get water from legacy system or 0
+        water_amount = Decimal(get_water_amount_for_month(lease.unit, billing_month))
 
     interest, is_late, weeks_late = compute_weekly_interest(base_rent, due_date, today)
     total_due = (base_rent + water_amount + interest).quantize(Decimal("0.01"))
@@ -107,7 +121,14 @@ def get_or_update_monthly_bill(lease, billing_month: date, today: date | None = 
         },
     )
 
+    # Never modify PAID bills - immutable for audit safety
+    if bill.status == "PAID":
+        bill._is_late = is_late
+        bill._weeks_late = weeks_late
+        return bill
+
     # keep totals fresh (water/interest can change)
+    # BUT: don't overwrite water if it was computed from WaterReading system
     changed = False
     if bill.due_date != due_date:
         bill.due_date = due_date
@@ -115,14 +136,22 @@ def get_or_update_monthly_bill(lease, billing_month: date, today: date | None = 
     if bill.base_rent != base_rent:
         bill.base_rent = base_rent
         changed = True
-    if bill.water_amount != water_amount:
-        bill.water_amount = water_amount
-        changed = True
+    
+    # Only update water_amount if NOT computed from WaterReading system
+    # or if the bill's current water is 0 (fresh bill)
+    if not bill.water_computed_from_system or bill.water_amount == 0:
+        if bill.water_amount != water_amount:
+            bill.water_amount = water_amount
+            changed = True
+    
     if bill.interest != interest:
         bill.interest = interest
         changed = True
-    if bill.total_due != total_due:
-        bill.total_due = total_due
+    
+    # Recalculate total_due based on current values (respecting system-computed water)
+    new_total = (bill.base_rent + bill.water_amount + bill.interest).quantize(Decimal("0.01"))
+    if bill.total_due != new_total:
+        bill.total_due = new_total
         changed = True
 
     if changed:
@@ -152,6 +181,7 @@ def ensure_bills_since_move_in(lease, today: date | None = None):
 def ensure_bills_up_to(lease, end_month: date, today: date | None = None):
     """
     For advance payment previews/payments (creates future MonthlyBill rows).
+    Allows up to 3 months advance to support thesis advance payment feature.
     """
     if lease is None:
         return
@@ -162,6 +192,13 @@ def ensure_bills_up_to(lease, end_month: date, today: date | None = None):
 
     start = month_start(lease.start_date)
     end = month_start(end_month)
+
+    # Limit to 3 months advance to prevent unlimited future generation
+    current_month = month_start(today)
+    max_advance_months = 3
+    max_date = add_months(current_month, max_advance_months)
+    if end > max_date:
+        end = max_date
 
     for m in months_between(start, end):
         get_or_update_monthly_bill(lease, m, today=today)
@@ -215,46 +252,147 @@ def set_bill_status(bill: MonthlyBill, *, status: str, payment_reference: str = 
     bill = MonthlyBill.objects.select_for_update().get(pk=bill.pk)
 
     if status == "PAID":
+        paid_time = paid_at or timezone.now()
+        bill.rent_paid = bill.base_rent
+        bill.water_paid = bill.water_amount
+        bill.rent_paid_at = paid_time
+        bill.water_paid_at = paid_time
+        bill.interest = Decimal("0.00")
+        bill.total_due = (bill.base_rent + bill.water_amount).quantize(Decimal("0.01"))
         bill.status = "PAID"
-        bill.paid_at = paid_at or timezone.now()
+        bill.paid_at = paid_time
         bill.payment_reference = payment_reference
     else:
+        bill.rent_paid = Decimal("0.00")
+        bill.water_paid = Decimal("0.00")
+        bill.rent_paid_at = None
+        bill.water_paid_at = None
         bill.status = "UNPAID"
         bill.paid_at = None
         bill.payment_reference = ""
 
-    bill.save(update_fields=["status", "paid_at", "payment_reference"])
+    bill.save(update_fields=[
+        "rent_paid", "water_paid", "rent_paid_at", "water_paid_at",
+        "interest", "total_due", "status", "paid_at", "payment_reference"
+    ])
     return bill
 
 
 @transaction.atomic
 def approve_manual_payment(payment):
     from payments.models import ManualPayment
+    from rentals.models import Notification
+    import logging
+    logger = logging.getLogger(__name__)
 
     payment = ManualPayment.objects.select_for_update().select_related("user").get(pk=payment.pk)
     if payment.status == "APPROVED":
+        logger.info(f"Payment {payment.id} already approved")
         return payment
 
-    payment.status = "APPROVED"
-    payment.save(update_fields=["status"])
-
     bill_ids = parse_bill_ids(payment.bill_ids)
+    logger.info(f"Approving payment {payment.id} for bills: {bill_ids}, user: {payment.user.id}")
+    
     if not bill_ids:
+        logger.warning(f"No bill_ids found for payment {payment.id}")
         return payment
 
     bills = MonthlyBill.objects.select_for_update().filter(
         pk__in=bill_ids,
         lease__tenant=payment.user,
     )
+    
+    logger.info(f"Found {bills.count()} bills to update")
+    if bills.count() != len(bill_ids):
+        raise ValidationError("Some selected bills were not found or do not belong to this tenant.")
 
     approved_at = timezone.now()
+    payment_type = getattr(payment, 'payment_type', 'full')  # Default to full if not set
+    if payment_type not in {"full", "rent_only", "water_only"}:
+        raise ValidationError("Invalid payment type.")
+    
+    payment_amount = Decimal(payment.amount or 0).quantize(Decimal("0.01"))
+    if payment_amount <= 0:
+        raise ValidationError("Payment amount must be greater than zero.")
+    
+    expected_amount = Decimal("0.00")
     for bill in bills:
-        if bill.status == "PAID" and bill.payment_reference == payment.reference_code:
-            continue
-        bill.status = "PAID"
-        bill.paid_at = approved_at
-        bill.payment_reference = payment.reference_code
-        bill.save(update_fields=["status", "paid_at", "payment_reference"])
+        if payment_type == "rent_only":
+            expected_amount += bill.rent_balance
+        elif payment_type == "water_only":
+            expected_amount += bill.water_balance
+        else:
+            expected_amount += bill.total_balance
+    expected_amount = expected_amount.quantize(Decimal("0.01"))
+    
+    if payment_amount != expected_amount:
+        raise ValidationError(
+            f"Payment amount ₱{payment_amount:,.2f} does not match the selected "
+            f"{payment_type.replace('_', ' ')} balance of ₱{expected_amount:,.2f}."
+        )
+    
+    payment.status = "APPROVED"
+    payment.save(update_fields=["status"])
+    
+    try:
+        method_display = "GCash" if payment.payment_method == "GCASH" else "Face-to-Face Cash"
+        Notification.create_tenant_notification(
+            title="Payment Approved",
+            message=f"Your {method_display} payment of ₱{payment.amount:,.2f} has been approved and your bills have been updated.",
+            notification_type='PAYMENT',
+            tenant_user=payment.user
+        )
+    except Exception as e:
+        logger.exception(f"Failed to create payment approval notification: {e}")
+    
+    for bill in bills:
+        logger.info(f"Updating bill {bill.id}: rent={bill.base_rent}, water={bill.water_amount}, type={payment_type}")
+
+        # Allocate payment based on payment_type
+        # Use max() to preserve existing partial payments safely
+        if payment_type == "rent_only":
+            bill.rent_paid = max(bill.rent_paid, bill.base_rent)
+            bill.rent_paid_at = approved_at
+            bill.payment_reference = payment.reference_code
+
+        elif payment_type == "water_only":
+            bill.water_paid = max(bill.water_paid, bill.water_amount)
+            bill.water_paid_at = approved_at
+            bill.payment_reference = payment.reference_code
+
+        else:
+            # Full payment
+            if bill.status == "PAID" and bill.payment_reference == payment.reference_code:
+                logger.info(f"Bill {bill.id} already paid with same reference, skipping")
+                continue
+            bill.rent_paid = max(bill.rent_paid, bill.base_rent)
+            bill.water_paid = max(bill.water_paid, bill.water_amount)
+            bill.rent_paid_at = approved_at
+            bill.water_paid_at = approved_at
+            bill.payment_reference = payment.reference_code
+            # Zero out interest - it is included in the full payment amount
+            bill.interest = Decimal("0.00")
+            bill.total_due = (bill.base_rent + bill.water_amount).quantize(Decimal("0.01"))
+
+        # Determine status using total_balance as source of truth
+        if bill.total_balance == 0:
+            bill.status = "PAID"
+            bill.paid_at = approved_at
+        elif bill.rent_paid > 0 or bill.water_paid > 0:
+            bill.status = "PARTIALLY_PAID"
+            bill.paid_at = None
+        else:
+            bill.status = "UNPAID"
+            bill.paid_at = None
+
+        update_fields = [
+            "rent_paid", "water_paid", "rent_paid_at", "water_paid_at",
+            "status", "paid_at", "payment_reference"
+        ]
+        if payment_type == "full":
+            update_fields += ["interest", "total_due"]
+        bill.save(update_fields=update_fields)
+        logger.info(f"Bill {bill.id} updated successfully: status={bill.status}, balance={bill.total_balance}")
 
     return payment
 
@@ -262,11 +400,26 @@ def approve_manual_payment(payment):
 @transaction.atomic
 def reject_manual_payment(payment):
     from payments.models import ManualPayment
+    from rentals.models import Notification
+    import logging
+    logger = logging.getLogger(__name__)
 
     payment = ManualPayment.objects.select_for_update().get(pk=payment.pk)
     if payment.status != "REJECTED":
         payment.status = "REJECTED"
         payment.save(update_fields=["status"])
+        
+        # Notify tenant that payment was rejected
+        try:
+            method_display = "GCash" if payment.payment_method == "GCASH" else "Face-to-Face Cash"
+            Notification.create_tenant_notification(
+                title="Payment Declined",
+                message=f"Your {method_display} payment request of ₱{payment.amount:,.2f} was declined. Please contact the admin for more information or submit a new payment.",
+                notification_type='PAYMENT',
+                tenant_user=payment.user
+            )
+        except Exception as e:
+            logger.exception(f"Failed to create payment rejection notification: {e}")
     return payment
 
 

@@ -623,14 +623,19 @@ def admin_edit_lease(request, lease_id: int):
 def admin_delete_lease(request, lease_id: int):
     lease = get_object_or_404(Lease, pk=lease_id)
     if request.method == "POST":
-        # Store unit info before deleting lease
         unit = lease.unit
         unit_number = unit.number
-        
-        # Delete the lease
         lease.delete()
-        
-        # Update unit status back to AVAILABLE
+        unit.status = "AVAILABLE"
+        unit.save(update_fields=["status"])
+        messages.success(request, f"Lease deleted and unit {unit_number} is now available.")
+        return redirect("admin_tenants")
+    return render(request, "admin_portal/confirm.html", {
+        "title": "Delete Lease",
+        "message": f"Delete lease for unit {lease.unit.number}? This cannot be undone.",
+        "post_url": reverse("admin_delete_lease", args=[lease.id]),
+        "back_url": reverse("admin_tenants"),
+    })
 
 
 @admin_required
@@ -665,7 +670,11 @@ def admin_mark_bill_unpaid(request, bill_id: int):
 def admin_approve_payment(request, payment_id: int):
     p = get_object_or_404(ManualPayment, pk=payment_id)
     if request.method == "POST":
-        approve_manual_payment(p)
+        try:
+            approve_manual_payment(p)
+            messages.success(request, f"Payment {p.reference_code} approved successfully.")
+        except Exception as e:
+            messages.error(request, f"Error approving payment: {e}")
         return redirect("admin_payments")
     return render(request, "admin_portal/confirm.html", {
         "title": "Approve Payment",
@@ -680,11 +689,51 @@ def admin_reject_payment(request, payment_id: int):
     p = get_object_or_404(ManualPayment, pk=payment_id)
     if request.method == "POST":
         reject_manual_payment(p)
+        messages.success(request, f"Payment {p.reference_code} rejected.")
         return redirect("admin_payments")
     return render(request, "admin_portal/confirm.html", {
         "title": "Reject Payment",
         "message": f"Reject payment {p.reference_code} by {p.user.email}?",
         "post_url": reverse("admin_reject_payment", args=[p.id]),
+        "back_url": reverse("admin_payments"),
+    })
+
+
+@admin_required
+def admin_confirm_schedule(request, payment_id: int):
+    """Confirm F2F cash payment schedule - notifies tenant that time is confirmed"""
+    p = get_object_or_404(ManualPayment, pk=payment_id)
+    if request.method == "POST":
+        p.schedule_confirmed = True
+        p.save(update_fields=["schedule_confirmed"])
+        
+        # Notify tenant that schedule is confirmed
+        try:
+            from rentals.models import Notification
+            schedule_info = f"on {p.preferred_date.strftime('%B %d, %Y')}" if p.preferred_date else ""
+            if p.preferred_time:
+                schedule_info += f" at {p.preferred_time.strftime('%I:%M %p')}"
+            
+            Notification.create_tenant_notification(
+                title="Cash Payment Appointment Confirmed",
+                message=f"Your face-to-face cash payment appointment has been confirmed.\n\nAmount: ₱{p.amount:,.2f}\nScheduled: {schedule_info}\n\nPlease bring the exact amount. See you then!",
+                notification_type='PAYMENT',
+                tenant_user=p.user
+            )
+        except Exception as e:
+            logger.exception(f"Failed to create schedule confirmation notification: {e}")
+        
+        messages.success(request, f"Schedule confirmed for {p.user.email}. Tenant has been notified.")
+        return redirect("admin_payments")
+    
+    schedule_info = f"{p.preferred_date.strftime('%B %d, %Y')}" if p.preferred_date else "No date"
+    if p.preferred_time:
+        schedule_info += f" at {p.preferred_time.strftime('%I:%M %p')}"
+    
+    return render(request, "admin_portal/confirm.html", {
+        "title": "Confirm F2F Schedule",
+        "message": f"Confirm cash payment appointment for {p.user.email}?\n\nAmount: ₱{p.amount:,.2f}\nScheduled: {schedule_info}\n\nTenant will be notified that the appointment is confirmed.",
+        "post_url": reverse("admin_confirm_schedule", args=[p.id]),
         "back_url": reverse("admin_payments"),
     })
 
@@ -825,84 +874,98 @@ def admin_delete_notification(request, notification_id):
 @admin_required
 def admin_billing(request):
     q = request.GET.get("q", "").strip()
-    status = request.GET.get("status", "").strip()
+    status_filter = request.GET.get("status", "").strip()
     month_filter = request.GET.get("month", "").strip()
     year_filter = request.GET.get("year", "").strip()
+    active_tab = request.GET.get("tab", "active")
+    if active_tab not in ("active", "upcoming"):
+        active_tab = "active"
 
-    bills = MonthlyBill.objects.select_related("lease", "lease__unit", "lease__tenant")
+    today = date.today()
+    current_month = today.replace(day=1)
 
-    if status in ("PAID", "UNPAID"):
-        bills = bills.filter(status=status)
-
+    # ── Base queryset with search + date filters applied (no status filter yet) ──
+    base_qs = MonthlyBill.objects.select_related("lease", "lease__unit", "lease__tenant")
     if q:
-        bills = bills.filter(
+        base_qs = base_qs.filter(
             Q(lease__tenant__email__icontains=q) |
             Q(lease__unit__number__icontains=q) |
             Q(payment_reference__icontains=q)
         )
-
-    # Apply month filter
     if month_filter and month_filter.isdigit():
-        bills = bills.filter(billing_month__month=int(month_filter))
-
-    # Apply year filter
+        base_qs = base_qs.filter(billing_month__month=int(month_filter))
     if year_filter and year_filter.isdigit():
-        bills = bills.filter(billing_month__year=int(year_filter))
+        base_qs = base_qs.filter(billing_month__year=int(year_filter))
 
-    bills = bills.order_by("-billing_month")[:500]
-    
-    # Calculate paid bills count for statistics
-    if status == "PAID":
-        paid_bills_count = bills.count()
-    elif status == "UNPAID":
-        paid_bills_count = 0
+    # ── Stats: computed from DB for accuracy (not from sliced Python list) ──
+    # Use billing_month for timing, status field as a proxy for paid (DB-level)
+    # For unpaid counts we use status__in which now includes PARTIALLY_PAID
+    stats_qs = base_qs
+    paid_count = stats_qs.filter(status="PAID").count()
+    unpaid_count = stats_qs.filter(
+        status__in=["UNPAID", "PARTIALLY_PAID"],
+        billing_month__lte=current_month
+    ).count()
+    overdue_count = stats_qs.filter(
+        status__in=["UNPAID", "PARTIALLY_PAID"],
+        billing_month__lt=current_month
+    ).count()
+    partial_count = stats_qs.filter(status="PARTIALLY_PAID").count()
+    upcoming_count = stats_qs.filter(
+        billing_month__gt=current_month
+    ).count()
+
+    # ── Fetch all matching bills for display (split in Python using total_balance) ──
+    all_bills = list(base_qs.order_by("-billing_month"))
+
+    # Active = current month and older (operations happen here)
+    active_bills = [b for b in all_bills if b.billing_month.replace(day=1) <= current_month]
+    # Upcoming = future months only (informational)
+    upcoming_bills = [b for b in all_bills if b.billing_month.replace(day=1) > current_month]
+
+    # ── Apply status sub-filter within the active tab (Python-side, uses total_balance) ──
+    if active_tab == "active":
+        if status_filter == "UNPAID":
+            display_bills = [b for b in active_bills if b.total_balance > 0]
+        elif status_filter == "OVERDUE":
+            display_bills = [b for b in active_bills
+                             if b.total_balance > 0 and b.billing_month.replace(day=1) < current_month]
+        elif status_filter == "PARTIAL":
+            display_bills = [b for b in active_bills
+                             if 0 < b.total_balance < b.total_due]
+        elif status_filter == "PAID":
+            display_bills = [b for b in active_bills if b.total_balance == 0]
+        else:
+            display_bills = active_bills
     else:
-        # Count paid bills from all bills (before filtering)
-        all_bills = MonthlyBill.objects.select_related("lease", "lease__unit", "lease__tenant")
-        if q:
-            all_bills = all_bills.filter(
-                Q(lease__tenant__email__icontains=q) |
-                Q(lease__unit__number__icontains=q) |
-                Q(payment_reference__icontains=q)
-            )
-        paid_bills_count = all_bills.filter(status="PAID").count()
-    
-    # Calculate unpaid bills count
-    if status == "PAID":
-        unpaid_bills_count = 0
-    elif status == "UNPAID":
-        unpaid_bills_count = bills.count()
-    else:
-        # Count unpaid bills from all bills (before filtering)
-        all_bills = MonthlyBill.objects.select_related("lease", "lease__unit", "lease__tenant")
-        if q:
-            all_bills = all_bills.filter(
-                Q(lease__tenant__email__icontains=q) |
-                Q(lease__unit__number__icontains=q) |
-                Q(payment_reference__icontains=q)
-            )
-        unpaid_bills_count = all_bills.filter(status="UNPAID").count()
-    
-    # Generate month and year choices
-    from django.utils import timezone
+        # Upcoming tab — no status sub-filter needed
+        display_bills = upcoming_bills
+
+    # Cap display at 500 rows
+    display_bills = display_bills[:500]
+
     current_year = timezone.now().year
     month_choices = [
-        (1, 'January'), (2, 'February'), (3, 'March'), (4, 'April'),
-        (5, 'May'), (6, 'June'), (7, 'July'), (8, 'August'),
-        (9, 'September'), (10, 'October'), (11, 'November'), (12, 'December')
+        (1, "January"), (2, "February"), (3, "March"), (4, "April"),
+        (5, "May"), (6, "June"), (7, "July"), (8, "August"),
+        (9, "September"), (10, "October"), (11, "November"), (12, "December"),
     ]
-    year_choices = list(range(current_year - 3, current_year + 2))  # Last 3 years and next year
-    
+    year_choices = list(range(current_year - 3, current_year + 2))
+
     return render(request, "admin_portal/billing.html", {
-        "bills": bills, 
-        "q": q, 
-        "status": status,
+        "display_bills": display_bills,
+        "active_tab": active_tab,
+        "q": q,
+        "status_filter": status_filter,
         "month_filter": month_filter,
         "year_filter": year_filter,
         "month_choices": month_choices,
         "year_choices": year_choices,
-        "paid_bills_count": paid_bills_count,
-        "unpaid_bills_count": unpaid_bills_count
+        "paid_count": paid_count,
+        "unpaid_count": unpaid_count,
+        "overdue_count": overdue_count,
+        "partial_count": partial_count,
+        "upcoming_count": upcoming_count,
     })
 
 

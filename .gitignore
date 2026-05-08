@@ -38,6 +38,9 @@ db.sqlite3-journal
 !package.json
 !package-lock.json
 
+# Scripts folder (debug/check/test scripts)
+scripts/
+
 # Temporary migration scripts
 convert_json_to_sql.py
 split_sql.py
@@ -61,3 +64,4 @@ reset_*.py
 list_*.py
 create_*.py
 investigate_*.py
+

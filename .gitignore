@@ -1,0 +1,63 @@
+# Environment variables
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+/media/static/
+
+# Database backups
+*.json
+!package.json
+!package-lock.json
+
+# Temporary migration scripts
+convert_json_to_sql.py
+split_sql.py
+regenerate_sql.py
+split_fixed_sql.py
+import_to_supabase.py
+export_app_data.py
+import_by_model.py
+retry_failed_models.py
+
+# SQL batch files
+import_batch_*.sql
+import_data*.sql
+
+# Debug/check scripts
+check_*.py
+debug_*.py
+fix_*.py
+test_*.py
+reset_*.py
+list_*.py
+create_*.py
+investigate_*.py

@@ -57,4 +57,35 @@ document.addEventListener('DOMContentLoaded', function () {
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && modal.classList.contains('open')) hideModal();
   });
+
+  // Sidebar Toggle logic
+  const sidebarToggle = document.getElementById('sidebarToggle');
+  if (sidebarToggle) {
+    // Check local storage for preference
+    if (localStorage.getItem('sidebarCollapsed') === 'true') {
+      document.body.classList.add('sidebar-collapsed');
+    }
+
+    sidebarToggle.addEventListener('click', function() {
+      document.body.classList.toggle('sidebar-collapsed');
+      const isCollapsed = document.body.classList.contains('sidebar-collapsed');
+      localStorage.setItem('sidebarCollapsed', isCollapsed);
+    });
+  }
+
+  // Mobile Sidebar Toggle
+  const mobileToggle = document.getElementById('mobileSidebarToggle');
+  const mobileOverlay = document.getElementById('mobileOverlay');
+
+  if (mobileToggle) {
+    mobileToggle.addEventListener('click', function() {
+      document.body.classList.toggle('mobile-sidebar-open');
+    });
+  }
+
+  if (mobileOverlay) {
+    mobileOverlay.addEventListener('click', function() {
+      document.body.classList.remove('mobile-sidebar-open');
+    });
+  }
 });

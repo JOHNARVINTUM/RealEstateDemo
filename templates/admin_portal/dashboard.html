@@ -1,395 +1,362 @@
 {% extends "admin_portal/base.html" %}
 {% load humanize %}
-{% block title %}Dashboard{% endblock %}
+{% block title %}Dashboard | RealEstate360+{% endblock %}
 
 {% block content %}
-  <div class="page-top">
-    <div class="page-header">
-      <h1>Admin Dashboard</h1>
-      <p class="muted">Property monitoring and analytics overview</p>
+<div class="dashboard-container px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
+  <!-- Header -->
+  <header class="dashboard-header flex flex-col sm:flex-row justify-between items-end sm:items-center gap-2 sm:gap-4">
+    <div class="flex-1">
+      <h1 class="font-display text-xl sm:text-4xl leading-none">Dashboard</h1>
+      <p class="text-[10px] sm:text-sm mt-1 text-slate-500">Welcome back, Admin.</p>
     </div>
-  </div>
+    <div class="flex gap-3 w-full sm:w-auto mb-1 sm:mb-0">
+      <a href="{% url 'admin_notifications' %}"
+        class="glass-panel py-1.5 px-3 flex items-center justify-center gap-2 hover:bg-white transition-colors duration-200 flex-1 sm:flex-none">
+        <svg class="w-4 h-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9">
+          </path>
+        </svg>
+        <span class="text-xs font-semibold text-slate-700">Notifications</span>
+        {% if unread_count > 0 %}
+        <span class="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{{ unread_count }}</span>
+        {% endif %}
+      </a>
+    </div>
+  </header>
 
-  <section class="hero-panel">
-    <h2 class="hero-title">Operations Snapshot</h2>
-    <p class="hero-copy">Monitor property activity from one page. These indicators help you see occupancy, revenue, and unpaid exposure before you drill into detailed records.</p>
+  <!-- Stats Grid -->
+  <section class="stats-grid">
+    <!-- Total Tenants -->
+    <div class="stat-card">
+      <div class="stat-icon blue">
+        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z">
+          </path>
+        </svg>
+      </div>
+      <div class="stat-info">
+        <span class="stat-label">Total Tenants</span>
+        <span class="stat-value">{{ total_tenants|intcomma }}</span>
+        <span class="stat-trend up">Active</span>
+      </div>
+    </div>
+
+    <!-- Occupied Units -->
+    <div class="stat-card">
+      <div class="stat-icon green">
+        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6">
+          </path>
+        </svg>
+      </div>
+      <div class="stat-info">
+        <span class="stat-label">Occupancy</span>
+        <span class="stat-value">{{ occupied_units|intcomma }}</span>
+        <span class="stat-trend up">Units</span>
+      </div>
+    </div>
+
+    <!-- Vacant Units -->
+    <div class="stat-card">
+      <div class="stat-icon orange">
+        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2">
+          </path>
+        </svg>
+      </div>
+      <div class="stat-info">
+        <span class="stat-label">Vacant</span>
+        <span class="stat-value">{{ vacant_units|intcomma }}</span>
+        <span class="stat-trend down">Ready</span>
+      </div>
+    </div>
+
+    <!-- Total Revenue -->
+    <div class="stat-card">
+      <div class="stat-icon red">
+        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+          </path>
+        </svg>
+      </div>
+      <div class="stat-info">
+        <span class="stat-label">Revenue</span>
+        <span class="stat-value">₱{{ total_revenue|floatformat:0|intcomma }}</span>
+        <span class="stat-trend up">Monthly</span>
+      </div>
+    </div>
   </section>
 
-  <section class="cards">
-    <div class="card">
-      <div class="card-title">Total Tenants</div>
-      <div class="card-value">{{ total_tenants|intcomma }}</div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">Occupied Units</div>
-      <div class="card-value">{{ occupied_units|intcomma }}</div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">Vacant Units</div>
-      <div class="card-value">{{ vacant_units|intcomma }}</div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">Total Revenue</div>
-      <div class="card-value">PHP {{ total_revenue|floatformat:0|intcomma }}</div>
-      <div class="card-sub">This month, based on payment date</div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">Overdue Payments</div>
-      <div class="card-value">{{ overdue_payments|intcomma }}</div>
-    </div>
-  </section>
-
-  <section class="grid-2">
-    <div class="panel">
-      <div class="section-head">
-        <div>
-          <h2 class="section-title">Notifications</h2>
-          <p class="section-copy">
-            {% if unread_count > 0 %}
-              You have {{ unread_count }} unread notification{{ unread_count|pluralize }}
-            {% else %}
-              All caught up! No new notifications.
-            {% endif %}
-          </p>
-        </div>
-        <div class="section-actions">
-          {% if unread_count > 0 %}
-            <form method="post" action="{% url 'admin_mark_all_notifications_read' %}" class="inline">
-              {% csrf_token %}
-              <button type="submit" class="btn btn-sm btn-secondary">Mark All Read</button>
-            </form>
-          {% endif %}
-          <a href="{% url 'admin_notifications' %}" class="btn btn-sm btn-primary">View All</a>
-        </div>
-      </div>
-      
-      <div class="notifications-list">
-        {% for notification in notifications %}
-          <div class="notification-item {% if not notification.is_read %}unread{% endif %}">
-            <div class="notification-icon">
-              {% if notification.notification_type == 'SUCCESS' %}
-                <div class="icon-success">
-                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                  </svg>
-                </div>
-              {% elif notification.notification_type == 'WARNING' %}
-                <div class="icon-warning">
-                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                  </svg>
-                </div>
-              {% elif notification.notification_type == 'ERROR' %}
-                <div class="icon-error">
-                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                  </svg>
-                </div>
-              {% else %}
-                <div class="icon-info">
-                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                  </svg>
-                </div>
-              {% endif %}
-            </div>
-            <div class="notification-content">
-              <div class="notification-header">
-                <h4 class="notification-title">{{ notification.title }}</h4>
-                <span class="notification-time">{{ notification.created_at|timesince }} ago</span>
-              </div>
-              <p class="notification-message">{{ notification.message|truncatewords:20 }}</p>
-              {% if not notification.is_read %}
-                <form method="post" action="{% url 'admin_mark_notification_read' notification.id %}" class="inline">
-                  {% csrf_token %}
-                  <button type="submit" class="btn btn-xs btn-link">Mark as read</button>
-                </form>
-              {% endif %}
-            </div>
+  <!-- Main Grid (Charts and Notifications) -->
+  <div class="dashboard-sections">
+    <!-- Charts Column -->
+    <div class="flex flex-col gap-6">
+      <!-- Revenue Chart -->
+      <div class="glass-panel">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div>
+            <h2 class="text-xl font-bold text-slate-800 font-display">Revenue Performance</h2>
+            <p class="text-sm text-slate-500">Actual vs Expected Income</p>
           </div>
-        {% empty %}
-          <div class="empty-notifications">
-            <svg class="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
-            </svg>
-            <p>No notifications yet</p>
-          </div>
-        {% endfor %}
-      </div>
-      
-      {% if notifications.count > 5 %}
-        <div class="panel-foot">
-          <a href="{% url 'admin_notifications' %}" class="btn btn-link">View all notifications ({{ unread_count }} unread)</a>
-        </div>
-      {% endif %}
-    </div>
-
-    <div class="panel">
-      <div class="section-head">
-        <div>
-          <h2 class="section-title">Monthly Rental Income Forecast</h2>
-          <p class="section-copy">Actual vs expected rental income with filtering options.</p>
-        </div>
-        <div class="section-actions">
-          <select id="monthFilter" class="form-select" style="padding: 8px; border-radius: 6px; border: 1px solid #ddd;">
+          <select id="monthFilter"
+            class="w-full sm:w-auto bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2">
             <option value="12">Last 12 Months</option>
             <option value="6">Last 6 Months</option>
             <option value="3">Last 3 Months</option>
             <option value="1">Last Month</option>
           </select>
         </div>
+        <div class="chart-container h-[300px] sm:h-[350px]">
+          <canvas id="rentChart"></canvas>
+        </div>
       </div>
-      <div style="height: 300px; width: 100%; position: relative;">
-        <canvas id="rentChart"></canvas>
-      </div>
-      <div class="panel-foot">
-        Showing actual payments received vs expected income from active leases
+
+      <!-- Water Monitoring Chart (The Bar Graph) -->
+      <div class="glass-panel">
+        <div class="flex justify-between items-center mb-6">
+          <div>
+            <h2 class="text-xl font-bold text-slate-800 font-display">Water Monitoring</h2>
+            <p class="text-sm text-slate-500">Utility usage trends</p>
+          </div>
+          <div class="hidden sm:flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-blue-500"></span>
+            <span class="text-xs font-bold text-slate-600">m³</span>
+          </div>
+        </div>
+        <div class="chart-container h-[250px]">
+          <canvas id="waterChart"></canvas>
+        </div>
       </div>
     </div>
-  </section>
 
-  <!-- Debug: Check if data exists -->
-{% if monthly_income_data %}
-    <p style="color: red; font-size: 12px;">DEBUG: Found {{ monthly_income_data|length }} months of data</p>
-{% else %}
-    <p style="color: red; font-size: 12px;">DEBUG: No monthly_income_data found</p>
-{% endif %}
+    <!-- Recent Notifications Section -->
+    <div class="flex flex-col">
+      <div class="glass-panel flex-1 flex flex-col">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-xl font-bold text-slate-800 font-display">Recent Activity</h2>
+          <a href="{% url 'admin_notifications' %}" class="text-sm font-semibold text-blue-600 hover:text-blue-700">View All</a>
+        </div>
+        <div class="space-y-4 overflow-y-auto pr-2 custom-scrollbar flex-1">
+        {% for notification in notifications|slice:":8" %}
+        <div class="flex gap-4 p-3 rounded-xl {% if not notification.is_read %}bg-blue-50/50 border-l-4 border-blue-500{% else %}bg-slate-50/30{% endif %} transition-all duration-200">
+          <div class="flex-shrink-0">
+            {% if notification.notification_type == 'SUCCESS' %}
+            <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+            </div>
+            {% elif notification.notification_type == 'WARNING' %}
+            <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+              </svg>
+            </div>
+            {% elif notification.notification_type == 'ERROR' %}
+            <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </div>
+            {% else %}
+            <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+            {% endif %}
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex justify-between items-start">
+              <h4 class="text-sm font-bold text-slate-800 truncate">{{ notification.title }}</h4>
+              <span class="text-[10px] font-medium text-slate-400 whitespace-nowrap">{{ notification.created_at|timesince }} ago</span>
+            </div>
+            <p class="text-xs text-slate-600 mt-1 line-clamp-2">{{ notification.message }}</p>
+          </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-10">
+          <svg class="w-12 h-12 text-slate-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+          </svg>
+          <p class="text-slate-400 text-sm">All caught up!</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Additional Stats Section (Quick Look) -->
+  <div class="glass-panel mt-6">
+    <h3 class="text-lg font-bold text-slate-800 mb-4 font-display">Quick Insights</h3>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div class="bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+        <span class="text-xs font-bold text-slate-400 uppercase">Overdue Payments</span>
+        <div class="flex items-center gap-3 mt-2">
+          <span class="text-2xl font-black text-red-600 font-display">{{ overdue_payments }}</span>
+          <span class="text-[10px] text-slate-500">Requires attention</span>
+        </div>
+      </div>
+      <div class="bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+        <span class="text-xs font-bold text-slate-400 uppercase">System Status</span>
+        <div class="flex items-center gap-2 mt-2">
+          <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+          <span class="text-sm font-bold text-slate-700">Online & Secure</span>
+        </div>
+      </div>
+      <div class="bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+        <span class="text-xs font-bold text-slate-400 uppercase">Last Activity</span>
+        <div class="text-sm font-bold text-slate-700 mt-2">
+          {% with last_notif=notifications|first %}
+            {% if last_notif %}{{ last_notif.created_at|timesince }} ago{% else %}No recent activity{% endif %}
+          {% endwith %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 {{ monthly_income_data|json_script:"monthly_income_data" }}
 {{ months_labels|json_script:"months_labels" }}
 
 <script>
-    // Monthly Rental Income Chart
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('DEBUG: DOM loaded, starting chart initialization...');
-        
-        // Check if Chart is available
-        if (typeof Chart === 'undefined') {
-            console.error('DEBUG: Chart.js not loaded');
-            return;
-        }
-        
-        const rentCtx = document.getElementById('rentChart');
-        if (!rentCtx) {
-            console.error('DEBUG: Chart canvas not found');
-            return;
-        }
-        
-        console.log('DEBUG: Chart canvas found');
-        
-        // Parse Django data for JavaScript
-        const monthlyIncomeDataElement = document.getElementById('monthly_income_data');
-        const monthsLabelsElement = document.getElementById('months_labels');
-        const monthFilter = document.getElementById('monthFilter');
-        
-        if (!monthlyIncomeDataElement || !monthsLabelsElement || !monthFilter) {
-            console.error('DEBUG: Data elements or filter not found');
-            return;
-        }
-        
-        console.log('DEBUG: Raw data elements found');
-        
-        let chart = null;
-        let fullMonthlyData = [];
-        let fullMonthsLabels = [];
-        
-        try {
-            fullMonthlyData = JSON.parse(monthlyIncomeDataElement.textContent);
-            fullMonthsLabels = JSON.parse(monthsLabelsElement.textContent);
-            
-            console.log('DEBUG: Parsed data:', fullMonthlyData);
-            console.log('DEBUG: Parsed labels:', fullMonthsLabels);
-            
-            if (fullMonthlyData.length === 0 || fullMonthsLabels.length === 0) {
-                console.error('DEBUG: Empty data arrays');
-                return;
-            }
-            
-            // Function to create/update chart with filtered data
-            function updateChart(monthsToShow) {
-                console.log('DEBUG: updateChart called with monthsToShow:', monthsToShow);
-                console.log('DEBUG: fullMonthlyData length:', fullMonthlyData.length);
-                console.log('DEBUG: fullMonthsLabels length:', fullMonthsLabels.length);
-                
-                const endIndex = fullMonthlyData.length;
-                const startIndex = Math.max(0, endIndex - monthsToShow);
-                
-                const filteredData = fullMonthlyData.slice(startIndex, endIndex);
-                const filteredLabels = fullMonthsLabels.slice(startIndex, endIndex);
-                
-                console.log(`DEBUG: Showing ${monthsToShow} months, from index ${startIndex} to ${endIndex}`);
-                console.log('DEBUG: Filtered data:', filteredData);
-                console.log('DEBUG: Filtered labels:', filteredLabels);
-                console.log('DEBUG: Chart object exists:', !!chart);
-                
-                const chartData = {
-                    labels: filteredLabels,
-                    datasets: [{
-                        label: 'Actual Income',
-                        data: filteredData.map(item => item.actual),
-                        borderColor: 'rgb(75, 192, 192)',
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        tension: 0.1,
-                        fill: true
-                    }, {
-                        label: 'Expected Income',
-                        data: filteredData.map(item => item.expected),
-                        borderColor: 'rgb(255, 99, 132)',
-                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                        tension: 0.1,
-                        fill: true
-                    }]
-                };
-                
-                // Clear any existing chart on this canvas
-                console.log('DEBUG: Clearing canvas...');
-                const existingChart = Chart.getChart(rentCtx);
-                if (existingChart) {
-                    console.log('DEBUG: Found existing chart, destroying it');
-                    existingChart.destroy();
+  document.addEventListener('DOMContentLoaded', function () {
+    const rentCtx = document.getElementById('rentChart');
+    if (!rentCtx) return;
+
+    const monthlyIncomeDataElement = document.getElementById('monthly_income_data');
+    const monthsLabelsElement = document.getElementById('months_labels');
+    const monthFilter = document.getElementById('monthFilter');
+
+    if (!monthlyIncomeDataElement || !monthsLabelsElement || !monthFilter) return;
+
+    let chart = null;
+    const fullMonthlyData = JSON.parse(monthlyIncomeDataElement.textContent);
+    const fullMonthsLabels = JSON.parse(monthsLabelsElement.textContent);
+
+    function updateChart(monthsToShow) {
+      const endIndex = fullMonthlyData.length;
+      const startIndex = Math.max(0, endIndex - monthsToShow);
+      const filteredData = fullMonthlyData.slice(startIndex, endIndex);
+      const filteredLabels = fullMonthsLabels.slice(startIndex, endIndex);
+
+      const chartData = {
+        labels: filteredLabels,
+        datasets: [{
+          label: 'Actual Income',
+          data: filteredData.map(item => item.actual),
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          borderWidth: 3,
+          pointBackgroundColor: '#fff',
+          pointBorderColor: '#3b82f6',
+          pointBorderWidth: 2,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          tension: 0.4,
+          fill: true
+        }, {
+          label: 'Expected Income',
+          data: filteredData.map(item => item.expected),
+          borderColor: '#94a3b8',
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          borderDash: [5, 5],
+          pointRadius: 0,
+          tension: 0.4,
+          fill: false
+        }]
+      };
+
+      const existingChart = Chart.getChart(rentCtx);
+      if (existingChart) existingChart.destroy();
+
+      chart = new Chart(rentCtx, {
+        type: 'line',
+        data: chartData,
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top',
+              align: 'end',
+              labels: {
+                usePointStyle: true,
+                padding: 20,
+                font: {
+                  family: "'Outfit', sans-serif",
+                  size: 12,
+                  weight: '600'
                 }
-                
-                // Create new chart
-                console.log('DEBUG: Creating new chart');
-                chart = new Chart(rentCtx, {
-                    type: 'line',
-                    data: chartData,
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        resizeDelay: 0,
-                        plugins: {
-                            legend: {
-                                position: 'top',
-                            },
-                            title: {
-                                display: false
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: {
-                                    callback: function(value) {
-                                        return '₱' + value.toLocaleString();
-                                    }
-                                }
-                            },
-                            x: {
-                                ticks: {
-                                    maxRotation: 45,
-                                    minRotation: 45
-                                }
-                            }
-                        }
-                    }
-                });
-                console.log('DEBUG: New chart created');
-                
-                console.log('DEBUG: Chart operation completed successfully');
+              }
+            },
+            tooltip: {
+              backgroundColor: '#fff',
+              titleColor: '#1e293b',
+              bodyColor: '#64748b',
+              borderColor: '#e2e8f0',
+              borderWidth: 1,
+              padding: 12,
+              boxPadding: 6,
+              usePointStyle: true,
+              callbacks: {
+                label: function (context) {
+                  let label = context.dataset.label || '';
+                  if (label) label += ': ';
+                  if (context.parsed.y !== null) {
+                    label += new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(context.parsed.y);
+                  }
+                  return label;
+                }
+              }
             }
-            
-            // Initialize chart with default 12 months
-            console.log('DEBUG: About to initialize chart with 12 months...');
-            updateChart(12);
-            console.log('DEBUG: Chart initialization completed');
-            
-            // Add event listener for filter change
-            monthFilter.addEventListener('change', function(e) {
-                e.preventDefault();
-                const selectedMonths = parseInt(this.value);
-                console.log('DEBUG: Filter changed to:', selectedMonths, 'months');
-                console.log('DEBUG: Filter element:', this);
-                console.log('DEBUG: Event object:', e);
-                updateChart(selectedMonths);
-            });
-            
-            // Also add click event as backup
-            monthFilter.addEventListener('click', function() {
-                console.log('DEBUG: Filter clicked');
-            });
-            
-            // Test initial filter
-            console.log('DEBUG: Initial filter value:', monthFilter.value);
-            console.log('DEBUG: Filter options:', Array.from(monthFilter.options).map(opt => opt.value));
-            
-            // Test manual filter change
-            console.log('DEBUG: Testing manual filter change...');
-            monthFilter.value = '6';
-            console.log('DEBUG: Changed filter to 6 months');
-            updateChart(6);
-            monthFilter.value = '12';  // Reset to default
-            
-        } catch (error) {
-            console.error('DEBUG: Error creating chart:', error);
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: {
+                display: true,
+                color: '#f1f5f9',
+                drawBorder: false
+              },
+              ticks: {
+                font: { family: "'Outfit', sans-serif", size: 11 },
+                color: '#94a3b8',
+                callback: function (value) {
+                  if (value >= 1000) return '₱' + (value / 1000) + 'k';
+                  return '₱' + value;
+                }
+              }
+            },
+            x: {
+              grid: { display: false },
+              ticks: {
+                font: { family: "'Outfit', sans-serif", size: 11 },
+                color: '#94a3b8'
+              }
+            }
+          }
         }
-    });
-  </script>
-  </section>
+      });
+    }
 
-  <section class="grid-2">
-    <div class="panel">
-      <div class="section-head">
-        <div>
-          <h2 class="section-title">Water Consumption Trends</h2>
-          <p class="section-copy">Reserved for utility trend tracking across occupied units.</p>
-        </div>
-      </div>
-      <canvas id="waterChart" height="110"></canvas>
-      <div class="panel-foot">
-        Consumption placeholder. Real data can be connected next.
-      </div>
-    </div>
+    updateChart(12);
+    monthFilter.addEventListener('change', (e) => updateChart(parseInt(e.target.value)));
+  });
+</script>
 
-    <div class="panel">
-      <div class="section-head">
-        <div>
-          <h2 class="section-title">Recent Activity</h2>
-          <p class="section-copy">Latest system events and updates.</p>
-        </div>
-      </div>
-      <div class="activity-list">
-        <div class="activity-item">
-          <div class="activity-icon icon-info">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-          </div>
-          <div class="activity-content">
-            <p class="activity-text">Notification system activated</p>
-            <span class="activity-time">Just now</span>
-          </div>
-        </div>
-        <div class="activity-item">
-          <div class="activity-icon icon-success">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-          </div>
-          <div class="activity-content">
-            <p class="activity-text">Unit 01 assigned to tenant</p>
-            <span class="activity-time">2 hours ago</span>
-          </div>
-        </div>
-        <div class="activity-item">
-          <div class="activity-icon icon-warning">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-            </svg>
-          </div>
-          <div class="activity-content">
-            <p class="activity-text">Rent due reminder sent</p>
-            <span class="activity-time">5 hours ago</span>
-          </div>
-        </div>
-      </div>
-      <div class="panel-foot">
-        <a href="{% url 'admin_notifications' %}" class="btn btn-link">View all activity</a>
-      </div>
-    </div>
-  </section>
+<style>
+  .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.05); border-radius: 10px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.1); }
+</style>
 {% endblock %}

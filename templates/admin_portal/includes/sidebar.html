@@ -1,160 +1,211 @@
 {% load static %}
-<aside class="sidebar w-72 bg-blue-950 text-white flex flex-col shadow-xl z-10 shrink-0">
+<aside class="sidebar w-72 bg-blue-950 text-white flex flex-col shadow-xl z-10 shrink-0 relative transition-all duration-300">
 
   <!-- Brand -->
-  <div class="px-6 py-8 border-b border-blue-900/50">
-    <div class="bg-white rounded-full w-24 h-24 mx-auto p-3 flex justify-center items-center shadow-lg mb-4 transition-all duration-300 opacity-80 hover:opacity-100 hover:shadow-xl cursor-pointer">
-      <img src="{% static 'img/RealEstateLogo.png' %}" alt="RealEstate360+ Logo"
-           class="w-full h-full object-contain transition-transform duration-300 hover:scale-105">
+  <div class="px-6 py-8 transition-all duration-300 brand-container">
+    <!-- Header: Logo + Name -->
+    <div class="brand-header mb-10">
+      <div class="flex items-center justify-start gap-3 w-fit brand-logo-container">
+        <div class="brand-logo-shell w-11 h-11 bg-white rounded-xl flex justify-center items-center shrink-0 shadow-lg transition-all duration-300 cursor-pointer p-1.5 flex-none">
+          <img src="{% static 'img/accounts/REALESTATE LOGO.png' %}" alt="Logo"
+               class="w-full h-full object-contain transition-transform duration-300 hover:scale-105">
+        </div>
+        <div class="text-xl font-semibold tracking-tight text-white brand-name whitespace-nowrap transition-all duration-300 mt-0.5 flex-none font-display">
+          RealEstate360<span class="text-blue-500">+</span>
+        </div>
+      </div>
     </div>
-    <div class="text-center">
-      <h2 class="text-lg font-bold tracking-wide text-white">RealEstate360<span class="text-green-500">+</span></h2>
-      <span class="text-[10px] text-blue-200 font-semibold tracking-widest uppercase bg-blue-900/50 px-3 py-1 rounded-full mt-2 inline-block">Admin Portal</span>
+
+    <!-- Welcome Section -->
+    <div class="brand-text transition-all duration-300 overflow-hidden">
+      <div class="flex items-center mb-4">
+        <div class="w-14 h-14 rounded-2xl bg-blue-900/40 flex items-center justify-center text-blue-300 border border-blue-800/30 shadow-inner">
+          <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        </div>
+      </div>
+      <div class="space-y-1">
+        <p class="text-[10px] font-bold text-blue-400 uppercase tracking-[0.2em]">{% now "l, F j" %}</p>
+        <h3 class="text-2xl font-semibold text-white leading-tight font-display">Welcome back,<br>Admin!</h3>
+      </div>
     </div>
   </div>
 
   <!-- Nav -->
-  <nav class="px-4 py-6 space-y-1 flex-1" aria-label="Admin navigation">
+  <nav class="px-4 py-6 space-y-2 flex-1 overflow-x-hidden" aria-label="Admin navigation">
 
     <a href="{% url 'admin_dashboard' %}"
        aria-current="{% if request.resolver_match.url_name == 'admin_dashboard' %}page{% endif %}"
-       class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200
+       class="nav-link flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 overflow-hidden
               {% if request.resolver_match.url_name == 'admin_dashboard' %}
-                bg-blue-900 border-l-4 border-green-500 font-semibold text-white shadow-md
+                bg-blue-600/20 border-l-4 border-blue-500 font-semibold text-white shadow-lg
               {% else %}
-                text-blue-100 hover:bg-blue-900/50 hover:translate-x-1 hover:text-white
+                text-blue-100 hover:bg-blue-900/50 hover:text-white
               {% endif %}">
-      <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-      </svg>
-      Dashboard
+      <div class="w-6 flex justify-center shrink-0">
+        <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+        </svg>
+      </div>
+      <span class="nav-text ml-3 whitespace-nowrap transition-all duration-300">Dashboard</span>
     </a>
 
     <a href="{% url 'admin_tenants' %}"
        aria-current="{% if request.resolver_match.url_name in 'admin_tenants,admin_tenant_detail,admin_create_tenant_profile,admin_create_lease,admin_create_unit,admin_edit_tenant,admin_edit_lease' %}page{% endif %}"
-       class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200
+       class="nav-link flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 overflow-hidden
               {% if request.resolver_match.url_name == 'admin_tenants' or request.resolver_match.url_name == 'admin_tenant_detail' or request.resolver_match.url_name == 'admin_create_tenant_profile' or request.resolver_match.url_name == 'admin_create_lease' or request.resolver_match.url_name == 'admin_create_unit' or request.resolver_match.url_name == 'admin_edit_tenant' or request.resolver_match.url_name == 'admin_edit_lease' %}
-                bg-blue-900 border-l-4 border-green-500 font-semibold text-white shadow-md
+                bg-blue-600/20 border-l-4 border-blue-500 font-semibold text-white shadow-lg
               {% else %}
-                text-blue-100 hover:bg-blue-900/50 hover:translate-x-1 hover:text-white
+                text-blue-100 hover:bg-blue-900/50 hover:text-white
               {% endif %}">
-      <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2C0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
-      Tenants
+      <div class="w-6 flex justify-center shrink-0">
+        <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2C0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      </div>
+      <span class="nav-text ml-3 whitespace-nowrap transition-all duration-300">Tenants</span>
     </a>
 
     <a href="{% url 'admin_billing' %}"
        aria-current="{% if request.resolver_match.url_name == 'admin_billing' or request.resolver_match.url_name == 'admin_mark_bill_paid' or request.resolver_match.url_name == 'admin_mark_bill_unpaid' or request.resolver_match.url_name == 'admin_delete_bill' %}page{% endif %}"
-       class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200
+       class="nav-link flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 overflow-hidden
               {% if request.resolver_match.url_name == 'admin_billing' or request.resolver_match.url_name == 'admin_mark_bill_paid' or request.resolver_match.url_name == 'admin_mark_bill_unpaid' or request.resolver_match.url_name == 'admin_delete_bill' %}
-                bg-blue-900 border-l-4 border-green-500 font-semibold text-white shadow-md
+                bg-blue-600/20 border-l-4 border-blue-500 font-semibold text-white shadow-lg
               {% else %}
-                text-blue-100 hover:bg-blue-900/50 hover:translate-x-1 hover:text-white
+                text-blue-100 hover:bg-blue-900/50 hover:text-white
               {% endif %}">
-      <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
-      Billing
+      <div class="w-6 flex justify-center shrink-0">
+        <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      </div>
+      <span class="nav-text ml-3 whitespace-nowrap transition-all duration-300">Billing</span>
     </a>
 
     <a href="{% url 'admin_water' %}"
        aria-current="{% if request.resolver_match.url_name == 'admin_water' %}page{% endif %}"
-       class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200
+       class="nav-link flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 overflow-hidden
               {% if request.resolver_match.url_name == 'admin_water' %}
-                bg-blue-900 border-l-4 border-green-500 font-semibold text-white shadow-md
+                bg-blue-600/20 border-l-4 border-blue-500 font-semibold text-white shadow-lg
               {% else %}
-                text-blue-100 hover:bg-blue-900/50 hover:translate-x-1 hover:text-white
+                text-blue-100 hover:bg-blue-900/50 hover:text-white
               {% endif %}">
-      <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M20 14.66V20a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2h2.34M20 14.66a3 3 0 01-3.5-1.34A3 3 0 0113.66 20M20 14.66V10a2 2 0 00-2-2h-2.34M10 2v2.34a3 3 0 01-1.34 3.5A3 3 0 012.34 10H10m0-8h4a2 2 0 012 2v8.5a3.5 3.5 0 01-3.5 3.5h-5A3.5 3.5 0 016 12.5V4a2 2 0 012-2z" />
-      </svg>
-      Water
+      <div class="w-6 flex justify-center shrink-0">
+        <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M20 14.66V20a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2h2.34M20 14.66a3 3 0 01-3.5-1.34A3 3 0 0113.66 20M20 14.66V10a2 2 0 00-2-2h-2.34M10 2v2.34a3 3 0 01-1.34 3.5A3 3 0 012.34 10H10m0-8h4a2 2 0 012 2v8.5a3.5 3.5 0 01-3.5 3.5h-5A3.5 3.5 0 016 12.5V4a2 2 0 012-2z" />
+        </svg>
+      </div>
+      <span class="nav-text ml-3 whitespace-nowrap transition-all duration-300">Water</span>
     </a>
 
     <a href="{% url 'admin_payments' %}"
        aria-current="{% if request.resolver_match.url_name == 'admin_payments' or request.resolver_match.url_name == 'admin_approve_payment' or request.resolver_match.url_name == 'admin_reject_payment' or request.resolver_match.url_name == 'admin_delete_payment' %}page{% endif %}"
-       class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200
+       class="nav-link flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 overflow-hidden
               {% if request.resolver_match.url_name == 'admin_payments' or request.resolver_match.url_name == 'admin_approve_payment' or request.resolver_match.url_name == 'admin_reject_payment' or request.resolver_match.url_name == 'admin_delete_payment' %}
-                bg-blue-900 border-l-4 border-green-500 font-semibold text-white shadow-md
+                bg-blue-600/20 border-l-4 border-blue-500 font-semibold text-white shadow-lg
               {% else %}
-                text-blue-100 hover:bg-blue-900/50 hover:translate-x-1 hover:text-white
+                text-blue-100 hover:bg-blue-900/50 hover:text-white
               {% endif %}">
-      <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-      </svg>
-      Payments
+      <div class="w-6 flex justify-center shrink-0">
+        <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+        </svg>
+      </div>
+      <span class="nav-text ml-3 whitespace-nowrap transition-all duration-300">Payments</span>
     </a>
 
     <a href="{% url 'admin_tenant_risk' %}"
        aria-current="{% if request.resolver_match.url_name == 'admin_tenant_risk' or request.resolver_match.url_name == 'admin_update_tenant_risks' %}page{% endif %}"
-       class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200
+       class="nav-link flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 overflow-hidden
               {% if request.resolver_match.url_name == 'admin_tenant_risk' or request.resolver_match.url_name == 'admin_update_tenant_risks' %}
-                bg-blue-900 border-l-4 border-green-500 font-semibold text-white shadow-md
+                bg-blue-600/20 border-l-4 border-blue-500 font-semibold text-white shadow-lg
               {% else %}
-                text-blue-100 hover:bg-blue-900/50 hover:translate-x-1 hover:text-white
+                text-blue-100 hover:bg-blue-900/50 hover:text-white
               {% endif %}">
-      <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-      </svg>
-      Tenant Risk
+      <div class="w-6 flex justify-center shrink-0">
+        <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+        </svg>
+      </div>
+      <span class="nav-text ml-3 whitespace-nowrap transition-all duration-300">Tenant Risk</span>
     </a>
 
     <a href="{% url 'admin_maintenance' %}"
        aria-current="{% if request.resolver_match.url_name == 'admin_maintenance' or request.resolver_match.url_name == 'admin_update_maintenance' %}page{% endif %}"
-       class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200
+       class="nav-link flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 overflow-hidden
               {% if request.resolver_match.url_name == 'admin_maintenance' or request.resolver_match.url_name == 'admin_update_maintenance' %}
-                bg-blue-900 border-l-4 border-green-500 font-semibold text-white shadow-md
+                bg-blue-600/20 border-l-4 border-blue-500 font-semibold text-white shadow-lg
               {% else %}
-                text-blue-100 hover:bg-blue-900/50 hover:translate-x-1 hover:text-white
+                text-blue-100 hover:bg-blue-900/50 hover:text-white
               {% endif %}">
-      <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
-      Maintenance
+      <div class="w-6 flex justify-center shrink-0">
+        <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      </div>
+      <span class="nav-text ml-3 whitespace-nowrap transition-all duration-300">Maintenance</span>
     </a>
 
     <a href="{% url 'admin_units' %}"
        aria-current="{% if request.resolver_match.url_name == 'admin_units' or request.resolver_match.url_name == 'admin_unit_detail' or request.resolver_match.url_name == 'admin_create_unit' or request.resolver_match.url_name == 'admin_edit_unit' or request.resolver_match.url_name == 'admin_delete_unit' %}page{% endif %}"
-       class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200
+       class="nav-link flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 overflow-hidden
               {% if request.resolver_match.url_name == 'admin_units' or request.resolver_match.url_name == 'admin_unit_detail' or request.resolver_match.url_name == 'admin_create_unit' or request.resolver_match.url_name == 'admin_edit_unit' or request.resolver_match.url_name == 'admin_delete_unit' %}
-                bg-blue-900 border-l-4 border-green-500 font-semibold text-white shadow-md
+                bg-blue-600/20 border-l-4 border-blue-500 font-semibold text-white shadow-lg
               {% else %}
-                text-blue-100 hover:bg-blue-900/50 hover:translate-x-1 hover:text-white
+                text-blue-100 hover:bg-blue-900/50 hover:text-white
               {% endif %}">
-      <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-      </svg>
-      Units
+      <div class="w-6 flex justify-center shrink-0">
+        <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+        </svg>
+      </div>
+      <span class="nav-text ml-3 whitespace-nowrap transition-all duration-300">Units</span>
     </a>
 
     <a href="{% url 'admin_announcements' %}"
        aria-current="{% if request.resolver_match.url_name == 'admin_announcements' or request.resolver_match.url_name == 'admin_create_announcement' or request.resolver_match.url_name == 'admin_edit_announcement' or request.resolver_match.url_name == 'admin_delete_announcement' %}page{% endif %}"
-       class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200
+       class="nav-link flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 overflow-hidden
               {% if request.resolver_match.url_name == 'admin_announcements' or request.resolver_match.url_name == 'admin_create_announcement' or request.resolver_match.url_name == 'admin_edit_announcement' or request.resolver_match.url_name == 'admin_delete_announcement' %}
-                bg-blue-900 border-l-4 border-green-500 font-semibold text-white shadow-md
+                bg-blue-600/20 border-l-4 border-blue-500 font-semibold text-white shadow-lg
               {% else %}
-                text-blue-100 hover:bg-blue-900/50 hover:translate-x-1 hover:text-white
+                text-blue-100 hover:bg-blue-900/50 hover:text-white
               {% endif %}">
-      <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
-      </svg>
-      Announcements
+      <div class="w-6 flex justify-center shrink-0">
+        <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+        </svg>
+      </div>
+      <span class="nav-text ml-3 whitespace-nowrap transition-all duration-300">Announcements</span>
     </a>
 
   </nav>
 
+  <!-- Toggle Button -->
+  <div class="px-4 pb-4 toggle-wrapper">
+    <button id="sidebarToggle" class="w-full flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 overflow-hidden text-blue-100 hover:bg-blue-900/50 hover:text-white">
+      <div class="w-6 flex justify-center shrink-0">
+        <svg class="w-5 h-5 shrink-0 opacity-80 transition-transform duration-300" id="toggleIcon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
+      </div>
+      <span class="nav-text ml-3 whitespace-nowrap transition-all duration-300">Collapse Sidebar</span>
+    </button>
+  </div>
+
   <!-- Logout -->
-  <div class="px-4 py-6 border-t border-blue-900/50">
+  <div class="px-4 py-6 border-t border-blue-900/50 logout-container transition-all duration-300">
     <form method="post" action="{% url 'logout' %}">
       {% csrf_token %}
       <button type="submit"
-              class="w-full text-left flex items-center gap-3 px-4 py-3 rounded-xl text-blue-200 hover:bg-red-500/10 hover:text-red-400 transition-all duration-200 font-medium">
-        <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-        </svg>
-        Logout
+              class="w-full text-left flex items-center px-4 py-3 rounded-xl text-blue-200 hover:bg-red-500/10 hover:text-red-400 transition-all duration-200 font-medium overflow-hidden">
+        <div class="w-6 flex justify-center shrink-0">
+          <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+        </div>
+        <span class="nav-text ml-3 whitespace-nowrap transition-all duration-300">Logout</span>
       </button>
     </form>
   </div>

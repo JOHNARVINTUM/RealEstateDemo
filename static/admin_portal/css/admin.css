@@ -914,6 +914,11 @@ button.link {
   color: #475569;
 }
 
+.status-inactive {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
 .empty-state {
   padding: 2.75rem 1.5rem;
   text-align: center;

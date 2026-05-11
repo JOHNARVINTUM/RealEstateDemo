@@ -67,9 +67,9 @@
           <a class="link" href="{% url 'admin_edit_tenant' t.id %}">Edit</a>
           <a class="link" href="{% url 'admin_create_lease' %}?tenant_id={{ t.user.id }}">Add Lease</a>
           <form method="post" action="{% url 'admin_delete_tenant' t.id %}" class="confirm-action"
-            data-confirm="Delete tenant {{ t.first_name }} {{ t.last_name }}?">
+            data-confirm="{% if t.has_records %}Deactivate{% else %}Delete{% endif %} tenant {{ t.first_name }} {{ t.last_name }}?">
             {% csrf_token %}
-            <button class="link link-danger" type="submit">Delete</button>
+            <button class="link link-danger" type="submit">{% if t.has_records %}Deactivate{% else %}Delete{% endif %}</button>
           </form>
         </td>
       </tr>

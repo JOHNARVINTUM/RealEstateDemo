@@ -1,6 +1,7 @@
 from datetime import date, datetime, timedelta, timezone
 import logging
 
+from django.conf import settings
 from django.db.models import Sum, Q
 from django.db import transaction
 from django.shortcuts import render, redirect, get_object_or_404
@@ -50,6 +51,39 @@ from rentals.models import UnitImage
 from django.utils import timezone as dj_timezone
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
+
+def tenant_has_records(tenant):
+    """Check if tenant has any records that should prevent hard delete."""
+    user = tenant.user
+    return (
+        Lease.objects.filter(tenant=user).exists()
+        or ManualPayment.objects.filter(user=user).exists()
+        or MaintenanceRequest.objects.filter(tenant=user).exists()
+        or TenantAttachment.objects.filter(tenant=user).exists()
+    )
+
+
+def deactivate_tenant(tenant):
+    """Deactivate tenant: disable login, close active leases, free units."""
+    today = date.today()
+    user = tenant.user
+
+    # Disable account login
+    user.is_active = False
+    user.save()
+
+    # Close active leases and free units
+    active_leases = Lease.objects.filter(tenant=user, is_active=True)
+    for lease in active_leases:
+        lease.is_active = False
+        if not lease.end_date:
+            lease.end_date = today
+        lease.save()
+
+        unit = lease.unit
+        unit.status = "AVAILABLE"
+        unit.save()
+
 
 def admin_required(view_func):
     """
@@ -164,6 +198,11 @@ def admin_tenants(request):
         )
 
     tenants = tenants.order_by("first_name", "last_name")[:500]
+
+    # Add has_records flag to each tenant for template
+    for tenant in tenants:
+        tenant.has_records = tenant_has_records(tenant)
+
     return render(request, "admin_portal/tenants.html", {"tenants": tenants, "q": q})
 
 
@@ -172,6 +211,7 @@ def admin_tenant_detail(request, tenant_id: int):
     tenant = get_object_or_404(TenantProfile.objects.select_related("user"), pk=tenant_id)
     leases = Lease.objects.select_related("unit", "tenant").filter(tenant=tenant.user).order_by("-start_date")
     attachments = TenantAttachment.objects.filter(tenant=tenant.user).select_related('uploaded_by').order_by('-uploaded_at')
+    tenant.has_records = tenant_has_records(tenant)
     return render(request, "admin_portal/tenant_detail.html", {"tenant": tenant, "leases": leases, "attachments": attachments})
 
 
@@ -496,6 +536,26 @@ Welcome aboard! We're excited to have you as part of our community!"""
                     logger.exception("ensure_bills_since_move_in failed for lease id %s", getattr(lease, 'id', None))
                     messages.warning(request, "Failed to generate initial bills; you can regenerate later.")
                 
+                # Create move-in payment record
+                try:
+                    from payments.models import ManualPayment
+                    move_in_method = form.cleaned_data.get('move_in_payment_method', 'GCASH')
+                    move_in_ref = form.cleaned_data.get('move_in_reference_code', '').strip()
+                    if move_in_method == 'CASH' and not move_in_ref:
+                        move_in_ref = f'CASH-MOVEIN-{lease.id}'
+                    ManualPayment.objects.create(
+                        user=lease.tenant,
+                        payment_type='move_in',
+                        payment_method=move_in_method,
+                        amount=lease.total_move_in_cost,
+                        reference_code=move_in_ref,
+                        bill_ids='',
+                        status='APPROVED',
+                    )
+                except Exception as e:
+                    logger.exception(f'Failed to create move-in payment record: {e}')
+                    messages.warning(request, 'Lease created but failed to record move-in payment.')
+                
                 # Success message with payment summary
                 success_message = f'''Lease created successfully! 
 
@@ -536,6 +596,8 @@ Welcome notification sent to tenant with complete payment schedule.'''
         "form": form,
         "back_url": reverse("admin_tenants"),
         "schedule_preview": schedule_preview,
+        "gcash_name": getattr(settings, 'GCASH_NAME', ''),
+        "gcash_number": getattr(settings, 'GCASH_NUMBER', ''),
     })
 
 
@@ -589,12 +651,45 @@ def admin_edit_tenant(request, tenant_id: int):
 @admin_required
 def admin_delete_tenant(request, tenant_id: int):
     tenant = get_object_or_404(TenantProfile, pk=tenant_id)
+    has_records = tenant_has_records(tenant)
+
     if request.method == "POST":
-        tenant.delete()
+        if has_records:
+            # Deactivate: preserve all history
+            deactivate_tenant(tenant)
+            messages.success(request, f"Tenant {tenant.full_name} has been deactivated. Their history is preserved and the unit is now available.")
+        else:
+            # Hard delete: no records to preserve
+            user = tenant.user
+            tenant.delete()
+            user.delete()
+            messages.success(request, f"Tenant {tenant.full_name} has been permanently deleted.")
         return redirect("admin_tenants")
+
+    # Determine action based on records
+    if has_records:
+        title = "Deactivate Tenant"
+        message = (
+            f"Deactivate tenant {tenant.full_name}?\n\n"
+            f"This tenant has existing records (leases, payments, or maintenance requests) "
+            f"and cannot be permanently deleted.\n\n"
+            f"Deactivation will:\n"
+            f"• Disable login access for this tenant\n"
+            f"• Close any active leases\n"
+            f"• Make the occupied unit available\n"
+            f"• Preserve all historical records (payments, bills, maintenance)"
+        )
+    else:
+        title = "Delete Tenant"
+        message = (
+            f"Delete tenant {tenant.full_name}?\n\n"
+            f"This tenant has no records. This action will permanently remove the tenant account.\n\n"
+            f"This cannot be undone."
+        )
+
     return render(request, "admin_portal/confirm.html", {
-        "title": "Delete Tenant",
-        "message": f"Delete tenant {tenant.full_name}? This cannot be undone.",
+        "title": title,
+        "message": message,
         "post_url": reverse("admin_delete_tenant", args=[tenant.id]),
         "back_url": reverse("admin_tenant_detail", args=[tenant.id]),
     })

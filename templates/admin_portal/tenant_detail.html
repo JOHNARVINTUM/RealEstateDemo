@@ -18,6 +18,14 @@
     <div class="page-actions">
       <a class="action-btn" href="{% url 'admin_edit_tenant' tenant.id %}">Edit Tenant</a>
       <a class="action-btn" href="{% url 'admin_create_lease' %}?tenant_id={{ tenant.user.id }}">Add Lease</a>
+      <form method="post" action="{% url 'admin_delete_tenant' tenant.id %}" class="confirm-action inline"
+        data-confirm="{% if tenant.has_records %}Deactivate{% else %}Delete{% endif %} tenant {{ tenant.first_name }} {{ tenant.last_name }}?"
+        style="display:inline;">
+        {% csrf_token %}
+        <button class="action-btn btn-danger" type="submit" style="background:linear-gradient(135deg,#b91c1c,#dc2626);color:#fff;">
+          {% if tenant.has_records %}Deactivate{% else %}Delete{% endif %}
+        </button>
+      </form>
     </div>
   </div>
 
@@ -29,6 +37,16 @@
     <div class="detail-card">
       <div class="detail-label">Contact</div>
       <div class="detail-value">{{ tenant.contact_no|default:"-" }}</div>
+    </div>
+    <div class="detail-card">
+      <div class="detail-label">Account Status</div>
+      <div class="detail-value">
+        {% if tenant.user.is_active %}
+          <span class="status-badge status-active">Active</span>
+        {% else %}
+          <span class="status-badge status-inactive">Inactive</span>
+        {% endif %}
+      </div>
     </div>
     <div class="detail-card">
       <div class="detail-label">Lease Count</div>

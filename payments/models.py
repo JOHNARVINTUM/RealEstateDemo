@@ -12,6 +12,7 @@ class ManualPayment(models.Model):
         ("full", "Full Payment"),
         ("rent_only", "Rent Only"),
         ("water_only", "Water Only"),
+        ("move_in", "Move-in Payment"),
     ]
 
     PAYMENT_METHOD_CHOICES = [

@@ -286,6 +286,41 @@
     </div>
   </div>
 
+  <!-- Move-in Payment Status -->
+  {% if move_in_payment %}
+  <div class="tenant-card border-l-4 {% if move_in_payment.status == 'APPROVED' %}border-l-emerald-500 bg-gradient-to-br from-emerald-50 to-white{% else %}border-l-yellow-500 bg-gradient-to-br from-yellow-50 to-white{% endif %} mb-6">
+    <div class="flex items-start gap-4">
+      <div class="w-14 h-14 rounded-2xl {% if move_in_payment.status == 'APPROVED' %}bg-emerald-100{% else %}bg-yellow-100{% endif %} flex items-center justify-center shrink-0">
+        <svg class="w-7 h-7 {% if move_in_payment.status == 'APPROVED' %}text-emerald-600{% else %}text-yellow-600{% endif %}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+      </div>
+      <div class="flex-1">
+        <h3 class="text-lg font-bold text-gray-800">Move-in Payment</h3>
+        <p class="text-sm text-gray-500 mt-1">Security Deposit + {{ lease.advance_months }} Month{{ lease.advance_months|pluralize }} Advance Rent</p>
+        <div class="flex flex-wrap items-center gap-3 mt-3">
+          <span class="text-2xl font-extrabold {% if move_in_payment.status == 'APPROVED' %}text-emerald-600{% else %}text-yellow-600{% endif %}">
+            ₱{{ move_in_payment.amount|floatformat:2|intcomma }}
+          </span>
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold
+            {% if move_in_payment.status == 'APPROVED' %}bg-emerald-100 text-emerald-700{% elif move_in_payment.status == 'PENDING' %}bg-yellow-100 text-yellow-700{% else %}bg-red-100 text-red-700{% endif %}">
+            {{ move_in_payment.status }}
+          </span>
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+            {% if move_in_payment.payment_method == 'GCASH' %}
+              <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"></path><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"></path></svg>
+              GCash
+            {% else %}
+              <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg>
+              Cash
+            {% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Quick Stats Grid -->
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
 

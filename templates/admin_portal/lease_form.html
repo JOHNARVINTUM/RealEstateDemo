@@ -31,6 +31,7 @@ function handleUnitSelection(selectElement) {
             
             // Update schedule preview
             updateSchedulePreviewInline();
+            updateMoveInSummary();
         }
     }
 }
@@ -86,6 +87,46 @@ function updateSchedulePreviewInline() {
     } else {
         previewContainer.style.display = 'none';
         console.log(' Preview hidden - missing required values');
+    }
+}
+
+function toggleMoveInPaymentMethod() {
+    const selected = document.querySelector('input[name="move_in_payment_method"]:checked')?.value;
+    const gcashSection = document.getElementById('gcash-movein-section');
+    const cashSection = document.getElementById('cash-movein-section');
+    const refInput = document.getElementById('id_move_in_reference_code');
+    const cashRefInput = document.getElementById('id_move_in_reference_code_cash');
+
+    if (selected === 'GCASH') {
+        gcashSection.style.display = 'block';
+        cashSection.style.display = 'none';
+        // Sync: copy cash ref to main ref input if needed
+        if (cashRefInput && cashRefInput.value && refInput) {
+            refInput.value = cashRefInput.value;
+        }
+    } else {
+        gcashSection.style.display = 'none';
+        cashSection.style.display = 'block';
+    }
+}
+
+function updateMoveInSummary() {
+    const monthlyRent = parseFloat(document.getElementById('id_monthly_rent')?.value || 0);
+    const advanceMonths = parseInt(document.getElementById('id_advance_months')?.value || 2);
+    const securityDeposit = parseFloat(document.getElementById('id_security_deposit')?.value || monthlyRent);
+    const box = document.getElementById('movein-summary-box');
+
+    if (monthlyRent > 0) {
+        box.style.display = 'block';
+        const advanceAmt = monthlyRent * advanceMonths;
+        const total = securityDeposit + advanceAmt;
+        const fmt = (v) => '₱' + v.toLocaleString('en-PH', {minimumFractionDigits: 2});
+        document.getElementById('movein-security-display').textContent = fmt(securityDeposit);
+        document.getElementById('movein-advance-display').textContent = fmt(advanceAmt);
+        document.getElementById('movein-adv-months').textContent = advanceMonths;
+        document.getElementById('movein-total-display').textContent = fmt(total);
+    } else {
+        box.style.display = 'none';
     }
 }
 
@@ -173,7 +214,7 @@ console.log('Lease form functions defined in head section');
             <input type="number" id="{{ form.monthly_rent.id_for_label }}" name="{{ form.monthly_rent.name }}" 
                    class="styled-input rent-input" step="0.01" min="0" 
                    value="{{ form.monthly_rent.value|default:'' }}" placeholder="0.00" required
-                   oninput="updateSchedulePreviewInline()">
+                   oninput="updateSchedulePreviewInline(); updateMoveInSummary()">
             {% if form.monthly_rent.errors %}
               <div class="text-red-600 text-sm mt-1">
                 {{ form.monthly_rent.errors.0 }}
@@ -214,7 +255,7 @@ console.log('Lease form functions defined in head section');
               <input type="number" id="{{ form.security_deposit.id_for_label }}" name="{{ form.security_deposit.name }}" 
                      class="styled-input" step="0.01" min="0" 
                      value="{{ form.security_deposit.value|default:'' }}" placeholder="0.00"
-                     oninput="updateSchedulePreviewInline()">
+                     oninput="updateSchedulePreviewInline(); updateMoveInSummary()">
               {% if form.security_deposit.errors %}
                 <div class="text-red-600 text-sm mt-1">
                   {{ form.security_deposit.errors.0 }}
@@ -231,13 +272,96 @@ console.log('Lease form functions defined in head section');
               <input type="number" id="{{ form.advance_months.id_for_label }}" name="{{ form.advance_months.name }}" 
                      class="styled-input" min="0" max="12" 
                      value="{{ form.advance_months.value|default:2 }}"
-                     oninput="updateSchedulePreviewInline()">
+                     oninput="updateSchedulePreviewInline(); updateMoveInSummary()">
               {% if form.advance_months.errors %}
                 <div class="text-red-600 text-sm mt-1">
                   {{ form.advance_months.errors.0 }}
                 </div>
               {% endif %}
               <small class="text-gray-500">Number of months for advance payment (default: 2)</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Move-in Payment Collection Section -->
+        <div class="move-in-payment-section mt-6">
+          <h3 class="text-lg font-semibold text-gray-800 mb-4">
+            <i class="fas fa-hand-holding-usd mr-2"></i>
+            Move-in Payment Collection
+          </h3>
+
+          <!-- Move-in Cost Summary (auto-calculated by JS) -->
+          <div class="movein-summary-box" id="movein-summary-box" style="display:none;">
+            <div class="movein-summary-grid">
+              <div class="movein-row">
+                <span>Security Deposit:</span>
+                <strong id="movein-security-display">₱0.00</strong>
+              </div>
+              <div class="movein-row">
+                <span>Advance Rent (<span id="movein-adv-months">2</span> month/s):</span>
+                <strong id="movein-advance-display">₱0.00</strong>
+              </div>
+              <div class="movein-row movein-total-row">
+                <span>Total Move-in Payment:</span>
+                <strong id="movein-total-display">₱0.00</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Payment Method -->
+          <div class="form-group mt-4">
+            <label class="form-label">Payment Method <span class="text-red-500">*</span></label>
+            <div class="payment-method-options">
+              <label class="payment-method-option">
+                <input type="radio" name="move_in_payment_method" value="GCASH" checked onchange="toggleMoveInPaymentMethod()">
+                <span class="payment-method-label">
+                  <i class="fas fa-qrcode"></i> GCash QR
+                </span>
+              </label>
+              <label class="payment-method-option">
+                <input type="radio" name="move_in_payment_method" value="CASH" onchange="toggleMoveInPaymentMethod()">
+                <span class="payment-method-label">
+                  <i class="fas fa-money-bill-alt"></i> Cash
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <!-- GCash Section -->
+          <div id="gcash-movein-section" class="mt-4">
+            <div class="gcash-qr-box">
+              <p class="text-sm text-gray-600 mb-2">Show this QR code to the tenant for payment:</p>
+              <img src="/static/img/gcash_qr3.jpg" alt="GCash QR" class="gcash-qr-img">
+              <p class="text-sm text-gray-500 mt-2">GCash Name: <strong>{{ gcash_name }}</strong></p>
+              <p class="text-sm text-gray-500">GCash Number: <strong>{{ gcash_number }}</strong></p>
+            </div>
+            <div class="form-group mt-3">
+              <label for="id_move_in_reference_code" class="form-label">
+                GCash Reference Number <span class="text-red-500">*</span>
+              </label>
+              <input type="text" id="id_move_in_reference_code" name="move_in_reference_code" 
+                     class="styled-input" placeholder="Enter GCash reference number"
+                     value="{{ form.move_in_reference_code.value|default:'' }}">
+              {% if form.move_in_reference_code.errors %}
+                <div class="text-red-600 text-sm mt-1">
+                  {{ form.move_in_reference_code.errors.0 }}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Cash Section -->
+          <div id="cash-movein-section" class="mt-4" style="display:none;">
+            <div class="cash-info-box">
+              <i class="fas fa-info-circle text-blue-500 mr-1"></i>
+              <span class="text-sm text-gray-600">Cash payment received from tenant. Enter a receipt note or leave blank.</span>
+            </div>
+            <div class="form-group mt-3">
+              <label for="id_move_in_reference_code_cash" class="form-label">
+                Receipt / Reference Note (optional)
+              </label>
+              <input type="text" id="id_move_in_reference_code_cash" class="styled-input" 
+                     placeholder="e.g. Official receipt #123">
             </div>
           </div>
         </div>
@@ -456,6 +580,93 @@ input[type="checkbox"] {
   min-height: 20px !important;
   height: 20px !important;
 }
+
+/* Move-in Payment Section */
+.movein-summary-box {
+  background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+  border: 1px solid #86efac;
+  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+}
+
+.movein-summary-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.movein-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.movein-total-row {
+  border-top: 2px solid #22c55e;
+  padding-top: 0.5rem;
+  margin-top: 0.25rem;
+  font-size: 1.05rem;
+  color: #15803d;
+}
+
+.payment-method-options {
+  display: flex;
+  gap: 1rem;
+}
+
+.payment-method-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border: 2px solid #d1d5db;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.payment-method-option:has(input:checked) {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.payment-method-option input[type="radio"] {
+  width: 18px !important;
+  min-height: 18px !important;
+  height: 18px !important;
+  padding: 0 !important;
+}
+
+.payment-method-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.gcash-qr-box {
+  text-align: center;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+
+.gcash-qr-img {
+  max-width: 180px !important;
+  margin: 0.5rem auto !important;
+  border-radius: 0.5rem !important;
+  border: 3px solid #e5e7eb !important;
+  padding: 0 !important;
+  height: auto !important;
+  min-height: auto !important;
+}
+
+.cash-info-box {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+}
 </style>
 
 <!-- Add Flatpickr CSS for date picker -->
@@ -483,7 +694,23 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    console.log('✅ Lease form initialization complete');
+    // Sync cash reference to main reference field on form submit
+    const leaseForm = document.getElementById('lease-form');
+    if (leaseForm) {
+        leaseForm.addEventListener('submit', function() {
+            const selected = document.querySelector('input[name="move_in_payment_method"]:checked')?.value;
+            const refInput = document.getElementById('id_move_in_reference_code');
+            const cashRefInput = document.getElementById('id_move_in_reference_code_cash');
+            if (selected === 'CASH' && cashRefInput && refInput) {
+                refInput.value = cashRefInput.value || 'CASH-RECEIVED';
+            }
+        });
+    }
+
+    // Initial move-in summary update
+    if (typeof updateMoveInSummary === 'function') updateMoveInSummary();
+
+    console.log('Lease form initialization complete');
 });
 </script>
 

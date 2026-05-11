@@ -159,10 +159,14 @@ def tenant_dashboard(request):
 
     # Get tenant's recent payments (pending and approved)
     recent_payments = []
+    move_in_payment = None
     if request.user.is_authenticated:
         recent_payments = ManualPayment.objects.filter(
             user=request.user
         ).order_by("-created_at")[:5]
+        move_in_payment = ManualPayment.objects.filter(
+            user=request.user, payment_type="move_in"
+        ).first()
     
     context = {
         "profile": profile,
@@ -173,6 +177,7 @@ def tenant_dashboard(request):
         "next_due_date": next_due_date,
         "next_billing_month": next_billing_month,
         "recent_payments": recent_payments,
+        "move_in_payment": move_in_payment,
     }
     return render(request, "rentals/tenant_dashboard.html", context)
 

@@ -1,230 +1,303 @@
 {% extends "admin_portal/base.html" %}
 {% load humanize %}
-{% block title %}Water Management{% endblock %}
-{% block content %}
-  <div class="page-top">
-    <div class="page-header">
-      <h1>Water Management</h1>
-      <p class="muted">Track and manage water meter readings</p>
-    </div>
-  </div>
+{% block title %}Water Management | RealEstate360+{% endblock %}
 
-  <!-- Stats Bar -->
-  <div class="stats-bar">
-    <div class="stat-pill">
-      <span class="stat-pill-value">{{ total_units }}</span> Total Units
+{% block content %}
+<div class="dashboard-container px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
+  <!-- Header Section -->
+  <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+    <div class="flex-1">
+      <h1 class="font-display text-3xl sm:text-4xl text-slate-900 leading-tight">Water Management</h1>
+      <p class="text-sm text-slate-500 mt-1">Track usage, manage rates, and process bulk meter readings.</p>
     </div>
-    <div class="stat-pill" style="border-color:#bbf7d0;background:#f0fdf4;">
-      <span class="stat-pill-value" style="color:#15803d;">{{ filled_count }}</span>
-      <span style="color:#15803d;">Done</span>
+  </header>
+
+  <!-- Stats Grid -->
+  <section class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+    <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
+      <div class="stat-icon blue w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+        </svg>
+      </div>
+      <div>
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Units</p>
+        <p class="text-xl font-display font-bold text-slate-900">{{ total_units }}</p>
+      </div>
     </div>
-    <div class="stat-pill" style="border-color:#fecaca;background:#fef2f2;">
-      <span class="stat-pill-value" style="color:#dc2626;">{{ missing_count }}</span>
-      <span style="color:#dc2626;">Missing</span>
+    <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
+      <div class="stat-icon green w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+      </div>
+      <div>
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Completed</p>
+        <p class="text-xl font-display font-bold text-slate-900">{{ filled_count }}</p>
+      </div>
+    </div>
+    <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3 border-l-4 border-l-red-500">
+      <div class="stat-icon red w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center text-red-600">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+      </div>
+      <div>
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Missing</p>
+        <p class="text-xl font-display font-bold text-slate-900">{{ missing_count }}</p>
+      </div>
     </div>
     {% if current_rate %}
-    <div class="stat-pill" style="border-color:#bfdbfe;background:#eff6ff;">
-      <span class="stat-pill-value" style="color:#1d4ed8;">₱{{ current_rate }}</span>
-      <span style="color:#1d4ed8;">Rate/m³</span>
+    <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
+      <div class="stat-icon indigo w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-600">
+        <span class="text-sm font-bold">₱</span>
+      </div>
+      <div>
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Rate / m³</p>
+        <p class="text-xl font-display font-bold text-slate-900">{{ current_rate }}</p>
+      </div>
     </div>
     {% endif %}
-  </div>
-
-  <!-- Month Selector -->
-  <div class="filter-panel">
-    <div class="section-head">
-      <div>
-        <h2 class="section-title">Select Month</h2>
-        <p class="section-copy">Choose the month to view or enter water readings.</p>
-      </div>
-    </div>
-    <form class="toolbar" method="get">
-      <select class="input" name="month">
-        {% for m_num, m_name in month_choices %}
-          <option value="{{ m_num }}" {% if month == m_num %}selected{% endif %}>{{ m_name }}</option>
-        {% endfor %}
-      </select>
-      <select class="input" name="year">
-        {% for y in year_choices %}
-          <option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}</option>
-        {% endfor %}
-      </select>
-      <button class="btn" type="submit">View</button>
-    </form>
-  </div>
-
-  <!-- Search Bar -->
-  <div class="filter-panel" style="margin-top: 1rem;">
-    <form method="get" class="toolbar">
-      <input type="hidden" name="month" value="{{ month }}">
-      <input type="hidden" name="year" value="{{ year }}">
-      <input type="text" name="search" class="input" placeholder="Search by unit number or tenant name..." value="{{ search }}" style="flex:1;">
-      <button type="submit" class="btn">Search</button>
-      {% if search %}
-        <a href="?month={{ month }}&year={{ year }}" class="btn btn-secondary" style="background:#f3f4f6;color:#6b7280;">Clear</a>
-      {% endif %}
-    </form>
-  </div>
-
-  <!-- Water Rate Management -->
-  <div class="filter-panel" style="margin-top: 1rem;">
-    <div class="section-head">
-      <div>
-        <h2 class="section-title">Water Rate Settings</h2>
-        <p class="section-copy">Set the rate per cubic meter. This applies to all units.</p>
-      </div>
-    </div>
-    <form class="toolbar" method="post" action="{% url 'admin_water_rate' %}">
-      {% csrf_token %}
-      <div style="display:flex;gap:1rem;align-items:center;">
-        <div>
-          <label style="display:block;font-size:12px;color:#6b7280;margin-bottom:4px;">Effective Date</label>
-          <input type="date" name="effective_date" class="input" value="{{ today|date:'Y-m-d' }}" required>
-        </div>
-        <div>
-          <label style="display:block;font-size:12px;color:#6b7280;margin-bottom:4px;">Rate per m³ (₱)</label>
-          <input type="number" name="rate_per_cu_m" class="input" step="0.01" min="0" value="{{ current_rate|default:'45.00' }}" required>
-        </div>
-        <div>
-          <label style="display:block;font-size:12px;color:#6b7280;margin-bottom:4px;">Notes</label>
-          <input type="text" name="notes" class="input" placeholder="Optional notes" style="width:200px;">
-        </div>
-        <button class="btn btn-primary" type="submit" style="margin-top:20px;">
-          {% if current_rate %}Update Rate{% else %}Set Rate{% endif %}
-        </button>
-      </div>
-    </form>
-  </div>
-
-  <!-- Rate Warning -->
-  {% if not current_rate %}
-    <div class="alert alert-warning" style="margin: 1rem 0; padding: 1rem; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px;">
-      <strong>⚠️ No Water Rate Set</strong><br>
-      Please set a water rate above before entering readings.
-    </div>
-  {% endif %}
-
-  <!-- Bulk Entry Form -->
-  <section class="hero-panel compact">
-    <h2 class="hero-title">Water Readings - {{ month_name }} {{ year }}</h2>
-    <p class="hero-copy">Enter current readings for each unit. Previous readings are auto-filled from last month.</p>
   </section>
 
-  <form method="post" action="{% url 'admin_water_process' %}">
-    {% csrf_token %}
-    <input type="hidden" name="month" value="{{ month }}">
-    <input type="hidden" name="year" value="{{ year }}">
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <!-- Left Column: Settings & Filter -->
+    <div class="lg:col-span-4 space-y-6">
+      <!-- Water Rate Settings -->
+      <div class="glass-panel border-none shadow-xl p-6">
+        <h2 class="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+          <svg class="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          </svg>
+          Water Rate Settings
+        </h2>
+        <form method="post" action="{% url 'admin_water_rate' %}" class="space-y-4">
+          {% csrf_token %}
+          <div>
+            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Effective Date</label>
+            <input type="date" name="effective_date" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none" value="{{ today|date:'Y-m-d' }}" required>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Rate per m³ (₱)</label>
+            <div class="relative">
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₱</span>
+              <input type="number" name="rate_per_cu_m" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-4 py-2.5 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none" step="0.01" min="0" value="{{ current_rate|default:'45.00' }}" required>
+            </div>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Optional Notes</label>
+            <input type="text" name="notes" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. Summer increase">
+          </div>
+          <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span>Update Rate</span>
+          </button>
+        </form>
+      </div>
 
-    <div class="table-wrap">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Unit</th>
-            <th>Tenant</th>
-            <th>Previous (m³)</th>
-            <th>Current (m³)</th>
-            <th>Usage</th>
-            <th>Amount</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in readings_data %}
-          <tr class="{% if row.has_reading %}row-done{% else %}row-missing{% endif %}">
-            <input type="hidden" name="lease_ids" value="{{ row.lease_id }}">
-            <td>
-              {{ row.unit_number }}
-              {% if row.is_first_billing %}
-                <span style="display:inline-block;margin-left:4px;padding:2px 6px;background:#dcfce7;color:#166534;font-size:10px;border-radius:4px;font-weight:600;">First Bill</span>
-              {% endif %}
-            </td>
-            <td>{{ row.tenant_name }}</td>
-            <td>
-              <span class="previous-reading">{{ row.previous_reading }}</span>
-            </td>
-            <td>
-              <input type="number" 
-                     name="reading_{{ row.lease_id }}" 
-                     class="input reading-input" 
-                     value="{{ row.current_reading|default:'' }}"
-                     step="0.01"
-                     min="0"
-                     placeholder="Enter reading"
-                     {% if row.bill_paid %}readonly{% endif %}
-                     data-previous="{{ row.previous_reading }}"
-                     data-rate="{{ rate }}"
-                     onchange="calculateRow(this)">
-            </td>
-            <td>
-              <span class="usage-display" id="usage_{{ row.lease_id }}">
-                {% if row.has_reading %}{{ row.usage }}{% else %}-{% endif %}
-              </span>
-            </td>
-            <td>
-              <span class="amount-display" id="amount_{{ row.lease_id }}">
-                {% if row.has_reading %}₱{{ row.amount|intcomma }}{% else %}-{% endif %}
-              </span>
-            </td>
-            <td>
-              {% if row.bill_paid %}
-                <span class="badge" style="background:#dcfce7;color:#166534;padding:4px 8px;border-radius:4px;font-size:12px;">Paid</span>
-              {% elif row.has_reading %}
-                <span class="badge" style="background:#dbeafe;color:#1e40af;padding:4px 8px;border-radius:4px;font-size:12px;">Done</span>
-              {% else %}
-                <span class="badge" style="background:#fee2e2;color:#991b1b;padding:4px 8px;border-radius:4px;font-size:12px;">Missing</span>
-              {% endif %}
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="7" style="text-align:center;padding:2rem;">
-              No active leases found for this period.
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      <!-- Month/Year Selection -->
+      <div class="glass-panel border-none shadow-xl p-6">
+        <h2 class="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+          <svg class="w-4 h-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path>
+          </svg>
+          Select Period
+        </h2>
+        <form method="get" class="space-y-4">
+          <div class="grid grid-cols-2 gap-3">
+            <select name="month" class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+              {% for m_num, m_name in month_choices %}
+                <option value="{{ m_num }}" {% if month == m_num %}selected{% endif %}>{{ m_name }}</option>
+              {% endfor %}
+            </select>
+            <select name="year" class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+              {% for y in year_choices %}
+                <option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-xl transition-all">
+            View Readings
+          </button>
+        </form>
+      </div>
     </div>
 
-    <div class="actions-bar" style="margin-top:1.5rem;display:flex;gap:1rem;align-items:center;">
-      <button type="submit" class="btn btn-primary" {% if not current_rate %}disabled{% endif %}>
-        💾 Save Readings & Compute Bills
-      </button>
+    <!-- Right Column: Bulk Readings Table -->
+    <div class="lg:col-span-8">
       {% if not current_rate %}
-        <span style="color:#dc2626;">Set water rate first to enable saving</span>
+      <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-r-xl">
+        <div class="flex items-center gap-3 text-red-700">
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+          </svg>
+          <div>
+            <p class="font-bold">No Water Rate Set</p>
+            <p class="text-xs">Please set a water rate in the settings panel before entering readings.</p>
+          </div>
+        </div>
+      </div>
       {% endif %}
-    </div>
-  </form>
 
-  <style>
-    .row-done { background: #f0fdf4; }
-    .row-missing { background: #fef2f2; }
-    .reading-input { width: 120px; text-align: right; }
-    .previous-reading { color: #6b7280; font-size: 14px; }
-    .usage-display, .amount-display { font-weight: 500; }
-  </style>
+      <div class="glass-panel overflow-hidden border-none shadow-xl">
+        <div class="p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+          <h2 class="text-lg font-bold text-slate-900">{{ month_name }} {{ year }} Readings</h2>
+          <div class="relative w-full md:w-64">
+            <form method="get" class="relative">
+              <input type="hidden" name="month" value="{{ month }}">
+              <input type="hidden" name="year" value="{{ year }}">
+              <input type="text" name="search" value="{{ search }}" placeholder="Search unit or tenant..." 
+                     class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none">
+              <div class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+              </div>
+            </form>
+          </div>
+        </div>
 
-  <script>
-    function calculateRow(input) {
-      const current = parseFloat(input.value) || 0;
-      const previous = parseFloat(input.dataset.previous) || 0;
-      const rate = parseFloat(input.dataset.rate) || 0;
-      const leaseId = input.name.replace('reading_', '');
+        <form method="post" action="{% url 'admin_water_process' %}">
+          {% csrf_token %}
+          <input type="hidden" name="month" value="{{ month }}">
+          <input type="hidden" name="year" value="{{ year }}">
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-50/50">
+                  <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Unit & Tenant</th>
+                  <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Prev (m³)</th>
+                  <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Current Reading</th>
+                  <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Usage</th>
+                  <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Amount</th>
+                  <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                {% for row in readings_data %}
+                <tr class="reading-row transition-colors duration-150 {% if row.has_reading %}bg-emerald-50/20{% else %}bg-white{% endif %}" data-lease="{{ row.lease_id }}">
+                  <input type="hidden" name="lease_ids" value="{{ row.lease_id }}">
+                  <td class="px-6 py-4">
+                    <div class="flex items-center gap-3">
+                      <div class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-[11px]">
+                        {{ row.tenant_name|first|upper }}
+                      </div>
+                      <div>
+                        <div class="font-bold text-slate-900 text-sm">Unit {{ row.unit_number }}</div>
+                        <div class="text-[10px] text-slate-500 truncate max-w-[120px]">{{ row.tenant_name }}</div>
+                      </div>
+                      {% if row.is_first_billing %}
+                        <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-100 text-blue-700 uppercase">First Bill</span>
+                      {% endif %}
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 text-right text-sm text-slate-400 font-mono">
+                    {{ row.previous_reading|floatformat:2 }}
+                  </td>
+                  <td class="px-6 py-4">
+                    <input type="number" 
+                           name="reading_{{ row.lease_id }}" 
+                           class="w-32 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none text-right transition-all reading-input" 
+                           value="{{ row.current_reading|default:'' }}"
+                           step="0.01"
+                           min="0"
+                           placeholder="0.00"
+                           {% if row.bill_paid %}readonly{% endif %}
+                           data-previous="{{ row.previous_reading }}"
+                           data-rate="{{ rate }}"
+                           oninput="calculateRow(this)">
+                  </td>
+                  <td class="px-6 py-4 text-right">
+                    <span class="text-sm font-bold text-slate-700 usage-display" id="usage_{{ row.lease_id }}">
+                      {% if row.has_reading %}{{ row.usage|floatformat:2 }}{% else %}-{% endif %}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 text-right">
+                    <span class="text-sm font-black text-slate-900 amount-display" id="amount_{{ row.lease_id }}">
+                      {% if row.has_reading %}₱{{ row.amount|intcomma }}{% else %}-{% endif %}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 text-center">
+                    {% if row.bill_paid %}
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase">Paid</span>
+                    {% elif row.has_reading %}
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 uppercase">Done</span>
+                    {% else %}
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 uppercase">Missing</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="py-20 text-center text-slate-400 text-sm">
+                    No active leases found for this period.
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="p-6 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
+            <p class="text-xs text-slate-500">
+              Usage and amounts are computed automatically based on the current rate.
+            </p>
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2" {% if not current_rate %}disabled{% endif %}>
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+              </svg>
+              <span>Save Readings & Compute Bills</span>
+            </button>
+          </div>
+        </form>
+      </div>
       
-      if (current > 0) {
-        const usage = Math.max(0, current - previous);
-        const amount = usage * rate;
-        
-        document.getElementById('usage_' + leaseId).textContent = usage.toFixed(2);
-        document.getElementById('amount_' + leaseId).textContent = '₱' + amount.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-        
-        // Update row styling
-        input.closest('tr').className = 'row-done';
-      } else {
-        document.getElementById('usage_' + leaseId).textContent = '-';
-        document.getElementById('amount_' + leaseId).textContent = '-';
-        input.closest('tr').className = 'row-missing';
-      }
+      <!-- Recompute Section -->
+      <div class="mt-8 flex justify-end">
+        <form method="post" action="{% url 'admin_water_recompute' %}" class="confirm-action" data-confirm="Recompute all water readings for {{ month_name }} {{ year }}? This will recalculate usage and amounts based on the latest rate.">
+          {% csrf_token %}
+          <input type="hidden" name="month" value="{{ month }}">
+          <input type="hidden" name="year" value="{{ year }}">
+          <button type="submit" class="text-xs font-bold text-slate-400 hover:text-blue-600 transition-all flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            Recompute all readings for this month
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function calculateRow(input) {
+    const current = parseFloat(input.value) || 0;
+    const previous = parseFloat(input.dataset.previous) || 0;
+    const rate = parseFloat(input.dataset.rate) || 0;
+    const leaseId = input.name.replace('reading_', '');
+    const row = input.closest('tr');
+    
+    if (input.value !== '') {
+      const usage = Math.max(0, current - previous);
+      const amount = usage * rate;
+      
+      document.getElementById('usage_' + leaseId).textContent = usage.toFixed(2);
+      document.getElementById('amount_' + leaseId).textContent = '₱' + amount.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      
+      // Update row styling
+      row.classList.add('bg-emerald-50/20');
+      row.classList.remove('bg-white');
+    } else {
+      document.getElementById('usage_' + leaseId).textContent = '-';
+      document.getElementById('amount_' + leaseId).textContent = '-';
+      row.classList.remove('bg-emerald-50/20');
+      row.classList.add('bg-white');
     }
-  </script>
+  }
+</script>
 {% endblock %}

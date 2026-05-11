@@ -1,71 +1,146 @@
 {% extends "admin_portal/base.html" %}
-{% block title %}Announcements{% endblock %}
+{% load humanize %}
+{% block title %}Broadcast Center | RealEstate360+{% endblock %}
 
 {% block content %}
-  <div class="page-top">
-    <div class="page-header">
-      <h1>Announcements</h1>
-      <p class="muted">Messages shown to tenants</p>
+<div class="dashboard-container px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
+  <!-- Header Section -->
+  <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+    <div class="flex-1">
+      <h1 class="font-display text-3xl sm:text-4xl text-slate-900 leading-tight">Broadcast Center</h1>
+      <p class="text-sm text-slate-500 mt-1">Manage and publish news updates to all your tenants.</p>
     </div>
-    <div class="page-actions">
-      <a class="action-btn" href="{% url 'admin_create_announcement' %}">+ Add Announcement</a>
+    <div class="flex items-center gap-3">
+      <a href="{% url 'admin_create_announcement' %}" 
+         class="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
+        </svg>
+        New Broadcast
+      </a>
     </div>
-  </div>
+  </header>
 
-  <section class="hero-panel compact">
-    <h2 class="hero-title">Announcement Center</h2>
-    <p class="hero-copy">Create and manage updates that appear to tenants so information stays timely, visible, and easy to maintain.</p>
-  </section>
-
-  <div class="filter-panel">
-    <div class="section-head">
+  <!-- Stats Grid -->
+  <section class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+    <div class="stat-card p-5 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
+      <div class="stat-icon slate w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-600 shadow-sm">
+        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+        </svg>
+      </div>
       <div>
-        <h2 class="section-title">Search</h2>
-        <p class="section-copy">Search announcements by title or body content.</p>
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Sent</p>
+        <p class="text-2xl font-display font-bold text-slate-900">{{ total_count }}</p>
       </div>
     </div>
-    <form class="toolbar" method="get">
-      <input class="input" name="q" value="{{ q }}" placeholder="Search title/content..." />
-      <button class="btn" type="submit">Search</button>
-      {% if q %}<a class="link" href="{% url 'admin_announcements' %}">Clear</a>{% endif %}
-    </form>
-  </div>
-
-  {% if items %}
-    <div class="section-head" style="margin-bottom:0.6rem;">
-      <span class="result-count">{{ items|length }} announcement{% if items|length != 1 %}s{% endif %}</span>
+    <div class="stat-card p-5 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4 border-b-4 border-b-blue-500">
+      <div class="stat-icon blue w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 shadow-sm">
+        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+        </svg>
+      </div>
+      <div>
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Active Now</p>
+        <p class="text-2xl font-display font-bold text-slate-900">{{ active_count }}</p>
+      </div>
     </div>
-  {% endif %}
+    <div class="stat-card p-5 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
+      <div class="stat-icon amber w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600 shadow-sm">
+        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+        </svg>
+      </div>
+      <div>
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Monthly Peak</p>
+        <p class="text-2xl font-display font-bold text-slate-900">{{ this_month_count }}</p>
+      </div>
+    </div>
+  </section>
 
-  <div class="table-wrap">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Title</th>
-          <th>Date</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for a in items %}
-          <tr>
-            <td>
-              <div class="cell-title">{{ a.title }}</div>
-              <div class="cell-sub">Published announcement</div>
-            </td>
-            <td>{{ a.created_at }}</td>
-            <td class="table-actions">
-              <a class="link" href="{% url 'admin_edit_announcement' a.id %}">Edit</a>
-              <form method="post" action="{% url 'admin_delete_announcement' a.id %}" class="confirm-action" data-confirm="Delete announcement: {{ a.title }}?">
-                {% csrf_token %}
-                <button class="link link-danger" type="submit">Delete</button>
-              </form>
-            </td>
-          </tr>
-        {% empty %}
-          <tr><td colspan="3" class="empty-state">No announcements found.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <!-- Filter & Search Panel -->
+  <div class="glass-panel mb-8 p-4 border-none shadow-xl flex flex-col md:flex-row items-center gap-4">
+    <div class="relative flex-1 w-full">
+      <form method="get" class="relative">
+        <input type="text" name="q" value="{{ q }}" placeholder="Search by title or content snippet..." 
+               class="w-full pl-10 pr-4 py-3 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none">
+        <div class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+        </div>
+      </form>
+    </div>
+    {% if q %}
+      <a href="{% url 'admin_announcements' %}" class="px-4 py-2 text-xs font-bold text-slate-400 hover:text-red-600 transition-colors">Clear Search</a>
+    {% endif %}
   </div>
+
+  <!-- Announcement Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+    {% for a in items %}
+    <div class="glass-panel group p-0 overflow-hidden border-none shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col relative bg-white border-l-4 {% if a.is_active %}border-l-blue-500{% else %}border-l-slate-300{% endif %}">
+      <!-- Card Header -->
+      <div class="p-6 pb-4">
+        <div class="flex justify-between items-start mb-3">
+          <span class="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest {% if a.is_active %}bg-blue-50 text-blue-600{% else %}bg-slate-100 text-slate-500{% endif %}">
+            {% if a.is_active %}Active{% else %}Draft/Private{% endif %}
+          </span>
+          <span class="text-[10px] font-bold text-slate-400">{{ a.created_at|date:"M d, Y" }}</span>
+        </div>
+        <h3 class="text-lg font-display font-bold text-slate-900 group-hover:text-blue-600 transition-colors leading-tight mb-2">
+          {{ a.title }}
+        </h3>
+        <p class="text-sm text-slate-500 line-clamp-3 leading-relaxed">
+          {{ a.body }}
+        </p>
+      </div>
+
+      <!-- Card Footer/Actions -->
+      <div class="mt-auto p-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[8px] font-black text-slate-500">
+            {{ a.created_by.email|first|upper|default:"A" }}
+          </div>
+          <span class="text-[10px] font-bold text-slate-500">By Admin</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <a href="{% url 'admin_edit_announcement' a.id %}" 
+             class="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200" title="Edit Broadcast">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+            </svg>
+          </a>
+          <form method="post" action="{% url 'admin_delete_announcement' a.id %}" class="inline confirm-action" data-confirm="Permanently delete this broadcast? This action cannot be undone.">
+            {% csrf_token %}
+            <button type="submit"
+                    class="p-2 text-slate-400 hover:text-red-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200" title="Delete Broadcast">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+              </svg>
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Decorative Hover Element -->
+      <div class="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 blur-3xl rounded-full -mr-12 -mt-12 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+    </div>
+    {% empty %}
+    <div class="col-span-full py-24 text-center glass-panel border-dashed border-2 border-slate-200 bg-transparent">
+      <div class="flex flex-col items-center">
+        <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-200 mb-4">
+          <svg class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+          </svg>
+        </div>
+        <h3 class="text-lg font-bold text-slate-800 italic">No broadcasts found.</h3>
+        <p class="text-sm text-slate-500 mt-1 max-w-xs mx-auto">Your broadcast center is currently silent. Start by creating a new announcement for your tenants.</p>
+        <a href="{% url 'admin_create_announcement' %}" class="mt-6 text-blue-600 font-bold text-xs uppercase tracking-widest hover:underline">+ Send your first broadcast</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
 {% endblock %}

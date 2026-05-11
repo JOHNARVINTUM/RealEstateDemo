@@ -1,233 +1,247 @@
 {% extends "admin_portal/base.html" %}
 {% load humanize %}
-{% block title %}Tenant{% endblock %}
-{% block content %}
+{% block title %}{{ tenant.first_name }} {{ tenant.last_name }} | Intelligence Profile{% endblock %}
 
+{% block content %}
+<div class="dashboard-container px-2 sm:px-4 lg:px-6 py-4 sm:py-6 max-w-7xl mx-auto">
   <!-- Breadcrumb -->
-  <nav class="breadcrumb" aria-label="Breadcrumb">
-    <a href="{% url 'admin_tenants' %}">Tenants</a>
-    <span class="breadcrumb-sep">›</span>
-    <span class="breadcrumb-current">{{ tenant.first_name }} {{ tenant.last_name }}</span>
+  <nav class="flex items-center gap-2 mb-8 text-xs font-bold uppercase tracking-widest text-slate-400">
+    <a href="{% url 'admin_tenants' %}" class="hover:text-blue-600 transition-colors">Tenants</a>
+    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path>
+    </svg>
+    <span class="text-slate-900">{{ tenant.first_name }} {{ tenant.last_name }}</span>
   </nav>
 
-  <div class="page-top">
-    <div class="page-header">
-      <h1>{{ tenant.first_name }} {{ tenant.last_name }}</h1>
-      <p class="muted">{{ tenant.user.email }} &bull; {{ tenant.contact_no|default:"No contact provided" }}</p>
-    </div>
-    <div class="page-actions">
-      <a class="action-btn" href="{% url 'admin_edit_tenant' tenant.id %}">Edit Tenant</a>
-      <a class="action-btn" href="{% url 'admin_create_lease' %}?tenant_id={{ tenant.user.id }}">Add Lease</a>
-      <form method="post" action="{% url 'admin_delete_tenant' tenant.id %}" class="confirm-action inline"
-        data-confirm="{% if tenant.has_records %}Deactivate{% else %}Delete{% endif %} tenant {{ tenant.first_name }} {{ tenant.last_name }}?"
-        style="display:inline;">
-        {% csrf_token %}
-        <button class="action-btn btn-danger" type="submit" style="background:linear-gradient(135deg,#b91c1c,#dc2626);color:#fff;">
-          {% if tenant.has_records %}Deactivate{% else %}Delete{% endif %}
-        </button>
-      </form>
-    </div>
-  </div>
+  <!-- Profile Hero Section -->
+  <header class="glass-panel p-6 sm:p-8 border-none shadow-2xl mb-8 overflow-hidden relative">
+    <div class="flex flex-col md:flex-row items-center gap-6 md:gap-8 relative z-10">
+      <!-- Avatar -->
+      <div class="w-24 h-24 sm:w-32 sm:h-32 rounded-3xl bg-blue-50 flex items-center justify-center text-blue-600 text-4xl sm:text-5xl font-display font-bold shadow-xl border-4 border-white">
+        {{ tenant.first_name|first }}{{ tenant.last_name|first }}
+      </div>
+      
+      <!-- Identity -->
+      <div class="flex-1 text-center md:text-left">
+        <div class="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-2">
+          <h1 class="text-3xl sm:text-4xl font-display font-bold text-slate-900">{{ tenant.first_name }} {{ tenant.last_name }}</h1>
+          {% if tenant.user.is_active %}
+            <span class="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Active Account
+            </span>
+          {% else %}
+            <span class="px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-widest">Inactive</span>
+          {% endif %}
+        </div>
+        <p class="text-slate-500 font-medium flex items-center justify-center md:justify-start gap-4">
+          <span class="flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+            {{ tenant.user.email }}
+          </span>
+          <span class="hidden sm:block text-slate-200">|</span>
+          <span class="flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+            {{ tenant.contact_no|default:"No Contact" }}
+          </span>
+        </p>
+      </div>
 
-  <div class="detail-grid">
-    <div class="detail-card">
-      <div class="detail-label">Email</div>
-      <div class="detail-value">{{ tenant.user.email }}</div>
-    </div>
-    <div class="detail-card">
-      <div class="detail-label">Contact</div>
-      <div class="detail-value">{{ tenant.contact_no|default:"-" }}</div>
-    </div>
-    <div class="detail-card">
-      <div class="detail-label">Account Status</div>
-      <div class="detail-value">
-        {% if tenant.user.is_active %}
-          <span class="status-badge status-active">Active</span>
-        {% else %}
-          <span class="status-badge status-inactive">Inactive</span>
-        {% endif %}
+      <!-- Actions -->
+      <div class="flex flex-wrap justify-center gap-3">
+        <a href="{% url 'admin_edit_tenant' tenant.id %}" class="px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+          Edit Profile
+        </a>
+        <form method="post" action="{% url 'admin_delete_tenant' tenant.id %}" class="inline confirm-action" data-confirm="{% if tenant.has_records %}Deactivate this tenant account? They will lose access to the portal but their history will be preserved.{% else %}Permanently delete this tenant and all associated data? This action cannot be undone.{% endif %}">
+          {% csrf_token %}
+          <button type="submit" class="px-5 py-2.5 bg-red-50 text-red-600 rounded-xl text-xs font-bold hover:bg-red-600 hover:text-white transition-all border border-red-100 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
+            {% if tenant.has_records %}Deactivate{% else %}Delete{% endif %}
+          </button>
+        </form>
       </div>
     </div>
-    <div class="detail-card">
-      <div class="detail-label">Lease Count</div>
-      <div class="detail-value">{{ leases|length }}</div>
-    </div>
-  </div>
+    <!-- Decor -->
+    <div class="absolute -right-20 -top-20 w-64 h-64 bg-blue-600/5 rounded-full blur-3xl"></div>
+  </header>
 
-  <!-- Attachments Section -->
-  <div class="panel">
-    <div class="section-head">
-      <div>
-        <h2 class="section-title">Documents & Attachments</h2>
-        <p class="section-copy">View tenant's contract, valid ID, and other uploaded documents.</p>
-      </div>
-      {% if attachments %}
-        <span class="result-count">{{ attachments|length }} attachment{% if attachments|length != 1 %}s{% endif %}</span>
-      {% endif %}
-    </div>
-    
-    {% if attachments %}
-      <div class="attachments-grid">
-        {% for attachment in attachments %}
-          <div class="attachment-card">
-            <div class="attachment-header">
-              <div class="attachment-type">
-                <span class="attachment-badge attachment-{{ attachment.attachment_type|lower }}">
-                  {{ attachment.get_attachment_type_display }}
-                </span>
+  <div class="flex flex-col lg:flex-row gap-8">
+    <!-- Main Content Column -->
+    <div class="flex-1 space-y-8">
+      
+      <!-- Key Stats Grid -->
+      <section class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Active Leases</p>
+          <p class="text-xl font-display font-bold text-slate-900">{{ leases|length }}</p>
+        </div>
+        <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Documents</p>
+          <p class="text-xl font-display font-bold text-slate-900">{{ attachments|length }}</p>
+        </div>
+        <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Rent</p>
+          <p class="text-xl font-display font-bold text-slate-900">₱{{ leases.0.monthly_rent|floatformat:0|intcomma|default:"0" }}</p>
+        </div>
+        <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Move-In Date</p>
+          <p class="text-sm font-display font-bold text-slate-900 mt-1.5">{{ leases.last.start_date|date:"M Y"|default:"N/A" }}</p>
+        </div>
+      </section>
+
+      <!-- Lease Portfolio -->
+      <section>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-sm font-black uppercase tracking-widest text-slate-800">Lease Portfolio</h2>
+          <a href="{% url 'admin_create_lease' %}?tenant_id={{ tenant.user.id }}" class="text-[10px] font-bold text-blue-600 hover:underline">+ Add New Lease</a>
+        </div>
+        <div class="space-y-4">
+          {% for l in leases %}
+          <div class="glass-panel p-5 border-none shadow-lg bg-white hover:shadow-xl transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-600 shadow-sm border border-slate-100">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
               </div>
-              <div class="attachment-actions">
-                <a href="{% url 'admin_view_attachment' attachment.id %}" 
-                   class="btn btn-sm btn-primary" 
-                   target="_blank"
-                   title="View {{ attachment.filename }}">
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                  </svg>
-                  View
+              <div>
+                <div class="text-lg font-display font-bold text-slate-900">Unit #{{ l.unit.number }}</div>
+                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Started {{ l.start_date|date:"F Y" }}</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-8 sm:gap-12">
+              <div class="text-center sm:text-left">
+                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mb-0.5">Monthly Rent</div>
+                <div class="text-sm font-bold text-slate-900">₱{{ l.monthly_rent|floatformat:0|intcomma }}</div>
+              </div>
+              <div class="text-center sm:text-left">
+                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mb-0.5">Due Day</div>
+                <div class="text-sm font-bold text-slate-900">{{ l.due_day }}th</div>
+              </div>
+              <div class="flex items-center gap-2">
+                <a href="{% url 'admin_edit_lease' l.id %}" class="p-2 text-slate-400 hover:text-blue-600 transition-colors">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                 </a>
-                <form method="post" action="{% url 'admin_delete_attachment' attachment.id %}" class="inline">
+              </div>
+            </div>
+          </div>
+          {% empty %}
+          <div class="py-12 text-center bg-slate-50/50 rounded-3xl border border-dashed border-slate-200">
+            <p class="text-sm text-slate-400 italic">No active or previous leases recorded.</p>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <!-- Document Vault -->
+      <section>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-sm font-black uppercase tracking-widest text-slate-800">Document Vault</h2>
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ attachments|length }} Secure Files</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          {% for attachment in attachments %}
+          <div class="glass-panel p-4 border-none shadow-lg bg-white hover:shadow-xl transition-all group overflow-hidden flex flex-col">
+            <!-- Header with Badge & Actions -->
+            <div class="flex justify-between items-start mb-4">
+              <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-500 text-[8px] font-black uppercase tracking-widest">
+                {{ attachment.get_attachment_type_display }}
+              </span>
+              <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <a href="{% url 'admin_view_attachment' attachment.id %}" target="_blank" class="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                </a>
+                <form method="post" action="{% url 'admin_delete_attachment' attachment.id %}" class="inline confirm-action" data-confirm="Permanently delete this document? This action cannot be undone.">
                   {% csrf_token %}
-                  <button type="submit" 
-                          class="btn btn-sm btn-outline-danger"
-                          onclick="return confirm('Delete {{ attachment.filename }}?')"
-                          title="Delete {{ attachment.filename }}">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                    </svg>
-                    Delete
+                  <button type="submit" class="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                   </button>
                 </form>
               </div>
             </div>
-            
-            <div class="attachment-content">
-              <div class="attachment-info">
-                <div class="attachment-filename">{{ attachment.filename }}</div>
-                <div class="attachment-meta">
-                  <span class="attachment-size">{{ attachment.get_file_size_display }}</span>
-                  <span class="attachment-date">{{ attachment.uploaded_at|date:"M d, Y H:i" }}</span>
-                </div>
-              </div>
-              
-              {% if attachment.description %}
-                <div class="attachment-description">
-                  <small>{{ attachment.description }}</small>
-                </div>
-              {% endif %}
-              
-              {% if attachment.uploaded_by %}
-                <div class="attachment-uploader">
-                  <small class="text-muted">Uploaded by: {{ attachment.uploaded_by.email }}</small>
+
+            <!-- Preview/Icon Area -->
+            <div class="bg-slate-50 rounded-xl mb-4 h-32 overflow-hidden flex items-center justify-center relative">
+              {% if attachment.is_image %}
+                <img src="{% url 'admin_view_attachment' attachment.id %}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                <div class="absolute inset-0 bg-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              {% else %}
+                <div class="flex flex-col items-center gap-2">
+                  {% if attachment.is_pdf %}
+                    <svg class="w-10 h-10 text-red-400" fill="currentColor" viewBox="0 0 24 24"><path d="M7 2v20h10V2H7zm8 16H9v-2h6v2zm0-4H9v-2h6v2zm0-4H9V8h6v2z"></path></svg>
+                  {% else %}
+                    <svg class="w-10 h-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                  {% endif %}
+                  <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">{{ attachment.file_extension|cut:"." }} Document</span>
                 </div>
               {% endif %}
             </div>
-            
-            <!-- Preview for images -->
-            {% if attachment.is_image %}
-              <div class="attachment-preview">
-                <a href="{% url 'admin_view_attachment' attachment.id %}" target="_blank">
-                  <img src="{% url 'admin_view_attachment' attachment.id %}" 
-                       alt="{{ attachment.filename }}" 
-                       class="attachment-thumbnail"
-                       onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                  <div class="attachment-preview-placeholder">
-                    <svg class="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                    </svg>
-                  </div>
-                </a>
-              </div>
-            {% else %}
-              <div class="attachment-icon">
-                {% if attachment.is_pdf %}
-                  <svg class="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                  </svg>
-                {% else %}
-                  <svg class="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                  </svg>
-                {% endif %}
-              </div>
-            {% endif %}
-          </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="empty-state">
-        <div class="empty-icon">
-          <svg class="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-          </svg>
-        </div>
-        <div class="empty-title">No attachments found</div>
-        <div class="empty-description">
-          This tenant hasn't uploaded any contracts, valid IDs, or other documents yet.
-        </div>
-        <div class="empty-actions">
-          <a href="{% url 'admin_edit_tenant' tenant.id %}" class="btn btn-primary">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-            </svg>
-            Add Documents
-          </a>
-        </div>
-      </div>
-    {% endif %}
-  </div>
 
-  <div class="panel">
-    <div class="section-head">
-      <div>
-        <h2 class="section-title">Lease History</h2>
-        <p class="section-copy">Review assigned units, monthly rent, due day, and current lease state for this tenant.</p>
-      </div>
-      {% if leases %}
-        <span class="result-count">{{ leases|length }} lease{% if leases|length != 1 %}s{% endif %}</span>
-      {% endif %}
-    </div>
-    <div class="table-wrap">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Unit</th>
-            <th>Monthly Rent</th>
-            <th>Due Day</th>
-            <th>Start Date</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for l in leases %}
-            <tr>
-              <td>
-                <div class="cell-title">{{ l.unit.number }}</div>
-                <div class="cell-sub">Assigned unit</div>
-              </td>
-              <td>PHP {{ l.monthly_rent|floatformat:0|intcomma }}</td>
-              <td>{{ l.due_day }}</td>
-              <td>{{ l.start_date }}</td>
-              <td>
-                <span class="status-badge {% if l.is_active %}status-active{% else %}status-default{% endif %}">
-                  {% if l.is_active %}Active{% else %}Inactive{% endif %}
-                </span>
-              </td>
-              <td class="table-actions">
-                <a class="link" href="{% url 'admin_edit_lease' l.id %}">Edit</a>
-                <form method="post" action="{% url 'admin_delete_lease' l.id %}" class="confirm-action" data-confirm="Delete lease for unit {{ l.unit.number }}?">
-                  {% csrf_token %}
-                  <button class="link link-danger" type="submit">Delete</button>
-                </form>
-              </td>
-            </tr>
+            <!-- Info -->
+            <div class="mt-auto">
+              <h4 class="text-xs font-bold text-slate-900 line-clamp-1 mb-1">{{ attachment.filename }}</h4>
+              <div class="flex justify-between items-center text-[9px] font-medium text-slate-400">
+                <span>{{ attachment.get_file_size_display }}</span>
+                <span>{{ attachment.uploaded_at|date:"M d, Y" }}</span>
+              </div>
+            </div>
+          </div>
           {% empty %}
-            <tr><td colspan="6" class="empty-state">No leases found.</td></tr>
+          <div class="col-span-full py-12 text-center bg-slate-50/50 rounded-3xl border border-dashed border-slate-200">
+            <p class="text-sm text-slate-400 italic">No documents attached to this profile.</p>
+          </div>
           {% endfor %}
-        </tbody>
-      </table>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Right Sidebar Column -->
+    <div class="w-full lg:w-[320px] space-y-6">
+      <!-- Admin Summary -->
+      <div class="glass-panel p-6 border-none shadow-xl bg-slate-900 text-white relative overflow-hidden">
+        <h3 class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-6 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          Account Meta
+        </h3>
+        <div class="space-y-4 relative z-10">
+          <div>
+            <div class="text-[9px] font-bold text-slate-500 uppercase tracking-tighter mb-1">Joined System</div>
+            <div class="text-xs font-bold text-slate-100">{{ tenant.user.date_joined|date:"F d, Y" }}</div>
+          </div>
+          <div class="h-px bg-slate-800"></div>
+          <div>
+            <div class="text-[9px] font-bold text-slate-500 uppercase tracking-tighter mb-1">Last Updated</div>
+            <div class="text-xs font-bold text-slate-100">{{ tenant.updated_at|date:"M d, H:i" }}</div>
+          </div>
+          <div class="h-px bg-slate-800"></div>
+          <div>
+            <div class="text-[9px] font-bold text-slate-500 uppercase tracking-tighter mb-1">Role Type</div>
+            <div class="text-xs font-bold text-blue-400 uppercase tracking-widest">RESIDENT TENANT</div>
+          </div>
+        </div>
+        <!-- Decor Icon -->
+        <div class="absolute -right-6 -bottom-6 text-slate-800/30">
+          <svg class="w-24 h-24" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"></path></svg>
+        </div>
+      </div>
+
+      <!-- Quick Actions / Shortcuts -->
+      <div class="glass-panel p-6 border-none shadow-lg bg-white space-y-3">
+        <h3 class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Contextual Tools</h3>
+        <a href="{% url 'admin_billing' %}?q={{ tenant.user.email }}" class="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all group">
+          <span class="text-xs font-bold text-slate-600 group-hover:text-blue-600">Financial Ledger</span>
+          <svg class="w-4 h-4 text-slate-300 group-hover:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        </a>
+        <a href="{% url 'admin_maintenance' %}?q={{ tenant.user.email }}" class="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all group">
+          <span class="text-xs font-bold text-slate-600 group-hover:text-blue-600">Maintenance History</span>
+          <svg class="w-4 h-4 text-slate-300 group-hover:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        </a>
+        <a href="{% url 'admin_tenant_risk' %}?q={{ tenant.user.email }}" class="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all group">
+          <span class="text-xs font-bold text-slate-600 group-hover:text-blue-600">Risk Assessment</span>
+          <svg class="w-4 h-4 text-slate-300 group-hover:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        </a>
+      </div>
     </div>
   </div>
+</div>
 {% endblock %}

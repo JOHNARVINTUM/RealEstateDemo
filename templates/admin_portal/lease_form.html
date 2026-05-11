@@ -2,91 +2,34 @@
 {% load humanize %}
 {% load static %}
 
-{% block title %}{{ title|default:"Lease Form" }} - Admin Portal{% endblock %}
+{% block title %}{{ title|default:"Lease Creation Studio" }} | RealEstate360+{% endblock %}
 
 {% block extra_head %}
+<!-- Flatpickr -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
 <script>
-// Define functions immediately to ensure they're available for inline handlers
 function handleUnitSelection(selectElement) {
-    console.log('Unit selection changed - inline handler');
     const selectedOption = selectElement.options[selectElement.selectedIndex];
-    const monthlyRentInput = document.querySelector('input[name="monthly_rent"]') || document.getElementById('id_monthly_rent');
-    const securityDepositInput = document.querySelector('input[name="security_deposit"]') || document.getElementById('id_security_deposit');
+    const monthlyRentInput = document.getElementById('id_monthly_rent');
+    const securityDepositInput = document.getElementById('id_security_deposit');
     
     if (selectedOption && selectedOption.value && monthlyRentInput) {
         const optionText = selectedOption.textContent;
         const rentMatch = optionText.match(/PHP\s+([\d,]+\.?\d*)/);
-        console.log('Rent match result:', rentMatch);
         
         if (rentMatch) {
             const rent = rentMatch[1].replace(/,/g, '');
             monthlyRentInput.value = rent;
-            console.log(' Monthly rent set to:', rent);
-            
-            // Auto-populate security deposit if empty
             if (securityDepositInput && !securityDepositInput.value) {
                 securityDepositInput.value = rent;
-                console.log(' Security deposit set to:', rent);
             }
-            
-            // Update schedule preview
-            updateSchedulePreviewInline();
-            updateMoveInSummary();
+            // Trigger the preview update in the included template
+            const event = new Event('input', { bubbles: true });
+            monthlyRentInput.dispatchEvent(event);
         }
-    }
-}
-
-function updateSchedulePreviewInline() {
-    console.log('Updating schedule preview - inline handler');
-    const previewContainer = document.getElementById('lease-schedule-preview');
-    if (!previewContainer) {
-        console.log(' Preview container not found');
-        return;
-    }
-    
-    const monthlyRentInput = document.querySelector('input[name="monthly_rent"]') || document.getElementById('id_monthly_rent');
-    const advanceMonthsInput = document.querySelector('input[name="advance_months"]') || document.getElementById('id_advance_months');
-    const securityDepositInput = document.querySelector('input[name="security_deposit"]') || document.getElementById('id_security_deposit');
-    const startDateInput = document.querySelector('input[name="start_date"]') || document.getElementById('id_start_date');
-    
-    const monthlyRent = parseFloat(monthlyRentInput?.value || 0);
-    const advanceMonths = parseInt(advanceMonthsInput?.value || 2);
-    const securityDeposit = parseFloat(securityDepositInput?.value || monthlyRent);
-    const startDate = startDateInput?.value;
-    
-    console.log('Form values:', { monthlyRent, advanceMonths, securityDeposit, startDate });
-    
-    if (monthlyRent > 0 && startDate) {
-        previewContainer.style.display = 'block';
-        
-        const advancePaymentAmount = monthlyRent * advanceMonths;
-        const totalMoveInCost = securityDeposit + advancePaymentAmount;
-        
-        // Update preview elements
-        const elements = {
-            'monthly_rent': '₱' + monthlyRent.toLocaleString('en-PH', {minimumFractionDigits: 2}),
-            'advance_months': advanceMonths,
-            'advance_payment_amount': '₱' + advancePaymentAmount.toLocaleString('en-PH', {minimumFractionDigits: 2}),
-            'security_deposit': '₱' + securityDeposit.toLocaleString('en-PH', {minimumFractionDigits: 2}),
-            'total_move_in_cost': '₱' + totalMoveInCost.toLocaleString('en-PH', {minimumFractionDigits: 2})
-        };
-        
-        Object.keys(elements).forEach(key => {
-            const element = previewContainer.querySelector(`[data-preview="${key}"]`);
-            if (element) {
-                element.textContent = elements[key];
-                console.log(' Updated element:', key, elements[key]);
-            }
-        });
-        
-        // Update pluralization
-        const pluralElement = previewContainer.querySelector('[data-preview="advance_months_plural"]');
-        if (pluralElement) pluralElement.textContent = advanceMonths === 1 ? '' : 's';
-        
-        console.log(' Schedule preview updated successfully');
-    } else {
-        previewContainer.style.display = 'none';
-        console.log(' Preview hidden - missing required values');
     }
 }
 
@@ -94,607 +37,222 @@ function toggleMoveInPaymentMethod() {
     const selected = document.querySelector('input[name="move_in_payment_method"]:checked')?.value;
     const gcashSection = document.getElementById('gcash-movein-section');
     const cashSection = document.getElementById('cash-movein-section');
-    const refInput = document.getElementById('id_move_in_reference_code');
-    const cashRefInput = document.getElementById('id_move_in_reference_code_cash');
-
+    
     if (selected === 'GCASH') {
-        gcashSection.style.display = 'block';
-        cashSection.style.display = 'none';
-        // Sync: copy cash ref to main ref input if needed
-        if (cashRefInput && cashRefInput.value && refInput) {
-            refInput.value = cashRefInput.value;
-        }
+        gcashSection.classList.remove('hidden');
+        cashSection.classList.add('hidden');
     } else {
-        gcashSection.style.display = 'none';
-        cashSection.style.display = 'block';
+        gcashSection.classList.add('hidden');
+        cashSection.classList.remove('hidden');
     }
 }
-
-function updateMoveInSummary() {
-    const monthlyRent = parseFloat(document.getElementById('id_monthly_rent')?.value || 0);
-    const advanceMonths = parseInt(document.getElementById('id_advance_months')?.value || 2);
-    const securityDeposit = parseFloat(document.getElementById('id_security_deposit')?.value || monthlyRent);
-    const box = document.getElementById('movein-summary-box');
-
-    if (monthlyRent > 0) {
-        box.style.display = 'block';
-        const advanceAmt = monthlyRent * advanceMonths;
-        const total = securityDeposit + advanceAmt;
-        const fmt = (v) => '₱' + v.toLocaleString('en-PH', {minimumFractionDigits: 2});
-        document.getElementById('movein-security-display').textContent = fmt(securityDeposit);
-        document.getElementById('movein-advance-display').textContent = fmt(advanceAmt);
-        document.getElementById('movein-adv-months').textContent = advanceMonths;
-        document.getElementById('movein-total-display').textContent = fmt(total);
-    } else {
-        box.style.display = 'none';
-    }
-}
-
-console.log('Lease form functions defined in head section');
 </script>
 {% endblock %}
 
 {% block content %}
+<div class="dashboard-container px-2 sm:px-4 lg:px-6 py-4 sm:py-6 max-w-7xl mx-auto">
   <!-- Breadcrumb -->
-  {% if back_url %}
-  <nav class="breadcrumb" aria-label="Breadcrumb">
-    <a href="{{ back_url }}">Back</a>
-    <span class="breadcrumb-sep">»</span>
-    <span class="breadcrumb-current">{{ title|default:"Lease Form" }}</span>
+  <nav class="flex items-center gap-2 mb-8 text-xs font-bold uppercase tracking-widest text-slate-400">
+    <a href="{% url 'admin_tenants' %}" class="hover:text-blue-600 transition-colors">Tenants</a>
+    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path>
+    </svg>
+    <span class="text-slate-900">{{ title|default:"Lease Studio" }}</span>
   </nav>
-  {% endif %}
 
-  <div class="page-top">
-    <div class="page-header">
-      <h1>{{ title|default:"Lease Form" }}</h1>
-      <p class="muted">Create a lease agreement between tenant and unit.</p>
-    </div>
-  </div>
+  <div class="flex flex-col lg:flex-row gap-8 items-start">
+    <!-- Left Column: Form Studio -->
+    <div class="flex-1 space-y-6">
+      <header class="mb-8">
+        <h1 class="text-3xl font-display font-bold text-slate-900">{{ title|default:"Lease Creation Studio" }}</h1>
+        <p class="text-sm text-slate-500 mt-1 font-medium">Drafting a new agreement. All financial projections update in real-time.</p>
+      </header>
 
-  <div class="panel confirm-card">
-    <div class="section-head">
-      <div>
-        <h2 class="section-title">{{ title|default:"Lease Form" }}</h2>
-        <p class="section-copy">Complete the required fields carefully before saving changes.</p>
-      </div>
-    </div>
-    
-    <form method="post" id="lease-form">
-      {% csrf_token %}
-      <div class="panel-body">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Tenant -->
-          <div class="form-group">
-            <label for="{{ form.tenant.id_for_label }}" class="form-label">
-              {{ form.tenant.label }} <span class="text-red-500">*</span>
-            </label>
-            <select id="{{ form.tenant.id_for_label }}" name="{{ form.tenant.name }}" class="styled-input" required>
-              <option value="">Select Tenant</option>
-              {% for tenant in form.tenant.field.queryset %}
-                <option value="{{ tenant.pk }}" {% if form.tenant.value == tenant.pk|stringformat:"s" %}selected{% endif %}>
-                  {{ tenant.email }} - {{ tenant.tenantprofile.full_name|default:tenant.email }}
-                </option>
-              {% endfor %}
-            </select>
-            {% if form.tenant.errors %}
-              <div class="text-red-600 text-sm mt-1">
-                {{ form.tenant.errors.0 }}
-              </div>
-            {% endif %}
-            <small class="text-gray-500">Select the tenant for this lease</small>
-          </div>
-
-          <!-- Unit -->
-          <div class="form-group">
-            <label for="{{ form.unit.id_for_label }}" class="form-label">
-              {{ form.unit.label }} <span class="text-red-500">*</span>
-            </label>
-            <select id="{{ form.unit.id_for_label }}" name="{{ form.unit.name }}" class="styled-input" required onchange="handleUnitSelection(this)">
-              <option value="">Select Unit</option>
-              {% for unit in form.unit.field.queryset %}
-                <option value="{{ unit.pk }}" {% if form.unit.value == unit.pk|stringformat:"s" %}selected{% endif %}>
-                  Unit {{ unit.number }} - {{ unit.unit_type }} - PHP {{ unit.monthly_rent|floatformat:2|intcomma }}
-                </option>
-              {% endfor %}
-            </select>
-            {% if form.unit.errors %}
-              <div class="text-red-600 text-sm mt-1">
-                {{ form.unit.errors.0 }}
-              </div>
-            {% endif %}
-            <small class="text-gray-500">Select the unit for this lease (only available units shown, monthly rent will auto-populate)</small>
-          </div>
-
-          
-          <!-- Monthly Rent -->
-          <div class="form-group">
-            <label for="{{ form.monthly_rent.id_for_label }}" class="form-label">
-              {{ form.monthly_rent.label }} <span class="text-red-500">*</span>
-            </label>
-            <input type="number" id="{{ form.monthly_rent.id_for_label }}" name="{{ form.monthly_rent.name }}" 
-                   class="styled-input rent-input" step="0.01" min="0" 
-                   value="{{ form.monthly_rent.value|default:'' }}" placeholder="0.00" required
-                   oninput="updateSchedulePreviewInline(); updateMoveInSummary()">
-            {% if form.monthly_rent.errors %}
-              <div class="text-red-600 text-sm mt-1">
-                {{ form.monthly_rent.errors.0 }}
-              </div>
-            {% endif %}
-            <small class="text-gray-500">Monthly rent amount (will auto-populate from unit selection)</small>
-          </div>
-
-          <!-- Due Day -->
-          <div class="form-group">
-            <label for="{{ form.due_day.id_for_label }}" class="form-label">
-              {{ form.due_day.label }} <span class="text-red-500">*</span>
-            </label>
-            <input type="number" id="{{ form.due_day.id_for_label }}" name="{{ form.due_day.name }}" 
-                   class="styled-input" min="1" max="31" value="{{ form.due_day.value|default:5 }}" required>
-            {% if form.due_day.errors %}
-              <div class="text-red-600 text-sm mt-1">
-                {{ form.due_day.errors.0 }}
-              </div>
-            {% endif %}
-            <small class="text-gray-500">Day of month when rent is due (1-31)</small>
-          </div>
-        </div>
-
-        <!-- Payment Details Section -->
-        <div class="payment-section mt-6">
-          <h3 class="text-lg font-semibold text-gray-800 mb-4">
-            <i class="fas fa-money-bill-wave mr-2"></i>
-            Payment Details
+      <form method="post" id="lease-form" class="space-y-6">
+        {% csrf_token %}
+        
+        <!-- Section: Parties & Premises -->
+        <div class="glass-panel p-6 border-none shadow-xl bg-white">
+          <h3 class="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-6 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+            1. Parties & Premises
           </h3>
-          
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- Security Deposit -->
-            <div class="form-group">
-              <label for="{{ form.security_deposit.id_for_label }}" class="form-label">
-                {{ form.security_deposit.label }}
-              </label>
-              <input type="number" id="{{ form.security_deposit.id_for_label }}" name="{{ form.security_deposit.name }}" 
-                     class="styled-input" step="0.01" min="0" 
-                     value="{{ form.security_deposit.value|default:'' }}" placeholder="0.00"
-                     oninput="updateSchedulePreviewInline(); updateMoveInSummary()">
-              {% if form.security_deposit.errors %}
-                <div class="text-red-600 text-sm mt-1">
-                  {{ form.security_deposit.errors.0 }}
-                </div>
-              {% endif %}
-              <small class="text-gray-500">Security deposit amount (defaults to 1 month rent)</small>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-2">
+              <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tenant Account</label>
+              <select name="tenant" id="id_tenant" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none" required>
+                <option value="">Select Tenant</option>
+                {% for tenant in form.tenant.field.queryset %}
+                  <option value="{{ tenant.pk }}" {% if form.tenant.value == tenant.pk|stringformat:"s" %}selected{% endif %}>
+                    {{ tenant.email }} - {{ tenant.tenantprofile.full_name|default:tenant.email }}
+                  </option>
+                {% endfor %}
+              </select>
             </div>
-
-            <!-- Advance Months -->
-            <div class="form-group">
-              <label for="{{ form.advance_months.id_for_label }}" class="form-label">
-                {{ form.advance_months.label }}
-              </label>
-              <input type="number" id="{{ form.advance_months.id_for_label }}" name="{{ form.advance_months.name }}" 
-                     class="styled-input" min="0" max="12" 
-                     value="{{ form.advance_months.value|default:2 }}"
-                     oninput="updateSchedulePreviewInline(); updateMoveInSummary()">
-              {% if form.advance_months.errors %}
-                <div class="text-red-600 text-sm mt-1">
-                  {{ form.advance_months.errors.0 }}
-                </div>
-              {% endif %}
-              <small class="text-gray-500">Number of months for advance payment (default: 2)</small>
+            <div class="space-y-2">
+              <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Unit Assignment</label>
+              <select name="unit" id="id_unit" onchange="handleUnitSelection(this)" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none" required>
+                <option value="">Select Unit</option>
+                {% for unit in form.unit.field.queryset %}
+                  <option value="{{ unit.pk }}" {% if form.unit.value == unit.pk|stringformat:"s" %}selected{% endif %}>
+                    Unit {{ unit.number }} ({{ unit.unit_type }}) - PHP {{ unit.monthly_rent|floatformat:2|intcomma }}
+                  </option>
+                {% endfor %}
+              </select>
             </div>
           </div>
         </div>
 
-        <!-- Move-in Payment Collection Section -->
-        <div class="move-in-payment-section mt-6">
-          <h3 class="text-lg font-semibold text-gray-800 mb-4">
-            <i class="fas fa-hand-holding-usd mr-2"></i>
-            Move-in Payment Collection
+        <!-- Section: Financial Terms -->
+        <div class="glass-panel p-6 border-none shadow-xl bg-white">
+          <h3 class="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-6 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            2. Financial Terms
           </h3>
-
-          <!-- Move-in Cost Summary (auto-calculated by JS) -->
-          <div class="movein-summary-box" id="movein-summary-box" style="display:none;">
-            <div class="movein-summary-grid">
-              <div class="movein-row">
-                <span>Security Deposit:</span>
-                <strong id="movein-security-display">₱0.00</strong>
-              </div>
-              <div class="movein-row">
-                <span>Advance Rent (<span id="movein-adv-months">2</span> month/s):</span>
-                <strong id="movein-advance-display">₱0.00</strong>
-              </div>
-              <div class="movein-row movein-total-row">
-                <span>Total Move-in Payment:</span>
-                <strong id="movein-total-display">₱0.00</strong>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="space-y-2">
+              <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Monthly Rent</label>
+              <div class="relative">
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₱</span>
+                <input type="number" name="monthly_rent" id="id_monthly_rent" value="{{ form.monthly_rent.value|default:'' }}" class="w-full pl-8 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none" required>
               </div>
             </div>
-          </div>
-
-          <!-- Payment Method -->
-          <div class="form-group mt-4">
-            <label class="form-label">Payment Method <span class="text-red-500">*</span></label>
-            <div class="payment-method-options">
-              <label class="payment-method-option">
-                <input type="radio" name="move_in_payment_method" value="GCASH" checked onchange="toggleMoveInPaymentMethod()">
-                <span class="payment-method-label">
-                  <i class="fas fa-qrcode"></i> GCash QR
-                </span>
-              </label>
-              <label class="payment-method-option">
-                <input type="radio" name="move_in_payment_method" value="CASH" onchange="toggleMoveInPaymentMethod()">
-                <span class="payment-method-label">
-                  <i class="fas fa-money-bill-alt"></i> Cash
-                </span>
-              </label>
+            <div class="space-y-2">
+              <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Security Deposit</label>
+              <div class="relative">
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₱</span>
+                <input type="number" name="security_deposit" id="id_security_deposit" value="{{ form.security_deposit.value|default:'' }}" class="w-full pl-8 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none">
+              </div>
             </div>
-          </div>
-
-          <!-- GCash Section -->
-          <div id="gcash-movein-section" class="mt-4">
-            <div class="gcash-qr-box">
-              <p class="text-sm text-gray-600 mb-2">Show this QR code to the tenant for payment:</p>
-              <img src="/static/img/gcash_qr3.jpg" alt="GCash QR" class="gcash-qr-img">
-              <p class="text-sm text-gray-500 mt-2">GCash Name: <strong>{{ gcash_name }}</strong></p>
-              <p class="text-sm text-gray-500">GCash Number: <strong>{{ gcash_number }}</strong></p>
-            </div>
-            <div class="form-group mt-3">
-              <label for="id_move_in_reference_code" class="form-label">
-                GCash Reference Number <span class="text-red-500">*</span>
-              </label>
-              <input type="text" id="id_move_in_reference_code" name="move_in_reference_code" 
-                     class="styled-input" placeholder="Enter GCash reference number"
-                     value="{{ form.move_in_reference_code.value|default:'' }}">
-              {% if form.move_in_reference_code.errors %}
-                <div class="text-red-600 text-sm mt-1">
-                  {{ form.move_in_reference_code.errors.0 }}
-                </div>
-              {% endif %}
-            </div>
-          </div>
-
-          <!-- Cash Section -->
-          <div id="cash-movein-section" class="mt-4" style="display:none;">
-            <div class="cash-info-box">
-              <i class="fas fa-info-circle text-blue-500 mr-1"></i>
-              <span class="text-sm text-gray-600">Cash payment received from tenant. Enter a receipt note or leave blank.</span>
-            </div>
-            <div class="form-group mt-3">
-              <label for="id_move_in_reference_code_cash" class="form-label">
-                Receipt / Reference Note (optional)
-              </label>
-              <input type="text" id="id_move_in_reference_code_cash" class="styled-input" 
-                     placeholder="e.g. Official receipt #123">
+            <div class="space-y-2">
+              <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Advance Months</label>
+              <input type="number" name="advance_months" id="id_advance_months" value="{{ form.advance_months.value|default:2 }}" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none">
             </div>
           </div>
         </div>
 
-        <!-- Lease Dates Section -->
-        <div class="dates-section mt-6">
-          <h3 class="text-lg font-semibold text-gray-800 mb-4">
-            <i class="fas fa-calendar-alt mr-2"></i>
-            Lease Dates
+        <!-- Section: Timeline -->
+        <div class="glass-panel p-6 border-none shadow-xl bg-white">
+          <h3 class="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-6 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+            3. Timeline & Schedule
           </h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="space-y-2">
+              <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Start Date</label>
+              <input type="text" name="start_date" id="id_start_date" value="{{ form.start_date.value|default:'' }}" class="flatpickr w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none" required>
+            </div>
+            <div class="space-y-2">
+              <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">End Date (Optional)</label>
+              <input type="text" name="end_date" id="id_end_date" value="{{ form.end_date.value|default:'' }}" class="flatpickr w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none">
+            </div>
+            <div class="space-y-2">
+              <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Rent Due Day</label>
+              <input type="number" name="due_day" id="id_due_day" value="{{ form.due_day.value|default:5 }}" min="1" max="31" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none" required>
+            </div>
+          </div>
           
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- Start Date -->
-            <div class="form-group">
-              <label for="{{ form.start_date.id_for_label }}" class="form-label">
-                {{ form.start_date.label }} <span class="text-red-500">*</span>
-              </label>
-              <input type="text" id="{{ form.start_date.id_for_label }}" name="{{ form.start_date.name }}" 
-                     class="styled-input flatpickr" placeholder="Select start date" 
-                     value="{{ form.start_date.value|default:'' }}" required
-                     onchange="updateSchedulePreviewInline()">
-              {% if form.start_date.errors %}
-                <div class="text-red-600 text-sm mt-1">
-                  {{ form.start_date.errors.0 }}
+          <!-- Lease Status Toggle -->
+          <div class="mt-6 pt-6 border-t border-slate-100">
+            <label class="flex items-center gap-3 cursor-pointer group">
+              <div class="relative">
+                <input type="checkbox" name="is_active" id="id_is_active" {% if form.is_active.value %}checked{% endif %} class="peer hidden">
+                <div class="w-10 h-6 bg-slate-200 rounded-full peer-checked:bg-blue-600 transition-all"></div>
+                <div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full peer-checked:translate-x-4 transition-all"></div>
+              </div>
+              <div>
+                <span class="text-xs font-bold text-slate-900">Activate Lease Immediately</span>
+                <p class="text-[10px] text-slate-400 font-medium">Agreement will be marked as active upon creation.</p>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Section: Initial Settlement -->
+        <div class="glass-panel p-6 border-none shadow-xl bg-white">
+          <h3 class="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-6 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+            4. Move-in Payment Method
+          </h3>
+          <div class="space-y-6">
+            <div class="flex gap-4">
+              <label class="flex-1 cursor-pointer group">
+                <input type="radio" name="move_in_payment_method" value="GCASH" checked onchange="toggleMoveInPaymentMethod()" class="peer hidden">
+                <div class="p-4 rounded-2xl border-2 border-slate-100 bg-slate-50 peer-checked:border-blue-600 peer-checked:bg-blue-50 transition-all group-hover:bg-white text-center">
+                  <div class="text-[10px] font-black uppercase tracking-widest text-slate-400 peer-checked:text-blue-600">GCash Transfer</div>
                 </div>
-              {% endif %}
-              <small class="text-gray-500">Lease start date</small>
+              </label>
+              <label class="flex-1 cursor-pointer group">
+                <input type="radio" name="move_in_payment_method" value="CASH" onchange="toggleMoveInPaymentMethod()" class="peer hidden">
+                <div class="p-4 rounded-2xl border-2 border-slate-100 bg-slate-50 peer-checked:border-blue-600 peer-checked:bg-blue-50 transition-all group-hover:bg-white text-center">
+                  <div class="text-[10px] font-black uppercase tracking-widest text-slate-400 peer-checked:text-blue-600">Cash Settlement</div>
+                </div>
+              </label>
             </div>
 
-            <!-- End Date -->
-            <div class="form-group">
-              <label for="{{ form.end_date.id_for_label }}" class="form-label">
-                {{ form.end_date.label }}
-              </label>
-              <input type="text" id="{{ form.end_date.id_for_label }}" name="{{ form.end_date.name }}" 
-                     class="styled-input flatpickr" placeholder="Select end date (optional)" 
-                     value="{{ form.end_date.value|default:'' }}">
-              {% if form.end_date.errors %}
-                <div class="text-red-600 text-sm mt-1">
-                  {{ form.end_date.errors.0 }}
+            <!-- GCash Detail -->
+            <div id="gcash-movein-section" class="space-y-6">
+              <div class="bg-blue-50/50 p-6 rounded-3xl border border-blue-100 flex flex-col sm:flex-row items-center gap-6">
+                <div class="bg-white p-3 rounded-2xl shadow-sm shrink-0 border border-blue-100">
+                    <img src="/static/img/gcash_qr3.jpg" class="w-32 h-32 rounded-xl object-contain">
                 </div>
-              {% endif %}
-              <small class="text-gray-500">Lease end date (optional)</small>
+                <div class="space-y-2 text-center sm:text-left">
+                    <h4 class="text-sm font-bold text-slate-900">Scan to Settle Move-in</h4>
+                    <p class="text-xs text-slate-500 leading-relaxed">Please scan this QR code to transfer the total move-in cost. Once settled, enter the 13-digit reference number below.</p>
+                    <div class="flex flex-wrap justify-center sm:justify-start gap-4 pt-2">
+                        <div class="text-[10px] font-black uppercase tracking-widest text-blue-600">Name: {{ gcash_name|default:"ADMIN" }}</div>
+                        <div class="text-[10px] font-black uppercase tracking-widest text-blue-600">No: {{ gcash_number|default:"09XXXXXXXXX" }}</div>
+                    </div>
+                </div>
+              </div>
+              <div class="space-y-2">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">GCash Reference Number</label>
+                <input type="text" name="move_in_reference_code" id="id_move_in_reference_code" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none" placeholder="Enter transaction reference">
+              </div>
+            </div>
+
+            <!-- Cash Detail -->
+            <div id="cash-movein-section" class="hidden space-y-4">
+              <div class="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100 flex items-center gap-4">
+                <svg class="w-6 h-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <p class="text-xs font-medium text-slate-600">Cash payment collected manually. Record reference/receipt if any.</p>
+              </div>
+              <div class="space-y-2">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Receipt Note (Optional)</label>
+                <input type="text" id="id_move_in_reference_code_cash" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none" placeholder="e.g. Receipt #44512">
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Is Active -->
-        <div class="form-group mt-6">
-          <label for="{{ form.is_active.id_for_label }}" class="form-label">
-            {{ form.is_active.label }}
-          </label>
-          <input type="checkbox" id="{{ form.is_active.id_for_label }}" name="{{ form.is_active.name }}" 
-                 class="styled-checkbox" {% if form.is_active.value %}checked{% endif %}>
-          {% if form.is_active.errors %}
-            <div class="text-red-600 text-sm mt-1">
-              {{ form.is_active.errors.0 }}
-            </div>
-          {% endif %}
-          <small class="text-gray-500">Activate this lease immediately (will be set automatically based on start date)</small>
-        </div>
-      </div>
-      
-      <div class="panel-actions">
-        <button class="btn" type="submit">
-          <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-          </svg>
-          Create Lease
-        </button>
-        {% if back_url %}
-          <a class="link" href="{{ back_url }}">
-            <svg class="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-            </svg>
+        <div class="flex items-center gap-4 pt-4">
+          <button type="submit" class="flex-1 bg-slate-900 text-white py-4 rounded-2xl font-display font-bold text-sm hover:bg-slate-800 transition-all shadow-xl shadow-slate-200">
+            Finalize & Create Lease
+          </button>
+          <a href="{{ back_url }}" class="px-8 py-4 bg-white border border-slate-200 text-slate-500 rounded-2xl font-display font-bold text-sm hover:bg-slate-50 transition-all">
             Cancel
           </a>
-        {% endif %}
-      </div>
-    </form>
-    
-    <!-- Include Schedule Preview -->
-    {% include "admin_portal/lease_schedule_preview.html" %}
+        </div>
+      </form>
+    </div>
+
+    <!-- Right Column: Live Preview Card -->
+    <div class="w-full lg:w-[400px]">
+      {% include "admin_portal/lease_schedule_preview.html" %}
+    </div>
   </div>
-{% endblock %}
-
-<style>
-/* Form styling */
-.styled-input {
-  width: 100%;
-  min-height: 46px;
-  border: 2px solid #d1d5db;
-  border-radius: 0.5rem;
-  padding: 0.75rem;
-  background: #ffffff;
-  font-size: 0.875rem;
-  color: #1f2937;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  box-sizing: border-box;
-  display: block;
-}
-
-.styled-input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.styled-checkbox {
-  width: 20px;
-  height: 20px;
-  margin-right: 0.5rem;
-}
-
-/* Rent input styling */
-.rent-input-container {
-  position: relative;
-}
-
-.rent-input {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #059669;
-  background: #f9fafb;
-}
-
-.rent-input:focus {
-  background: #ffffff;
-  color: #059669;
-}
-
-.rent-input[readonly] {
-  cursor: not-allowed;
-  opacity: 0.8;
-}
-
-.rent-input::placeholder {
-  color: #6b7280;
-  font-style: italic;
-  font-weight: 400;
-}
-
-/* Form group styling */
-.form-group {
-  margin-bottom: 1.5rem;
-}
-
-.form-label {
-  display: block;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-  margin-bottom: 0.5rem;
-}
-
-/* Grid layout */
-.grid {
-  display: grid;
-}
-
-.grid-cols-1 {
-  grid-template-columns: repeat(1, minmax(0, 1fr));
-}
-
-.grid-cols-2 {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.gap-4 {
-  gap: 1rem;
-}
-
-.mt-4 {
-  margin-top: 1rem;
-}
-
-/* Error and helper text */
-.text-red-500 {
-  color: #ef4444;
-}
-
-.text-gray-500 {
-  color: #6b7280;
-  font-size: 0.75rem;
-  margin-top: 0.25rem;
-}
-
-.text-red-600 {
-  color: #dc2626;
-  font-size: 0.875rem;
-  margin-top: 0.25rem;
-}
-
-/* Override any conflicting styles */
-select, input[type="text"], input[type="date"], input[type="number"], input[type="checkbox"] {
-  width: 100% !important;
-  min-height: 46px !important;
-  border: 2px solid #d1d5db !important;
-  border-radius: 0.5rem !important;
-  padding: 0.75rem !important;
-  background: #ffffff !important;
-  font-size: 0.875rem !important;
-  color: #1f2937 !important;
-  box-sizing: border-box !important;
-  display: block !important;
-}
-
-select:focus, input[type="text"]:focus, input[type="date"]:focus, input[type="number"]:focus {
-  outline: none !important;
-  border-color: #3b82f6 !important;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
-}
-
-input[type="checkbox"] {
-  width: 20px !important;
-  min-height: 20px !important;
-  height: 20px !important;
-}
-
-/* Move-in Payment Section */
-.movein-summary-box {
-  background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
-  border: 1px solid #86efac;
-  border-radius: 0.75rem;
-  padding: 1rem 1.25rem;
-}
-
-.movein-summary-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.movein-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.9rem;
-  color: #374151;
-}
-
-.movein-total-row {
-  border-top: 2px solid #22c55e;
-  padding-top: 0.5rem;
-  margin-top: 0.25rem;
-  font-size: 1.05rem;
-  color: #15803d;
-}
-
-.payment-method-options {
-  display: flex;
-  gap: 1rem;
-}
-
-.payment-method-option {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
-  border: 2px solid #d1d5db;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
-}
-
-.payment-method-option:has(input:checked) {
-  border-color: #3b82f6;
-  background: #eff6ff;
-}
-
-.payment-method-option input[type="radio"] {
-  width: 18px !important;
-  min-height: 18px !important;
-  height: 18px !important;
-  padding: 0 !important;
-}
-
-.payment-method-label {
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-.gcash-qr-box {
-  text-align: center;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.75rem;
-  padding: 1rem;
-}
-
-.gcash-qr-img {
-  max-width: 180px !important;
-  margin: 0.5rem auto !important;
-  border-radius: 0.5rem !important;
-  border: 3px solid #e5e7eb !important;
-  padding: 0 !important;
-  height: auto !important;
-  min-height: auto !important;
-}
-
-.cash-info-box {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  border-radius: 0.5rem;
-  padding: 0.75rem 1rem;
-}
-</style>
-
-<!-- Add Flatpickr CSS for date picker -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+</div>
 
 <script>
-// Initialize date pickers only
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded - initializing date pickers');
-    
-    // Initialize date pickers
-    const dateInputs = document.querySelectorAll('.flatpickr');
-    dateInputs.forEach(input => {
-        if (window.flatpickr) {
-            flatpickr(input, {
-                dateFormat: 'Y-m-d',
-                minDate: 'today',
-                allowInput: true,
-                onChange: function(selectedDates, dateStr, instance) {
-                    console.log('Date changed:', dateStr);
-                    updateSchedulePreviewInline();
-                }
-            });
+    flatpickr(".flatpickr", {
+        dateFormat: "Y-m-d",
+        minDate: "today",
+        onChange: function(selectedDates, dateStr, instance) {
+            instance.element.dispatchEvent(new Event('input', { bubbles: true }));
         }
     });
-    
-    // Sync cash reference to main reference field on form submit
+
     const leaseForm = document.getElementById('lease-form');
     if (leaseForm) {
         leaseForm.addEventListener('submit', function() {
@@ -702,17 +260,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const refInput = document.getElementById('id_move_in_reference_code');
             const cashRefInput = document.getElementById('id_move_in_reference_code_cash');
             if (selected === 'CASH' && cashRefInput && refInput) {
-                refInput.value = cashRefInput.value || 'CASH-RECEIVED';
+                refInput.value = cashRefInput.value || 'CASH-SETTLEMENT';
             }
         });
     }
-
-    // Initial move-in summary update
-    if (typeof updateMoveInSummary === 'function') updateMoveInSummary();
-
-    console.log('Lease form initialization complete');
 });
 </script>
-
-<!-- Add Flatpickr JavaScript -->
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+{% endblock %}

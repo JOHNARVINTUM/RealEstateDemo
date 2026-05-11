@@ -1,48 +1,82 @@
 {% extends "admin_portal/base.html" %}
-{% block title %}{{ title|default:"Confirm" }}{% endblock %}
+{% load static %}
+
+{% block title %}{{ title|default:"Confirm Action" }} | RealEstate360+{% endblock %}
+
 {% block content %}
+<div class="min-h-[70vh] flex items-center justify-center p-4">
+    <div class="w-full max-w-md">
+        <!-- Breadcrumb (Floating/Centered) -->
+        {% if back_url %}
+        <nav class="flex items-center justify-center gap-2 mb-8 text-[10px] font-black uppercase tracking-widest text-slate-400">
+            <a href="{{ back_url }}" class="hover:text-blue-600 transition-colors">Previous</a>
+            <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg>
+            <span>Confirm</span>
+        </nav>
+        {% endif %}
 
-  {% if back_url %}
-  <nav class="breadcrumb" aria-label="Breadcrumb">
-    <a href="{{ back_url }}">Back</a>
-    <span class="breadcrumb-sep">›</span>
-    <span class="breadcrumb-current">{{ title|default:"Confirm" }}</span>
-  </nav>
-  {% endif %}
+        <div class="glass-panel p-0 border-none shadow-2xl bg-white overflow-hidden text-center">
+            <!-- Header: High Alert -->
+            <div class="p-8 bg-rose-50/50 flex flex-col items-center">
+                <div class="w-20 h-20 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 mb-6 animate-pulse-subtle">
+                    <svg class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-display font-bold text-slate-900">{{ title|default:"Confirm Action" }}</h2>
+                <p class="text-xs font-bold text-rose-500 uppercase tracking-widest mt-2">Critical Security Confirmation</p>
+            </div>
 
-  <div class="page-top">
-    <div class="page-header">
-      <h1>{{ title|default:"Confirm" }}</h1>
-      <p class="muted">Please review this action before continuing.</p>
-    </div>
-  </div>
+            <!-- Body: Message -->
+            <div class="p-8 space-y-6">
+                <div class="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                    <p class="text-sm text-slate-600 font-medium leading-relaxed">
+                        {{ message|default:"Are you sure you want to proceed? This action may permanently modify or remove records from the system." }}
+                    </p>
+                </div>
+                
+                <div class="text-[10px] text-slate-400 font-black uppercase tracking-tighter">
+                    Please verify before proceeding
+                </div>
 
-  <div class="panel confirm-card">
-    <div class="section-head">
-      <div style="display:flex;align-items:center;gap:0.75rem;">
-        <!-- Warning icon -->
-        <span style="display:flex;align-items:center;justify-content:center;width:2.2rem;height:2.2rem;border-radius:0.6rem;background:#fef3c7;">
-          <svg style="width:1.2rem;height:1.2rem;color:#b45309;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-        </span>
-        <div>
-          <h2 class="section-title">{{ title|default:"Confirm Action" }}</h2>
-          <p class="section-copy">This action may affect existing records. Review the note below before confirming.</p>
+                <!-- Actions -->
+                <div class="flex flex-col gap-3 pt-4">
+                    <form method="post" action="{{ post_url }}" class="w-full">
+                        {% csrf_token %}
+                        <button type="submit" class="w-full bg-rose-600 text-white py-4 rounded-2xl font-display font-bold text-sm hover:bg-rose-700 transition-all shadow-xl shadow-rose-200">
+                            Yes, Confirm Action
+                        </button>
+                    </form>
+                    {% if back_url %}
+                    <a href="{{ back_url }}" class="w-full py-4 bg-white border border-slate-200 text-slate-500 rounded-2xl font-display font-bold text-sm hover:bg-slate-50 transition-all text-center">
+                        No, Cancel & Return
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Footer: Traceability -->
+            <div class="px-8 py-4 bg-slate-50 border-t border-slate-100 flex justify-center gap-6">
+                <div class="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                    Secure Auth
+                </div>
+                <div class="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    {% now "H:i" %}
+                </div>
+            </div>
         </div>
-      </div>
     </div>
-    <div class="panel-body" style="margin-top:0.75rem;">
-      <p style="color:#334155;font-size:0.95rem;line-height:1.6;">{{ message }}</p>
-    </div>
-    <div class="panel-actions">
-      <form method="post" action="{{ post_url }}">
-        {% csrf_token %}
-        <button class="btn" style="background:linear-gradient(135deg,#b91c1c,#dc2626);" type="submit">Confirm</button>
-      </form>
-      {% if back_url %}
-        <a class="link" href="{{ back_url }}">Cancel</a>
-      {% endif %}
-    </div>
-  </div>
+</div>
+
+<style>
+@keyframes pulse-subtle {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.8; transform: scale(1.05); }
+}
+.animate-pulse-subtle {
+    animation: pulse-subtle 3s ease-in-out infinite;
+}
+</style>
 {% endblock %}

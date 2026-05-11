@@ -52,9 +52,9 @@
     </a>
 
     <a href="{% url 'admin_tenants' %}"
-       aria-current="{% if request.resolver_match.url_name in 'admin_tenants,admin_tenant_detail,admin_create_tenant_profile,admin_create_lease,admin_create_unit,admin_edit_tenant,admin_edit_lease' %}page{% endif %}"
+       aria-current="{% if request.resolver_match.url_name in 'admin_tenants,admin_tenant_detail,admin_create_tenant_profile,admin_create_lease,admin_edit_tenant,admin_edit_lease' %}page{% endif %}"
        class="nav-link flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 overflow-hidden
-              {% if request.resolver_match.url_name == 'admin_tenants' or request.resolver_match.url_name == 'admin_tenant_detail' or request.resolver_match.url_name == 'admin_create_tenant_profile' or request.resolver_match.url_name == 'admin_create_lease' or request.resolver_match.url_name == 'admin_create_unit' or request.resolver_match.url_name == 'admin_edit_tenant' or request.resolver_match.url_name == 'admin_edit_lease' %}
+              {% if request.resolver_match.url_name == 'admin_tenants' or request.resolver_match.url_name == 'admin_tenant_detail' or request.resolver_match.url_name == 'admin_create_tenant_profile' or request.resolver_match.url_name == 'admin_create_lease' or request.resolver_match.url_name == 'admin_edit_tenant' or request.resolver_match.url_name == 'admin_edit_lease' %}
                 bg-blue-600/20 border-l-4 border-blue-500 font-semibold text-white shadow-lg
               {% else %}
                 text-blue-100 hover:bg-blue-900/50 hover:text-white

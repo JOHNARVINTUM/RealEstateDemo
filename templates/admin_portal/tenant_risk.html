@@ -1,213 +1,307 @@
 {% extends "admin_portal/base.html" %}
 {% load humanize %}
-{% block title %}Tenant Risk Classification{% endblock %}
-{% block content %}
-  <div class="page-top">
-    <div class="page-header">
-      <h1>Tenant Risk Classification</h1>
-      <p class="muted">Payment behavior analysis and risk assessment</p>
-    </div>
-  </div>
+{% block title %}Tenant Risk Analysis | RealEstate360+{% endblock %}
 
-  <section class="hero-panel compact">
-    <h2 class="hero-title">Risk Assessment Dashboard</h2>
-    <p class="hero-copy">Monitor tenant payment patterns, identify potential risks, and make informed decisions about lease renewals and payment collections.</p>
+{% block content %}
+<div class="dashboard-container px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
+  <!-- Header Section -->
+  <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+    <div class="flex-1">
+      <h1 class="font-display text-3xl sm:text-4xl text-slate-900 leading-tight">Tenant Risk Analysis</h1>
+      <p class="text-sm text-slate-500 mt-1">Payment behavior analysis and risk assessment dashboard.</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <form method="post" action="{% url 'admin_update_tenant_risks' %}" class="confirm-action" data-confirm="Update all tenant risk classifications? This analysis uses real-time payment history and may take a few moments to complete.">
+        {% csrf_token %}
+        <button type="submit" class="group flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-95">
+          <svg class="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          Update Risk Scores
+        </button>
+      </form>
+    </div>
+  </header>
+
+  <!-- Stats Grid -->
+  <section class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+    <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
+      <div class="stat-icon slate w-10 h-10 bg-slate-50 rounded-lg flex items-center justify-center text-slate-600">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+        </svg>
+      </div>
+      <div>
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total</p>
+        <p class="text-xl font-display font-bold text-slate-900">{{ total_tenants }}</p>
+      </div>
+    </div>
+    <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
+      <div class="stat-icon green w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+      </div>
+      <div>
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Low Risk</p>
+        <p class="text-xl font-display font-bold text-slate-900">{{ low_risk_count }}</p>
+      </div>
+    </div>
+    <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3 border-l-4 border-l-amber-500">
+      <div class="stat-icon amber w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center text-amber-600">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+        </svg>
+      </div>
+      <div>
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Medium</p>
+        <p class="text-xl font-display font-bold text-slate-900">{{ medium_risk_count }}</p>
+      </div>
+    </div>
+    <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3 border-l-4 border-l-red-500">
+      <div class="stat-icon red w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center text-red-600">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+      </div>
+      <div>
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">High Risk</p>
+        <p class="text-xl font-display font-bold text-slate-900">{{ high_risk_count }}</p>
+      </div>
+    </div>
+    <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
+      <div class="stat-icon blue w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+        </svg>
+      </div>
+      <div>
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">New</p>
+        <p class="text-xl font-display font-bold text-slate-900">{{ new_tenant_count }}</p>
+      </div>
+    </div>
   </section>
 
-  <!-- Stats Bar -->
-  <div class="stats-bar">
-    <div class="stat-pill">
-      <span class="stat-pill-value">{{ total_tenants }}</span> Total Tenants
+  <!-- Filter Panel -->
+  <div class="glass-panel mb-8 p-4 border-none shadow-xl flex flex-col md:flex-row items-center gap-4">
+    <div class="relative flex-1 w-full">
+      <form method="get" class="relative">
+        <input type="text" name="q" value="{{ q }}" placeholder="Search tenant name or email..." 
+               class="w-full pl-10 pr-4 py-2.5 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none">
+        <div class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+        </div>
+        <input type="hidden" name="risk" value="{{ risk }}">
+      </form>
     </div>
-    <div class="stat-pill" style="border-color:#bbf7d0;background:#f0fdf4;">
-      <span class="stat-pill-value" style="color:#15803d;">{{ low_risk_count }}</span>
-      <span style="color:#15803d;">Low Risk</span>
-    </div>
-    <div class="stat-pill" style="border-color:#fde68a;background:#fffbeb;">
-      <span class="stat-pill-value" style="color:#b45309;">{{ medium_risk_count }}</span>
-      <span style="color:#b45309;">Medium Risk</span>
-    </div>
-    <div class="stat-pill" style="border-color:#fecaca;background:#fff1f2;">
-      <span class="stat-pill-value" style="color:#b91c1c;">{{ high_risk_count }}</span>
-      <span style="color:#b91c1c;">High Risk</span>
-    </div>
-    <div class="stat-pill" style="border-color:#dbeafe;background:#eff6ff;">
-      <span class="stat-pill-value" style="color:#1e40af;">{{ new_tenant_count }}</span>
-      <span style="color:#1e40af;">New Tenants</span>
+    <div class="flex items-center gap-2 w-full md:w-auto">
+      <form method="get" class="flex items-center gap-2 w-full md:w-auto">
+        <input type="hidden" name="q" value="{{ q }}">
+        <select name="risk" onchange="this.form.submit()" class="bg-white/50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none min-w-[140px]">
+          <option value="">All Risks</option>
+          <option value="LOW" {% if risk == "LOW" %}selected{% endif %}>Low Risk</option>
+          <option value="MEDIUM" {% if risk == "MEDIUM" %}selected{% endif %}>Medium</option>
+          <option value="HIGH" {% if risk == "HIGH" %}selected{% endif %}>High Risk</option>
+        </select>
+        <select name="sort" onchange="this.form.submit()" class="bg-white/50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none min-w-[140px]">
+          <option value="score_desc" {% if sort == "score_desc" %}selected{% endif %}>High Score First</option>
+          <option value="score_asc" {% if sort == "score_asc" %}selected{% endif %}>Low Score First</option>
+        </select>
+      </form>
+      {% if q or risk or sort != "score_desc" %}
+        <a href="{% url 'admin_tenant_risk' %}" class="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Clear Filters">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </a>
+      {% endif %}
     </div>
   </div>
 
-  <div class="filter-panel">
-    <div class="section-head">
-      <div>
-        <h2 class="section-title">Filters</h2>
-        <p class="section-copy">Filter tenants by risk level, name, or email address.</p>
-      </div>
-      <div class="section-actions">
-        <form method="post" action="{% url 'admin_update_tenant_risks' %}" style="display: inline;">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-primary" onclick="return confirm('Update all tenant risk classifications? This may take a moment.')">
-            Update Risk Scores
-          </button>
-        </form>
-      </div>
-    </div>
-    <form class="toolbar" method="get">
-      <input class="input" name="q" value="{{ q }}" placeholder="Search tenant name or email..." />
-      <select class="input" name="risk">
-        <option value="">All Risk Levels</option>
-        <option value="LOW" {% if risk == "LOW" %}selected{% endif %}>Low Risk</option>
-        <option value="MEDIUM" {% if risk == "MEDIUM" %}selected{% endif %}>Medium Risk</option>
-        <option value="HIGH" {% if risk == "HIGH" %}selected{% endif %}>High Risk</option>
-      </select>
-      <button class="btn" type="submit">Filter</button>
-      {% if q or risk %}<a class="link" href="{% url 'admin_tenant_risk' %}">Clear</a>{% endif %}
-    </form>
-  </div>
-
-  <div class="table-wrap">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Tenant</th>
-          <th>Risk Level</th>
-          <th>Payment Score</th>
-          <th>Late Payments</th>
-          <th>Unpaid Bills</th>
-          <th>Last Payment</th>
-          <th>Risk Factors</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for risk in page_obj %}
-          <tr>
-            <td>
-              <div class="cell-title">{{ risk.tenant.tenantprofile.full_name|default:risk.tenant.email }}</div>
-              <div class="cell-sub">{{ risk.tenant.email }}</div>
-            </td>
-            <td>
-              <div style="display: flex; flex-direction: column; gap: 4px;">
-                <span class="status-badge 
-                  {% if risk.risk_level == 'LOW' %}status-approved
-                  {% elif risk.risk_level == 'MEDIUM' %}status-pending
-                  {% else %}status-rejected{% endif %}">
-                  {{ risk.get_risk_level_display }}
-                </span>
-                {% if risk.is_new_tenant %}
-                  <span class="status-badge" style="background-color: #dbeafe; color: #1e40af; font-size: 0.75rem;">
-                    NEW TENANT
-                  </span>
-                {% endif %}
+  <!-- Main Table -->
+  <div class="glass-panel overflow-hidden border-none shadow-2xl">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-slate-50/50">
+            <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tenant</th>
+            <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Risk Level</th>
+            <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Score</th>
+            <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Issues</th>
+            <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Assessment Factors</th>
+            <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for r in page_obj %}
+          <tr class="hover:bg-slate-50/30 transition-colors duration-150">
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-[11px]">
+                  {{ r.tenant.email|first|upper }}
+                </div>
+                <div>
+                  <div class="font-bold text-slate-900 text-sm truncate max-w-[180px]">
+                    {{ r.tenant.tenantprofile.full_name|default:r.tenant.email }}
+                  </div>
+                  <div class="text-[10px] text-slate-500 truncate max-w-[180px]">{{ r.tenant.email }}</div>
+                </div>
               </div>
             </td>
-            <td>
-              <div class="cell-title">{{ risk.payment_score }}/100</div>
-              <div class="cell-sub">
-                {% if risk.payment_score >= 80 %}
-                  <span style="color: #15803d;">Excellent</span>
-                {% elif risk.payment_score >= 60 %}
-                  <span style="color: #b45309;">Good</span>
-                {% elif risk.payment_score >= 40 %}
-                  <span style="color: #ea580c;">Fair</span>
+            <td class="px-6 py-4 text-center">
+              <div class="flex flex-col items-center gap-1">
+                {% if r.risk_level == 'LOW' %}
+                  <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase tracking-tight">Low Risk</span>
+                {% elif r.risk_level == 'MEDIUM' %}
+                  <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-tight">Medium</span>
                 {% else %}
-                  <span style="color: #b91c1c;">Poor</span>
+                  <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-100 text-red-700 uppercase tracking-tight animate-pulse">High Risk</span>
+                {% endif %}
+                
+                {% if r.is_new_tenant %}
+                  <span class="text-[9px] font-black text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded tracking-widest uppercase">Initial</span>
                 {% endif %}
               </div>
             </td>
-            <td>{{ risk.late_payment_count }}</td>
-            <td>{{ risk.unpaid_bill_count }}</td>
-            <td>
-              {% if risk.last_payment_date %}
-                {{ risk.last_payment_date|date:"M d, Y" }}
+            <td class="px-6 py-4 text-center">
+              <div class="flex flex-col items-center">
+                <div class="relative w-12 h-6 bg-slate-100 rounded-full overflow-hidden">
+                  <div class="absolute inset-0 h-full transition-all duration-1000 
+                    {% if r.payment_score >= 80 %}bg-emerald-500
+                    {% elif r.payment_score >= 60 %}bg-amber-500
+                    {% elif r.payment_score >= 40 %}bg-orange-500
+                    {% else %}bg-red-500{% endif %}" 
+                    style="width: {{ r.payment_score }}%">
+                  </div>
+                </div>
+                <span class="text-[11px] font-black mt-1 
+                  {% if r.payment_score >= 80 %}text-emerald-700
+                  {% elif r.payment_score >= 60 %}text-amber-700
+                  {% elif r.payment_score >= 40 %}text-orange-700
+                  {% else %}text-red-700{% endif %}">
+                  {{ r.payment_score }}
+                </span>
+              </div>
+            </td>
+            <td class="px-6 py-4 text-center">
+              <div class="flex justify-center items-center gap-3">
+                <div class="text-center" title="Late Payments">
+                  <div class="text-[10px] font-bold {% if r.late_payment_count > 0 %}text-amber-600{% else %}text-slate-300{% endif %}">{{ r.late_payment_count }}</div>
+                  <div class="text-[8px] uppercase text-slate-400">Late</div>
+                </div>
+                <div class="w-px h-4 bg-slate-100"></div>
+                <div class="text-center" title="Unpaid Bills">
+                  <div class="text-[10px] font-bold {% if r.unpaid_bill_count > 0 %}text-red-600{% else %}text-slate-300{% endif %}">{{ r.unpaid_bill_count }}</div>
+                  <div class="text-[8px] uppercase text-slate-400">Unpaid</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-6 py-4">
+              {% if r.risk_factors %}
+                <div class="grid grid-cols-2 gap-x-4 gap-y-1">
+                  <div class="flex items-center justify-between text-[9px] font-medium text-slate-500">
+                    <span>Timeliness</span>
+                    <span class="font-bold text-slate-700">{{ r.risk_factors.payment_timeliness|default:0 }}</span>
+                  </div>
+                  <div class="flex items-center justify-between text-[9px] font-medium text-slate-500">
+                    <span>Consistency</span>
+                    <span class="font-bold text-slate-700">{{ r.risk_factors.payment_consistency|default:0 }}</span>
+                  </div>
+                  <div class="flex items-center justify-between text-[9px] font-medium text-slate-500">
+                    <span>Status</span>
+                    <span class="font-bold text-slate-700">{{ r.risk_factors.current_payment_status|default:0 }}</span>
+                  </div>
+                  <div class="flex items-center justify-between text-[9px] font-medium text-slate-500">
+                    <span>Recency</span>
+                    <span class="font-bold text-slate-700">{% if r.last_payment_date %}Active{% else %}None{% endif %}</span>
+                  </div>
+                </div>
               {% else %}
-                <span class="muted">No payments</span>
+                <span class="text-[10px] text-slate-300 italic">No factors calculated</span>
               {% endif %}
             </td>
-            <td>
-              <div class="risk-factors">
-                {% if risk.risk_factors %}
-                  <div class="factor-item">
-                    <small>Timeliness: {{ risk.risk_factors.payment_timeliness|default:0 }}/100</small>
-                  </div>
-                  <div class="factor-item">
-                    <small>Consistency: {{ risk.risk_factors.payment_consistency|default:0 }}/100</small>
-                  </div>
-                  <div class="factor-item">
-                    <small>Current Status: {{ risk.risk_factors.current_payment_status|default:0 }}/100</small>
-                  </div>
-                {% else %}
-                  <span class="muted">Not calculated</span>
-                {% endif %}
-              </div>
-            </td>
-            <td class="table-actions">
-              <a class="link" href="{% url 'admin_tenant_detail' risk.tenant.id %}">View Details</a>
+            <td class="px-6 py-4 text-right">
+              <a href="{% url 'admin_tenant_detail' r.tenant.id %}" 
+                 class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-blue-50 hover:text-blue-600 transition-all border border-slate-100">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                </svg>
+                View Details
+              </a>
             </td>
           </tr>
-        {% empty %}
-          <tr><td colspan="8" class="empty-state">No tenant risk classifications found.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Pagination -->
-  {% if page_obj.has_other_pages %}
-    <div class="pagination">
-      {% if page_obj.has_previous %}
-        <a href="?page=1{% if q %}&q={{ q }}{% endif %}{% if risk %}&risk={{ risk }}{% endif %}" class="pagination-link">First</a>
-        <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if risk %}&risk={{ risk }}{% endif %}" class="pagination-link">Previous</a>
-      {% endif %}
-      
-      <span class="pagination-info">
-        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-      </span>
-      
-      {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if risk %}&risk={{ risk }}{% endif %}" class="pagination-link">Next</a>
-        <a href="?page={{ page_obj.paginator.num_pages }}{% if q %}&q={{ q }}{% endif %}{% if risk %}&risk={{ risk }}{% endif %}" class="pagination-link">Last</a>
-      {% endif %}
+          {% empty %}
+          <tr>
+            <td colspan="6" class="py-24 text-center">
+              <div class="flex flex-col items-center">
+                <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-200 mb-4">
+                  <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                </div>
+                <h3 class="text-sm font-bold text-slate-800">No assessments found</h3>
+                <p class="text-xs text-slate-500 mt-1">Try adjusting your filters or update risk scores.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-  {% endif %}
 
-  <style>
-    .risk-factors {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-    
-    .factor-item {
-      font-size: 0.75rem;
-      color: #6b7280;
-    }
-    
-    .pagination {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 1rem;
-      margin-top: 1rem;
-      padding: 1rem;
-    }
-    
-    .pagination-link {
-      padding: 0.5rem 1rem;
-      border: 1px solid #d1d5db;
-      border-radius: 0.375rem;
-      text-decoration: none;
-      color: #374151;
-      background: white;
-    }
-    
-    .pagination-link:hover {
-      background: #f9fafb;
-    }
-    
-    .pagination-info {
-      color: #6b7280;
-      font-size: 0.875rem;
-    }
-  </style>
+    <!-- Pagination Controls -->
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
+      <div class="text-xs text-slate-500">
+        Showing <span class="font-bold text-slate-700">{{ page_obj.start_index }}</span> to <span class="font-bold text-slate-700">{{ page_obj.end_index }}</span> of <span class="font-bold text-slate-700">{{ page_obj.paginator.count }}</span> tenants
+      </div>
+      <div class="flex items-center gap-1">
+        {% if page_obj.has_previous %}
+          <a href="?page=1&q={{ q }}&risk={{ risk }}&sort={{ sort }}" 
+             class="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200" title="First Page">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+            </svg>
+          </a>
+          <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&risk={{ risk }}&sort={{ sort }}" 
+             class="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200" title="Previous Page">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+          </a>
+        {% endif %}
+
+        <div class="flex items-center gap-1 px-2">
+          {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+              <span class="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-600 text-white text-xs font-bold shadow-lg shadow-blue-500/30">{{ num }}</span>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+              <a href="?page={{ num }}&q={{ q }}&risk={{ risk }}&sort={{ sort }}" 
+                 class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:bg-white hover:text-blue-600 transition-all text-xs font-bold border border-transparent hover:border-slate-200">{{ num }}</a>
+            {% endif %}
+          {% endfor %}
+        </div>
+
+        {% if page_obj.has_next %}
+          <a href="?page={{ page_obj.next_page_number }}&q={{ q }}&risk={{ risk }}&sort={{ sort }}" 
+             class="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200" title="Next Page">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </a>
+          <a href="?page={{ page_obj.paginator.num_pages }}&q={{ q }}&risk={{ risk }}&sort={{ sort }}" 
+             class="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200" title="Last Page">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
+            </svg>
+          </a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
 {% endblock %}

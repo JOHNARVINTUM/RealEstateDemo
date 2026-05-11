@@ -187,9 +187,9 @@ def admin_dashboard(request):
 def admin_tenants(request):
     q = request.GET.get("q", "").strip()
 
-    tenants = TenantProfile.objects.select_related("user")
+    tenants_list = TenantProfile.objects.select_related("user")
     if q:
-        tenants = tenants.filter(
+        tenants_list = tenants_list.filter(
             Q(first_name__icontains=q) |
             Q(last_name__icontains=q) |
             Q(contact_no__icontains=q) |
@@ -197,13 +197,33 @@ def admin_tenants(request):
             Q(user__username__icontains=q)
         )
 
-    tenants = tenants.order_by("first_name", "last_name")[:500]
+    tenants_list = tenants_list.order_by("first_name", "last_name")
+    
+    paginator = Paginator(tenants_list, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
 
-    # Add has_records flag to each tenant for template
-    for tenant in tenants:
+    # Add has_records flag to each tenant in current page
+    for tenant in page_obj:
         tenant.has_records = tenant_has_records(tenant)
 
-    return render(request, "admin_portal/tenants.html", {"tenants": tenants, "q": q})
+    # Calculate stats for the header
+    total_tenants_count = TenantProfile.objects.count()
+    active_tenants_count = Lease.objects.filter(is_active=True).values("tenant").distinct().count()
+    
+    today = timezone.now()
+    new_tenants_count = TenantProfile.objects.filter(
+        user__date_joined__year=today.year, 
+        user__date_joined__month=today.month
+    ).count()
+
+    return render(request, "admin_portal/tenants.html", {
+        "page_obj": page_obj, 
+        "q": q,
+        "total_tenants_count": total_tenants_count,
+        "active_tenants_count": active_tenants_count,
+        "new_tenants_count": new_tenants_count,
+    })
 
 
 @admin_required
@@ -246,10 +266,13 @@ def admin_create_tenant_profile(request):
             logger.exception("Failed to create tenant profile: %s", e)
             messages.error(request, f"Error creating tenant: {str(e)}")
 
-    return render(request, "admin_portal/form.html", {
+    recent_tenants = TenantProfile.objects.all().order_by('-id')[:5]
+    
+    return render(request, "admin_portal/tenant_form.html", {
         "title": "Add Tenant",
         "form": form,
         "back_url": reverse("admin_tenants"),
+        "recent_tenants": recent_tenants,
         "help_text": "Password will be automatically generated based on the tenant's name and sent via email."
     })
 
@@ -274,20 +297,27 @@ def admin_units(request):
             Q(description__icontains=search_query)
         )
     
-    # Get statistics
-    total_units = units.count()
-    available_units = units.filter(status='AVAILABLE').count()
-    occupied_units = units.filter(status='OCCUPIED').count()
-    maintenance_units = units.filter(status='MAINTENANCE').count()
+    from django.core.paginator import Paginator
+    
+    # Get statistics (before pagination)
+    total_units_count = units.count()
+    available_units_count = units.filter(status='AVAILABLE').count()
+    occupied_units_count = units.filter(status='OCCUPIED').count()
+    maintenance_units_count = units.filter(status='MAINTENANCE').count()
+
+    # Pagination (9 per page for a perfect 3-column grid)
+    paginator = Paginator(units, 9)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
     
     return render(request, "admin_portal/units.html", {
-        'units': units,
+        'page_obj': page_obj,
         'status_filter': status_filter,
         'search_query': search_query,
-        'total_units': total_units,
-        'available_units': available_units,
-        'occupied_units': occupied_units,
-        'maintenance_units': maintenance_units,
+        'total_units': total_units_count,
+        'available_units': available_units_count,
+        'occupied_units': occupied_units_count,
+        'maintenance_units': maintenance_units_count,
     })
 
 
@@ -850,9 +880,10 @@ def admin_update_maintenance(request, req_id: int):
     else:
         form = AdminMaintenanceUpdateForm(instance=req)
 
-    return render(request, "admin_portal/form.html", {
-        "title": "Update Maintenance",
+    return render(request, "admin_portal/maintenance_update.html", {
+        "title": "Resolve Maintenance Issue",
         "form": form,
+        "req": req,
         "back_url": reverse("admin_maintenance"),
     })
 
@@ -864,9 +895,12 @@ def admin_edit_announcement(request, ann_id: int):
     if request.method == "POST" and form.is_valid():
         form.save(uploaded_by=request.user)
         return redirect("admin_announcements")
-    return render(request, "admin_portal/form.html", {
+    recent_items = Announcement.objects.all().order_by("-created_at")[:3]
+    return render(request, "admin_portal/announcement_form.html", {
         "title": "Edit Announcement",
         "form": form,
+        "ann": ann,
+        "recent_items": recent_items,
         "back_url": reverse("admin_announcements"),
     })
 
@@ -1036,8 +1070,10 @@ def admin_billing(request):
         # Upcoming tab — no status sub-filter needed
         display_bills = upcoming_bills
 
-    # Cap display at 500 rows
-    display_bills = display_bills[:500]
+    # Paginate results (10 items per page)
+    paginator = Paginator(display_bills, 10)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
 
     current_year = timezone.now().year
     month_choices = [
@@ -1048,7 +1084,7 @@ def admin_billing(request):
     year_choices = list(range(current_year - 3, current_year + 2))
 
     return render(request, "admin_portal/billing.html", {
-        "display_bills": display_bills,
+        "page_obj": page_obj,
         "active_tab": active_tab,
         "q": q,
         "status_filter": status_filter,
@@ -1122,8 +1158,13 @@ def admin_payments(request):
         approved_count = all_payments.filter(status="APPROVED").count()
         rejected_count = all_payments.filter(status="REJECTED").count()
     
+    # Paginate results (10 items per page)
+    paginator = Paginator(payments, 10)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+    
     return render(request, "admin_portal/payments.html", {
-        "payments": payments, 
+        "page_obj": page_obj, 
         "q": q, 
         "status": status,
         "pending_count": pending_count,
@@ -1165,9 +1206,16 @@ def admin_tenant_risk(request):
             Q(tenant__email__icontains=q) |
             Q(tenant__tenantprofile__full_name__icontains=q)
         )
+
+    # Sorting
+    sort = request.GET.get("sort", "score_desc").strip()
+    if sort == "score_asc":
+        risk_classifications = risk_classifications.order_by("payment_score")
+    else:
+        risk_classifications = risk_classifications.order_by("-payment_score")
     
     # Pagination
-    paginator = Paginator(risk_classifications, 20)
+    paginator = Paginator(risk_classifications, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
@@ -1182,6 +1230,7 @@ def admin_tenant_risk(request):
         'page_obj': page_obj,
         'q': q,
         'risk': risk_filter,
+        'sort': sort,
         'total_tenants': total_tenants,
         'low_risk_count': low_risk_count,
         'medium_risk_count': medium_risk_count,
@@ -1222,8 +1271,36 @@ def admin_maintenance(request):
             Q(description__icontains=q)
         )
 
-    reqs = reqs.order_by("-created_at")[:500]
-    return render(request, "admin_portal/maintenance.html", {"reqs": reqs, "q": q, "status": status})
+    reqs = reqs.order_by("-created_at")
+
+    # Calculate statistics
+    all_reqs = MaintenanceRequest.objects.all()
+    if q:
+        all_reqs = all_reqs.filter(
+            Q(lease__tenant__email__icontains=q) |
+            Q(lease__unit__number__icontains=q) |
+            Q(description__icontains=q)
+        )
+    
+    total_count = all_reqs.count()
+    pending_count = all_reqs.filter(status="PENDING").count()
+    in_progress_count = all_reqs.filter(status="IN_PROGRESS").count()
+    resolved_count = all_reqs.filter(status="RESOLVED").count()
+
+    # Pagination (10 items per page)
+    paginator = Paginator(reqs, 10)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, "admin_portal/maintenance.html", {
+        "page_obj": page_obj, 
+        "q": q, 
+        "status": status,
+        "total_count": total_count,
+        "pending_count": pending_count,
+        "in_progress_count": in_progress_count,
+        "resolved_count": resolved_count
+    })
 
 
 @admin_required
@@ -1235,8 +1312,26 @@ def admin_announcements(request):
     if q:
         items = items.filter(Q(title__icontains=q) | Q(body__icontains=q))
 
-    items = items.order_by("-created_at")[:200]
-    return render(request, "admin_portal/announcements.html", {"items": items, "q": q})
+    items = items.order_by("-created_at")
+    
+    # Calculate statistics
+    total_count = Announcement.objects.count()
+    active_count = Announcement.objects.filter(is_active=True).count()
+    
+    from django.utils import timezone
+    now = timezone.now()
+    this_month_count = Announcement.objects.filter(
+        created_at__year=now.year, 
+        created_at__month=now.month
+    ).count()
+
+    return render(request, "admin_portal/announcements.html", {
+        "items": items, 
+        "q": q,
+        "total_count": total_count,
+        "active_count": active_count,
+        "this_month_count": this_month_count
+    })
 
 
 @admin_required
@@ -1247,9 +1342,11 @@ def admin_create_announcement(request):
         form.save(user=request.user)  # uses your custom save(user=...)
         return redirect("admin_announcements")
 
-    return render(request, "admin_portal/form.html", {
-        "title": "Add Announcement",
+    recent_items = Announcement.objects.all().order_by("-created_at")[:3]
+    return render(request, "admin_portal/announcement_form.html", {
+        "title": "Create Announcement",
         "form": form,
+        "recent_items": recent_items,
         "back_url": reverse("admin_announcements"),
     })
 

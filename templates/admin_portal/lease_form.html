@@ -207,7 +207,7 @@ function toggleMoveInPaymentMethod() {
               </div>
               <div class="space-y-2">
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">GCash Reference Number</label>
-                <input type="text" name="move_in_reference_code" id="id_move_in_reference_code" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none" placeholder="Enter transaction reference">
+                <input type="text" name="move_in_reference_code" id="id_move_in_reference_code" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none" placeholder="e.g. REF-1023456789012">
               </div>
             </div>
 
@@ -219,7 +219,7 @@ function toggleMoveInPaymentMethod() {
               </div>
               <div class="space-y-2">
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Receipt Note (Optional)</label>
-                <input type="text" id="id_move_in_reference_code_cash" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none" placeholder="e.g. Receipt #44512">
+                <input type="text" id="id_move_in_reference_code_cash" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none" placeholder="e.g. REF-RECEIPT-44512">
               </div>
             </div>
           </div>
@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const refInput = document.getElementById('id_move_in_reference_code');
             const cashRefInput = document.getElementById('id_move_in_reference_code_cash');
             if (selected === 'CASH' && cashRefInput && refInput) {
-                refInput.value = cashRefInput.value || 'CASH-SETTLEMENT';
+                refInput.value = cashRefInput.value || 'REF-CASH-SETTLEMENT';
             }
         });
     }

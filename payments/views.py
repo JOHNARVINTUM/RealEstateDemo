@@ -116,7 +116,7 @@ def f2f_cash_payment(request):
         # Create F2F payment request
         payment = ManualPayment.objects.create(
             user=request.user,
-            reference_code="F2F-" + datetime.now().strftime("%Y%m%d-%H%M%S"),
+            reference_code="REF-F2F-" + datetime.now().strftime("%Y%m%d-%H%M%S"),
             bill_ids=bill_ids,
             payment_type=payment_type,
             payment_method="CASH",

@@ -2,7 +2,7 @@ from datetime import date, datetime, timedelta, timezone
 import logging
 
 from django.conf import settings
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, F, ExpressionWrapper, DecimalField
 from django.db import transaction
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -103,11 +103,21 @@ def admin_dashboard(request):
     vacant_units = Unit.objects.filter(is_active=True).count() - occupied_units
 
     today = timezone.now().date()
-    # Count revenue by when bills were actually paid (paid_at), not by their billing month.
-    # This ensures advance payments approved now are included in this month's revenue.
+    # Monthly revenue includes rent, water, and interest for the current billing month.
     total_revenue = (
-        MonthlyBill.objects.filter(status="PAID", paid_at__year=today.year, paid_at__month=today.month)
-        .aggregate(total=Sum("total_due"))["total"] or 0
+        MonthlyBill.objects.filter(billing_month__year=today.year, billing_month__month=today.month)
+        .aggregate(
+            total=Sum(
+                ExpressionWrapper(F("base_rent") + F("water_amount") + F("interest"),
+                output_field=DecimalField()
+                )
+            )
+        )["total"] or 0
+    )
+    # Monthly collected is ALL cash received this month.
+    monthly_collected = (
+        ManualPayment.objects.filter(status="APPROVED", created_at__year=today.year, created_at__month=today.month)
+        .aggregate(total=Sum("amount"))["total"] or 0
     )
     overdue_payments = MonthlyBill.objects.filter(status="UNPAID", due_date__lt=today).count()
 
@@ -137,13 +147,18 @@ def admin_dashboard(request):
             
             month_date = datetime(month_year, month_month, 1).date()
         
-        # Get paid bills for this month (actual revenue)
+        # Get monthly revenue (rent + water + interest) for this billing month
         actual_revenue = (
             MonthlyBill.objects.filter(
-                status="PAID",
-                paid_at__year=month_date.year,
-                paid_at__month=month_date.month
-            ).aggregate(total=Sum("total_due"))["total"] or 0
+                billing_month__year=month_date.year,
+                billing_month__month=month_date.month
+            ).aggregate(
+                total=Sum(
+                    ExpressionWrapper(F("base_rent") + F("water_amount") + F("interest"),
+                    output_field=DecimalField()
+                    )
+                )
+            )["total"] or 0
         )
         
         # Get expected revenue from active leases
@@ -173,7 +188,9 @@ def admin_dashboard(request):
         "total_tenants": total_tenants,
         "occupied_units": occupied_units,
         "vacant_units": max(vacant_units, 0),
+        "available_units": max(vacant_units, 0),
         "total_revenue": total_revenue,
+        "monthly_collected": monthly_collected,
         "overdue_payments": overdue_payments,
         "notifications": notifications,
         "unread_notifications": unread_notifications,
@@ -572,7 +589,7 @@ Welcome aboard! We're excited to have you as part of our community!"""
                     move_in_method = form.cleaned_data.get('move_in_payment_method', 'GCASH')
                     move_in_ref = form.cleaned_data.get('move_in_reference_code', '').strip()
                     if move_in_method == 'CASH' and not move_in_ref:
-                        move_in_ref = f'CASH-MOVEIN-{lease.id}'
+                        move_in_ref = f'REF-CASH-MOVEIN-{lease.id}'
                     ManualPayment.objects.create(
                         user=lease.tenant,
                         payment_type='move_in',

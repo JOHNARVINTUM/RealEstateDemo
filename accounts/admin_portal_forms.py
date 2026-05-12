@@ -486,7 +486,7 @@ class LeaseForm(forms.ModelForm):
         max_length=80,
         required=False,
         label="Reference / Receipt No.",
-        widget=forms.TextInput(attrs={"placeholder": "e.g. GCash ref number or receipt note"}),
+        widget=forms.TextInput(attrs={"placeholder": "e.g. REF-1023456789012"}),
     )
     
     class Meta:

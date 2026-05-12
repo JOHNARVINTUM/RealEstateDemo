@@ -60,23 +60,23 @@
       </div>
     </div>
 
-    <!-- Vacant Units -->
+    <!-- Available Units -->
     <div class="stat-card">
-      <div class="stat-icon orange">
+      <div class="stat-icon purple">
         <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2">
+            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
           </path>
         </svg>
       </div>
       <div class="stat-info">
-        <span class="stat-label">Vacant</span>
-        <span class="stat-value">{{ vacant_units|intcomma }}</span>
-        <span class="stat-trend down">Ready</span>
+        <span class="stat-label">Available Units</span>
+        <span class="stat-value">{{ available_units|intcomma }}</span>
+        <span class="stat-trend up">Ready</span>
       </div>
     </div>
 
-    <!-- Total Revenue -->
+    <!-- Monthly Revenue -->
     <div class="stat-card">
       <div class="stat-icon red">
         <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -86,9 +86,25 @@
         </svg>
       </div>
       <div class="stat-info">
-        <span class="stat-label">Revenue</span>
+        <span class="stat-label">Monthly Revenue</span>
         <span class="stat-value">₱{{ total_revenue|floatformat:0|intcomma }}</span>
-        <span class="stat-trend up">Monthly</span>
+        <span class="stat-trend up">Earned</span>
+      </div>
+    </div>
+
+    <!-- Monthly Collected -->
+    <div class="stat-card">
+      <div class="stat-icon orange">
+        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z">
+          </path>
+        </svg>
+      </div>
+      <div class="stat-info">
+        <span class="stat-label">Monthly Collected</span>
+        <span class="stat-value">₱{{ monthly_collected|floatformat:0|intcomma }}</span>
+        <span class="stat-trend up">Rent/Water</span>
       </div>
     </div>
   </section>
@@ -102,7 +118,7 @@
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div>
             <h2 class="text-xl font-bold text-slate-800 font-sans tracking-tight">Revenue Performance</h2>
-            <p class="text-sm text-slate-500">Actual vs Expected Income</p>
+            <p class="text-sm text-slate-500">Billed revenue vs expected rent</p>
           </div>
           <select id="monthFilter"
             class="w-full sm:w-auto bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2">
@@ -197,6 +213,13 @@
     <h3 class="text-lg font-bold text-slate-800 mb-4 font-sans tracking-tight">Quick Insights</h3>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       <div class="bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+        <span class="text-xs font-bold text-slate-400 uppercase">Vacant Units</span>
+        <div class="flex items-center gap-3 mt-2">
+          <span class="text-2xl font-bold text-orange-600 font-sans">{{ vacant_units }}</span>
+          <span class="text-[10px] text-slate-500">Ready units</span>
+        </div>
+      </div>
+      <div class="bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
         <span class="text-xs font-bold text-slate-400 uppercase">Overdue Payments</span>
         <div class="flex items-center gap-3 mt-2">
           <span class="text-2xl font-bold text-red-600 font-sans">{{ overdue_payments }}</span>
@@ -249,7 +272,7 @@
       const chartData = {
         labels: filteredLabels,
         datasets: [{
-          label: 'Actual Income',
+          label: 'Billed Revenue',
           data: filteredData.map(item => item.actual),
           borderColor: '#3b82f6',
           backgroundColor: 'rgba(59, 130, 246, 0.1)',

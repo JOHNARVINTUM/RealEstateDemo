@@ -1,6 +1,16 @@
 from django.db import models
 from django.conf import settings
 
+
+def normalize_reference_code(value):
+    value = (value or "").strip()
+    if not value:
+        return ""
+    if value.upper().startswith("REF-"):
+        return value
+    return f"REF-{value}"
+
+
 class ManualPayment(models.Model):
     STATUS_CHOICES = [
         ("PENDING", "PENDING"),
@@ -44,6 +54,10 @@ class ManualPayment(models.Model):
 
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="PENDING")
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        self.reference_code = normalize_reference_code(self.reference_code)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.user.email} - {self.payment_method} - ₱{self.amount} ({self.status})"

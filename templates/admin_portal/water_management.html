@@ -7,8 +7,8 @@
   <!-- Header Section -->
   <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
     <div class="flex-1">
-      <h1 class="font-display text-3xl sm:text-4xl text-slate-900 leading-tight">Water Management</h1>
-      <p class="text-sm text-slate-500 mt-1">Track usage, manage rates, and process bulk meter readings.</p>
+      <h1 class="font-sans font-bold tracking-tight text-3xl sm:text-4xl text-slate-900 leading-tight">Water Management</h1>
+      <p class="text-sm text-slate-500 mt-1">Monitor property utility consumption, update base cubic meter rates, and process recurring sub-meter logs.</p>
     </div>
   </header>
 
@@ -22,7 +22,7 @@
       </div>
       <div>
         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Units</p>
-        <p class="text-xl font-display font-bold text-slate-900">{{ total_units }}</p>
+        <p class="text-xl font-sans font-bold text-slate-900">{{ total_units }}</p>
       </div>
     </div>
     <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
@@ -33,7 +33,7 @@
       </div>
       <div>
         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Completed</p>
-        <p class="text-xl font-display font-bold text-slate-900">{{ filled_count }}</p>
+        <p class="text-xl font-sans font-bold text-slate-900">{{ filled_count }}</p>
       </div>
     </div>
     <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3 border-l-4 border-l-red-500">
@@ -44,7 +44,7 @@
       </div>
       <div>
         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Missing</p>
-        <p class="text-xl font-display font-bold text-slate-900">{{ missing_count }}</p>
+        <p class="text-xl font-sans font-bold text-slate-900">{{ missing_count }}</p>
       </div>
     </div>
     {% if current_rate %}
@@ -54,7 +54,7 @@
       </div>
       <div>
         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Rate / m³</p>
-        <p class="text-xl font-display font-bold text-slate-900">{{ current_rate }}</p>
+        <p class="text-xl font-sans font-bold text-slate-900">{{ current_rate }}</p>
       </div>
     </div>
     {% endif %}
@@ -64,7 +64,7 @@
     <!-- Left Column: Settings & Filter -->
     <div class="lg:col-span-4 space-y-6">
       <!-- Water Rate Settings -->
-      <div class="glass-panel border-none shadow-xl p-6">
+      <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
         <h2 class="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
           <svg class="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
@@ -99,7 +99,7 @@
       </div>
 
       <!-- Month/Year Selection -->
-      <div class="glass-panel border-none shadow-xl p-6">
+      <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
         <h2 class="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
           <svg class="w-4 h-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path>
@@ -142,7 +142,7 @@
       </div>
       {% endif %}
 
-      <div class="glass-panel overflow-hidden border-none shadow-xl">
+      <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
         <div class="p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
           <h2 class="text-lg font-bold text-slate-900">{{ month_name }} {{ year }} Readings</h2>
           <div class="relative w-full md:w-64">

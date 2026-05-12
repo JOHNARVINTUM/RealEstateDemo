@@ -7,8 +7,8 @@
   <!-- Header Section -->
   <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
     <div class="flex-1">
-      <h1 class="font-display text-3xl sm:text-4xl text-slate-900 leading-tight">Broadcast Center</h1>
-      <p class="text-sm text-slate-500 mt-1">Manage and publish news updates to all your tenants.</p>
+      <h1 class="font-sans font-bold tracking-tight text-3xl sm:text-4xl text-slate-900 leading-tight">Property Announcements</h1>
+      <p class="text-sm text-slate-500 mt-1">Compose, schedule, and distribute official administrative notices to all registered tenants.</p>
     </div>
     <div class="flex items-center gap-3">
       <a href="{% url 'admin_create_announcement' %}" 
@@ -16,7 +16,7 @@
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
         </svg>
-        New Broadcast
+        New Announcement
       </a>
     </div>
   </header>
@@ -31,7 +31,7 @@
       </div>
       <div>
         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Sent</p>
-        <p class="text-2xl font-display font-bold text-slate-900">{{ total_count }}</p>
+        <p class="text-2xl font-sans font-bold text-slate-900">{{ total_count }}</p>
       </div>
     </div>
     <div class="stat-card p-5 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4 border-b-4 border-b-blue-500">
@@ -43,7 +43,7 @@
       </div>
       <div>
         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Active Now</p>
-        <p class="text-2xl font-display font-bold text-slate-900">{{ active_count }}</p>
+        <p class="text-2xl font-sans font-bold text-slate-900">{{ active_count }}</p>
       </div>
     </div>
     <div class="stat-card p-5 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
@@ -54,17 +54,17 @@
       </div>
       <div>
         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Monthly Peak</p>
-        <p class="text-2xl font-display font-bold text-slate-900">{{ this_month_count }}</p>
+        <p class="text-2xl font-sans font-bold text-slate-900">{{ this_month_count }}</p>
       </div>
     </div>
   </section>
 
   <!-- Filter & Search Panel -->
-  <div class="glass-panel mb-8 p-4 border-none shadow-xl flex flex-col md:flex-row items-center gap-4">
+  <div class="bg-white rounded-3xl border border-slate-200 p-4 shadow-sm mb-8 flex flex-col md:flex-row items-center gap-4">
     <div class="relative flex-1 w-full">
       <form method="get" class="relative">
         <input type="text" name="q" value="{{ q }}" placeholder="Search by title or content snippet..." 
-               class="w-full pl-10 pr-4 py-3 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none">
+               class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none">
         <div class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
@@ -80,7 +80,7 @@
   <!-- Announcement Grid -->
   <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
     {% for a in items %}
-    <div class="glass-panel group p-0 overflow-hidden border-none shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col relative bg-white border-l-4 {% if a.is_active %}border-l-blue-500{% else %}border-l-slate-300{% endif %}">
+    <div class="bg-white rounded-3xl border border-slate-200 group p-0 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col relative border-l-4 {% if a.is_active %}border-l-blue-500{% else %}border-l-slate-300{% endif %}">
       <!-- Card Header -->
       <div class="p-6 pb-4">
         <div class="flex justify-between items-start mb-3">
@@ -89,7 +89,7 @@
           </span>
           <span class="text-[10px] font-bold text-slate-400">{{ a.created_at|date:"M d, Y" }}</span>
         </div>
-        <h3 class="text-lg font-display font-bold text-slate-900 group-hover:text-blue-600 transition-colors leading-tight mb-2">
+        <h3 class="text-lg font-sans font-bold text-slate-900 group-hover:text-blue-600 transition-colors leading-tight mb-2">
           {{ a.title }}
         </h3>
         <p class="text-sm text-slate-500 line-clamp-3 leading-relaxed">
@@ -128,7 +128,7 @@
       <div class="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 blur-3xl rounded-full -mr-12 -mt-12 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
     </div>
     {% empty %}
-    <div class="col-span-full py-24 text-center glass-panel border-dashed border-2 border-slate-200 bg-transparent">
+    <div class="col-span-full py-24 text-center rounded-3xl border-dashed border-2 border-slate-200 bg-transparent">
       <div class="flex flex-col items-center">
         <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-200 mb-4">
           <svg class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">

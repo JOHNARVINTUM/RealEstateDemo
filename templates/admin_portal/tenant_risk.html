@@ -7,8 +7,8 @@
   <!-- Header Section -->
   <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
     <div class="flex-1">
-      <h1 class="font-display text-3xl sm:text-4xl text-slate-900 leading-tight">Tenant Risk Analysis</h1>
-      <p class="text-sm text-slate-500 mt-1">Payment behavior analysis and risk assessment dashboard.</p>
+      <h1 class="font-sans font-bold tracking-tight text-3xl sm:text-4xl text-slate-900 leading-tight">Tenant Risk Analysis</h1>
+      <p class="text-sm text-slate-500 mt-1">Evaluate property payment histories, monitor ledger behaviors, and assess structural leasing risks.</p>
     </div>
     <div class="flex items-center gap-3">
       <form method="post" action="{% url 'admin_update_tenant_risks' %}" class="confirm-action" data-confirm="Update all tenant risk classifications? This analysis uses real-time payment history and may take a few moments to complete.">
@@ -33,7 +33,7 @@
       </div>
       <div>
         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total</p>
-        <p class="text-xl font-display font-bold text-slate-900">{{ total_tenants }}</p>
+        <p class="text-xl font-sans font-bold text-slate-900">{{ total_tenants }}</p>
       </div>
     </div>
     <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
@@ -44,7 +44,7 @@
       </div>
       <div>
         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Low Risk</p>
-        <p class="text-xl font-display font-bold text-slate-900">{{ low_risk_count }}</p>
+        <p class="text-xl font-sans font-bold text-slate-900">{{ low_risk_count }}</p>
       </div>
     </div>
     <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3 border-l-4 border-l-amber-500">
@@ -55,7 +55,7 @@
       </div>
       <div>
         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Medium</p>
-        <p class="text-xl font-display font-bold text-slate-900">{{ medium_risk_count }}</p>
+        <p class="text-xl font-sans font-bold text-slate-900">{{ medium_risk_count }}</p>
       </div>
     </div>
     <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3 border-l-4 border-l-red-500">
@@ -66,7 +66,7 @@
       </div>
       <div>
         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">High Risk</p>
-        <p class="text-xl font-display font-bold text-slate-900">{{ high_risk_count }}</p>
+        <p class="text-xl font-sans font-bold text-slate-900">{{ high_risk_count }}</p>
       </div>
     </div>
     <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
@@ -77,17 +77,17 @@
       </div>
       <div>
         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">New</p>
-        <p class="text-xl font-display font-bold text-slate-900">{{ new_tenant_count }}</p>
+        <p class="text-xl font-sans font-bold text-slate-900">{{ new_tenant_count }}</p>
       </div>
     </div>
   </section>
 
   <!-- Filter Panel -->
-  <div class="glass-panel mb-8 p-4 border-none shadow-xl flex flex-col md:flex-row items-center gap-4">
+  <div class="bg-white rounded-3xl border border-slate-200 p-4 shadow-sm mb-8 flex flex-col md:flex-row items-center gap-4">
     <div class="relative flex-1 w-full">
       <form method="get" class="relative">
         <input type="text" name="q" value="{{ q }}" placeholder="Search tenant name or email..." 
-               class="w-full pl-10 pr-4 py-2.5 bg-white/50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none">
+               class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none">
         <div class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
@@ -99,13 +99,13 @@
     <div class="flex items-center gap-2 w-full md:w-auto">
       <form method="get" class="flex items-center gap-2 w-full md:w-auto">
         <input type="hidden" name="q" value="{{ q }}">
-        <select name="risk" onchange="this.form.submit()" class="bg-white/50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none min-w-[140px]">
+        <select name="risk" onchange="this.form.submit()" class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none min-w-[140px]">
           <option value="">All Risks</option>
           <option value="LOW" {% if risk == "LOW" %}selected{% endif %}>Low Risk</option>
           <option value="MEDIUM" {% if risk == "MEDIUM" %}selected{% endif %}>Medium</option>
           <option value="HIGH" {% if risk == "HIGH" %}selected{% endif %}>High Risk</option>
         </select>
-        <select name="sort" onchange="this.form.submit()" class="bg-white/50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none min-w-[140px]">
+        <select name="sort" onchange="this.form.submit()" class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none min-w-[140px]">
           <option value="score_desc" {% if sort == "score_desc" %}selected{% endif %}>High Score First</option>
           <option value="score_asc" {% if sort == "score_asc" %}selected{% endif %}>Low Score First</option>
         </select>
@@ -121,7 +121,7 @@
   </div>
 
   <!-- Main Table -->
-  <div class="glass-panel overflow-hidden border-none shadow-2xl">
+  <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
     <div class="overflow-x-auto">
       <table class="w-full text-left border-collapse">
         <thead>

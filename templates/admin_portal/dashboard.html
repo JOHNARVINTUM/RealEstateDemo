@@ -7,8 +7,8 @@
   <!-- Header -->
   <header class="dashboard-header flex flex-col sm:flex-row justify-between items-end sm:items-center gap-2 sm:gap-4">
     <div class="flex-1">
-      <h1 class="font-display text-xl sm:text-4xl leading-none">Dashboard</h1>
-      <p class="text-[10px] sm:text-sm mt-1 text-slate-500">Welcome back, Admin.</p>
+      <h1 class="font-sans font-bold tracking-tight text-xl sm:text-4xl text-slate-900 leading-none">Dashboard</h1>
+      <p class="text-xs sm:text-sm mt-1 text-slate-500 font-medium">Overview of property assets, occupancy, and revenue.</p>
     </div>
     <div class="flex gap-3 w-full sm:w-auto mb-1 sm:mb-0">
       <a href="{% url 'admin_notifications' %}"
@@ -101,7 +101,7 @@
       <div class="glass-panel">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div>
-            <h2 class="text-xl font-bold text-slate-800 font-display">Revenue Performance</h2>
+            <h2 class="text-xl font-bold text-slate-800 font-sans tracking-tight">Revenue Performance</h2>
             <p class="text-sm text-slate-500">Actual vs Expected Income</p>
           </div>
           <select id="monthFilter"
@@ -121,7 +121,7 @@
       <div class="glass-panel">
         <div class="flex justify-between items-center mb-6">
           <div>
-            <h2 class="text-xl font-bold text-slate-800 font-display">Water Monitoring</h2>
+            <h2 class="text-xl font-bold text-slate-800 font-sans tracking-tight">Water Monitoring</h2>
             <p class="text-sm text-slate-500">Utility usage trends</p>
           </div>
           <div class="hidden sm:flex items-center gap-2">
@@ -139,7 +139,7 @@
     <div class="flex flex-col">
       <div class="glass-panel flex-1 flex flex-col">
         <div class="flex justify-between items-center mb-6">
-          <h2 class="text-xl font-bold text-slate-800 font-display">Recent Activity</h2>
+          <h2 class="text-xl font-bold text-slate-800 font-sans tracking-tight">Recent Activity</h2>
           <a href="{% url 'admin_notifications' %}" class="text-sm font-semibold text-blue-600 hover:text-blue-700">View All</a>
         </div>
         <div class="space-y-4 overflow-y-auto pr-2 custom-scrollbar flex-1">
@@ -194,12 +194,12 @@
 
   <!-- Additional Stats Section (Quick Look) -->
   <div class="glass-panel mt-6">
-    <h3 class="text-lg font-bold text-slate-800 mb-4 font-display">Quick Insights</h3>
+    <h3 class="text-lg font-bold text-slate-800 mb-4 font-sans tracking-tight">Quick Insights</h3>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       <div class="bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
         <span class="text-xs font-bold text-slate-400 uppercase">Overdue Payments</span>
         <div class="flex items-center gap-3 mt-2">
-          <span class="text-2xl font-black text-red-600 font-display">{{ overdue_payments }}</span>
+          <span class="text-2xl font-bold text-red-600 font-sans">{{ overdue_payments }}</span>
           <span class="text-[10px] text-slate-500">Requires attention</span>
         </div>
       </div>

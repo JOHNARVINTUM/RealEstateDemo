@@ -7,8 +7,15 @@
   <!-- Header Section -->
   <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
     <div class="flex-1">
-      <h1 class="font-sans font-bold tracking-tight text-3xl sm:text-4xl text-slate-900 leading-tight">Tenant Risk Analysis</h1>
-      <p class="text-sm text-slate-500 mt-1">Evaluate property payment histories, monitor ledger behaviors, and assess structural leasing risks.</p>
+      <div class="flex items-center gap-3 mb-2">
+        <div class="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center text-white shadow-xl shadow-slate-200">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+            </svg>
+        </div>
+        <h1 class="font-sans font-bold tracking-tight text-3xl sm:text-4xl text-slate-900 leading-tight">Tenant Risk Analysis</h1>
+      </div>
+      <p class="text-sm text-slate-500 font-medium">Evaluate property payment histories, monitor ledger behaviors, and assess structural leasing risks.</p>
     </div>
     <div class="flex items-center gap-3">
       <form method="post" action="{% url 'admin_update_tenant_risks' %}" class="confirm-action" data-confirm="Update all tenant risk classifications? This analysis uses real-time payment history and may take a few moments to complete.">

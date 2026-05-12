@@ -3,108 +3,130 @@
 {% block title %}Dashboard | RealEstate360+{% endblock %}
 
 {% block content %}
-<div class="dashboard-container px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
-  <!-- Header -->
-  <header class="dashboard-header flex flex-col sm:flex-row justify-between items-end sm:items-center gap-2 sm:gap-4">
+<div class="dashboard-container px-2 sm:px-4 lg:px-6 py-4 sm:py-6 max-w-7xl mx-auto">
+  <!-- Header Section -->
+  <header class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-10">
     <div class="flex-1">
-      <h1 class="font-sans font-bold tracking-tight text-xl sm:text-4xl text-slate-900 leading-none">Dashboard</h1>
-      <p class="text-xs sm:text-sm mt-1 text-slate-500 font-medium">Overview of property assets, occupancy, and revenue.</p>
+      <div class="flex items-center gap-3 mb-2">
+        <div class="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center text-white shadow-xl shadow-slate-200">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+          </svg>
+        </div>
+        <h1 class="font-sans font-bold tracking-tight text-3xl sm:text-4xl text-slate-900 leading-tight">Dashboard Overview</h1>
+      </div>
+      <p class="text-sm text-slate-500 font-medium">Real-time monitoring of property assets, live occupancy intelligence, and revenue flows.</p>
     </div>
-    <div class="flex gap-3 w-full sm:w-auto mb-1 sm:mb-0">
+    <div class="flex items-center gap-4 w-full lg:w-auto">
       <a href="{% url 'admin_notifications' %}"
-        class="glass-panel py-1.5 px-3 flex items-center justify-center gap-2 hover:bg-white transition-colors duration-200 flex-1 sm:flex-none">
-        <svg class="w-4 h-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9">
-          </path>
-        </svg>
-        <span class="text-xs font-semibold text-slate-700">Notifications</span>
-        {% if unread_count > 0 %}
-        <span class="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{{ unread_count }}</span>
-        {% endif %}
+        class="group px-5 py-3.5 bg-white border border-slate-200 text-slate-700 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 hover:text-blue-600 transition-all shadow-sm flex items-center justify-center gap-3 w-full lg:w-auto active:scale-95">
+        <div class="relative">
+          <svg class="w-4 h-4 text-slate-500 group-hover:text-blue-600 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+          </svg>
+          {% if unread_count > 0 %}
+          <span class="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-md animate-pulse">{{ unread_count }}</span>
+          {% endif %}
+        </div>
+        Notifications
       </a>
     </div>
   </header>
 
-  <!-- Stats Grid -->
-  <section class="stats-grid">
+  <!-- High-Impact Statistics Grid -->
+  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-5 mb-10">
     <!-- Total Tenants -->
-    <div class="stat-card">
-      <div class="stat-icon blue">
-        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z">
-          </path>
-        </svg>
+    <div class="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm relative overflow-hidden group border-b-4 border-b-blue-500 flex flex-col justify-between hover:shadow-md transition-all duration-300">
+      <div class="relative z-10">
+        <div class="flex items-center justify-between mb-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+            </svg>
+          </div>
+          <span class="text-[9px] font-black text-blue-600 uppercase tracking-widest px-2 py-0.5 bg-blue-50 rounded-lg">Active</span>
+        </div>
+        <p class="text-3xl font-sans font-extrabold text-slate-900 mb-0.5 tracking-tight">{{ total_tenants|intcomma }}</p>
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Tenants</p>
       </div>
-      <div class="stat-info">
-        <span class="stat-label">Total Tenants</span>
-        <span class="stat-value">{{ total_tenants|intcomma }}</span>
-        <span class="stat-trend up">Active</span>
+      <div class="absolute -right-3 -bottom-3 text-slate-50 group-hover:text-slate-100 transition-colors duration-500 pointer-events-none">
+        <svg class="w-20 h-20" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
       </div>
     </div>
 
     <!-- Occupied Units -->
-    <div class="stat-card">
-      <div class="stat-icon green">
-        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6">
-          </path>
-        </svg>
+    <div class="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm relative overflow-hidden group border-b-4 border-b-emerald-500 flex flex-col justify-between hover:shadow-md transition-all duration-300">
+      <div class="relative z-10">
+        <div class="flex items-center justify-between mb-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+            </svg>
+          </div>
+          <span class="text-[9px] font-black text-emerald-600 uppercase tracking-widest px-2 py-0.5 bg-emerald-50 rounded-lg">Units</span>
+        </div>
+        <p class="text-3xl font-sans font-extrabold text-slate-900 mb-0.5 tracking-tight">{{ occupied_units|intcomma }}</p>
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Occupied Assets</p>
       </div>
-      <div class="stat-info">
-        <span class="stat-label">Occupancy</span>
-        <span class="stat-value">{{ occupied_units|intcomma }}</span>
-        <span class="stat-trend up">Units</span>
+      <div class="absolute -right-3 -bottom-3 text-slate-50 group-hover:text-slate-100 transition-colors duration-500 pointer-events-none">
+        <svg class="w-20 h-20" fill="currentColor" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
       </div>
     </div>
 
     <!-- Available Units -->
-    <div class="stat-card">
-      <div class="stat-icon purple">
-        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
-          </path>
-        </svg>
+    <div class="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm relative overflow-hidden group border-b-4 border-b-purple-500 flex flex-col justify-between hover:shadow-md transition-all duration-300">
+      <div class="relative z-10">
+        <div class="flex items-center justify-between mb-3">
+          <div class="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+            </svg>
+          </div>
+          <span class="text-[9px] font-black text-purple-600 uppercase tracking-widest px-2 py-0.5 bg-purple-50 rounded-lg">Ready</span>
+        </div>
+        <p class="text-3xl font-sans font-extrabold text-slate-900 mb-0.5 tracking-tight">{{ available_units|intcomma }}</p>
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Available Units</p>
       </div>
-      <div class="stat-info">
-        <span class="stat-label">Available Units</span>
-        <span class="stat-value">{{ available_units|intcomma }}</span>
-        <span class="stat-trend up">Ready</span>
+      <div class="absolute -right-3 -bottom-3 text-slate-50 group-hover:text-slate-100 transition-colors duration-500 pointer-events-none">
+        <svg class="w-20 h-20" fill="currentColor" viewBox="0 0 24 24"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
       </div>
     </div>
 
     <!-- Monthly Revenue -->
-    <div class="stat-card">
-      <div class="stat-icon red">
-        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
-          </path>
-        </svg>
+    <div class="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm relative overflow-hidden group border-b-4 border-b-rose-500 flex flex-col justify-between hover:shadow-md transition-all duration-300">
+      <div class="relative z-10">
+        <div class="flex items-center justify-between mb-3">
+          <div class="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600 group-hover:scale-110 transition-transform">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <span class="text-[9px] font-black text-rose-600 uppercase tracking-widest px-2 py-0.5 bg-rose-50 rounded-lg">Earned</span>
+        </div>
+        <p class="text-2xl sm:text-3xl font-sans font-extrabold text-slate-900 mb-0.5 tracking-tight truncate" title="₱{{ total_revenue|floatformat:0|intcomma }}">₱{{ total_revenue|floatformat:0|intcomma }}</p>
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">Monthly Revenue</p>
       </div>
-      <div class="stat-info">
-        <span class="stat-label">Monthly Revenue</span>
-        <span class="stat-value">₱{{ total_revenue|floatformat:0|intcomma }}</span>
-        <span class="stat-trend up">Earned</span>
+      <div class="absolute -right-3 -bottom-3 text-slate-50 group-hover:text-slate-100 transition-colors duration-500 pointer-events-none">
+        <svg class="w-20 h-20" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
       </div>
     </div>
 
     <!-- Monthly Collected -->
-    <div class="stat-card">
-      <div class="stat-icon orange">
-        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z">
-          </path>
-        </svg>
+    <div class="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm relative overflow-hidden group border-b-4 border-b-amber-500 flex flex-col justify-between hover:shadow-md transition-all duration-300">
+      <div class="relative z-10">
+        <div class="flex items-center justify-between mb-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 group-hover:scale-110 transition-transform">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+            </svg>
+          </div>
+          <span class="text-[9px] font-black text-amber-600 uppercase tracking-widest px-2 py-0.5 bg-amber-50 rounded-lg">Rent/Water</span>
+        </div>
+        <p class="text-2xl sm:text-3xl font-sans font-extrabold text-slate-900 mb-0.5 tracking-tight truncate" title="₱{{ monthly_collected|floatformat:0|intcomma }}">₱{{ monthly_collected|floatformat:0|intcomma }}</p>
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">Monthly Collected</p>
       </div>
-      <div class="stat-info">
-        <span class="stat-label">Monthly Collected</span>
-        <span class="stat-value">₱{{ monthly_collected|floatformat:0|intcomma }}</span>
-        <span class="stat-trend up">Rent/Water</span>
+      <div class="absolute -right-3 -bottom-3 text-slate-50 group-hover:text-slate-100 transition-colors duration-500 pointer-events-none">
+        <svg class="w-20 h-20" fill="currentColor" viewBox="0 0 24 24"><path d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
       </div>
     </div>
   </section>
@@ -155,7 +177,7 @@
     <div class="flex flex-col">
       <div class="glass-panel flex-1 flex flex-col">
         <div class="flex justify-between items-center mb-6">
-          <h2 class="text-xl font-bold text-slate-800 font-sans tracking-tight">Recent Activity</h2>
+          <h2 class="text-xl font-bold text-slate-800 font-sans tracking-tight">Recent Notifications</h2>
           <a href="{% url 'admin_notifications' %}" class="text-sm font-semibold text-blue-600 hover:text-blue-700">View All</a>
         </div>
         <div class="space-y-4 overflow-y-auto pr-2 custom-scrollbar flex-1">

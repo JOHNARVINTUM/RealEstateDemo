@@ -69,35 +69,41 @@ class MonthlyBill(models.Model):
     @property
     def total_balance(self):
         """Total remaining balance including interest"""
+        if self.status == "PAID":
+            return 0
+        if self.base_rent == 0 and self.water_amount == 0 and self.total_due > 0:
+            return max(self.total_due - (self.rent_paid + self.water_paid), 0)
         return self.rent_balance + self.water_balance + self.interest
     
     @property
     def is_rent_paid(self):
         """Check if rent is fully paid"""
-        return self.rent_paid >= self.base_rent
+        return self.rent_paid >= self.base_rent if self.base_rent > 0 else True
     
     @property
     def is_water_paid(self):
         """Check if water is fully paid"""
-        return self.water_paid >= self.water_amount
+        return self.water_paid >= self.water_amount if self.water_amount > 0 else True
     
     @property
     def payment_status(self):
         """Detailed payment status"""
-        if self.is_rent_paid and self.is_water_paid:
+        if self.status == "PAID":
             return "FULLY_PAID"
-        elif self.is_rent_paid:
+        if self.is_rent_paid and self.is_water_paid and (self.base_rent > 0 or self.water_amount > 0):
+            return "FULLY_PAID"
+        elif self.is_rent_paid and self.base_rent > 0:
             return "RENT_PAID_WATER_PENDING"
-        elif self.is_water_paid:
+        elif self.is_water_paid and self.water_amount > 0:
             return "WATER_PAID_RENT_PENDING"
         else:
-            return "PARTIALLY_PAID" if (self.rent_paid > 0 or self.water_paid > 0) else "UNPAID"
+            return "PARTIALLY_PAID" if (self.rent_paid > 0 or self.water_paid > 0 or self.status == "PARTIALLY_PAID") else "UNPAID"
 
     @property
     def billing_state(self):
         """Computed billing state for ledger display. No DB column."""
         from datetime import date as _date
-        if self.total_balance == 0:
+        if self.status == "PAID" or (self.total_balance == 0 and self.status not in ("UNPAID", "PARTIALLY_PAID")):
             return "PAID"
         today = _date.today()
         current_month = today.replace(day=1)

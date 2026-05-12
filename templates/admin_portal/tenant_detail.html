@@ -90,13 +90,134 @@
         </div>
       </section>
 
+      <!-- Risk Profile Assessment -->
+      <section>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-sm font-black uppercase tracking-widest text-slate-800">Risk Profile Assessment</h2>
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Real-Time Ledger Analysis</span>
+        </div>
+        
+        {% with r=tenant.user.tenantriskclassification %}
+        {% if r %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Left Column: Risk Level & Score Details -->
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Assessed Risk Level</div>
+              <div class="flex items-center gap-3">
+                {% if r.risk_level == 'LOW' %}
+                  <span class="px-3.5 py-1.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-700 uppercase tracking-wide">Low Risk</span>
+                  <span class="text-xs font-medium text-slate-500">Excellent payment standing</span>
+                {% elif r.risk_level == 'MEDIUM' %}
+                  <span class="px-3.5 py-1.5 rounded-full text-xs font-black bg-amber-100 text-amber-700 uppercase tracking-wide">Medium Risk</span>
+                  <span class="text-xs font-medium text-slate-500">Standard monitoring tier</span>
+                {% else %}
+                  <span class="px-3.5 py-1.5 rounded-full text-xs font-black bg-red-100 text-red-700 uppercase tracking-wide animate-pulse">High Risk</span>
+                  <span class="text-xs font-medium text-red-500 font-bold">Requires attention</span>
+                {% endif %}
+              </div>
+            </div>
+            
+            <div class="mt-6 pt-4 border-t border-slate-100">
+              <div class="flex items-baseline justify-between mb-2">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Payment Behavior Score</span>
+                <span class="text-lg font-black font-sans 
+                  {% if r.payment_score >= 80 %}text-emerald-600
+                  {% elif r.payment_score >= 50 %}text-amber-600
+                  {% else %}text-red-600{% endif %}">
+                  {{ r.payment_score }}<span class="text-xs font-medium text-slate-400">/100</span>
+                </span>
+              </div>
+              <!-- Continuous beautiful slider bar -->
+              <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-full rounded-full transition-all duration-1000
+                  {% if r.payment_score >= 80 %}bg-emerald-500
+                  {% elif r.payment_score >= 50 %}bg-amber-500
+                  {% else %}bg-red-500{% endif %}"
+                  style="width: {{ r.payment_score }}%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: Ledger Issues & Assessment Factors -->
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+            <!-- Ledger Issues Counters -->
+            <div>
+              <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Ledger Issues Found</div>
+              <div class="grid grid-cols-2 gap-3">
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
+                  <span class="text-xs font-medium text-slate-600">Late Payments</span>
+                  <span class="text-sm font-black {% if r.late_payment_count > 0 %}text-amber-600{% else %}text-slate-400{% endif %}">{{ r.late_payment_count }}</span>
+                </div>
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
+                  <span class="text-xs font-medium text-slate-600">Unpaid Bills</span>
+                  <span class="text-sm font-black {% if r.unpaid_bill_count > 0 %}text-red-600{% else %}text-slate-400{% endif %}">{{ r.unpaid_bill_count }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Detailed Factors Breakdown -->
+            <div class="mt-6 pt-4 border-t border-slate-100">
+              <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2.5">Assessment Factors Breakdown</div>
+              {% if r.risk_factors %}
+                <div class="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-500">Timeliness</span>
+                    <span class="font-bold text-slate-800">{{ r.risk_factors.payment_timeliness|default:0 }}</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-500">Consistency</span>
+                    <span class="font-bold text-slate-800">{{ r.risk_factors.payment_consistency|default:0 }}</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-500">Status Score</span>
+                    <span class="font-bold text-slate-800">{{ r.risk_factors.current_payment_status|default:0 }}</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-500">Recency Status</span>
+                    <span class="font-bold text-slate-800">{% if r.last_payment_date %}Active{% else %}None{% endif %}</span>
+                  </div>
+                </div>
+              {% else %}
+                <p class="text-xs text-slate-400 italic py-1">No detailed matrix metrics recorded.</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% else %}
+        <div class="bg-white rounded-2xl border border-slate-200 p-8 text-center shadow-sm">
+          <p class="text-sm text-slate-400 italic">Risk classification profile is currently unassigned or pending background assessment calculation.</p>
+        </div>
+        {% endif %}
+        {% endwith %}
+      </section>
+
       <!-- Lease Portfolio -->
       <section>
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-sm font-black uppercase tracking-widest text-slate-800">Lease Portfolio</h2>
-          <a href="{% url 'admin_create_lease' %}?tenant_id={{ tenant.user.id }}" class="text-[10px] font-bold text-blue-600 hover:underline">+ Add New Lease</a>
         </div>
         <div class="space-y-4">
+          <!-- Assign New Lease Trigger Card Slot -->
+          <a href="{% url 'admin_create_lease' %}?tenant_id={{ tenant.user.id }}" class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md hover:border-[#3B7CE6] transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group block">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-2xl bg-[#3B7CE6]/10 flex items-center justify-center text-[#3B7CE6] shadow-xs border border-[#3B7CE6]/20 group-hover:scale-110 transition-transform shrink-0">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
+                </svg>
+              </div>
+              <div>
+                <div class="text-lg font-sans font-bold text-slate-900 group-hover:text-[#3B7CE6] transition-colors">Add New Lease</div>
+                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Assign property unit</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-8 sm:gap-12 justify-end mt-2 sm:mt-0">
+              <div class="flex items-center text-xs font-bold text-[#3B7CE6] gap-1 opacity-80 group-hover:opacity-100 group-hover:translate-x-1 transition-all">
+                <span>Assign Unit</span>
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+              </div>
+            </div>
+          </a>
           {% for l in leases %}
           <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div class="flex items-center gap-4">
@@ -225,22 +346,7 @@
         </div>
       </div>
 
-      <!-- Quick Actions / Shortcuts -->
-      <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-3">
-        <h3 class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Contextual Tools</h3>
-        <a href="{% url 'admin_billing' %}?q={{ tenant.user.email }}" class="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all group">
-          <span class="text-xs font-bold text-slate-600 group-hover:text-blue-600">Financial Ledger</span>
-          <svg class="w-4 h-4 text-slate-300 group-hover:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-        </a>
-        <a href="{% url 'admin_maintenance' %}?q={{ tenant.user.email }}" class="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all group">
-          <span class="text-xs font-bold text-slate-600 group-hover:text-blue-600">Maintenance History</span>
-          <svg class="w-4 h-4 text-slate-300 group-hover:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-        </a>
-        <a href="{% url 'admin_tenant_risk' %}?q={{ tenant.user.email }}" class="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all group">
-          <span class="text-xs font-bold text-slate-600 group-hover:text-blue-600">Risk Assessment</span>
-          <svg class="w-4 h-4 text-slate-300 group-hover:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-        </a>
-      </div>
+
     </div>
   </div>
 </div>

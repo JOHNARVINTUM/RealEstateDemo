@@ -7,8 +7,15 @@
   <!-- Header Section -->
   <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
     <div class="flex-1">
-      <h1 class="font-sans font-bold tracking-tight text-3xl sm:text-4xl text-slate-900 leading-tight">Payment Queue</h1>
-      <p class="text-sm text-slate-500 mt-1">Review, verify, and process submitted property payment transactions and reference settlements.</p>
+      <div class="flex items-center gap-3 mb-2">
+        <div class="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center text-white shadow-xl shadow-slate-200">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+            </svg>
+        </div>
+        <h1 class="font-sans font-bold tracking-tight text-3xl sm:text-4xl text-slate-900 leading-tight">Payment Queue</h1>
+      </div>
+      <p class="text-sm text-slate-500 font-medium">Review, verify, and process submitted property payment transactions and reference settlements.</p>
     </div>
   </header>
 
@@ -72,11 +79,17 @@
           </svg>
         </div>
         <input type="hidden" name="status" value="{{ status }}">
+        <input type="hidden" name="method" value="{{ method }}">
       </form>
     </div>
-    <div class="flex items-center gap-2 w-full md:w-auto">
-      <form method="get" class="flex items-center gap-2 w-full md:w-auto">
+    <div class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+      <form method="get" class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
         <input type="hidden" name="q" value="{{ q }}">
+        <select name="method" onchange="this.form.submit()" class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none min-w-[140px]">
+          <option value="">All Methods</option>
+          <option value="GCASH" {% if method == "GCASH" %}selected{% endif %}>GCash QR</option>
+          <option value="CASH" {% if method == "CASH" %}selected{% endif %}>F2F Cash</option>
+        </select>
         <select name="status" onchange="this.form.submit()" class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none min-w-[140px]">
           <option value="">All Statuses</option>
           <option value="PENDING" {% if status == "PENDING" %}selected{% endif %}>Pending</option>
@@ -84,7 +97,7 @@
           <option value="REJECTED" {% if status == "REJECTED" %}selected{% endif %}>Rejected</option>
         </select>
       </form>
-      {% if q or status %}
+      {% if q or status or method %}
         <a href="{% url 'admin_payments' %}" class="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Clear Filters">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -111,7 +124,7 @@
         </thead>
         <tbody class="divide-y divide-slate-100">
           {% for p in page_obj %}
-          <tr class="hover:bg-slate-50/30 transition-colors duration-150">
+          <tr class="hover:bg-slate-50/30 transition-colors duration-150 payment-row" data-method="{{ p.payment_method }}">
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
                 <div class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-[11px]">
@@ -264,13 +277,13 @@
       </div>
       <div class="flex items-center gap-1">
         {% if page_obj.has_previous %}
-          <a href="?page=1&q={{ q }}&status={{ status }}" 
+          <a href="?page=1&q={{ q }}&status={{ status }}&method={{ method }}" 
              class="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200" title="First Page">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
             </svg>
           </a>
-          <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&status={{ status }}" 
+          <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&status={{ status }}&method={{ method }}" 
              class="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200" title="Previous Page">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
@@ -283,20 +296,20 @@
             {% if page_obj.number == num %}
               <span class="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-600 text-white text-xs font-bold shadow-lg shadow-blue-500/30">{{ num }}</span>
             {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-              <a href="?page={{ num }}&q={{ q }}&status={{ status }}" 
+              <a href="?page={{ num }}&q={{ q }}&status={{ status }}&method={{ method }}" 
                  class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:bg-white hover:text-blue-600 transition-all text-xs font-bold border border-transparent hover:border-slate-200">{{ num }}</a>
             {% endif %}
           {% endfor %}
         </div>
 
         {% if page_obj.has_next %}
-          <a href="?page={{ page_obj.next_page_number }}&q={{ q }}&status={{ status }}" 
+          <a href="?page={{ page_obj.next_page_number }}&q={{ q }}&status={{ status }}&method={{ method }}" 
              class="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200" title="Next Page">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
             </svg>
           </a>
-          <a href="?page={{ page_obj.paginator.num_pages }}&q={{ q }}&status={{ status }}" 
+          <a href="?page={{ page_obj.paginator.num_pages }}&q={{ q }}&status={{ status }}&method={{ method }}" 
              class="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200" title="Last Page">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>

@@ -1069,18 +1069,18 @@ def admin_billing(request):
     # Upcoming = future months only (informational)
     upcoming_bills = [b for b in all_bills if b.billing_month.replace(day=1) > current_month]
 
-    # ── Apply status sub-filter within the active tab (Python-side, uses total_balance) ──
+    # ── Apply status sub-filter within the active tab using b.status as source of truth ──
     if active_tab == "active":
         if status_filter == "UNPAID":
-            display_bills = [b for b in active_bills if b.total_balance > 0]
+            display_bills = [b for b in active_bills if b.status in ("UNPAID", "PARTIALLY_PAID")]
         elif status_filter == "OVERDUE":
             display_bills = [b for b in active_bills
-                             if b.total_balance > 0 and b.billing_month.replace(day=1) < current_month]
+                             if b.status in ("UNPAID", "PARTIALLY_PAID") and b.billing_month.replace(day=1) < current_month]
         elif status_filter == "PARTIAL":
             display_bills = [b for b in active_bills
-                             if 0 < b.total_balance < b.total_due]
+                             if b.status == "PARTIALLY_PAID"]
         elif status_filter == "PAID":
-            display_bills = [b for b in active_bills if b.total_balance == 0]
+            display_bills = [b for b in active_bills if b.status == "PAID"]
         else:
             display_bills = active_bills
     else:
@@ -1136,10 +1136,16 @@ def admin_delete_bill(request, bill_id: int):
 def admin_payments(request):
     q = request.GET.get("q", "").strip()
     status = request.GET.get("status", "").strip()
+    method = request.GET.get("method", "").strip()
 
     payments = ManualPayment.objects.select_related("user")
     if status in ("PENDING", "APPROVED", "REJECTED"):
         payments = payments.filter(status=status)
+    if method == "GCASH":
+        payments = payments.filter(payment_method="GCASH")
+    elif method == "CASH":
+        payments = payments.filter(~Q(payment_method="GCASH"))
+
     if q:
         payments = payments.filter(
             Q(user__email__icontains=q) |
@@ -1184,6 +1190,7 @@ def admin_payments(request):
         "page_obj": page_obj, 
         "q": q, 
         "status": status,
+        "method": method,
         "pending_count": pending_count,
         "approved_count": approved_count,
         "rejected_count": rejected_count
@@ -1275,11 +1282,15 @@ def admin_update_tenant_risks(request):
 def admin_maintenance(request):
     q = request.GET.get("q", "").strip()
     status = request.GET.get("status", "").strip()
+    priority = request.GET.get("priority", "").strip()
 
     reqs = MaintenanceRequest.objects.select_related("lease", "lease__unit", "lease__tenant")
 
     if status:
         reqs = reqs.filter(status=status)
+        
+    if priority:
+        reqs = reqs.filter(priority=priority)
 
     if q:
         reqs = reqs.filter(
@@ -1313,6 +1324,7 @@ def admin_maintenance(request):
         "page_obj": page_obj, 
         "q": q, 
         "status": status,
+        "priority": priority,
         "total_count": total_count,
         "pending_count": pending_count,
         "in_progress_count": in_progress_count,

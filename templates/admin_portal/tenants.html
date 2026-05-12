@@ -7,8 +7,15 @@
   <!-- Header Section -->
   <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
     <div class="flex-1">
-      <h1 class="font-sans font-bold tracking-tight text-3xl sm:text-4xl text-slate-900 leading-tight">Tenants Portfolio</h1>
-      <p class="text-sm text-slate-500 mt-1 font-medium">Search, manage, and monitor tenant profiles across your property assets.</p>
+      <div class="flex items-center gap-3 mb-2">
+        <div class="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center text-white shadow-xl shadow-slate-200">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+            </svg>
+        </div>
+        <h1 class="font-sans font-bold tracking-tight text-3xl sm:text-4xl text-slate-900 leading-tight">Tenants Portfolio</h1>
+      </div>
+      <p class="text-sm text-slate-500 font-medium">Search, manage, and monitor tenant profiles across your property assets.</p>
     </div>
     <div class="flex flex-wrap gap-3">
       <a href="{% url 'admin_create_tenant_profile' %}" class="group relative inline-flex items-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-[1.25rem] font-bold text-sm transition-all duration-300 hover:bg-slate-800 hover:shadow-2xl hover:shadow-slate-200 hover:-translate-y-0.5 overflow-hidden">

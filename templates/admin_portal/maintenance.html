@@ -7,8 +7,16 @@
   <!-- Header Section -->
   <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
     <div class="flex-1">
-      <h1 class="font-sans font-bold tracking-tight text-3xl sm:text-4xl text-slate-900 leading-tight">Property Maintenance</h1>
-      <p class="text-sm text-slate-500 mt-1">Review unit repair logs, schedule technician dispatches, and track ongoing facility resolutions.</p>
+      <div class="flex items-center gap-3 mb-2">
+        <div class="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center text-white shadow-xl shadow-slate-200">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+        </div>
+        <h1 class="font-sans font-bold tracking-tight text-3xl sm:text-4xl text-slate-900 leading-tight">Property Maintenance</h1>
+      </div>
+      <p class="text-sm text-slate-500 font-medium">Review unit repair logs, schedule technician dispatches, and track ongoing facility resolutions.</p>
     </div>
   </header>
 
@@ -72,11 +80,18 @@
           </svg>
         </div>
         <input type="hidden" name="status" value="{{ status }}">
+        <input type="hidden" name="priority" value="{{ priority }}">
       </form>
     </div>
-    <div class="flex items-center gap-2 w-full md:w-auto">
-      <form method="get" class="flex items-center gap-2 w-full md:w-auto">
+    <div class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+      <form method="get" class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
         <input type="hidden" name="q" value="{{ q }}">
+        <select name="priority" onchange="this.form.submit()" class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none min-w-[140px]">
+          <option value="">All Priorities</option>
+          <option value="HIGH" {% if priority == "HIGH" %}selected{% endif %}>High Priority</option>
+          <option value="MEDIUM" {% if priority == "MEDIUM" %}selected{% endif %}>Medium Priority</option>
+          <option value="LOW" {% if priority == "LOW" %}selected{% endif %}>Low Priority</option>
+        </select>
         <select name="status" onchange="this.form.submit()" class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none min-w-[140px]">
           <option value="">All Statuses</option>
           <option value="PENDING" {% if status == "PENDING" %}selected{% endif %}>Pending</option>
@@ -84,7 +99,7 @@
           <option value="RESOLVED" {% if status == "RESOLVED" %}selected{% endif %}>Resolved</option>
         </select>
       </form>
-      {% if q or status %}
+      {% if q or status or priority %}
         <a href="{% url 'admin_maintenance' %}" class="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Clear Filters">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -110,7 +125,7 @@
         </thead>
         <tbody class="divide-y divide-slate-100">
           {% for r in page_obj %}
-          <tr class="hover:bg-slate-50/30 transition-colors duration-150">
+          <tr class="hover:bg-slate-50/30 transition-colors duration-150 maintenance-row" data-priority="{{ r.priority }}">
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
                 <div class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-[11px]">
@@ -221,13 +236,13 @@
       </div>
       <div class="flex items-center gap-1">
         {% if page_obj.has_previous %}
-          <a href="?page=1&q={{ q }}&status={{ status }}" 
+          <a href="?page=1&q={{ q }}&status={{ status }}&priority={{ priority }}" 
              class="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200" title="First Page">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
             </svg>
           </a>
-          <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&status={{ status }}" 
+          <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&status={{ status }}&priority={{ priority }}" 
              class="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200" title="Previous Page">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
@@ -240,20 +255,20 @@
             {% if page_obj.number == num %}
               <span class="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-600 text-white text-xs font-bold shadow-lg shadow-blue-500/30">{{ num }}</span>
             {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-              <a href="?page={{ num }}&q={{ q }}&status={{ status }}" 
+              <a href="?page={{ num }}&q={{ q }}&status={{ status }}&priority={{ priority }}" 
                  class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:bg-white hover:text-blue-600 transition-all text-xs font-bold border border-transparent hover:border-slate-200">{{ num }}</a>
             {% endif %}
           {% endfor %}
         </div>
 
         {% if page_obj.has_next %}
-          <a href="?page={{ page_obj.next_page_number }}&q={{ q }}&status={{ status }}" 
+          <a href="?page={{ page_obj.next_page_number }}&q={{ q }}&status={{ status }}&priority={{ priority }}" 
              class="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200" title="Next Page">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
             </svg>
           </a>
-          <a href="?page={{ page_obj.paginator.num_pages }}&q={{ q }}&status={{ status }}" 
+          <a href="?page={{ page_obj.paginator.num_pages }}&q={{ q }}&status={{ status }}&priority={{ priority }}" 
              class="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200" title="Last Page">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>

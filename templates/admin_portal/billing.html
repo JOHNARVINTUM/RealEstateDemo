@@ -7,8 +7,15 @@
   <!-- Header Section -->
   <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
     <div class="flex-1">
-      <h1 class="font-sans font-bold tracking-tight text-3xl sm:text-4xl text-slate-900 leading-tight">Billing & Ledger</h1>
-      <p class="text-sm text-slate-500 mt-1">Monitor tenant ledger payments, track overdue balances, and manage upcoming lease charges.</p>
+      <div class="flex items-center gap-3 mb-2">
+        <div class="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center text-white shadow-xl shadow-slate-200">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+        </div>
+        <h1 class="font-sans font-bold tracking-tight text-3xl sm:text-4xl text-slate-900 leading-tight">Billing & Ledger</h1>
+      </div>
+      <p class="text-sm text-slate-500 font-medium">Monitor tenant ledger payments, track overdue balances, and manage upcoming lease charges.</p>
     </div>
   </header>
 
@@ -80,12 +87,12 @@
   <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
     <!-- Tabs -->
     <div class="flex border-b border-slate-200 bg-slate-50">
-      <a href="?tab=active&q={{ q }}&month={{ month_filter }}&year={{ year_filter }}"
+      <a href="?tab=active&q={{ q }}&status={{ status_filter }}&month={{ month_filter }}&year={{ year_filter }}"
          class="px-8 py-4 text-sm font-bold transition-all duration-200 border-b-2 {% if active_tab == 'active' %}border-blue-600 text-blue-600 bg-white{% else %}border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50{% endif %} flex items-center gap-2">
         <span>Active Bills</span>
         <span class="px-2 py-0.5 rounded-full text-[10px] {% if active_tab == 'active' %}bg-blue-100 text-blue-700{% else %}bg-slate-200 text-slate-600{% endif %}">{{ unpaid_count }}</span>
       </a>
-      <a href="?tab=upcoming&q={{ q }}&month={{ month_filter }}&year={{ year_filter }}"
+      <a href="?tab=upcoming&q={{ q }}&status={{ status_filter }}&month={{ month_filter }}&year={{ year_filter }}"
          class="px-8 py-4 text-sm font-bold transition-all duration-200 border-b-2 {% if active_tab == 'upcoming' %}border-blue-600 text-blue-600 bg-white{% else %}border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50{% endif %} flex items-center gap-2">
         <span>Upcoming Bills</span>
         <span class="px-2 py-0.5 rounded-full text-[10px] {% if active_tab == 'upcoming' %}bg-blue-100 text-blue-700{% else %}bg-slate-200 text-slate-600{% endif %}">{{ upcoming_count }}</span>
@@ -193,6 +200,8 @@
             <td class="px-6 py-4 text-right">
               {% if b.total_balance > 0 %}
                 <span class="text-sm font-black text-red-600">₱{{ b.total_balance|floatformat:0|intcomma }}</span>
+              {% elif b.status != "PAID" %}
+                <span class="text-sm font-black text-red-600">₱{{ b.total_due|floatformat:0|intcomma }}</span>
               {% else %}
                 <span class="text-slate-300">—</span>
               {% endif %}
@@ -223,7 +232,7 @@
             <td class="px-6 py-4 text-right">
               <div class="flex justify-end items-center gap-2">
                 {% if active_tab == "active" %}
-                  {% if b.total_balance > 0 %}
+                  {% if b.status != "PAID" %}
                     <form method="post" action="{% url 'admin_mark_bill_paid' b.id %}" class="confirm-action" data-confirm="Mark bill #{{ b.id }} as PAID? This clears the remaining balance.">
                       {% csrf_token %}
                       <button type="submit" class="p-2 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-all" title="Mark Paid">

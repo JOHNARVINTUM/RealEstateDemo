@@ -50,7 +50,7 @@
     <!-- Medium Risk -->
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-amber-600 flex flex-col justify-between">
       <div>
-        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Medium Liability</span>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Medium Risk Status</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ medium_risk_count }}</div>
       </div>
       <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
@@ -61,7 +61,7 @@
     <!-- High Risk -->
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-rose-600 flex flex-col justify-between">
       <div>
-        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Critical Risk Alerts</span>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">High Risk Status</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ high_risk_count }}</div>
       </div>
       <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
@@ -107,7 +107,7 @@
         <select name="risk" onchange="this.form.submit()" class="bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-slate-500 transition-all outline-none cursor-pointer min-w-[130px]">
           <option value="">All Risk Tiers</option>
           <option value="LOW" {% if risk == "LOW" %}selected{% endif %}>Low Risk</option>
-          <option value="MEDIUM" {% if risk == "MEDIUM" %}selected{% endif %}>Medium Liability</option>
+          <option value="MEDIUM" {% if risk == "MEDIUM" %}selected{% endif %}>Medium Risk</option>
           <option value="HIGH" {% if risk == "HIGH" %}selected{% endif %}>High Risk</option>
         </select>
         
@@ -168,11 +168,11 @@
                   </span>
                 {% elif r.risk_level == 'MEDIUM' %}
                   <span class="px-2.5 py-0.5 rounded bg-amber-100 text-amber-900 font-extrabold text-[10px] uppercase select-none block">
-                    Medium Liability
+                    Medium Risk
                   </span>
                 {% else %}
                   <span class="px-2.5 py-0.5 rounded bg-rose-100 text-rose-900 font-extrabold text-[10px] uppercase select-none block">
-                    Critical Risk
+                    High Risk
                   </span>
                 {% endif %}
                 

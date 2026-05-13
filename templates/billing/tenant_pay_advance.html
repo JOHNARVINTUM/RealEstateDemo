@@ -1,250 +1,234 @@
 {% extends "tenant_base.html" %}
 {% load humanize %}
-{% block title %}Make Payment - RealEstate360+{% endblock %}
-{% block meta_description %}Preview your payment total and pay via GCash.{% endblock %}
+{% block title %}Remittance Studio - RealEstate360+{% endblock %}
+{% block meta_description %}Preview your payment total and pay via integrated payment channels.{% endblock %}
 
 {% block tenant_content %}
 
   <!-- Page Header -->
-  <div class="mb-8">
-    <h1 class="text-3xl font-extrabold text-blue-950 tracking-tight">Make Payment</h1>
-    <p class="text-gray-500 mt-1 font-medium text-sm">Preview your payment total. When you click Pay, you'll be redirected to Manual GCash.</p>
+  <div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Remittance Studio</h1>
+      <p class="text-slate-500 mt-1 font-medium text-sm">Configure target statement intervals and process verified electronic settlements</p>
+    </div>
+    <!-- Payment Processor Protocol Tag -->
+    <div class="bg-white border border-slate-200 px-3 py-1.5 rounded-md shadow-sm w-fit">
+      <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Gateway Status</span>
+      <span class="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-emerald-600 block animate-pulse"></span> Available
+      </span>
+    </div>
   </div>
 
-  <!-- Controls + Total -->
-  <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 mb-8">
+  <!-- Remittance Controller Array -->
+  <div class="tenant-card mb-8">
     <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-8">
 
-      <!-- Month selector -->
+      <!-- Configuration Console -->
       <form method="get" class="w-full lg:flex-1">
-        <label class="block text-sm font-bold text-blue-950 uppercase tracking-wider mb-2">Number of Months</label>
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Advance Months Scope</label>
         <div class="relative">
           <select name="months_to_pay"
-                  class="w-full px-5 py-4 bg-slate-50 border border-gray-200 rounded-xl text-gray-800 font-medium appearance-none focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/30 focus:border-blue-900 transition-all shadow-sm cursor-pointer"
+                  class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-slate-900 font-medium appearance-none focus:outline-none focus:border-slate-900 transition-colors text-sm cursor-pointer shadow-sm"
                   onchange="this.form.submit()">
             {% for n in months_options %}
               <option value="{{ n }}" {% if months_to_pay == n %}selected{% endif %}>
-                {{ n }} Month{% if n != 1 %}s{% endif %}
+                Process {{ n }} Statement Period{% if n != 1 %}s{% endif %}
               </option>
             {% endfor %}
           </select>
-          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-5 text-gray-500">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
           </div>
         </div>
 
-        <div class="mt-4 p-4 rounded-xl {% if has_pending %}bg-orange-50 border border-orange-100{% else %}bg-blue-50 border border-blue-100{% endif %} flex items-start gap-3">
-          <div class="mt-0.5">
-            {% if has_pending %}
-              <svg class="w-5 h-5 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-            {% else %}
-              <svg class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            {% endif %}
+        <!-- Scope Guidance Alert -->
+        <div class="mt-4 p-4 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600 leading-relaxed">
+          <div class="flex items-start gap-2.5">
+            <svg class="w-4 h-4 text-slate-900 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              {% if has_pending %}
+                <span class="font-bold text-slate-900 block mb-0.5">Outstanding Default Captured</span>
+                System detected <strong>{{ unpaid_count }} pending statement(s)</strong>. Remittance logic enforces priority settlement of oldest arrears first.
+              {% else %}
+                <span class="font-bold text-slate-900 block mb-0.5">Pre-Payment Authorization</span>
+                No past-due logs recorded. Selecting parameters above applies standard advance coverage directly to succeeding intervals.
+              {% endif %}
+            </div>
           </div>
-          <p class="text-sm font-medium {% if has_pending %}text-orange-800{% else %}text-blue-800{% endif %}">
-            {% if has_pending %}
-              You have <strong>{{ unpaid_count }} pending unpaid bill(s)</strong>. Preview shows oldest unpaid first.
-            {% else %}
-              No pending bills. Preview shows advance months.
-            {% endif %}
-          </p>
         </div>
       </form>
 
-      <!-- Payment Type Selector & Total -->
-      <div class="w-full lg:max-w-sm rounded-2xl border-l-4 border-l-green-500 border-y border-r border-gray-200 bg-gradient-to-br from-white to-slate-50 p-6 shadow-sm">
-        <!-- Payment Type Selector -->
-        <div class="mb-4">
-          <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Payment Type</label>
-          <div class="grid grid-cols-3 gap-2">
-            <a href="?months_to_pay={{ months_to_pay }}&payment_type=rent_only" 
-               class="px-3 py-2 text-xs font-semibold rounded-lg text-center transition-all
-                      {% if payment_type == 'rent_only' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
-              Rent Only
-            </a>
-            <a href="?months_to_pay={{ months_to_pay }}&payment_type=water_only"
-               class="px-3 py-2 text-xs font-semibold rounded-lg text-center transition-all
-                      {% if payment_type == 'water_only' %}bg-cyan-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
-              Water Only
-            </a>
-            <a href="?months_to_pay={{ months_to_pay }}&payment_type=full"
-               class="px-3 py-2 text-xs font-semibold rounded-lg text-center transition-all
-                      {% if payment_type == 'full' or not payment_type %}bg-green-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
-              Full Payment
-            </a>
+      <!-- Ledger Calculation Engine -->
+      <div class="w-full lg:max-w-md bg-slate-50/75 border border-slate-200 rounded-xl p-6 border-l-4 border-l-slate-900 shadow-sm flex flex-col justify-between">
+        <div>
+          <!-- Type Split Selector -->
+          <div class="mb-5">
+            <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">Settlement Target Split</label>
+            <div class="grid grid-cols-3 gap-2">
+              <a href="?months_to_pay={{ months_to_pay }}&payment_type=rent_only" 
+                 class="px-2.5 py-2 text-xs font-bold rounded-md text-center block transition-colors
+                        {% if payment_type == 'rent_only' %}bg-slate-900 text-white{% else %}bg-white text-slate-700 hover:bg-slate-100 border border-slate-200{% endif %}">
+                Rent Only
+              </a>
+              <a href="?months_to_pay={{ months_to_pay }}&payment_type=water_only"
+                 class="px-2.5 py-2 text-xs font-bold rounded-md text-center block transition-colors
+                        {% if payment_type == 'water_only' %}bg-slate-900 text-white{% else %}bg-white text-slate-700 hover:bg-slate-100 border border-slate-200{% endif %}">
+                Water Only
+              </a>
+              <a href="?months_to_pay={{ months_to_pay }}&payment_type=full"
+                 class="px-2.5 py-2 text-xs font-bold rounded-md text-center block transition-colors
+                        {% if payment_type == 'full' or not payment_type %}bg-slate-900 text-white{% else %}bg-white text-slate-700 hover:bg-slate-100 border border-slate-200{% endif %}">
+                Comprehensive
+              </a>
+            </div>
           </div>
-        </div>
 
-        <!-- Amount Breakdown -->
-        <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-          {% if payment_type == 'rent_only' %}
-            Total Rent Due
-          {% elif payment_type == 'water_only' %}
-            Total Water Due
-          {% else %}
-            Total Amount (Preview)
-          {% endif %}
-        </div>
-        <div class="text-4xl font-extrabold text-blue-950 mt-2 tracking-tight">
-          ₱{{ total_amount|default:"0.00"|floatformat:2|intcomma }}
-        </div>
-        
-        <!-- Breakdown -->
-        <div class="mt-3 text-sm text-gray-600 space-y-1">
-          {% if payment_type == 'rent_only' %}
-          <div class="flex justify-between text-blue-600">
-            <span>Rent to Pay:</span>
-            <span class="font-bold">₱{{ total_rent|floatformat:2|intcomma }}</span>
+          <!-- Computed Total Display -->
+          <div class="border-t border-slate-200/80 pt-4">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              {% if payment_type == 'rent_only' %}
+                Aggregate Rent Calculation
+              {% elif payment_type == 'water_only' %}
+                Aggregate Water Calculation
+              {% else %}
+                Total Remittance Assessment
+              {% endif %}
+            </div>
+            <div class="text-3xl font-bold text-slate-900 tracking-tight mt-1">
+              ₱{{ total_amount|default:"0.00"|floatformat:2|intcomma }}
+            </div>
           </div>
-          <div class="flex justify-between text-gray-400">
-            <span>Water:</span>
-            <span class="font-medium">₱0.00 (not included)</span>
-          </div>
-          {% elif payment_type == 'water_only' %}
-          <div class="flex justify-between text-gray-400">
-            <span>Rent:</span>
-            <span class="font-medium">₱0.00 (not included)</span>
-          </div>
-          <div class="flex justify-between text-cyan-600">
-            <span>Water to Pay:</span>
-            <span class="font-bold">₱{{ total_water|floatformat:2|intcomma }}</span>
-          </div>
-          {% else %}
-          <div class="flex justify-between">
-            <span>Rent:</span>
-            <span class="font-medium">₱{{ total_rent|floatformat:2|intcomma }}</span>
-          </div>
-          <div class="flex justify-between">
-            <span>Water:</span>
-            <span class="font-medium">₱{{ total_water|floatformat:2|intcomma }}</span>
-          </div>
-          {% if total_penalty > 0 %}
-          <div class="flex justify-between text-red-500">
-            <span>Penalty:</span>
-            <span class="font-medium">₱{{ total_penalty|floatformat:2|intcomma }}</span>
-          </div>
-          {% endif %}
-          {% endif %}
-        </div>
-
-        <!-- Payment Method Selection -->
-        <div class="mt-6 space-y-3">
-          <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Choose Payment Method</p>
           
-          <!-- GCash QR Option -->
+          <!-- Explicit Line Items -->
+          <div class="mt-4 pt-3 border-t border-slate-200/50 text-xs space-y-1.5 font-medium text-slate-600">
+            {% if payment_type == 'rent_only' %}
+              <div class="flex justify-between text-slate-900 font-bold">
+                <span>Calculated Rent Base:</span>
+                <span>₱{{ total_rent|floatformat:2|intcomma }}</span>
+              </div>
+              <div class="flex justify-between text-slate-400">
+                <span>Water Utility Target:</span>
+                <span>Excluded from split</span>
+              </div>
+            {% elif payment_type == 'water_only' %}
+              <div class="flex justify-between text-slate-400">
+                <span>Lease Rent Target:</span>
+                <span>Excluded from split</span>
+              </div>
+              <div class="flex justify-between text-slate-900 font-bold">
+                <span>Calculated Water Base:</span>
+                <span>₱{{ total_water|floatformat:2|intcomma }}</span>
+              </div>
+            {% else %}
+              <div class="flex justify-between text-slate-800">
+                <span>Assessed Lease Rent:</span>
+                <span class="font-bold">₱{{ total_rent|floatformat:2|intcomma }}</span>
+              </div>
+              <div class="flex justify-between text-slate-800">
+                <span>Assessed Water Utility:</span>
+                <span class="font-bold">₱{{ total_water|floatformat:2|intcomma }}</span>
+              </div>
+              {% if total_penalty > 0 %}
+                <div class="flex justify-between text-rose-700 font-bold">
+                  <span>Accrued Penalty Interest:</span>
+                  <span>₱{{ total_penalty|floatformat:2|intcomma }}</span>
+                </div>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Remittance Method Triggers -->
+        <div class="mt-6 pt-4 border-t border-slate-200/80 space-y-2.5">
+          <!-- GCash Gateway -->
           <form method="post" action="{% url 'manual_gcash_payment' %}">
             {% csrf_token %}
             <input type="hidden" name="bill_ids" value="{% for row in preview_rows %}{{ row.bill_id }}{% if not forloop.last %},{% endif %}{% endfor %}">
             <input type="hidden" name="payment_type" value="{{ payment_type|default:'full' }}">
             <input type="hidden" name="amount" value="{{ total_amount }}">
             <button type="submit"
-                    class="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl 
-                           {% if payment_type == 'rent_only' %}bg-blue-600 hover:bg-blue-700
-                           {% elif payment_type == 'water_only' %}bg-cyan-600 hover:bg-cyan-700
-                           {% else %}bg-blue-600 hover:bg-blue-700{% endif %} 
-                           text-white font-bold text-base shadow-md hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-sm">
+              <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
               </svg>
-              {% if payment_type == 'rent_only' %}
-                Pay Rent via GCash
-              {% elif payment_type == 'water_only' %}
-                Pay Water via GCash
-              {% else %}
-                Pay with GCash QR
-              {% endif %}
+              Process GCash Remittance
             </button>
           </form>
           
-          <!-- F2F Cash Option -->
+          <!-- F2F Cash Vault Routing -->
           <form method="post" action="{% url 'f2f_cash_payment' %}">
             {% csrf_token %}
             <input type="hidden" name="bill_ids" value="{% for row in preview_rows %}{{ row.bill_id }}{% if not forloop.last %},{% endif %}{% endfor %}">
             <input type="hidden" name="payment_type" value="{{ payment_type|default:'full' }}">
             <input type="hidden" name="amount" value="{{ total_amount }}">
             <button type="submit"
-                    class="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl 
-                           bg-amber-500 hover:bg-amber-600
-                           text-white font-bold text-base shadow-md hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500">
-              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 font-bold text-xs uppercase tracking-wider transition-colors shadow-sm">
+              <svg class="w-4 h-4 shrink-0 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
-              {% if payment_type == 'rent_only' %}
-                Pay Rent in Cash (F2F)
-              {% elif payment_type == 'water_only' %}
-                Pay Water in Cash (F2F)
-              {% else %}
-                Pay Face-to-Face Cash
-              {% endif %}
+              Log Direct Administration Transmittal
             </button>
           </form>
-        </div>
-        
-        <div class="text-xs font-medium text-gray-400 mt-3 text-center">
-          GCash: Instant transfer & verification.<br>
-          F2F: Schedule appointment with admin.
         </div>
       </div>
 
     </div>
   </div>
 
-  <!-- Preview Ledger -->
-  <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8">
-    <div class="px-6 py-5 border-b border-gray-100 flex items-center gap-3">
-      <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-        <svg class="w-4 h-4 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-        </svg>
-      </div>
+  <!-- Preview Coverage Grid -->
+  <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mb-8">
+    <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
       <div>
-        <h2 class="text-base font-bold text-blue-950">Payment Preview Ledger</h2>
-        <p class="text-xs text-gray-500 mt-0.5 font-medium">Preview only — admin verification happens in Manual GCash.</p>
+        <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wide">Target Ledger Allocation Preview</h2>
+        <p class="text-xs text-slate-500 font-medium">Itemized distribution matrix mapped across specified billing intervals</p>
       </div>
+      <span class="text-xs font-bold text-slate-400">Target Records: {{ preview_rows|length }}</span>
     </div>
+
     <div class="overflow-x-auto">
-      <table class="min-w-full">
-        <thead class="bg-slate-50 border-b border-gray-200">
-          <tr>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Month</th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Rent</th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Water</th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Penalty</th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">To Pay</th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Due Date</th>
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-slate-100/75 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+            <th class="py-3 px-6">Interval Month</th>
+            <th class="py-3 px-6">Assessed Rent Base</th>
+            <th class="py-3 px-6">Assessed Water Utility</th>
+            <th class="py-3 px-6">Penalty Applied</th>
+            <th class="py-3 px-6">Target Settlement Allocation</th>
+            <th class="py-3 px-6">Scheduled Deadline</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100">
+        <tbody class="divide-y divide-slate-200/60 text-sm">
           {% for r in preview_rows %}
-            <tr class="hover:bg-slate-50 transition-colors duration-150">
-              <td class="px-6 py-4 text-sm font-medium text-blue-950">{{ r.month_label }}</td>
-              <td class="px-6 py-4 text-sm text-gray-600">
-                <span class="{% if r.pay_rent == 0 %}text-gray-400{% endif %}">₱{{ r.rent|floatformat:2|intcomma }}</span>
+            <tr class="hover:bg-slate-50/80 transition-colors">
+              <td class="py-3.5 px-6 font-bold text-slate-900">{{ r.month_label }}</td>
+              <td class="py-3.5 px-6 text-slate-700 font-medium">
+                <span class="{% if r.pay_rent == 0 %}text-slate-400{% endif %}">₱{{ r.rent|floatformat:2|intcomma }}</span>
                 {% if r.pay_rent > 0 and r.pay_rent < r.rent %}
-                  <br><span class="text-xs text-blue-600">→ Pay ₱{{ r.pay_rent|floatformat:2 }}</span>
+                  <span class="block text-xs font-bold text-slate-900 mt-0.5">[Apply ₱{{ r.pay_rent|floatformat:2 }}]</span>
                 {% endif %}
               </td>
-              <td class="px-6 py-4 text-sm text-gray-600">
-                <span class="{% if r.pay_water == 0 %}text-gray-400{% endif %}">₱{{ r.water|default:"0.00"|floatformat:2|intcomma }}</span>
+              <td class="py-3.5 px-6 text-slate-700 font-medium">
+                <span class="{% if r.pay_water == 0 %}text-slate-400{% endif %}">₱{{ r.water|default:"0.00"|floatformat:2|intcomma }}</span>
                 {% if r.pay_water > 0 and r.pay_water < r.water %}
-                  <br><span class="text-xs text-cyan-600">→ Pay ₱{{ r.pay_water|floatformat:2 }}</span>
+                  <span class="block text-xs font-bold text-slate-900 mt-0.5">[Apply ₱{{ r.pay_water|floatformat:2 }}]</span>
                 {% endif %}
               </td>
-              <td class="px-6 py-4 text-sm text-red-500">
+              <td class="py-3.5 px-6 text-rose-700 font-medium">
                 {% if r.pay_penalty and r.pay_penalty != 0 %}₱{{ r.pay_penalty|floatformat:2|intcomma }}{% else %}-{% endif %}
               </td>
-              <td class="px-6 py-4 text-sm font-bold text-blue-950">₱{{ r.pay_total|floatformat:2|intcomma }}</td>
-              <td class="px-6 py-4 text-sm text-gray-600">
-                {% if r.due_date %}{{ r.due_date|date:"F j, Y" }}{% else %}-{% endif %}
+              <td class="py-3.5 px-6 font-bold text-slate-900">₱{{ r.pay_total|floatformat:2|intcomma }}</td>
+              <td class="py-3.5 px-6 text-slate-600 font-medium">
+                {% if r.due_date %}{{ r.due_date|date:"Y-m-d" }}{% else %}-{% endif %}
               </td>
             </tr>
           {% empty %}
             <tr>
-              <td colspan="6" class="px-6 py-14 text-center">
-                <svg class="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <p class="text-gray-500 font-medium">No preview available.</p>
+              <td colspan="6" class="py-12 px-6 text-center text-slate-500">
+                <p class="font-bold text-slate-700 text-base">Allocation parameters empty</p>
+                <p class="text-xs text-slate-400 mt-1">Select months interval or target split type above to compile transmittal previews.</p>
               </td>
             </tr>
           {% endfor %}

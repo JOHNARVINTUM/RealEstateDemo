@@ -1,137 +1,137 @@
 {% extends "tenant_base.html" %}
 {% load humanize %}
-{% block title %}Face-to-Face Cash Payment - RealEstate360+{% endblock %}
-{% block meta_description %}Schedule a face-to-face cash payment appointment with the property admin.{% endblock %}
+{% block title %}Direct Transmittal Scheduling - RealEstate360+{% endblock %}
+{% block meta_description %}Schedule an official face-to-face administration transmittal log for physical settlements.{% endblock %}
 
 {% block tenant_content %}
 
   <!-- Page Header -->
-  <div class="mb-8">
-    <h1 class="text-3xl font-extrabold text-blue-950 tracking-tight">Face-to-Face Cash Payment</h1>
-    <p class="text-gray-500 mt-1 font-medium text-sm">Schedule an appointment to pay cash in person. The admin will confirm your preferred date and time.</p>
+  <div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Direct Transmittal Scheduling</h1>
+      <p class="text-slate-500 mt-1 font-medium text-sm">Coordinate secured face-to-face cash clearing with the property administration office</p>
+    </div>
+    <!-- Transmittal Protocol Tag -->
+    <div class="bg-white border border-slate-200 px-3 py-1.5 rounded-md shadow-sm w-fit">
+      <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Protocol Method</span>
+      <span class="text-xs font-bold text-slate-800">Physical Cash Clearing</span>
+    </div>
   </div>
 
   {% if error %}
-    <div class="mb-6 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-r-2xl p-5 shadow-sm flex items-start gap-3">
-      <svg class="w-6 h-6 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+    <!-- Explicit Form Error Capture -->
+    <div class="mb-8 bg-rose-50 border border-rose-200 text-rose-900 rounded-lg p-4 flex items-start gap-3 shadow-sm">
+      <svg class="w-5 h-5 shrink-0 text-rose-700 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
       <div>
-        <p class="font-bold">Submission Error</p>
-        <p class="text-sm font-medium mt-1">{{ error }}</p>
+        <p class="font-bold text-xs uppercase tracking-wider text-rose-900">Transmittal Parameter Error</p>
+        <p class="text-xs font-medium mt-0.5">{{ error }}</p>
       </div>
     </div>
   {% endif %}
 
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
 
-    <!-- Payment Summary -->
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-      <h2 class="text-xl font-bold text-blue-950 flex items-center gap-2">
-        <span class="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-        </span>
-        Payment Summary
-      </h2>
-      <p class="text-sm text-gray-500 mt-2 font-medium">Review the amount before scheduling your appointment.</p>
+    <!-- Payment Protocol Summary -->
+    <div class="tenant-card h-fit flex flex-col justify-between">
+      <div>
+        <div class="border-b border-slate-100 pb-4 mb-4">
+          <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wide">Transmittal Target Summary</h2>
+          <p class="text-xs text-slate-500 font-medium mt-0.5">Staged financial totals mapping to target interval scope</p>
+        </div>
 
-      <div class="mt-6 space-y-4">
-        <!-- Amount -->
-        <div class="rounded-xl border border-amber-200 bg-amber-50 p-5 flex justify-between items-center shadow-sm">
+        <!-- Calculated Amount Base -->
+        <div class="p-4 rounded-lg bg-slate-50 border border-slate-200/80 mb-5 flex justify-between items-center">
           <div>
-            <div class="text-xs font-bold text-amber-700 uppercase tracking-wider">Total Amount to Pay</div>
-            <div class="text-3xl font-black text-amber-800 mt-1">₱{{ amount_to_pay|floatformat:2|intcomma }}</div>
+            <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Staged Liability Base</span>
+            <span class="text-3xl font-bold text-slate-900 block mt-0.5">₱{{ amount_to_pay|floatformat:2|intcomma }}</span>
           </div>
-          <div class="w-12 h-12 rounded-full bg-amber-200 flex items-center justify-center text-amber-700 shadow-inner">
-            <span class="text-2xl font-extrabold">₱</span>
-          </div>
-        </div>
-
-        <!-- Payment Type -->
-        <div class="rounded-xl border border-gray-100 bg-slate-50 p-5">
-          <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">Payment Type</div>
-          <div class="text-lg font-bold text-blue-950 mt-1">
-            {% if payment_type == "full" %}Full Payment
-            {% elif payment_type == "rent_only" %}Rent Only
-            {% elif payment_type == "water_only" %}Water Only
-            {% else %}Full Payment{% endif %}
+          <div class="text-slate-300 font-mono text-2xl font-bold select-none">
+            [F2F]
           </div>
         </div>
 
-        <!-- Instructions -->
-        <div class="rounded-xl bg-blue-50 border border-blue-100 p-5 text-sm text-blue-800">
-          <div class="flex items-start gap-3">
-            <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            <div>
-              <p class="font-bold mb-1">How it works:</p>
-              <ol class="list-decimal list-inside space-y-1 text-blue-700">
-                <li>Select your preferred date and time</li>
-                <li>Add any special notes (optional)</li>
-                <li>Submit the request</li>
-                <li>Wait for admin confirmation</li>
-                <li>Pay cash in person at the scheduled time</li>
-              </ol>
-            </div>
+        <!-- Target Coverage Mode -->
+        <div class="mb-6">
+          <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider mb-1">Target Coverage Scope</span>
+          <div class="p-3 rounded-md bg-white border border-slate-200 font-bold text-xs text-slate-800">
+            {% if payment_type == "full" %}Comprehensive Settlement
+            {% elif payment_type == "rent_only" %}Restricted Split: Lease Rent Only
+            {% elif payment_type == "water_only" %}Restricted Split: Water Utility Only
+            {% else %}Comprehensive Settlement{% endif %}
           </div>
+        </div>
+
+        <!-- Directive Array -->
+        <div class="pt-4 border-t border-slate-100">
+          <span class="text-xs font-bold text-slate-900 block mb-2">Transmittal Lifecycle Flow</span>
+          <ol class="list-decimal list-inside space-y-1.5 text-xs font-medium text-slate-600">
+            <li>Select preferred date/time targets on the console</li>
+            <li>Submit scheduling parameters for real-time admin review</li>
+            <li>Status transitions to <span class="font-bold text-slate-900">PENDING_CONFIRMATION</span></li>
+            <li>Admin updates transmittal to confirm receiving direct cache</li>
+          </ol>
         </div>
       </div>
     </div>
 
-    <!-- Schedule Appointment -->
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 h-fit">
-      <h2 class="text-xl font-bold text-blue-950 flex items-center gap-2">
-        <span class="w-8 h-8 rounded-lg bg-green-100 text-green-600 flex items-center justify-center">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-        </span>
-        Schedule Appointment
-      </h2>
-      <p class="text-sm text-gray-500 mt-2 font-medium">Choose when you'd like to meet the admin for cash payment.</p>
+    <!-- Appointment Scheduling Form -->
+    <div class="tenant-card">
+      <div class="border-b border-slate-100 pb-4 mb-5">
+        <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wide">Appointment Parameters Console</h2>
+        <p class="text-xs text-slate-500 font-medium mt-0.5">Specify clear chronological coordinates for administrative meetup</p>
+      </div>
 
-      <form method="post" class="mt-8 space-y-5 tenant-form">
+      <form method="post" class="space-y-4">
         {% csrf_token %}
         <input type="hidden" name="amount" value="{{ amount_to_pay }}">
         <input type="hidden" name="bill_ids" value="{{ bill_ids }}">
         <input type="hidden" name="payment_type" value="{{ payment_type|default:'full' }}">
 
-        <!-- Preferred Date -->
+        <!-- Preferred Date Input -->
         <div>
-          <label class="block text-sm font-bold text-blue-900 mb-2 uppercase tracking-wide">
-            Preferred Date <span class="text-red-500">*</span>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+            Preferred Clearing Date <span class="text-rose-700">*</span>
           </label>
           <input type="date" name="preferred_date" required
                  value="{{ preferred_date }}"
                  min="{% now 'Y-m-d' %}"
-                 class="w-full border border-gray-200 rounded-xl px-5 py-4 bg-slate-50 focus:bg-white focus:border-blue-900 focus:ring-2 focus:ring-blue-900/20 outline-none transition-all text-blue-950">
+                 class="w-full border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm font-medium text-slate-900 bg-white focus:outline-none focus:border-slate-900 transition-colors">
         </div>
 
-        <!-- Preferred Time -->
+        <!-- Preferred Time Input -->
         <div>
-          <label class="block text-sm font-bold text-blue-900 mb-2 uppercase tracking-wide">
-            Preferred Time <span class="text-gray-400 font-normal">(Optional)</span>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+            Preferred Clearing Time <span class="text-slate-400 font-normal">(Optional)</span>
           </label>
           <input type="time" name="preferred_time"
                  value="{{ preferred_time }}"
-                 class="w-full border border-gray-200 rounded-xl px-5 py-4 bg-slate-50 focus:bg-white focus:border-blue-900 focus:ring-2 focus:ring-blue-900/20 outline-none transition-all text-blue-950">
-          <p class="text-xs text-gray-400 mt-1">Leave blank if flexible with time</p>
+                 class="w-full border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm font-medium text-slate-900 bg-white focus:outline-none focus:border-slate-900 transition-colors">
+          <p class="text-[11px] text-slate-400 mt-1">Leave empty if available during broad business operating ranges</p>
         </div>
 
-        <!-- Tenant Note -->
+        <!-- Submitting Instructions Note -->
         <div>
-          <label class="block text-sm font-bold text-blue-900 mb-2 uppercase tracking-wide">
-            Special Requests / Notes <span class="text-gray-400 font-normal">(Optional)</span>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+            Supplemental Transmittal Directives <span class="text-slate-400 font-normal">(Optional)</span>
           </label>
           <textarea name="tenant_note" rows="3"
-                    class="w-full border border-gray-200 rounded-xl px-5 py-4 bg-slate-50 focus:bg-white focus:border-blue-900 focus:ring-2 focus:ring-blue-900/20 outline-none transition-all text-blue-950 resize-none"
-                    placeholder="e.g., I can only meet in the afternoon, or any special instructions...">{{ tenant_note }}</textarea>
+                    class="w-full border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm font-medium text-slate-900 bg-white focus:outline-none focus:border-slate-900 transition-colors resize-none"
+                    placeholder="Provide specific notes mapped to your handover targets...">{{ tenant_note }}</textarea>
         </div>
 
-        <div class="rounded-xl bg-amber-50 border border-amber-100 p-4 text-sm text-amber-800 flex items-start gap-3">
-          <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          <p>Status will remain <span class="font-bold">PENDING</span> until the admin confirms your appointment and receives the cash payment.</p>
+        <!-- Persistence Alert -->
+        <div class="p-3.5 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600 leading-relaxed">
+          <span class="font-bold text-slate-900 block mb-0.5">Authorization Freeze Note</span>
+          Transmittal remains staged pending final physical caching log verification by property account reps.
         </div>
 
-        <button type="submit"
-                class="w-full bg-green-600 text-white py-4 rounded-xl font-bold text-base hover:bg-green-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-          Request Appointment
-        </button>
+        <!-- Final Submit Trigger -->
+        <div class="pt-2">
+          <button type="submit"
+                  class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-lg text-xs uppercase tracking-wider transition-colors shadow-sm">
+            Transmit Scheduling Log
+          </button>
+        </div>
       </form>
     </div>
 

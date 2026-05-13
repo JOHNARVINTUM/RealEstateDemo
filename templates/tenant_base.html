@@ -4,7 +4,7 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'admin_portal/css/admin.css' %}">
 <style>
-  /* Enhanced Tenant Portal Styling */
+  /* Practical & Authentic Tenant Portal Styling */
   
   /* Form Field Styling */
   .tenant-form select,
@@ -15,14 +15,13 @@
   .tenant-form input[type="tel"],
   .tenant-form textarea {
     width: 100%;
-    border: 2px solid var(--color-gray-200);
-    border-radius: var(--radius-xl);
-    padding: var(--space-4) var(--space-5);
-    background-color: var(--color-gray-50);
-    transition: all var(--transition-normal);
-    font-size: var(--font-size-sm);
-    color: var(--color-gray-800);
-    font-family: 'Poppins', sans-serif;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+    padding: 0.625rem 0.875rem;
+    background-color: #ffffff;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    font-size: 0.9375rem;
+    color: #0f172a;
     font-weight: 500;
   }
   
@@ -33,205 +32,239 @@
   .tenant-form input[type="number"]:focus,
   .tenant-form input[type="tel"]:focus,
   .tenant-form textarea:focus {
-    background-color: white;
-    border-color: var(--color-primary);
+    border-color: #0f172a;
     outline: none;
-    box-shadow: 0 0 0 3px rgba(23, 37, 84, 0.1);
-    transform: translateY(-1px);
-  }
-  
-  .tenant-form select:hover,
-  .tenant-form input:hover,
-  .tenant-form textarea:hover {
-    border-color: var(--color-gray-300);
-    background-color: white;
+    box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
   }
   
   /* Form Labels */
   .tenant-form label {
     display: block;
-    margin-bottom: var(--space-2);
-    color: var(--color-gray-700);
-    font-size: var(--font-size-sm);
-    font-weight: 600;
-    letter-spacing: 0.025em;
+    margin-bottom: 0.375rem;
+    color: #334155;
+    font-size: 0.875rem;
+    font-weight: 700;
   }
   
   /* Form Buttons */
   .tenant-form button[type="submit"] {
-    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+    background-color: #0f172a;
     color: white;
     border: none;
-    padding: var(--space-4) var(--space-8);
-    border-radius: var(--radius-xl);
-    font-weight: 600;
-    font-size: var(--font-size-base);
-    transition: all var(--transition-normal);
-    box-shadow: var(--shadow-md);
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 700;
+    font-size: 0.9375rem;
+    transition: background-color 0.15s ease;
     cursor: pointer;
-    letter-spacing: 0.025em;
   }
   
   .tenant-form button[type="submit"]:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
+    background-color: #1e293b;
   }
   
-  .tenant-form button[type="submit"]:active {
-    transform: translateY(0);
-  }
-  
-  /* Error Messages */
+  /* Messages */
   .tenant-form .errorlist {
     list-style: none;
     padding: 0;
-    margin: var(--space-2) 0 0 0;
+    margin: 0.5rem 0 0 0;
   }
   
   .tenant-form .errorlist li {
-    background-color: var(--color-error-bg);
-    color: var(--color-error);
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-lg);
-    font-size: var(--font-size-sm);
-    font-weight: 500;
-    border-left: 3px solid var(--color-error);
+    background-color: #fee2e2;
+    color: #991b1b;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-left: 3px solid #dc2626;
   }
   
-  /* Success Messages */
   .tenant-form .success-message {
-    background-color: var(--color-success-bg);
-    color: var(--color-success);
-    padding: var(--space-3) var(--space-4);
-    border-radius: var(--radius-lg);
-    font-size: var(--font-size-sm);
-    font-weight: 500;
-    border-left: 3px solid var(--color-success);
-    margin-bottom: var(--space-4);
+    background-color: #f0fdf4;
+    color: #166534;
+    padding: 0.75rem 1rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-left: 3px solid #16a34a;
+    margin-bottom: 1rem;
   }
   
-  /* Card Components */
+  /* Practical Cards */
   .tenant-card {
-    background: white;
-    border: 1px solid var(--color-gray-200);
-    border-radius: var(--radius-2xl);
-    padding: var(--space-6);
-    box-shadow: var(--shadow-sm);
-    transition: all var(--transition-normal);
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
   }
   
-  .tenant-card:hover {
-    box-shadow: var(--shadow-md);
-    transform: translateY(-1px);
-  }
-  
-  /* Status Badges */
+  /* Readable Status Badges */
   .status-badge {
     display: inline-flex;
     align-items: center;
-    padding: var(--space-1) var(--space-3);
-    border-radius: var(--radius-full);
-    font-size: var(--font-size-xs);
-    font-weight: 600;
+    padding: 0.25rem 0.625rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.025em;
   }
   
   .status-badge.success {
-    background-color: var(--color-success-bg);
-    color: var(--color-success);
+    background-color: #f0fdf4;
+    color: #166534;
+    border: 1px solid #bbf7d0;
   }
   
   .status-badge.warning {
-    background-color: var(--color-warning-bg);
-    color: var(--color-warning);
+    background-color: #fefbeb;
+    color: #b45309;
+    border: 1px solid #fde68a;
   }
   
   .status-badge.error {
-    background-color: var(--color-error-bg);
-    color: var(--color-error);
+    background-color: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
   }
   
   .status-badge.info {
-    background-color: var(--color-info-bg);
-    color: var(--color-info);
+    background-color: #f8fafc;
+    color: #334155;
+    border: 1px solid #e2e8f0;
   }
   
-  /* Enhanced Sidebar Navigation */
+  /* Sidebar */
   .tenant-sidebar {
-    background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+    background-color: #0f172a;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    height: 100vh !important;
+    z-index: 1000 !important;
+    overflow-y: auto !important;
+    transition: width 0.3s ease !important;
   }
   
   .tenant-sidebar .nav-item {
-    transition: all var(--transition-normal);
+    transition: background-color 0.15s ease, color 0.15s ease;
   }
   
   .tenant-sidebar .nav-item:hover {
-    background: rgba(255, 255, 255, 0.1);
-    transform: translateX(4px);
+    background-color: #1e293b;
+    color: #ffffff;
   }
   
   .tenant-sidebar .nav-item.active {
-    background: rgba(255, 255, 255, 0.15);
-    border-left: 4px solid var(--color-secondary);
+    background-color: #1e293b;
+    color: #ffffff;
+    border-left: 4px solid #3b82f6;
+    font-weight: 700;
+  }
+
+  /* Tenant Sidebar Collapse Behavior */
+  body.tenant-collapsed .tenant-sidebar {
+    width: 88px !important;
+  }
+
+  body.tenant-collapsed .tenant-sidebar .brand-text,
+  body.tenant-collapsed .tenant-sidebar .nav-text {
+    opacity: 0;
+    width: 0;
+    display: none !important;
+  }
+
+  body.tenant-collapsed .tenant-sidebar .brand-container {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  body.tenant-collapsed .tenant-sidebar .brand-header {
+    justify-content: center;
+  }
+
+  body.tenant-collapsed .tenant-sidebar .tenant-brand-logo {
+    width: 44px;
+    height: 44px;
+  }
+
+  body.tenant-collapsed .tenant-sidebar .brand-name {
+    display: none !important;
+  }
+
+  body.tenant-collapsed .tenant-sidebar .nav-item,
+  body.tenant-collapsed .tenant-sidebar button {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  body.tenant-collapsed #tenantToggleIcon {
+    transform: rotate(180deg);
   }
   
-  /* Loading States */
+  /* Override neon gradient utilities to map to readable dark text */
+  .text-gradient {
+    background: none !important;
+    -webkit-text-fill-color: initial !important;
+    color: #0f172a !important;
+  }
+
+  /* Main Workspace Offset for Fixed Sidebar */
+  main.flex-1 {
+    margin-left: 288px !important;
+    transition: margin-left 0.3s ease !important;
+  }
+
+  body.tenant-collapsed main.flex-1 {
+    margin-left: 88px !important;
+  }
+
+  /* Loading State */
   .loading {
-    position: relative;
+    opacity: 0.7;
     pointer-events: none;
-    opacity: 0.6;
   }
-  
-  .loading::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 20px;
-    height: 20px;
-    margin: -10px 0 0 -10px;
-    border: 2px solid transparent;
-    border-top-color: var(--color-primary);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-  
-  /* Responsive Improvements */
-  @media (max-width: 768px) {
-    .tenant-form select,
-    .tenant-form input,
-    .tenant-form textarea {
-      padding: var(--space-3) var(--space-4);
-      font-size: var(--font-size-base);
-    }
-    
-    .tenant-form button[type="submit"] {
-      padding: var(--space-3) var(--space-6);
-      font-size: var(--font-size-sm);
-    }
-    
-    .tenant-card {
-      padding: var(--space-4);
-    }
+
+  /* Tenant Workspace Background Pattern - Distinct from Admin Squares */
+  .tenant-workspace-bg {
+    background-color: #f8fafc;
+    background-image: radial-gradient(rgba(148, 163, 184, 0.22) 1px, transparent 1px);
+    background-size: 28px 28px;
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="min-h-screen flex bg-slate-50 font-['Poppins',_sans-serif]">
+<div class="min-h-screen flex tenant-workspace-bg font-['Poppins',_sans-serif]">
 
   {% include "includes/tenant_sidebar.html" %}
 
-  <main class="flex-1 px-4 py-6 overflow-y-auto">
+  <main class="flex-1 px-4 py-6 overflow-y-auto transition-all duration-300">
     <div class="max-w-6xl mx-auto animate-fade-in">
       {% block tenant_content %}{% endblock %}
     </div>
   </main>
 
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const toggleBtn = document.getElementById('tenantSidebarToggle');
+    if (toggleBtn) {
+      // Load stored state
+      if (localStorage.getItem('tenantSidebarCollapsed') === 'true') {
+        document.body.classList.add('tenant-collapsed');
+      }
+
+      toggleBtn.addEventListener('click', function () {
+        document.body.classList.toggle('tenant-collapsed');
+        const isCollapsed = document.body.classList.contains('tenant-collapsed');
+        localStorage.setItem('tenantSidebarCollapsed', isCollapsed);
+      });
+    }
+  });
+</script>
 {% endblock %}

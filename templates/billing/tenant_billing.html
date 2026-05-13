@@ -6,17 +6,24 @@
 {% block tenant_content %}
 
   <!-- Page Header -->
-  <div class="mb-8">
-    <h1 class="text-3xl font-extrabold text-blue-950 tracking-tight">Billing Information</h1>
-    <p class="text-gray-500 mt-1 font-medium text-sm">View your current bill, ongoing billing, and payment history</p>
+  <div class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Billing Information</h1>
+      <p class="text-slate-500 mt-1 font-medium text-sm">Review your current statement, ongoing charges, and complete payment history</p>
+    </div>
+    <!-- System Period Indicator -->
+    <div class="bg-white border border-slate-200 px-4 py-2 rounded-lg shadow-sm w-fit">
+      <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Statement Period</span>
+      <span class="text-xs font-bold text-slate-800">{% now "F Y" %}</span>
+    </div>
   </div>
 
   <!-- Billing Filters -->
-  <div class="bg-white rounded-xl border border-gray-200 p-4 mb-6 shadow-sm">
-    <form method="get" class="flex flex-wrap gap-3 items-end">
-      <div class="flex-1 min-w-[140px]">
-        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Month</label>
-        <select name="month" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+  <div class="tenant-card mb-8">
+    <form method="get" class="flex flex-wrap gap-4 items-end">
+      <div class="flex-1 min-w-[150px]">
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Target Month</label>
+        <select name="month" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-slate-900 text-sm font-medium text-slate-900 bg-white">
           <option value="">All Months</option>
           {% for month_num, month_name in month_choices %}
             <option value="{{ month_num }}" {% if month_filter == month_num|stringformat:"s" %}selected{% endif %}>{{ month_name }}</option>
@@ -24,9 +31,9 @@
         </select>
       </div>
       
-      <div class="flex-1 min-w-[100px]">
-        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Year</label>
-        <select name="year" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+      <div class="flex-1 min-w-[120px]">
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Target Year</label>
+        <select name="year" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-slate-900 text-sm font-medium text-slate-900 bg-white">
           <option value="">All Years</option>
           {% for year in year_choices %}
             <option value="{{ year }}" {% if year_filter == year|stringformat:"s" %}selected{% endif %}>{{ year }}</option>
@@ -34,310 +41,395 @@
         </select>
       </div>
       
-      <div class="flex gap-2">
-        <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors text-sm">
-          Filter
+      <div class="flex gap-2.5">
+        <button type="submit" class="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg transition-colors text-sm">
+          Filter Statements
         </button>
         {% if month_filter or year_filter %}
-          <a href="{% url 'tenant_billing' %}" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-lg transition-colors text-sm">
-            Clear
+          <a href="{% url 'tenant_billing' %}" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg transition-colors text-sm inline-flex items-center justify-center">
+            Reset
           </a>
         {% endif %}
       </div>
     </form>
   </div>
 
-  <!-- Current Bill Card -->
-  <div class="rounded-2xl border-l-4 border-l-green-500 border-y border-r border-gray-200 bg-gradient-to-br from-white to-slate-50 p-6 shadow-sm hover:shadow-md transition-shadow mb-8">
-    <div class="flex items-start gap-4">
-      <div class="w-14 h-14 rounded-xl bg-blue-50 flex items-center justify-center shrink-0 shadow-inner">
-        <span class="text-3xl font-extrabold text-blue-900">₱</span>
-      </div>
-      <div class="flex-1">
-        <h2 class="text-xl font-bold text-blue-950 tracking-tight">Current Bill</h2>
-        <p class="text-gray-500 text-sm font-medium mt-1">
-          {% if current_bill %}{{ current_bill.billing_month|date:"F Y" }}{% else %}-{% endif %}
-        </p>
-
-        <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-
-          <!-- Billing Breakdown -->
-          <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Billing Breakdown</p>
-            <div class="flex justify-between py-2 text-sm border-b border-gray-50">
-              <span class="text-gray-600 font-medium">Monthly Rent</span>
-              <span class="font-bold text-blue-950">
-                ₱{% if current_bill %}{{ current_bill.base_rent|floatformat:2|intcomma }}{% else %}{{ lease.monthly_rent|floatformat:2|intcomma }}{% endif %}
-              </span>
-            </div>
-            <div class="flex justify-between py-2 text-sm border-b border-gray-50">
-              <span class="text-gray-600 font-medium">Water Utility</span>
-              <span class="font-bold text-blue-950">
-                ₱{% if current_bill %}{{ current_bill.water_amount|default:"0.00"|floatformat:2|intcomma }}{% else %}0.00{% endif %}
-                {% if water_reading %}
-                  <button onclick="toggleWaterDetails()" class="ml-2 text-blue-500 hover:text-blue-700 text-xs underline" type="button">ⓘ View Details</button>
-                {% endif %}
-              </span>
-            </div>
-            {% if water_reading %}
-            <div id="waterDetails" class="hidden bg-blue-50 p-3 rounded-lg mt-2 mb-2">
-              <p class="text-xs font-semibold text-blue-800 uppercase tracking-wider mb-2">Water Usage Details</p>
-              <div class="grid grid-cols-2 gap-2 text-xs">
-                <div class="flex justify-between">
-                  <span class="text-gray-600">Previous Reading:</span>
-                  <span class="font-medium">{{ water_reading.previous_reading|floatformat:2 }} m³</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-gray-600">Current Reading:</span>
-                  <span class="font-medium">{{ water_reading.current_reading|floatformat:2 }} m³</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-gray-600">Consumption:</span>
-                  <span class="font-medium">{{ water_reading.consumption|floatformat:2 }} m³</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-gray-600">Rate:</span>
-                  <span class="font-medium">₱{{ water_reading.rate_per_cu_m|floatformat:2 }}/m³</span>
-                </div>
-              </div>
-              <div class="mt-2 pt-2 border-t border-blue-200">
-                <div class="flex justify-between text-sm">
-                  <span class="text-gray-600">Calculation:</span>
-                  <span class="font-bold text-blue-900">{{ water_reading.consumption|floatformat:2 }} × ₱{{ water_reading.rate_per_cu_m|floatformat:2 }} = ₱{{ water_reading.computed_amount|floatformat:2 }}</span>
-                </div>
-              </div>
-            </div>
-            {% endif %}
-            <div class="flex justify-between py-2 text-sm">
-              <span class="text-gray-600 font-medium">Penalty</span>
-              <span class="font-bold text-red-500">
-                {% if current_bill and current_bill.interest and current_bill.interest != 0 %}₱{{ current_bill.interest|floatformat:2|intcomma }}{% else %}-{% endif %}
-              </span>
-            </div>
-            <div class="border-t border-gray-200 mt-4 pt-4 flex justify-between items-end">
-              <span class="text-base font-bold text-gray-900">Total Amount</span>
-              <span class="text-3xl font-extrabold text-blue-950 tracking-tight">
-                ₱{% if current_bill %}{{ current_bill.total_due|default:"0.00"|floatformat:2|intcomma }}{% else %}0.00{% endif %}
-              </span>
-            </div>
-          </div>
-
-          <!-- Payment Status -->
-          <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Payment Status</p>
-            
-            <!-- Due Date -->
-            <div class="flex items-center gap-4 py-3 border-b border-gray-50">
-              <div class="w-10 h-10 rounded-lg bg-slate-50 border border-gray-100 flex items-center justify-center">
-                <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path>
-                </svg>
-              </div>
-              <div>
-                <div class="text-xs text-gray-500 font-medium">Due Date</div>
-                <div class="font-bold text-blue-950 mt-0.5">
-                  {% if current_bill and current_bill.due_date %}{{ current_bill.due_date|date:"F j, Y" }}{% else %}-{% endif %}
-                </div>
-              </div>
-            </div>
-            
-            <!-- Rent Status -->
-            <div class="flex items-center gap-4 py-3 border-b border-gray-50">
-              {% if current_bill and current_bill.is_rent_paid %}
-                <div class="w-10 h-10 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center">
-                  <svg class="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20 6 9 17l-5-5"></path>
-                  </svg>
-                </div>
-                <div>
-                  <div class="text-xs text-gray-500 font-medium">Rent Status</div>
-                  <div class="font-bold text-blue-600 mt-0.5">PAID {% if current_bill.rent_paid_at %}{{ current_bill.rent_paid_at|date:"F j, Y" }}{% endif %}</div>
-                </div>
-              {% else %}
-                <div class="w-10 h-10 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center">
-                  <svg class="w-5 h-5 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div>
-                  <div class="text-xs text-gray-500 font-medium">Rent Status</div>
-                  <div class="font-bold text-orange-600 mt-0.5">
-                    {% if current_bill.rent_paid > 0 %}
-                      PARTIAL (Paid ₱{{ current_bill.rent_paid|floatformat:2 }} / ₱{{ current_bill.base_rent|floatformat:2 }})
-                    {% else %}
-                      UNPAID (₱{{ current_bill.rent_balance|floatformat:2 }})
-                    {% endif %}
-                  </div>
-                </div>
-              {% endif %}
-            </div>
-            
-            <!-- Water Status -->
-            <div class="flex items-center gap-4 py-3">
-              {% if current_bill and current_bill.is_water_paid %}
-                <div class="w-10 h-10 rounded-lg bg-cyan-50 border border-cyan-100 flex items-center justify-center">
-                  <svg class="w-5 h-5 text-cyan-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20 6 9 17l-5-5"></path>
-                  </svg>
-                </div>
-                <div>
-                  <div class="text-xs text-gray-500 font-medium">Water Status</div>
-                  <div class="font-bold text-cyan-600 mt-0.5">PAID {% if current_bill.water_paid_at %}{{ current_bill.water_paid_at|date:"F j, Y" }}{% endif %}</div>
-                </div>
-              {% else %}
-                <div class="w-10 h-10 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center">
-                  <svg class="w-5 h-5 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div>
-                  <div class="text-xs text-gray-500 font-medium">Water Status</div>
-                  <div class="font-bold text-orange-600 mt-0.5">
-                    {% if current_bill.water_paid > 0 %}
-                      PARTIAL (Paid ₱{{ current_bill.water_paid|floatformat:2 }} / ₱{{ current_bill.water_amount|floatformat:2 }})
-                    {% else %}
-                      UNPAID (₱{{ current_bill.water_balance|floatformat:2 }})
-                    {% endif %}
-                  </div>
-                </div>
-              {% endif %}
-            </div>
-          </div>
-
+  <!-- Current Bill Statement Card -->
+  <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mb-8 border-l-4 border-l-slate-900">
+    <div class="p-6 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div class="flex items-center gap-3.5">
+        <div class="w-12 h-12 rounded-lg bg-slate-900 text-white flex items-center justify-center font-bold text-2xl shrink-0">
+          ₱
+        </div>
+        <div>
+          <h2 class="text-lg font-bold text-slate-900">Current Assessment Summary</h2>
+          <p class="text-xs font-medium text-slate-500 mt-0.5">
+            Billing Cycle: {% if current_bill %}{{ current_bill.billing_month|date:"F Y" }}{% else %}-{% endif %}
+          </p>
         </div>
       </div>
+      <!-- Deadlines block -->
+      <div class="text-left md:text-right">
+        <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Payment Deadline</span>
+        <span class="text-sm font-bold text-slate-900">
+          {% if current_bill and current_bill.due_date %}{{ current_bill.due_date|date:"F j, Y" }}{% else %}-{% endif %}
+        </span>
+      </div>
+    </div>
+
+    <div class="p-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+        <!-- Billing Breakdown -->
+        <div class="bg-white p-5 rounded-xl border border-slate-200">
+          <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Financial Breakdown</p>
+          
+          <div class="flex justify-between py-2 text-sm border-b border-slate-100">
+            <span class="text-slate-600 font-medium">Monthly Rent Base</span>
+            <span class="font-bold text-slate-900">
+              ₱{% if current_bill %}{{ current_bill.base_rent|floatformat:2|intcomma }}{% else %}{{ lease.monthly_rent|floatformat:2|intcomma }}{% endif %}
+            </span>
+          </div>
+
+          <div class="flex justify-between py-2 text-sm border-b border-slate-100 items-center">
+            <div>
+              <span class="text-slate-600 font-medium">Water Utility Charge</span>
+              {% if water_reading %}
+                <button onclick="toggleWaterDetails()" class="ml-1.5 text-slate-900 hover:text-slate-600 text-xs font-bold underline focus:outline-none" type="button">
+                  [Usage Metrics]
+                </button>
+              {% endif %}
+            </div>
+            <span class="font-bold text-slate-900">
+              ₱{% if current_bill %}{{ current_bill.water_amount|default:"0.00"|floatformat:2|intcomma }}{% else %}0.00{% endif %}
+            </span>
+          </div>
+
+          {% if water_reading %}
+          <div id="waterDetails" class="hidden bg-slate-50 p-4 rounded-lg border border-slate-200 my-3">
+            <p class="text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2">Meter Reading Details</p>
+            <div class="grid grid-cols-2 gap-y-2 gap-x-4 text-xs">
+              <div class="flex justify-between border-b border-slate-200/50 pb-1">
+                <span class="text-slate-500 font-medium">Prior Reading:</span>
+                <span class="font-bold text-slate-800">{{ water_reading.previous_reading|floatformat:2 }} m³</span>
+              </div>
+              <div class="flex justify-between border-b border-slate-200/50 pb-1">
+                <span class="text-slate-500 font-medium">Latest Reading:</span>
+                <span class="font-bold text-slate-800">{{ water_reading.current_reading|floatformat:2 }} m³</span>
+              </div>
+              <div class="flex justify-between border-b border-slate-200/50 pb-1">
+                <span class="text-slate-500 font-medium">Net Consumption:</span>
+                <span class="font-bold text-slate-800">{{ water_reading.consumption|floatformat:2 }} m³</span>
+              </div>
+              <div class="flex justify-between border-b border-slate-200/50 pb-1">
+                <span class="text-slate-500 font-medium">Unit Rate:</span>
+                <span class="font-bold text-slate-800">₱{{ water_reading.rate_per_cu_m|floatformat:2 }}/m³</span>
+              </div>
+            </div>
+            <div class="mt-2.5 pt-2 border-t border-slate-300">
+              <div class="flex justify-between text-xs font-bold text-slate-900">
+                <span>Calculated Cost:</span>
+                <span>{{ water_reading.consumption|floatformat:2 }} × ₱{{ water_reading.rate_per_cu_m|floatformat:2 }} = ₱{{ water_reading.computed_amount|floatformat:2 }}</span>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="flex justify-between py-2 text-sm border-b border-slate-100">
+            <span class="text-slate-600 font-medium">Late Penalty Interest</span>
+            <span class="font-bold text-rose-700">
+              {% if current_bill and current_bill.interest and current_bill.interest != 0 %}₱{{ current_bill.interest|floatformat:2|intcomma }}{% else %}-{% endif %}
+            </span>
+          </div>
+
+          <div class="mt-5 pt-4 border-t-2 border-slate-900 flex justify-between items-baseline">
+            <span class="text-sm font-bold text-slate-900 uppercase tracking-wider">Total Amount Due</span>
+            <span class="text-2xl font-extrabold text-slate-900">
+              ₱{% if current_bill %}{{ current_bill.total_due|default:"0.00"|floatformat:2|intcomma }}{% else %}0.00{% endif %}
+            </span>
+          </div>
+        </div>
+
+        <!-- Payment Settlement Verification -->
+        <div class="bg-white p-5 rounded-xl border border-slate-200 flex flex-col justify-between">
+          <div>
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Clearing Status</p>
+            
+            <div class="space-y-4">
+              <!-- Rent status block -->
+              <div class="p-3.5 rounded-lg border border-slate-100 bg-slate-50 flex items-start justify-between gap-3">
+                <div>
+                  <span class="text-xs font-bold text-slate-500 block">Rent Account Status</span>
+                  <div class="mt-1">
+                    {% if current_bill and current_bill.is_rent_paid %}
+                      <span class="inline-flex items-center gap-1.5 font-bold text-xs text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded">
+                        CLEARED {% if current_bill.rent_paid_at %}({{ current_bill.rent_paid_at|date:"M j, Y" }}){% endif %}
+                      </span>
+                    {% else %}
+                      {% if current_bill and current_bill.rent_paid > 0 %}
+                        <span class="inline-flex items-center gap-1.5 font-bold text-xs text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded">
+                          PARTIAL (₱{{ current_bill.rent_paid|floatformat:2 }} / ₱{{ current_bill.base_rent|floatformat:2 }})
+                        </span>
+                      {% else %}
+                        <span class="inline-flex items-center gap-1.5 font-bold text-xs text-rose-800 bg-rose-100 px-2.5 py-0.5 rounded">
+                          UNPAID (₱{{ current_bill.rent_balance|default:current_bill.base_rent|floatformat:2 }})
+                        </span>
+                      {% endif %}
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Water status block -->
+              <div class="p-3.5 rounded-lg border border-slate-100 bg-slate-50 flex items-start justify-between gap-3">
+                <div>
+                  <span class="text-xs font-bold text-slate-500 block">Water Utility Status</span>
+                  <div class="mt-1">
+                    {% if current_bill and current_bill.is_water_paid %}
+                      <span class="inline-flex items-center gap-1.5 font-bold text-xs text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded">
+                        CLEARED {% if current_bill.water_paid_at %}({{ current_bill.water_paid_at|date:"M j, Y" }}){% endif %}
+                      </span>
+                    {% else %}
+                      {% if current_bill and current_bill.water_paid > 0 %}
+                        <span class="inline-flex items-center gap-1.5 font-bold text-xs text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded">
+                          PARTIAL (₱{{ current_bill.water_paid|floatformat:2 }} / ₱{{ current_bill.water_amount|floatformat:2 }})
+                        </span>
+                      {% else %}
+                        <span class="inline-flex items-center gap-1.5 font-bold text-xs text-rose-800 bg-rose-100 px-2.5 py-0.5 rounded">
+                          UNPAID (₱{{ current_bill.water_balance|default:current_bill.water_amount|floatformat:2 }})
+                        </span>
+                      {% endif %}
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions Button Trigger -->
+          <div class="mt-6 pt-4 border-t border-slate-100">
+            <a href="{% url 'tenant_pay_advance' %}" class="w-full text-center block bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 px-4 rounded-lg text-sm transition-colors">
+              Proceed to Payment
+            </a>
+          </div>
+        </div>
+
+      </div>
     </div>
   </div>
 
-  <!-- Ongoing Billing Table -->
-  <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8">
-    <div class="px-6 py-5 border-b border-gray-100 flex items-center gap-3">
-      <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-        <svg class="w-4 h-4 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-          <polyline points="14 2 14 8 20 8"></polyline>
-        </svg>
-      </div>
+  <!-- Ongoing Billing Registry -->
+  <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mb-8">
+    <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
       <div>
-        <h2 class="text-base font-bold text-blue-950">Ongoing Billing</h2>
-        <p class="text-xs text-gray-500 mt-0.5 font-medium">Unpaid bills up to the current month</p>
+        <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wide">Ongoing Assessment Ledger</h2>
+        <p class="text-xs text-slate-500 font-medium">Aggregated balances scheduled up to the current period</p>
       </div>
+      <span class="text-xs font-bold text-slate-400">Total Records: {{ ongoing_rows|length }}</span>
     </div>
+
     <div class="overflow-x-auto">
-      <table class="min-w-full">
-        <thead class="bg-slate-50 border-b border-gray-200">
-          <tr>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Month</th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Rent</th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Water</th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Penalty</th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Due Date</th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-slate-100/75 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+            <th class="py-3 px-6">Billing Month</th>
+            <th class="py-3 px-6">Rent Assessed</th>
+            <th class="py-3 px-6">Water Assessed</th>
+            <th class="py-3 px-6">Accrued Penalty</th>
+            <th class="py-3 px-6">Computed Total</th>
+            <th class="py-3 px-6">Target Deadline</th>
+            <th class="py-3 px-6">Status</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100">
+        <tbody class="divide-y divide-slate-200/60 text-sm" id="ongoingTableBody">
           {% for r in ongoing_rows %}
-            <tr class="hover:bg-slate-50 transition-colors duration-150">
-              <td class="px-6 py-4 text-sm font-medium text-blue-950">{{ r.month_label }}</td>
-              <td class="px-6 py-4 text-sm text-gray-600">₱{{ r.rent|floatformat:2|intcomma }}</td>
-              <td class="px-6 py-4 text-sm text-gray-600">
+            <tr class="ongoing-row hover:bg-slate-50/80 transition-colors">
+              <td class="py-3.5 px-6 font-bold text-slate-900">{{ r.month_label }}</td>
+              <td class="py-3.5 px-6 text-slate-700 font-medium">₱{{ r.rent|floatformat:2|intcomma }}</td>
+              <td class="py-3.5 px-6 text-slate-700 font-medium">
                 ₱{{ r.water|floatformat:2|intcomma }}
                 {% if r.water_reading %}
-                  <br><span class="text-xs text-blue-500">{{ r.water_reading.consumption|floatformat:1 }}m³ × ₱{{ r.water_reading.rate_per_cu_m|floatformat:1 }}</span>
+                  <span class="block text-[11px] text-slate-400 font-normal mt-0.5">({{ r.water_reading.consumption|floatformat:1 }}m³ @ ₱{{ r.water_reading.rate_per_cu_m|floatformat:1 }})</span>
                 {% endif %}
               </td>
-              <td class="px-6 py-4 text-sm text-red-500">
+              <td class="py-3.5 px-6 text-rose-700 font-medium">
                 {% if r.penalty and r.penalty != 0 %}₱{{ r.penalty|floatformat:2|intcomma }}{% else %}-{% endif %}
               </td>
-              <td class="px-6 py-4 text-sm font-bold text-blue-950">₱{{ r.total|floatformat:2|intcomma }}</td>
-              <td class="px-6 py-4 text-sm text-gray-600">
+              <td class="py-3.5 px-6 font-bold text-slate-900">₱{{ r.total|floatformat:2|intcomma }}</td>
+              <td class="py-3.5 px-6 text-slate-600 font-medium">
                 {% if r.due_date %}{{ r.due_date|date:"Y-m-d" }}{% else %}-{% endif %}
               </td>
-              <td class="px-6 py-4 text-sm">
+              <td class="py-3.5 px-6">
                 {% if r.status == "OVERDUE" %}
-                  <span class="px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">OVERDUE</span>
+                  <span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-rose-100 text-rose-900 border border-rose-200">OVERDUE</span>
                 {% elif r.status == "PAID" %}
-                  <span class="px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">PAID</span>
+                  <span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-200">PAID</span>
                 {% elif r.status == "DUE_TODAY" %}
-                  <span class="px-2 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">DUE TODAY</span>
+                  <span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-200">DUE TODAY</span>
                 {% else %}
-                  <span class="px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">UPCOMING</span>
+                  <span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-800 border border-slate-200">UPCOMING</span>
                 {% endif %}
               </td>
             </tr>
           {% empty %}
             <tr>
-              <td colspan="7" class="px-6 py-14 text-center">
-                <svg class="w-12 h-12 text-green-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p class="text-gray-500 font-medium">No ongoing billing.</p>
-                <p class="text-sm text-gray-400 mt-1">You're all caught up!</p>
+              <td colspan="7" class="py-12 px-6 text-center text-slate-500">
+                <div class="max-w-xs mx-auto">
+                  <p class="font-bold text-slate-700 text-base">No active assessment entries</p>
+                  <p class="text-xs text-slate-400 mt-1">All standard monthly logs have been settled or are clear of default.</p>
+                </div>
               </td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
+    </div>
+
+    <!-- Ongoing Ledger Pagination Controls -->
+    <div class="px-6 py-3 border-t border-slate-200 bg-white flex flex-col sm:flex-row items-center justify-between gap-3" id="ongoingPagination">
+      <div class="text-xs text-slate-500">
+        Showing <span id="ongoingStart" class="font-bold text-slate-700">0</span> to <span id="ongoingEnd" class="font-bold text-slate-700">0</span> of <span id="ongoingTotal" class="font-bold text-slate-700">{{ ongoing_rows|length }}</span> entries
+      </div>
+      <div class="flex items-center gap-1" id="ongoingPageButtons">
+        <!-- Dynamically injected pagination buttons -->
+      </div>
     </div>
   </div>
 
-  <!-- Payment History Table -->
-  <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8">
-    <div class="px-6 py-5 border-b border-gray-100 flex items-center gap-3">
-      <div class="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
-        <span class="text-base font-extrabold text-green-600">₱</span>
-      </div>
+  <!-- Historical Payment Vault -->
+  <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mb-8">
+    <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
       <div>
-        <h2 class="text-base font-bold text-blue-950">Payment History</h2>
-        <p class="text-xs text-gray-500 mt-0.5 font-medium">Actual payment transactions only</p>
+        <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wide">Validated Payment History</h2>
+        <p class="text-xs text-slate-500 font-medium">Archived chronological records of all processed tenant remittances</p>
       </div>
+      <span class="text-xs font-bold text-slate-400">Total Transmittals: {{ transactions|length }}</span>
     </div>
+
     <div class="overflow-x-auto">
-      <table class="min-w-full">
-        <thead class="bg-slate-50 border-b border-gray-200">
-          <tr>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Paid Date</th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Reference</th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Months Paid</th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Amount</th>
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-slate-100/75 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+            <th class="py-3 px-6">Verification Date</th>
+            <th class="py-3 px-6">Trace Reference</th>
+            <th class="py-3 px-6">Applied Coverage</th>
+            <th class="py-3 px-6">Settled Amount</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100">
+        <tbody class="divide-y divide-slate-200/60 text-sm" id="historyTableBody">
           {% for t in transactions %}
-            <tr class="hover:bg-slate-50 transition-colors duration-150">
-              <td class="px-6 py-4 text-sm text-gray-600">
+            <tr class="history-row hover:bg-slate-50/80 transition-colors">
+              <td class="py-3.5 px-6 text-slate-700 font-medium">
                 {% if t.paid_at %}{{ t.paid_at|date:"Y-m-d" }}
-                {% else %}<span class="text-red-500 font-semibold">Not Paid</span>{% endif %}
+                {% else %}<span class="text-rose-700 font-bold">Unsettled</span>{% endif %}
               </td>
-              <td class="px-6 py-4 text-sm font-semibold text-blue-950">{{ t.reference }}</td>
-              <td class="px-6 py-4 text-sm text-gray-600">{{ t.months_paid }}</td>
-              <td class="px-6 py-4 text-sm font-bold text-green-600">₱{{ t.total_amount|floatformat:2|intcomma }}</td>
+              <td class="py-3.5 px-6 font-mono font-bold text-slate-900">{{ t.reference }}</td>
+              <td class="py-3.5 px-6 text-slate-600 font-medium">{{ t.months_paid }}</td>
+              <td class="py-3.5 px-6 font-bold text-slate-900">₱{{ t.total_amount|floatformat:2|intcomma }}</td>
             </tr>
           {% empty %}
             <tr>
-              <td colspan="4" class="px-6 py-14 text-center">
-                <svg class="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p class="text-gray-500 font-medium">No payments yet.</p>
+              <td colspan="4" class="py-12 px-6 text-center text-slate-500">
+                <p class="font-bold text-slate-700 text-base">Vault is empty</p>
+                <p class="text-xs text-slate-400 mt-1">No archived transactions mapped to your account reference.</p>
               </td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
+    </div>
+
+    <!-- Payment History Pagination Controls -->
+    <div class="px-6 py-3 border-t border-slate-200 bg-white flex flex-col sm:flex-row items-center justify-between gap-3" id="historyPagination">
+      <div class="text-xs text-slate-500">
+        Showing <span id="historyStart" class="font-bold text-slate-700">0</span> to <span id="historyEnd" class="font-bold text-slate-700">0</span> of <span id="historyTotal" class="font-bold text-slate-700">{{ transactions|length }}</span> entries
+      </div>
+      <div class="flex items-center gap-1" id="historyPageButtons">
+        <!-- Dynamically injected pagination buttons -->
+      </div>
     </div>
   </div>
 
   <script>
     function toggleWaterDetails() {
       const details = document.getElementById('waterDetails');
-      if (details.classList.contains('hidden')) {
-        details.classList.remove('hidden');
-      } else {
-        details.classList.add('hidden');
+      if (details) {
+        details.classList.toggle('hidden');
       }
     }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      function setupPagination(rowClass, startId, endId, totalId, containerId, pageSize) {
+        const rows = document.querySelectorAll('.' + rowClass);
+        const total = rows.length;
+        const totalPages = Math.ceil(total / pageSize);
+        const container = document.getElementById(containerId);
+        const startSpan = document.getElementById(startId);
+        const endSpan = document.getElementById(endId);
+
+        if (total <= pageSize) {
+          const pagWrapper = document.getElementById(containerId)?.closest('div[id$="Pagination"]');
+          if (pagWrapper) pagWrapper.style.display = 'none';
+          rows.forEach(r => r.style.display = '');
+          if (startSpan) startSpan.textContent = total > 0 ? 1 : 0;
+          if (endSpan) endSpan.textContent = total;
+          return;
+        }
+
+        function showPage(page) {
+          const start = (page - 1) * pageSize;
+          const end = Math.min(start + pageSize, total);
+
+          rows.forEach((r, idx) => {
+            r.style.display = (idx >= start && idx < end) ? '' : 'none';
+          });
+
+          if (startSpan) startSpan.textContent = total > 0 ? start + 1 : 0;
+          if (endSpan) endSpan.textContent = end;
+
+          // Render page buttons
+          if (!container) return;
+          container.innerHTML = '';
+
+          // Prev Button
+          const prevBtn = document.createElement('button');
+          prevBtn.type = 'button';
+          prevBtn.textContent = 'Prev';
+          prevBtn.className = 'px-2.5 py-1 text-xs font-bold rounded border transition-colors mr-1 ' + 
+            (page === 1 ? 'text-slate-300 border-slate-100 cursor-not-allowed bg-slate-50/50' : 'text-slate-700 border-slate-300 hover:bg-slate-50 bg-white');
+          prevBtn.disabled = page === 1;
+          prevBtn.onclick = () => showPage(page - 1);
+          container.appendChild(prevBtn);
+
+          // Page Numbers
+          for (let i = 1; i <= totalPages; i++) {
+            const pageBtn = document.createElement('button');
+            pageBtn.type = 'button';
+            pageBtn.textContent = i;
+            pageBtn.className = 'w-7 h-7 text-xs font-bold rounded border transition-colors mx-0.5 flex items-center justify-center ' + 
+              (i === page ? 'bg-slate-900 text-white border-slate-900' : 'text-slate-700 border-slate-300 hover:bg-slate-50 bg-white');
+            pageBtn.onclick = () => showPage(i);
+            container.appendChild(pageBtn);
+          }
+
+          // Next Button
+          const nextBtn = document.createElement('button');
+          nextBtn.type = 'button';
+          nextBtn.textContent = 'Next';
+          nextBtn.className = 'px-2.5 py-1 text-xs font-bold rounded border transition-colors ml-1 ' + 
+            (page === totalPages ? 'text-slate-300 border-slate-100 cursor-not-allowed bg-slate-50/50' : 'text-slate-700 border-slate-300 hover:bg-slate-50 bg-white');
+          nextBtn.disabled = page === totalPages;
+          nextBtn.onclick = () => showPage(page + 1);
+          container.appendChild(nextBtn);
+        }
+
+        showPage(1);
+      }
+
+      // Initialize 5 rows per page for ultra-neat presentation
+      setupPagination('ongoing-row', 'ongoingStart', 'ongoingEnd', 'ongoingTotal', 'ongoingPageButtons', 5);
+      setupPagination('history-row', 'historyStart', 'historyEnd', 'historyTotal', 'historyPageButtons', 5);
+    });
   </script>
 
 {% endblock %}

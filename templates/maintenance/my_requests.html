@@ -1,72 +1,276 @@
 {% extends "tenant_base.html" %}
-{% block title %}My Requests - RealEstate360+{% endblock %}
+{% block title %}Maintenance History - RealEstate360+{% endblock %}
 {% block meta_description %}Track and manage your maintenance service requests.{% endblock %}
 
 {% block tenant_content %}
 
   <!-- Page Header -->
-  <div class="flex items-center justify-between mb-8">
+  <div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
     <div>
-      <h1 class="text-3xl font-extrabold text-blue-950 tracking-tight">Maintenance History</h1>
-      <p class="text-gray-500 font-medium mt-1 text-sm">Track and manage your service requests.</p>
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Maintenance History</h1>
+      <p class="text-slate-500 font-medium mt-1 text-sm">Review logged engineering tasks and property preservation service requests</p>
     </div>
-    <a href="{% url 'report_issue' %}"
-       class="bg-green-600 text-white px-5 py-3 rounded-xl font-bold shadow-md shadow-green-900/20 hover:bg-green-700 hover:-translate-y-0.5 transition-all text-sm flex items-center gap-2">
-      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-      </svg>
-      New Request
-    </a>
+    <div>
+      <a href="{% url 'report_issue' %}"
+         class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2.5 rounded-lg text-xs uppercase tracking-wider transition-colors inline-flex items-center gap-2 shadow-sm">
+        <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+        </svg>
+        Log New Transmittal
+      </a>
+    </div>
   </div>
 
-  <!-- Requests Table -->
-  <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-    <table class="min-w-full divide-y divide-gray-100">
-      <thead class="bg-slate-50 border-b border-gray-200">
-        <tr>
-          <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date Submitted</th>
-          <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Category</th>
-          <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Issue Title</th>
-          <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-gray-100 bg-white">
-        {% for r in requests %}
-          <tr class="hover:bg-slate-50/80 transition-colors">
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">{{ r.created_at|date:"M d, Y" }}</td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <span class="px-3 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-100 uppercase">{{ r.get_category_display }}</span>
-            </td>
-            <td class="px-6 py-4 text-sm font-bold text-blue-950">{{ r.title }}</td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              {% if r.status == "OPEN" %}
-                <span class="px-3 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-700 border border-amber-200 uppercase">Open</span>
-              {% elif r.status == "IN_PROGRESS" %}
-                <span class="px-3 py-1 rounded-full text-[11px] font-bold bg-blue-100 text-blue-700 border border-blue-200 uppercase">In Progress</span>
-              {% elif r.status == "RESOLVED" %}
-                <span class="px-3 py-1 rounded-full text-[11px] font-bold bg-green-100 text-green-700 border border-green-200 uppercase">Resolved</span>
-              {% else %}
-                <span class="px-3 py-1 rounded-full text-[11px] font-bold bg-gray-100 text-gray-600 border border-gray-200 uppercase">Closed</span>
-              {% endif %}
-            </td>
+  <!-- Filters Array Console -->
+  <div class="tenant-card mb-8">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div class="flex flex-wrap items-center gap-4 flex-1">
+        <!-- Category Scope Dropdown -->
+        <div class="min-w-[160px] flex-1 sm:flex-initial">
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Filter Category Scope</label>
+          <select id="filterCategory" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 bg-white focus:outline-none focus:border-slate-900 transition-colors cursor-pointer shadow-sm">
+            <option value="ALL">All Categories</option>
+            <option value="PLUMBING">Plumbing</option>
+            <option value="ELECTRICAL">Electrical</option>
+            <option value="STRUCTURAL">Structural</option>
+            <option value="OTHER">Other</option>
+          </select>
+        </div>
+
+        <!-- Dispatch Status Dropdown -->
+        <div class="min-w-[160px] flex-1 sm:flex-initial">
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Filter Dispatch Status</label>
+          <select id="filterStatus" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 bg-white focus:outline-none focus:border-slate-900 transition-colors cursor-pointer shadow-sm">
+            <option value="ALL">All Statuses</option>
+            <option value="OPEN">Staged (Open)</option>
+            <option value="IN_PROGRESS">In Progress</option>
+            <option value="RESOLVED">Resolved</option>
+            <option value="CLOSED">Archived (Closed)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Action Clear/Reset Filters -->
+      <div class="self-end w-full sm:w-auto">
+        <button type="button" id="resetFiltersBtn" class="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 font-bold px-4 py-2 rounded-lg text-xs uppercase tracking-wider transition-colors inline-flex items-center justify-center">
+          Reset Filters
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Service Requests Table Grid -->
+  <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mb-8">
+    <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+      <div>
+        <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wide">Registered Engineering Tasks</h2>
+        <p class="text-xs text-slate-500 font-medium">Aggregated list of current and archived issue dispatches</p>
+      </div>
+      <span class="text-xs font-bold text-slate-400">Total Entries: <span id="pageTotal">{{ requests|length }}</span></span>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-slate-100/75 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+            <th class="py-3 px-6">Timestamp Submitted</th>
+            <th class="py-3 px-6">Category Scope</th>
+            <th class="py-3 px-6">Issue Title</th>
+            <th class="py-3 px-6">Dispatch Status</th>
           </tr>
-        {% empty %}
-          <tr>
-            <td colspan="4" class="px-6 py-20 text-center">
-              <div class="flex flex-col items-center">
-                <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                  <svg class="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                  </svg>
+        </thead>
+        <tbody class="divide-y divide-slate-200/60 text-sm">
+          {% for r in requests %}
+            <tr class="maintenance-row hover:bg-slate-50/80 transition-colors"
+                data-category="{{ r.category }}"
+                data-status="{{ r.status }}">
+              <td class="py-3.5 px-6 font-medium text-slate-600 whitespace-nowrap">{{ r.created_at|date:"Y-m-d H:i" }}</td>
+              <td class="py-3.5 px-6 whitespace-nowrap">
+                <span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-slate-50 text-slate-700 border border-slate-200">{{ r.get_category_display }}</span>
+              </td>
+              <td class="py-3.5 px-6 font-bold text-slate-900">{{ r.title }}</td>
+              <td class="py-3.5 px-6 whitespace-nowrap">
+                {% if r.status == "OPEN" %}
+                  <span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-200 uppercase">Staged (Open)</span>
+                {% elif r.status == "IN_PROGRESS" %}
+                  <span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-blue-100 text-blue-900 border border-blue-200 uppercase">In Progress</span>
+                {% elif r.status == "RESOLVED" %}
+                  <span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-200 uppercase">Resolved</span>
+                {% else %}
+                  <span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-800 border border-slate-300 uppercase">Archived</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr id="emptyVaultRow">
+              <td colspan="4" class="py-12 px-6 text-center text-slate-500">
+                <div class="max-w-xs mx-auto">
+                  <p class="font-bold text-slate-700 text-base">No registered tasks</p>
+                  <p class="text-xs text-slate-400 mt-1">No property preservation logs mapped to your tenant identification strings.</p>
                 </div>
-                <p class="text-gray-500 font-medium">No maintenance requests found.</p>
-                <p class="text-sm text-gray-400 mt-1">When you report an issue, it will appear here.</p>
+              </td>
+            </tr>
+          {% endfor %}
+          
+          <!-- Dynamic Filter Empty Result Placeholder -->
+          <tr id="noResultsRow" style="display: none;">
+            <td colspan="4" class="py-12 px-6 text-center text-slate-500">
+              <div class="max-w-xs mx-auto">
+                <p class="font-bold text-slate-700 text-base">No exact match found</p>
+                <p class="text-xs text-slate-400 mt-1">Adjust Category Scope or Dispatch Status filters above to restore transmittal entries.</p>
               </div>
             </td>
           </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Dynamic Client-Side Pagination Controls -->
+    <div class="px-6 py-3 border-t border-slate-200 bg-white flex flex-col sm:flex-row items-center justify-between gap-3" id="paginationWrapper" style="display: none;">
+      <div class="text-xs text-slate-500">
+        Showing <span id="pageStart" class="font-bold text-slate-700">0</span> to <span id="pageEnd" class="font-bold text-slate-700">0</span> of filtered entries
+      </div>
+      <div class="flex items-center gap-1" id="pageButtons">
+        <!-- Dynamically injected pagination buttons -->
+      </div>
+    </div>
   </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const filterCategory = document.getElementById('filterCategory');
+      const filterStatus = document.getElementById('filterStatus');
+      const resetFiltersBtn = document.getElementById('resetFiltersBtn');
+      const rows = Array.from(document.querySelectorAll('.maintenance-row'));
+      const noResultsRow = document.getElementById('noResultsRow');
+      const emptyVaultRow = document.getElementById('emptyVaultRow');
+      const startSpan = document.getElementById('pageStart');
+      const endSpan = document.getElementById('pageEnd');
+      const totalSpan = document.getElementById('pageTotal');
+      const pageButtonsContainer = document.getElementById('pageButtons');
+      const paginationWrapper = document.getElementById('paginationWrapper');
+
+      const pageSize = 5;
+      let currentPage = 1;
+      let filteredRows = [...rows];
+
+      function applyFilters() {
+        const catVal = filterCategory ? filterCategory.value : 'ALL';
+        const statVal = filterStatus ? filterStatus.value : 'ALL';
+
+        // Filter active rows matching both dataset filters
+        filteredRows = rows.filter(r => {
+          const matchCat = (catVal === 'ALL' || r.dataset.category === catVal);
+          const matchStat = (statVal === 'ALL' || r.dataset.status === statVal);
+          return matchCat && matchStat;
+        });
+
+        // Update top counter indicator
+        if (totalSpan) totalSpan.textContent = filteredRows.length;
+
+        // Check overall table availability
+        if (rows.length > 0) {
+          if (filteredRows.length === 0) {
+            if (noResultsRow) noResultsRow.style.display = '';
+            if (emptyVaultRow) emptyVaultRow.style.display = 'none';
+            if (paginationWrapper) paginationWrapper.style.display = 'none';
+            rows.forEach(r => r.style.display = 'none');
+            return;
+          } else {
+            if (noResultsRow) noResultsRow.style.display = 'none';
+            if (emptyVaultRow) emptyVaultRow.style.display = 'none';
+          }
+        }
+
+        currentPage = 1;
+        renderPage();
+      }
+
+      function renderPage() {
+        const total = filteredRows.length;
+        const totalPages = Math.ceil(total / pageSize);
+
+        // Reset visibility state
+        rows.forEach(r => r.style.display = 'none');
+
+        if (total === 0) return;
+
+        // Guarantee bounds safety
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+
+        const start = (currentPage - 1) * pageSize;
+        const end = Math.min(start + pageSize, total);
+
+        // Show range
+        filteredRows.forEach((r, idx) => {
+          if (idx >= start && idx < end) {
+            r.style.display = '';
+          }
+        });
+
+        if (startSpan) startSpan.textContent = start + 1;
+        if (endSpan) endSpan.textContent = end;
+
+        // Populate controls UI
+        if (!pageButtonsContainer) return;
+        pageButtonsContainer.innerHTML = '';
+
+        if (totalPages <= 1) {
+          if (paginationWrapper) paginationWrapper.style.display = 'none';
+          return;
+        } else {
+          if (paginationWrapper) paginationWrapper.style.display = '';
+        }
+
+        // Prev Trigger Button
+        const prevBtn = document.createElement('button');
+        prevBtn.type = 'button';
+        prevBtn.textContent = 'Prev';
+        prevBtn.className = 'px-2.5 py-1 text-xs font-bold rounded border transition-colors mr-1 ' + 
+          (currentPage === 1 ? 'text-slate-300 border-slate-100 cursor-not-allowed bg-slate-50/50' : 'text-slate-700 border-slate-300 hover:bg-slate-50 bg-white');
+        prevBtn.disabled = currentPage === 1;
+        prevBtn.onclick = () => { currentPage--; renderPage(); };
+        pageButtonsContainer.appendChild(prevBtn);
+
+        // Numeric Indicators Array
+        for (let i = 1; i <= totalPages; i++) {
+          const pageBtn = document.createElement('button');
+          pageBtn.type = 'button';
+          pageBtn.textContent = i;
+          pageBtn.className = 'w-7 h-7 text-xs font-bold rounded border transition-colors mx-0.5 flex items-center justify-center ' + 
+            (i === currentPage ? 'bg-slate-900 text-white border-slate-900' : 'text-slate-700 border-slate-300 hover:bg-slate-50 bg-white');
+          pageBtn.onclick = () => { currentPage = i; renderPage(); };
+          pageButtonsContainer.appendChild(pageBtn);
+        }
+
+        // Next Trigger Button
+        const nextBtn = document.createElement('button');
+        nextBtn.type = 'button';
+        nextBtn.textContent = 'Next';
+        nextBtn.className = 'px-2.5 py-1 text-xs font-bold rounded border transition-colors ml-1 ' + 
+          (currentPage === totalPages ? 'text-slate-300 border-slate-100 cursor-not-allowed bg-slate-50/50' : 'text-slate-700 border-slate-300 hover:bg-slate-50 bg-white');
+        nextBtn.disabled = currentPage === totalPages;
+        nextBtn.onclick = () => { currentPage++; renderPage(); };
+        pageButtonsContainer.appendChild(nextBtn);
+      }
+
+      if (filterCategory) filterCategory.addEventListener('change', applyFilters);
+      if (filterStatus) filterStatus.addEventListener('change', applyFilters);
+
+      if (resetFiltersBtn) {
+        resetFiltersBtn.addEventListener('click', function() {
+          if (filterCategory) filterCategory.value = 'ALL';
+          if (filterStatus) filterStatus.value = 'ALL';
+          applyFilters();
+        });
+      }
+
+      // Initial assessment launch
+      if (rows.length > 0) {
+        applyFilters();
+      }
+    });
+  </script>
 
 {% endblock %}

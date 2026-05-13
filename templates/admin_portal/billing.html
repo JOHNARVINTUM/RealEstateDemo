@@ -144,18 +144,18 @@
     </div>
 
     <!-- Master Ledger Data Table -->
-    <div class="overflow-x-auto">
-      <table class="w-full text-left border-collapse">
+    <div class="overflow-x-auto custom-scrollbar">
+      <table class="w-full text-left border-collapse min-w-[1000px]">
         <thead>
           <tr class="bg-slate-50 border-b border-slate-200">
             <th class="px-5 py-3 text-xs font-bold text-slate-700">Account Mapping</th>
             <th class="px-5 py-3 text-xs font-bold text-slate-700">Target Period</th>
-            <th class="px-5 py-3 text-xs font-bold text-slate-700">Cycle Due Date</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700">Due Date</th>
             <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Original Base</th>
-            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Outstanding Sum</th>
-            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-center">State Indicator</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Outstanding</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-center">Status</th>
             <th class="px-5 py-3 text-xs font-bold text-slate-700">Remittance Key</th>
-            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Inline Actions</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Actions</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-200 text-sm">
@@ -242,7 +242,7 @@
                     <form method="post" action="{% url 'admin_mark_bill_paid' b.id %}" class="confirm-action inline-block" data-confirm="Mark bill #{{ b.id }} as PAID? This clears the remaining balance.">
                       {% csrf_token %}
                       <button type="submit" class="px-2.5 py-1 rounded bg-slate-100 hover:bg-emerald-600 hover:text-white text-slate-800 font-bold text-xs transition-colors" title="Mark Fully Settled">
-                        Settle Bill
+                        {% if active_tab == 'active' %}Settle{% else %}Settle Bill{% endif %}
                       </button>
                     </form>
                   {% else %}

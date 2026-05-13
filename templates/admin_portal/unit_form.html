@@ -29,7 +29,7 @@
     <form method="post">
       {% csrf_token %}
       <div class="panel-body">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="form-grid">
           <!-- Unit Number -->
           <div class="form-group">
             <label for="id_number" class="form-label">
@@ -167,79 +167,3 @@
     </form>
   </div>
 {% endblock %}
-
-<style>
-.form-group {
-  margin-bottom: 1.5rem;
-}
-
-.form-label {
-  display: block;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-  margin-bottom: 0.5rem;
-}
-
-.form-control {
-  width: 100%;
-  min-height: 46px;
-  border: 2px solid #d1d5db;
-  border-radius: 0.5rem;
-  padding: 0.75rem;
-  background: #ffffff;
-  font-size: 0.875rem;
-  color: #1f2937;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  box-sizing: border-box;
-  display: block;
-}
-
-.form-control:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-textarea.form-control {
-  min-height: 100px;
-  height: auto;
-  resize: vertical;
-}
-
-.text-red-500 {
-  color: #ef4444;
-}
-
-.text-gray-500 {
-  color: #6b7280;
-  font-size: 0.75rem;
-  margin-top: 0.25rem;
-}
-
-.grid {
-  display: grid;
-}
-
-.grid-cols-1 {
-  grid-template-columns: repeat(1, minmax(0, 1fr));
-}
-
-.grid-cols-2 {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.gap-4 {
-  gap: 1rem;
-}
-
-.mt-4 {
-  margin-top: 1rem;
-}
-
-.text-red-600 {
-  color: #dc2626;
-  font-size: 0.875rem;
-  margin-top: 0.25rem;
-}
-</style>

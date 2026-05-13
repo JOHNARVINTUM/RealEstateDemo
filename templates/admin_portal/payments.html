@@ -108,17 +108,17 @@
 
   <!-- Master Data Table Workspace Card -->
   <div class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
-    <div class="overflow-x-auto">
-      <table class="w-full text-left border-collapse">
+    <div class="overflow-x-auto custom-scrollbar">
+      <table class="w-full text-left border-collapse min-w-[1000px]">
         <thead>
           <tr class="bg-slate-50 border-b border-slate-200">
             <th class="px-5 py-3.5 text-xs font-bold text-slate-700">Contracting Tenant</th>
-            <th class="px-5 py-3.5 text-xs font-bold text-slate-700">Routing Channel</th>
-            <th class="px-5 py-3.5 text-xs font-bold text-slate-700 text-right">Sum Transacted</th>
-            <th class="px-5 py-3.5 text-xs font-bold text-slate-700">Identifier / Schedule Mapping</th>
-            <th class="px-5 py-3.5 text-xs font-bold text-slate-700">Target Bills Mapped</th>
-            <th class="px-5 py-3.5 text-xs font-bold text-slate-700 text-center">Status Track</th>
-            <th class="px-5 py-3.5 text-xs font-bold text-slate-700 text-right">Administrative Options</th>
+            <th class="px-5 py-3.5 text-xs font-bold text-slate-700">Channel</th>
+            <th class="px-5 py-3.5 text-xs font-bold text-slate-700 text-right">Amount</th>
+            <th class="px-5 py-3.5 text-xs font-bold text-slate-700">Reference / Schedule</th>
+            <th class="px-5 py-3.5 text-xs font-bold text-slate-700">Bills Mapped</th>
+            <th class="px-5 py-3.5 text-xs font-bold text-slate-700 text-center">Status</th>
+            <th class="px-5 py-3.5 text-xs font-bold text-slate-700 text-right">Actions</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-200 text-sm">
@@ -144,11 +144,11 @@
             <td class="px-5 py-4 shrink-0">
               {% if p.payment_method == "GCASH" %}
                 <span class="inline-block px-2.5 py-1 rounded bg-blue-50 border border-blue-200 text-blue-800 text-[10px] font-extrabold uppercase select-none">
-                  GCash Remote
+                  GCash
                 </span>
               {% else %}
                 <span class="inline-block px-2.5 py-1 rounded bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-extrabold uppercase select-none">
-                  F2F Cash Desk
+                  Cash
                 </span>
               {% endif %}
             </td>
@@ -218,7 +218,7 @@
                   {% if p.payment_method == "GCASH" %}
                     <form method="post" action="{% url 'admin_approve_payment' p.id %}" class="confirm-action inline-block" data-confirm="Approve ₱{{ p.amount|floatformat:2|intcomma }} GCash payment from {{ p.user.email }}?&#10;&#10;Reference: {{ p.reference_code }}&#10;Type: {{ p.payment_type }}&#10;Bills: {{ p.bill_ids }}">
                       {% csrf_token %}
-                      <button type="submit" class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded text-emerald-800 text-xs font-bold transition-colors" title="Authorize Transfer">
+                      <button type="submit" class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-600 hover:text-white border border-emerald-200 rounded text-emerald-800 text-xs font-bold transition-colors" title="Authorize Transfer">
                         Approve
                       </button>
                     </form>
@@ -226,15 +226,15 @@
                     {% if not p.schedule_confirmed %}
                       <form method="post" action="{% url 'admin_confirm_schedule' p.id %}" class="confirm-action inline-block" data-confirm="Confirm F2F schedule for {{ p.user.email }}?&#10;&#10;Date: {{ p.preferred_date|date:'M d, Y' }}&#10;Time: {{ p.preferred_time|time:'g:i A' }}&#10;Tenant will be notified.">
                         {% csrf_token %}
-                        <button type="submit" class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded text-blue-800 text-xs font-bold transition-colors" title="Lock Appointment Schedule">
-                          Confirm Desk Link
+                        <button type="submit" class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-600 hover:text-white border border-blue-200 rounded text-blue-800 text-xs font-bold transition-colors" title="Lock Appointment Schedule">
+                          Confirm
                         </button>
                       </form>
                     {% else %}
                       <form method="post" action="{% url 'admin_approve_payment' p.id %}" class="confirm-action inline-block" data-confirm="Confirm cash payment RECEIVED from {{ p.user.email }}?&#10;&#10;Amount: ₱{{ p.amount|floatformat:2|intcomma }}&#10;Scheduled: {{ p.preferred_date|date:'M d, Y' }} {{ p.preferred_time|time:'g:i A' }}&#10;Bills: {{ p.bill_ids }}">
                         {% csrf_token %}
-                        <button type="submit" class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded text-emerald-800 text-xs font-bold transition-colors" title="Verify Cash Delivered">
-                          Receipt Cash
+                        <button type="submit" class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-600 hover:text-white border border-emerald-200 rounded text-emerald-800 text-xs font-bold transition-colors" title="Verify Cash Delivered">
+                          Receipt
                         </button>
                       </form>
                     {% endif %}

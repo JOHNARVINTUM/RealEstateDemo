@@ -1,272 +1,252 @@
 {% extends "admin_portal/base.html" %}
 {% load humanize %}
-{% block title %}Dashboard | RealEstate360+{% endblock %}
+{% block title %}Dashboard | Core Administration{% endblock %}
 
 {% block content %}
-<div class="dashboard-container px-2 sm:px-4 lg:px-6 py-4 sm:py-6 max-w-7xl mx-auto">
-  <!-- Header Section -->
-  <header class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-10">
-    <div class="flex-1">
-      <div class="flex items-center gap-3 mb-2">
-        <div class="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center text-white shadow-xl shadow-slate-200">
-          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
-          </svg>
-        </div>
-        <h1 class="font-sans font-bold tracking-tight text-3xl sm:text-4xl text-slate-900 leading-tight">Dashboard Overview</h1>
+<div class="dashboard-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-8 pb-12">
+  
+  <!-- Top Title & Navigation Header -->
+  <header class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <span class="inline-block w-3 h-3 rounded-full bg-emerald-500"></span>
+        <span class="text-sm font-semibold text-slate-700">Core Administration Console</span>
       </div>
-      <p class="text-sm text-slate-500 font-medium">Real-time monitoring of property assets, live occupancy intelligence, and revenue flows.</p>
+      <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900">System Dashboard</h1>
+      <p class="text-base text-slate-700 mt-1 leading-relaxed">Practical telemetry overview for live property status, leasing operations, and billing cycles.</p>
     </div>
-    <div class="flex items-center gap-4 w-full lg:w-auto">
-      <a href="{% url 'admin_notifications' %}"
-        class="group px-5 py-3.5 bg-white border border-slate-200 text-slate-700 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 hover:text-blue-600 transition-all shadow-sm flex items-center justify-center gap-3 w-full lg:w-auto active:scale-95">
-        <div class="relative">
-          <svg class="w-4 h-4 text-slate-500 group-hover:text-blue-600 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
-          </svg>
-          {% if unread_count > 0 %}
-          <span class="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-md animate-pulse">{{ unread_count }}</span>
-          {% endif %}
-        </div>
-        Notifications
+    
+    <div class="flex items-center gap-3 w-full md:w-auto">
+      <a href="{% url 'admin_notifications' %}" class="inline-flex items-center gap-2 px-5 py-3 bg-slate-50 hover:bg-slate-100 border border-slate-300 rounded-lg text-sm font-bold text-slate-800 transition-colors w-full md:w-auto justify-center relative">
+        <svg class="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+        </svg>
+        <span>Notifications</span>
+        {% if unread_count > 0 %}
+          <span class="bg-rose-600 text-white text-xs font-black px-2 py-0.5 rounded-full ml-1">{{ unread_count }}</span>
+        {% endif %}
+      </a>
+      
+      <a href="{% url 'admin_create_unit' %}" class="inline-flex items-center gap-2 px-5 py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-sm font-bold transition-colors shadow-xs shrink-0 justify-center">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+        </svg>
+        <span>Add Unit</span>
       </a>
     </div>
   </header>
 
-  <!-- High-Impact Statistics Grid -->
-  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-5 mb-10">
-    <!-- Total Tenants -->
-    <div class="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm relative overflow-hidden group border-b-4 border-b-blue-500 flex flex-col justify-between hover:shadow-md transition-all duration-300">
-      <div class="relative z-10">
-        <div class="flex items-center justify-between mb-3">
-          <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-            </svg>
-          </div>
-          <span class="text-[9px] font-black text-blue-600 uppercase tracking-widest px-2 py-0.5 bg-blue-50 rounded-lg">Active</span>
-        </div>
-        <p class="text-3xl font-sans font-extrabold text-slate-900 mb-0.5 tracking-tight">{{ total_tenants|intcomma }}</p>
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Tenants</p>
+  <!-- Key Metrics Counters (Highly Readable & High Contrast) -->
+  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+    
+    <!-- Active Tenants -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-blue-600 flex flex-col justify-between">
+      <div>
+        <span class="text-sm font-bold text-slate-700 block mb-1">Active Tenants</span>
+        <div class="text-3xl font-black text-slate-900 tracking-tight">{{ total_tenants|intcomma }}</div>
       </div>
-      <div class="absolute -right-3 -bottom-3 text-slate-50 group-hover:text-slate-100 transition-colors duration-500 pointer-events-none">
-        <svg class="w-20 h-20" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+      <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
+        <span class="text-blue-600 font-bold">●</span> Registered accounts
       </div>
     </div>
 
-    <!-- Occupied Units -->
-    <div class="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm relative overflow-hidden group border-b-4 border-b-emerald-500 flex flex-col justify-between hover:shadow-md transition-all duration-300">
-      <div class="relative z-10">
-        <div class="flex items-center justify-between mb-3">
-          <div class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-            </svg>
-          </div>
-          <span class="text-[9px] font-black text-emerald-600 uppercase tracking-widest px-2 py-0.5 bg-emerald-50 rounded-lg">Units</span>
-        </div>
-        <p class="text-3xl font-sans font-extrabold text-slate-900 mb-0.5 tracking-tight">{{ occupied_units|intcomma }}</p>
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Occupied Assets</p>
+    <!-- Occupied Assets -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-emerald-600 flex flex-col justify-between">
+      <div>
+        <span class="text-sm font-bold text-slate-700 block mb-1">Occupied Units</span>
+        <div class="text-3xl font-black text-slate-900 tracking-tight">{{ occupied_units|intcomma }}</div>
       </div>
-      <div class="absolute -right-3 -bottom-3 text-slate-50 group-hover:text-slate-100 transition-colors duration-500 pointer-events-none">
-        <svg class="w-20 h-20" fill="currentColor" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+      <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
+        <span class="text-emerald-600 font-bold">●</span> Active contracts
       </div>
     </div>
 
     <!-- Available Units -->
-    <div class="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm relative overflow-hidden group border-b-4 border-b-purple-500 flex flex-col justify-between hover:shadow-md transition-all duration-300">
-      <div class="relative z-10">
-        <div class="flex items-center justify-between mb-3">
-          <div class="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-            </svg>
-          </div>
-          <span class="text-[9px] font-black text-purple-600 uppercase tracking-widest px-2 py-0.5 bg-purple-50 rounded-lg">Ready</span>
-        </div>
-        <p class="text-3xl font-sans font-extrabold text-slate-900 mb-0.5 tracking-tight">{{ available_units|intcomma }}</p>
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Available Units</p>
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-purple-600 flex flex-col justify-between">
+      <div>
+        <span class="text-sm font-bold text-slate-700 block mb-1">Available Units</span>
+        <div class="text-3xl font-black text-slate-900 tracking-tight">{{ available_units|intcomma }}</div>
       </div>
-      <div class="absolute -right-3 -bottom-3 text-slate-50 group-hover:text-slate-100 transition-colors duration-500 pointer-events-none">
-        <svg class="w-20 h-20" fill="currentColor" viewBox="0 0 24 24"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+      <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
+        <span class="text-purple-600 font-bold">●</span> Ready for intake
       </div>
     </div>
 
-    <!-- Monthly Revenue -->
-    <div class="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm relative overflow-hidden group border-b-4 border-b-rose-500 flex flex-col justify-between hover:shadow-md transition-all duration-300">
-      <div class="relative z-10">
-        <div class="flex items-center justify-between mb-3">
-          <div class="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600 group-hover:scale-110 transition-transform">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-          </div>
-          <span class="text-[9px] font-black text-rose-600 uppercase tracking-widest px-2 py-0.5 bg-rose-50 rounded-lg">Earned</span>
+    <!-- Monthly Billed Revenue -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-slate-700 flex flex-col justify-between">
+      <div>
+        <span class="text-sm font-bold text-slate-700 block mb-1">Current Month Billed</span>
+        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight truncate" title="₱{{ total_revenue|floatformat:0|intcomma }}">
+          ₱{{ total_revenue|floatformat:0|intcomma }}
         </div>
-        <p class="text-2xl sm:text-3xl font-sans font-extrabold text-slate-900 mb-0.5 tracking-tight truncate" title="₱{{ total_revenue|floatformat:0|intcomma }}">₱{{ total_revenue|floatformat:0|intcomma }}</p>
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">Monthly Revenue</p>
       </div>
-      <div class="absolute -right-3 -bottom-3 text-slate-50 group-hover:text-slate-100 transition-colors duration-500 pointer-events-none">
-        <svg class="w-20 h-20" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5 truncate">
+        <span>Rent, water & extras</span>
       </div>
     </div>
 
-    <!-- Monthly Collected -->
-    <div class="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm relative overflow-hidden group border-b-4 border-b-amber-500 flex flex-col justify-between hover:shadow-md transition-all duration-300">
-      <div class="relative z-10">
-        <div class="flex items-center justify-between mb-3">
-          <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 group-hover:scale-110 transition-transform">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
-            </svg>
-          </div>
-          <span class="text-[9px] font-black text-amber-600 uppercase tracking-widest px-2 py-0.5 bg-amber-50 rounded-lg">Rent/Water</span>
+    <!-- Monthly Collected Cash -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-indigo-600 flex flex-col justify-between">
+      <div>
+        <span class="text-sm font-bold text-slate-700 block mb-1">Current Month Collected</span>
+        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight truncate" title="₱{{ monthly_collected|floatformat:0|intcomma }}">
+          ₱{{ monthly_collected|floatformat:0|intcomma }}
         </div>
-        <p class="text-2xl sm:text-3xl font-sans font-extrabold text-slate-900 mb-0.5 tracking-tight truncate" title="₱{{ monthly_collected|floatformat:0|intcomma }}">₱{{ monthly_collected|floatformat:0|intcomma }}</p>
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">Monthly Collected</p>
       </div>
-      <div class="absolute -right-3 -bottom-3 text-slate-50 group-hover:text-slate-100 transition-colors duration-500 pointer-events-none">
-        <svg class="w-20 h-20" fill="currentColor" viewBox="0 0 24 24"><path d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+      <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5 truncate">
+        <span>Verified remits</span>
       </div>
     </div>
+
   </section>
 
-  <!-- Main Grid (Charts and Notifications) -->
-  <div class="dashboard-sections">
-    <!-- Charts Column -->
-    <div class="flex flex-col gap-6">
-      <!-- Revenue Chart -->
-      <div class="glass-panel">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+  <!-- Main Grid Workspace -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    
+    <!-- Left Workspace Column (2 span) -->
+    <div class="lg:col-span-2 space-y-8">
+      
+      <!-- Revenue Performance line chart -->
+      <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 pb-3 border-b border-slate-100">
           <div>
-            <h2 class="text-xl font-bold text-slate-800 font-sans tracking-tight">Revenue Performance</h2>
-            <p class="text-sm text-slate-500">Billed revenue vs expected rent</p>
+            <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Revenue Trajectory</h2>
+            <p class="text-sm text-slate-700 mt-0.5">Historical comparison of billed totals against base lease valuations</p>
           </div>
-          <select id="monthFilter"
-            class="w-full sm:w-auto bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2">
-            <option value="12">Last 12 Months</option>
-            <option value="6">Last 6 Months</option>
-            <option value="3">Last 3 Months</option>
-            <option value="1">Last Month</option>
+          <select id="monthFilter" class="bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-slate-500 focus:border-slate-500 block p-2.5 font-bold w-full sm:w-auto">
+            <option value="12">Past 12 Months</option>
+            <option value="6">Past 6 Months</option>
+            <option value="3">Past 3 Months</option>
           </select>
         </div>
-        <div class="chart-container h-[300px] sm:h-[350px]">
+        <div class="h-[300px] w-full">
           <canvas id="rentChart"></canvas>
         </div>
       </div>
 
-      <!-- Water Monitoring Chart (The Bar Graph) -->
-      <div class="glass-panel">
-        <div class="flex justify-between items-center mb-6">
+      <!-- Scannable Property Gateway Panel (Highly practical custom frontend control) -->
+      <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
+        <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
           <div>
-            <h2 class="text-xl font-bold text-slate-800 font-sans tracking-tight">Water Monitoring</h2>
-            <p class="text-sm text-slate-500">Utility usage trends</p>
-          </div>
-          <div class="hidden sm:flex items-center gap-2">
-            <span class="w-3 h-3 rounded-full bg-blue-500"></span>
-            <span class="text-xs font-bold text-slate-600">m³</span>
+            <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Property Management Console</h2>
+            <p class="text-sm text-slate-700 mt-0.5">Instantly scan category status and route directly to pre-filtered modules</p>
           </div>
         </div>
-        <div class="chart-container h-[250px]">
+
+        <!-- Scanning tiles grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6 items-stretch">
+          
+          <!-- Filter Available -->
+          <div class="border border-slate-200 rounded-lg p-4 bg-slate-50/50 hover:bg-slate-50 transition-colors flex flex-col justify-between h-full">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-bold text-purple-800 bg-purple-50 px-2.5 py-0.5 rounded border border-purple-200">Available</span>
+                <span class="text-sm font-extrabold text-slate-900">{{ available_units }} units</span>
+              </div>
+              <p class="text-sm text-slate-700 leading-relaxed mt-2">Vacant units prioritized for incoming tenant screening.</p>
+            </div>
+            <a href="{% url 'admin_units' %}?status=AVAILABLE" class="mt-4 block text-center bg-white hover:bg-purple-50 border border-slate-300 text-purple-800 font-extrabold text-sm py-2 rounded transition-colors shadow-xs">
+              Scan Vacant Assets →
+            </a>
+          </div>
+
+          <!-- Filter Occupied -->
+          <div class="border border-slate-200 rounded-lg p-4 bg-slate-50/50 hover:bg-slate-50 transition-colors flex flex-col justify-between h-full">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200">Occupied</span>
+                <span class="text-sm font-extrabold text-slate-900">{{ occupied_units }} units</span>
+              </div>
+              <p class="text-sm text-slate-700 leading-relaxed mt-2">Assets under active monthly leasing contracts.</p>
+            </div>
+            <a href="{% url 'admin_units' %}?status=OCCUPIED" class="mt-4 block text-center bg-white hover:bg-emerald-50 border border-slate-300 text-emerald-800 font-extrabold text-sm py-2 rounded transition-colors shadow-xs">
+              View Active Roster →
+            </a>
+          </div>
+
+          <!-- Filter Tenants -->
+          <div class="border border-slate-200 rounded-lg p-4 bg-slate-50/50 hover:bg-slate-50 transition-colors flex flex-col justify-between h-full">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-bold text-blue-800 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-200">Tenants</span>
+                <span class="text-sm font-extrabold text-slate-900">{{ total_tenants }} users</span>
+              </div>
+              <p class="text-sm text-slate-700 leading-relaxed mt-2">Full repository of tenant accounts and compliance credentials.</p>
+            </div>
+            <a href="{% url 'admin_tenants' %}" class="mt-4 block text-center bg-white hover:bg-blue-50 border border-slate-300 text-blue-800 font-extrabold text-sm py-2 rounded transition-colors shadow-xs">
+              Access Base Registry →
+            </a>
+          </div>
+
+        </div>
+
+        <!-- Practical Action Footer -->
+        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div class="text-sm text-slate-800 leading-relaxed">
+            <span class="font-extrabold text-slate-900">Quick Administration:</span> Direct registry links to instantiate new records.
+          </div>
+          <div class="flex items-center gap-3 w-full sm:w-auto">
+            <a href="{% url 'admin_create_unit' %}" class="flex-1 sm:flex-none text-center px-4 py-2 bg-white hover:bg-slate-100 border border-slate-300 text-slate-900 font-extrabold text-sm rounded transition-colors">
+              + New Unit
+            </a>
+            <a href="{% url 'admin_create_tenant_profile' %}" class="flex-1 sm:flex-none text-center px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-sm rounded transition-colors">
+              + Intake Tenant
+            </a>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Right Feed Column (1 span) -->
+    <div class="space-y-8">
+      
+      <!-- Recent Notifications List -->
+      <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col max-h-[460px]">
+        <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100 shrink-0">
+          <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Notifications</h2>
+          <a href="{% url 'admin_notifications' %}" class="text-sm font-bold text-slate-800 hover:text-slate-900 underline">View All</a>
+        </div>
+        
+        <div class="space-y-4 overflow-y-auto pr-1 flex-1">
+          {% for notification in notifications %}
+            <div class="p-4 rounded-lg border transition-colors {% if not notification.is_read %}bg-slate-50 border-slate-300 border-l-4 border-l-slate-800{% else %}bg-white border-slate-200{% endif %}">
+              <div class="mb-1">
+                <span class="text-sm font-extrabold text-slate-900 block leading-snug truncate">{{ notification.title }}</span>
+                <span class="text-xs text-slate-500 font-semibold block mt-0.5">{{ notification.created_at|timesince }} ago</span>
+              </div>
+              <p class="text-sm text-slate-800 leading-relaxed mt-1.5 line-clamp-2">{{ notification.message }}</p>
+            </div>
+          {% empty %}
+            <div class="text-center py-10 text-slate-500">
+              <p class="text-sm font-semibold">No system log alerts triggered.</p>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Water Monitoring Utility Graph -->
+      <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
+        <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
+          <div>
+            <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Utility Flow Tracker</h2>
+            <p class="text-sm text-slate-700 mt-0.5">Volumetric water consumption</p>
+          </div>
+          <span class="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded">m³</span>
+        </div>
+        <div class="h-[200px] w-full">
           <canvas id="waterChart"></canvas>
         </div>
       </div>
+
     </div>
 
-    <!-- Recent Notifications Section -->
-    <div class="flex flex-col">
-      <div class="glass-panel flex-1 flex flex-col">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-xl font-bold text-slate-800 font-sans tracking-tight">Recent Notifications</h2>
-          <a href="{% url 'admin_notifications' %}" class="text-sm font-semibold text-blue-600 hover:text-blue-700">View All</a>
-        </div>
-        <div class="space-y-4 overflow-y-auto pr-2 custom-scrollbar flex-1">
-        {% for notification in notifications|slice:":8" %}
-        <div class="flex gap-4 p-3 rounded-xl {% if not notification.is_read %}bg-blue-50/50 border-l-4 border-blue-500{% else %}bg-slate-50/30{% endif %} transition-all duration-200">
-          <div class="flex-shrink-0">
-            {% if notification.notification_type == 'SUCCESS' %}
-            <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
-              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-              </svg>
-            </div>
-            {% elif notification.notification_type == 'WARNING' %}
-            <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600">
-              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-              </svg>
-            </div>
-            {% elif notification.notification_type == 'ERROR' %}
-            <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600">
-              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-              </svg>
-            </div>
-            {% else %}
-            <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-            </div>
-            {% endif %}
-          </div>
-          <div class="flex-1 min-w-0">
-            <div class="flex justify-between items-start">
-              <h4 class="text-sm font-bold text-slate-800 truncate">{{ notification.title }}</h4>
-              <span class="text-[10px] font-medium text-slate-400 whitespace-nowrap">{{ notification.created_at|timesince }} ago</span>
-            </div>
-            <p class="text-xs text-slate-600 mt-1 line-clamp-2">{{ notification.message }}</p>
-          </div>
-        </div>
-        {% empty %}
-        <div class="text-center py-10">
-          <svg class="w-12 h-12 text-slate-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
-          </svg>
-          <p class="text-slate-400 text-sm">All caught up!</p>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
   </div>
 
-  <!-- Additional Stats Section (Quick Look) -->
-  <div class="glass-panel mt-6">
-    <h3 class="text-lg font-bold text-slate-800 mb-4 font-sans tracking-tight">Quick Insights</h3>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div class="bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
-        <span class="text-xs font-bold text-slate-400 uppercase">Vacant Units</span>
-        <div class="flex items-center gap-3 mt-2">
-          <span class="text-2xl font-bold text-orange-600 font-sans">{{ vacant_units }}</span>
-          <span class="text-[10px] text-slate-500">Ready units</span>
-        </div>
-      </div>
-      <div class="bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
-        <span class="text-xs font-bold text-slate-400 uppercase">Overdue Payments</span>
-        <div class="flex items-center gap-3 mt-2">
-          <span class="text-2xl font-bold text-red-600 font-sans">{{ overdue_payments }}</span>
-          <span class="text-[10px] text-slate-500">Requires attention</span>
-        </div>
-      </div>
-      <div class="bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
-        <span class="text-xs font-bold text-slate-400 uppercase">System Status</span>
-        <div class="flex items-center gap-2 mt-2">
-          <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-          <span class="text-sm font-bold text-slate-700">Online & Secure</span>
-        </div>
-      </div>
-      <div class="bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
-        <span class="text-xs font-bold text-slate-400 uppercase">Last Activity</span>
-        <div class="text-sm font-bold text-slate-700 mt-2">
-          {% with last_notif=notifications|first %}
-            {% if last_notif %}{{ last_notif.created_at|timesince }} ago{% else %}No recent activity{% endif %}
-          {% endwith %}
-        </div>
-      </div>
-    </div>
-  </div>
 </div>
 
+<!-- Data pass-through for JS Chart Rendering -->
 {{ monthly_income_data|json_script:"monthly_income_data" }}
 {{ months_labels|json_script:"months_labels" }}
 
@@ -296,25 +276,25 @@
         datasets: [{
           label: 'Billed Revenue',
           data: filteredData.map(item => item.actual),
-          borderColor: '#3b82f6',
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          borderColor: '#1e293b',
+          backgroundColor: 'rgba(30, 41, 59, 0.05)',
           borderWidth: 3,
           pointBackgroundColor: '#fff',
-          pointBorderColor: '#3b82f6',
-          pointBorderWidth: 2,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          tension: 0.4,
+          pointBorderColor: '#1e293b',
+          pointBorderWidth: 2.5,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          tension: 0.25,
           fill: true
         }, {
-          label: 'Expected Income',
+          label: 'Expected Base Valuation',
           data: filteredData.map(item => item.expected),
-          borderColor: '#94a3b8',
+          borderColor: '#64748b',
           backgroundColor: 'transparent',
           borderWidth: 2,
           borderDash: [5, 5],
           pointRadius: 0,
-          tension: 0.4,
+          tension: 0.25,
           fill: false
         }]
       };
@@ -335,22 +315,25 @@
               align: 'end',
               labels: {
                 usePointStyle: true,
-                padding: 20,
+                padding: 16,
                 font: {
                   family: "'Outfit', sans-serif",
-                  size: 12,
-                  weight: '600'
-                }
+                  size: 13,
+                  weight: '700'
+                },
+                color: '#1e293b'
               }
             },
             tooltip: {
-              backgroundColor: '#fff',
-              titleColor: '#1e293b',
-              bodyColor: '#64748b',
-              borderColor: '#e2e8f0',
+              backgroundColor: '#0f172a',
+              titleColor: '#f8fafc',
+              bodyColor: '#e2e8f0',
+              borderColor: '#334155',
               borderWidth: 1,
               padding: 12,
               boxPadding: 6,
+              titleFont: { size: 13, weight: 'bold' },
+              bodyFont: { size: 13 },
               usePointStyle: true,
               callbacks: {
                 label: function (context) {
@@ -373,8 +356,8 @@
                 drawBorder: false
               },
               ticks: {
-                font: { family: "'Outfit', sans-serif", size: 11 },
-                color: '#94a3b8',
+                font: { family: "'Outfit', sans-serif", size: 12, weight: '600' },
+                color: '#475569',
                 callback: function (value) {
                   if (value >= 1000) return '₱' + (value / 1000) + 'k';
                   return '₱' + value;
@@ -384,8 +367,8 @@
             x: {
               grid: { display: false },
               ticks: {
-                font: { family: "'Outfit', sans-serif", size: 11 },
-                color: '#94a3b8'
+                font: { family: "'Outfit', sans-serif", size: 12, weight: '600' },
+                color: '#475569'
               }
             }
           }
@@ -397,11 +380,4 @@
     monthFilter.addEventListener('change', (e) => updateChart(parseInt(e.target.value)));
   });
 </script>
-
-<style>
-  .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-  .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.05); border-radius: 10px; }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.1); }
-</style>
 {% endblock %}

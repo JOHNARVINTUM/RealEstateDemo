@@ -1,257 +1,268 @@
 {% extends "admin_portal/base.html" %}
 {% load humanize %}
-{% block title %}Tenant Risk Analysis | RealEstate360+{% endblock %}
+{% block title %}Tenant Risk Analysis | Real Estate Administration{% endblock %}
 
 {% block content %}
-<div class="dashboard-container px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
-  <!-- Header Section -->
-  <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-    <div class="flex-1">
-      <div class="flex items-center gap-3 mb-2">
-        <div class="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center text-white shadow-xl shadow-slate-200">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-            </svg>
-        </div>
-        <h1 class="font-sans font-bold tracking-tight text-3xl sm:text-4xl text-slate-900 leading-tight">Tenant Risk Analysis</h1>
-      </div>
-      <p class="text-sm text-slate-500 font-medium">Evaluate property payment histories, monitor ledger behaviors, and assess structural leasing risks.</p>
+<div class="tenant-risk-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
+  
+  <!-- Studio Top Title Block -->
+  <header class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+      <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">Tenant Risk Analysis</h1>
+      <p class="text-sm text-slate-700 mt-1 leading-relaxed">Evaluate property payment histories, monitor ledger settlement consistency, and assess structural leasing liabilities.</p>
     </div>
-    <div class="flex items-center gap-3">
+    
+    <div class="w-full sm:w-auto shrink-0">
       <form method="post" action="{% url 'admin_update_tenant_risks' %}" class="confirm-action" data-confirm="Update all tenant risk classifications? This analysis uses real-time payment history and may take a few moments to complete.">
         {% csrf_token %}
-        <button type="submit" class="group flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-95">
-          <svg class="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-          </svg>
-          Update Risk Scores
+        <button type="submit" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white font-extrabold px-5 py-2.5 rounded-lg text-sm transition-colors text-center shadow-xs">
+          Recalculate Entire Ledger Risks
         </button>
       </form>
     </div>
   </header>
 
-  <!-- Stats Grid -->
-  <section class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-    <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
-      <div class="stat-icon slate w-10 h-10 bg-slate-50 rounded-lg flex items-center justify-center text-slate-600">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-        </svg>
-      </div>
+  <!-- Summary Metric Overview Cards (Consistent Iconless Layout) -->
+  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+    
+    <!-- Total Registered Profiles -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-blue-600 flex flex-col justify-between">
       <div>
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total</p>
-        <p class="text-xl font-sans font-bold text-slate-900">{{ total_tenants }}</p>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Total Assessed Accounts</span>
+        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ total_tenants }}</div>
+      </div>
+      <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
+        <span class="text-blue-600 font-bold">●</span> Registered profiles
       </div>
     </div>
-    <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
-      <div class="stat-icon green w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-        </svg>
-      </div>
+
+    <!-- Low Risk -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-emerald-600 flex flex-col justify-between">
       <div>
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Low Risk</p>
-        <p class="text-xl font-sans font-bold text-slate-900">{{ low_risk_count }}</p>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Low Risk Status</span>
+        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ low_risk_count }}</div>
+      </div>
+      <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
+        <span class="text-emerald-600 font-bold">●</span> Superb remits track
       </div>
     </div>
-    <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3 border-l-4 border-l-amber-500">
-      <div class="stat-icon amber w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center text-amber-600">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-        </svg>
-      </div>
+
+    <!-- Medium Risk -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-amber-600 flex flex-col justify-between">
       <div>
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Medium</p>
-        <p class="text-xl font-sans font-bold text-slate-900">{{ medium_risk_count }}</p>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Medium Liability</span>
+        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ medium_risk_count }}</div>
+      </div>
+      <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
+        <span class="text-amber-600 font-bold">●</span> Occasional lateness
       </div>
     </div>
-    <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3 border-l-4 border-l-red-500">
-      <div class="stat-icon red w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center text-red-600">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-        </svg>
-      </div>
+
+    <!-- High Risk -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-rose-600 flex flex-col justify-between">
       <div>
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">High Risk</p>
-        <p class="text-xl font-sans font-bold text-slate-900">{{ high_risk_count }}</p>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Critical Risk Alerts</span>
+        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ high_risk_count }}</div>
+      </div>
+      <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
+        <span class="text-rose-600 font-bold">●</span> Continuous defaults
       </div>
     </div>
-    <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
-      <div class="stat-icon blue w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-        </svg>
-      </div>
+
+    <!-- New Contracts -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-slate-700 flex flex-col justify-between">
       <div>
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">New</p>
-        <p class="text-xl font-sans font-bold text-slate-900">{{ new_tenant_count }}</p>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Initial Phase Clients</span>
+        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ new_tenant_count }}</div>
+      </div>
+      <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
+        <span class="text-slate-700 font-bold">●</span> Insufficient tracking
       </div>
     </div>
+
   </section>
 
-  <!-- Filter Panel -->
-  <div class="bg-white rounded-3xl border border-slate-200 p-4 shadow-sm mb-8 flex flex-col md:flex-row items-center gap-4">
-    <div class="relative flex-1 w-full">
+  <!-- Filter & Sort Navigation Control Strip -->
+  <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
+    
+    <!-- Search Bar Input -->
+    <div class="w-full md:w-80">
       <form method="get" class="relative">
-        <input type="text" name="q" value="{{ q }}" placeholder="Search tenant name or email..." 
-               class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none">
-        <div class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <input type="text" name="q" value="{{ q }}" placeholder="Filter account identifier or string..." 
+               class="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 transition-all outline-none">
+        <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
           </svg>
-        </div>
+        </span>
         <input type="hidden" name="risk" value="{{ risk }}">
       </form>
     </div>
-    <div class="flex items-center gap-2 w-full md:w-auto">
-      <form method="get" class="flex items-center gap-2 w-full md:w-auto">
+
+    <!-- Dropdown Parameters Select Form -->
+    <div class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+      <form method="get" class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
         <input type="hidden" name="q" value="{{ q }}">
-        <select name="risk" onchange="this.form.submit()" class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none min-w-[140px]">
-          <option value="">All Risks</option>
+        
+        <select name="risk" onchange="this.form.submit()" class="bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-slate-500 transition-all outline-none cursor-pointer min-w-[130px]">
+          <option value="">All Risk Tiers</option>
           <option value="LOW" {% if risk == "LOW" %}selected{% endif %}>Low Risk</option>
-          <option value="MEDIUM" {% if risk == "MEDIUM" %}selected{% endif %}>Medium</option>
+          <option value="MEDIUM" {% if risk == "MEDIUM" %}selected{% endif %}>Medium Liability</option>
           <option value="HIGH" {% if risk == "HIGH" %}selected{% endif %}>High Risk</option>
         </select>
-        <select name="sort" onchange="this.form.submit()" class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none min-w-[140px]">
-          <option value="score_desc" {% if sort == "score_desc" %}selected{% endif %}>High Score First</option>
-          <option value="score_asc" {% if sort == "score_asc" %}selected{% endif %}>Low Score First</option>
+        
+        <select name="sort" onchange="this.form.submit()" class="bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-slate-500 transition-all outline-none cursor-pointer min-w-[140px]">
+          <option value="score_desc" {% if sort == "score_desc" %}selected{% endif %}>High Credibility Score</option>
+          <option value="score_asc" {% if sort == "score_asc" %}selected{% endif %}>Low Credibility Score</option>
         </select>
       </form>
+
       {% if q or risk or sort != "score_desc" %}
-        <a href="{% url 'admin_tenant_risk' %}" class="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Clear Filters">
-          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-          </svg>
+        <a href="{% url 'admin_tenant_risk' %}" class="px-3 py-2 text-slate-600 hover:text-white hover:bg-slate-800 border border-slate-300 hover:border-slate-800 rounded-lg transition-colors text-xs font-bold flex items-center gap-1" title="Reset Configured Parameters">
+          <span>Reset</span>
         </a>
       {% endif %}
     </div>
+
   </div>
 
-  <!-- Main Table -->
-  <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+  <!-- Master Data Risk Evaluation Container -->
+  <div class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
     <div class="overflow-x-auto">
       <table class="w-full text-left border-collapse">
         <thead>
-          <tr class="bg-slate-50/50">
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tenant</th>
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Risk Level</th>
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Score</th>
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Issues</th>
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Assessment Factors</th>
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
+          <tr class="bg-slate-50 border-b border-slate-200">
+            <th class="px-5 py-3.5 text-xs font-bold text-slate-700">Account Identity</th>
+            <th class="px-5 py-3.5 text-xs font-bold text-slate-700 text-center">Calculated Tier</th>
+            <th class="px-5 py-3.5 text-xs font-bold text-slate-700 text-center">Score Ratio</th>
+            <th class="px-5 py-3.5 text-xs font-bold text-slate-700 text-center">Lateness & Arrears</th>
+            <th class="px-5 py-3.5 text-xs font-bold text-slate-700">Assessment Factors Breakdown</th>
+            <th class="px-5 py-3.5 text-xs font-bold text-slate-700 text-right">Direct Navigation</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-100">
+        <tbody class="divide-y divide-slate-200 text-sm">
           {% for r in page_obj %}
-          <tr class="hover:bg-slate-50/30 transition-colors duration-150">
-            <td class="px-6 py-4">
-              <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-[11px]">
+          <tr class="hover:bg-slate-50/70 transition-colors">
+            
+            <!-- Account Identity Column -->
+            <td class="px-5 py-4">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-800 font-bold text-xs shrink-0 border border-slate-200">
                   {{ r.tenant.email|first|upper }}
                 </div>
-                <div>
+                <div class="min-w-0">
                   <div class="font-bold text-slate-900 text-sm truncate max-w-[180px]">
                     {{ r.tenant.tenantprofile.full_name|default:r.tenant.email }}
                   </div>
-                  <div class="text-[10px] text-slate-500 truncate max-w-[180px]">{{ r.tenant.email }}</div>
+                  <div class="text-xs text-slate-600 font-medium truncate max-w-[180px]">{{ r.tenant.email }}</div>
                 </div>
               </div>
             </td>
-            <td class="px-6 py-4 text-center">
-              <div class="flex flex-col items-center gap-1">
+
+            <!-- Calculated Tier Column -->
+            <td class="px-5 py-4 text-center">
+              <div class="inline-flex flex-col items-center gap-1">
                 {% if r.risk_level == 'LOW' %}
-                  <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase tracking-tight">Low Risk</span>
+                  <span class="px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-900 font-extrabold text-[10px] uppercase select-none block">
+                    Low Risk
+                  </span>
                 {% elif r.risk_level == 'MEDIUM' %}
-                  <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-tight">Medium</span>
+                  <span class="px-2.5 py-0.5 rounded bg-amber-100 text-amber-900 font-extrabold text-[10px] uppercase select-none block">
+                    Medium Liability
+                  </span>
                 {% else %}
-                  <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-100 text-red-700 uppercase tracking-tight animate-pulse">High Risk</span>
+                  <span class="px-2.5 py-0.5 rounded bg-rose-100 text-rose-900 font-extrabold text-[10px] uppercase select-none block">
+                    Critical Risk
+                  </span>
                 {% endif %}
                 
                 {% if r.is_new_tenant %}
-                  <span class="text-[9px] font-black text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded tracking-widest uppercase">Initial</span>
+                  <span class="text-[9px] font-extrabold text-slate-700 bg-slate-100 border border-slate-200 px-1.5 rounded uppercase block">
+                    Initial Setup
+                  </span>
                 {% endif %}
               </div>
             </td>
-            <td class="px-6 py-4 text-center">
-              <div class="flex flex-col items-center">
-                <div class="relative w-12 h-6 bg-slate-100 rounded-full overflow-hidden">
-                  <div class="absolute inset-0 h-full transition-all duration-1000 
-                    {% if r.payment_score >= 80 %}bg-emerald-500
-                    {% elif r.payment_score >= 60 %}bg-amber-500
-                    {% elif r.payment_score >= 40 %}bg-orange-500
-                    {% else %}bg-red-500{% endif %}" 
+
+            <!-- Score Ratio Column -->
+            <td class="px-5 py-4 text-center">
+              <div class="flex flex-col items-center max-w-[100px] mx-auto">
+                <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200">
+                  <div class="h-full transition-all duration-500 
+                    {% if r.payment_score >= 80 %}bg-emerald-600
+                    {% elif r.payment_score >= 60 %}bg-amber-600
+                    {% elif r.payment_score >= 40 %}bg-orange-600
+                    {% else %}bg-rose-600{% endif %}" 
                     style="width: {{ r.payment_score }}%">
                   </div>
                 </div>
-                <span class="text-[11px] font-black mt-1 
-                  {% if r.payment_score >= 80 %}text-emerald-700
-                  {% elif r.payment_score >= 60 %}text-amber-700
-                  {% elif r.payment_score >= 40 %}text-orange-700
-                  {% else %}text-red-700{% endif %}">
-                  {{ r.payment_score }}
-                </span>
+                <strong class="text-xs font-black mt-1 text-slate-900 block font-mono">
+                  {{ r.payment_score }}%
+                </strong>
               </div>
             </td>
-            <td class="px-6 py-4 text-center">
-              <div class="flex justify-center items-center gap-3">
-                <div class="text-center" title="Late Payments">
-                  <div class="text-[10px] font-bold {% if r.late_payment_count > 0 %}text-amber-600{% else %}text-slate-300{% endif %}">{{ r.late_payment_count }}</div>
-                  <div class="text-[8px] uppercase text-slate-400">Late</div>
+
+            <!-- Lateness & Arrears Column -->
+            <td class="px-5 py-4 text-center">
+              <div class="inline-flex items-center gap-4 bg-slate-50 border border-slate-200 rounded px-3 py-1 text-xs">
+                <div>
+                  <strong class="font-bold font-mono {% if r.late_payment_count > 0 %}text-amber-700{% else %}text-slate-600{% endif %}">
+                    {{ r.late_payment_count }}
+                  </strong>
+                  <span class="text-[10px] text-slate-500 block uppercase font-medium">Late</span>
                 </div>
-                <div class="w-px h-4 bg-slate-100"></div>
-                <div class="text-center" title="Unpaid Bills">
-                  <div class="text-[10px] font-bold {% if r.unpaid_bill_count > 0 %}text-red-600{% else %}text-slate-300{% endif %}">{{ r.unpaid_bill_count }}</div>
-                  <div class="text-[8px] uppercase text-slate-400">Unpaid</div>
+                
+                <span class="w-px h-6 bg-slate-200 block"></span>
+                
+                <div>
+                  <strong class="font-bold font-mono {% if r.unpaid_bill_count > 0 %}text-rose-700{% else %}text-slate-600{% endif %}">
+                    {{ r.unpaid_bill_count }}
+                  </strong>
+                  <span class="text-[10px] text-slate-500 block uppercase font-medium">Unpaid</span>
                 </div>
               </div>
             </td>
-            <td class="px-6 py-4">
+
+            <!-- Assessment Factors Breakdown Column -->
+            <td class="px-5 py-4">
               {% if r.risk_factors %}
-                <div class="grid grid-cols-2 gap-x-4 gap-y-1">
-                  <div class="flex items-center justify-between text-[9px] font-medium text-slate-500">
-                    <span>Timeliness</span>
-                    <span class="font-bold text-slate-700">{{ r.risk_factors.payment_timeliness|default:0 }}</span>
+                <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs max-w-xs">
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-600 font-medium">Timeliness:</span>
+                    <strong class="text-slate-900 font-bold font-mono">{{ r.risk_factors.payment_timeliness|default:0 }}</strong>
                   </div>
-                  <div class="flex items-center justify-between text-[9px] font-medium text-slate-500">
-                    <span>Consistency</span>
-                    <span class="font-bold text-slate-700">{{ r.risk_factors.payment_consistency|default:0 }}</span>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-600 font-medium">Consistency:</span>
+                    <strong class="text-slate-900 font-bold font-mono">{{ r.risk_factors.payment_consistency|default:0 }}</strong>
                   </div>
-                  <div class="flex items-center justify-between text-[9px] font-medium text-slate-500">
-                    <span>Status</span>
-                    <span class="font-bold text-slate-700">{{ r.risk_factors.current_payment_status|default:0 }}</span>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-600 font-medium">Clear State:</span>
+                    <strong class="text-slate-900 font-bold font-mono">{{ r.risk_factors.current_payment_status|default:0 }}</strong>
                   </div>
-                  <div class="flex items-center justify-between text-[9px] font-medium text-slate-500">
-                    <span>Recency</span>
-                    <span class="font-bold text-slate-700">{% if r.last_payment_date %}Active{% else %}None{% endif %}</span>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-600 font-medium">Recency Link:</span>
+                    <strong class="text-slate-900 font-bold">{% if r.last_payment_date %}Active{% else %}None{% endif %}</strong>
                   </div>
                 </div>
               {% else %}
-                <span class="text-[10px] text-slate-300 italic">No factors calculated</span>
+                <span class="text-xs text-slate-500 block italic">Pending sufficient baseline cycle updates</span>
               {% endif %}
             </td>
-            <td class="px-6 py-4 text-right">
+
+            <!-- Direct Navigation Column -->
+            <td class="px-5 py-4 text-right">
               <a href="{% url 'admin_tenant_detail' r.tenant.id %}" 
-                 class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-blue-50 hover:text-blue-600 transition-all border border-slate-100">
-                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                </svg>
-                View Details
+                 class="inline-block px-3 py-1.5 bg-white border border-slate-300 text-slate-700 hover:text-white hover:bg-slate-800 rounded font-bold text-xs transition-colors shrink-0">
+                View Account
               </a>
             </td>
+
           </tr>
           {% empty %}
           <tr>
-            <td colspan="6" class="py-24 text-center">
-              <div class="flex flex-col items-center">
-                <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-200 mb-4">
-                  <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                  </svg>
-                </div>
-                <h3 class="text-sm font-bold text-slate-800">No assessments found</h3>
-                <p class="text-xs text-slate-500 mt-1">Try adjusting your filters or update risk scores.</p>
-              </div>
+            <td colspan="6" class="py-16 text-center bg-white">
+              <strong class="text-xs text-slate-600 block">No target risk profiles matched configured filter parameters.</strong>
+              <p class="text-xs text-slate-500 mt-0.5">Please reset search definitions or instantiate a total recalculation event.</p>
             </td>
           </tr>
           {% endfor %}
@@ -259,56 +270,51 @@
       </table>
     </div>
 
-    <!-- Pagination Controls -->
+    <!-- Paginator State Injector Section -->
     {% if page_obj.paginator.num_pages > 1 %}
-    <div class="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
-      <div class="text-xs text-slate-500">
-        Showing <span class="font-bold text-slate-700">{{ page_obj.start_index }}</span> to <span class="font-bold text-slate-700">{{ page_obj.end_index }}</span> of <span class="font-bold text-slate-700">{{ page_obj.paginator.count }}</span> tenants
+    <div class="px-5 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="text-xs text-slate-600 font-medium">
+        Presenting indices <strong class="text-slate-800 font-bold">{{ page_obj.start_index }}</strong> through <strong class="text-slate-800 font-bold">{{ page_obj.end_index }}</strong> of <strong class="text-slate-800 font-bold">{{ page_obj.paginator.count }}</strong> recorded profiles
       </div>
+
       <div class="flex items-center gap-1">
         {% if page_obj.has_previous %}
           <a href="?page=1&q={{ q }}&risk={{ risk }}&sort={{ sort }}" 
-             class="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200" title="First Page">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
-            </svg>
+             class="px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
+            First
           </a>
           <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&risk={{ risk }}&sort={{ sort }}" 
-             class="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200" title="Previous Page">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-            </svg>
+             class="px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
+            Prev
           </a>
         {% endif %}
 
         <div class="flex items-center gap-1 px-2">
           {% for num in page_obj.paginator.page_range %}
             {% if page_obj.number == num %}
-              <span class="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-600 text-white text-xs font-bold shadow-lg shadow-blue-500/30">{{ num }}</span>
+              <span class="px-3 py-1.5 rounded bg-slate-800 text-white text-xs font-extrabold select-none">{{ num }}</span>
             {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
               <a href="?page={{ num }}&q={{ q }}&risk={{ risk }}&sort={{ sort }}" 
-                 class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:bg-white hover:text-blue-600 transition-all text-xs font-bold border border-transparent hover:border-slate-200">{{ num }}</a>
+                 class="px-3 py-1.5 rounded bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-colors">{{ num }}</a>
             {% endif %}
           {% endfor %}
         </div>
 
         {% if page_obj.has_next %}
           <a href="?page={{ page_obj.next_page_number }}&q={{ q }}&risk={{ risk }}&sort={{ sort }}" 
-             class="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200" title="Next Page">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-            </svg>
+             class="px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
+            Next
           </a>
           <a href="?page={{ page_obj.paginator.num_pages }}&q={{ q }}&risk={{ risk }}&sort={{ sort }}" 
-             class="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200" title="Last Page">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
-            </svg>
+             class="px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
+            Last
           </a>
         {% endif %}
       </div>
     </div>
     {% endif %}
+
   </div>
+
 </div>
 {% endblock %}

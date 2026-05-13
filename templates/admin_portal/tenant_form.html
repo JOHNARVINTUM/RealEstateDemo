@@ -2,179 +2,205 @@
 {% load humanize %}
 {% load static %}
 
-{% block title %}{{ title|default:"Tenant Registration" }} | RealEstate360+{% endblock %}
+{% block title %}{{ title|default:"Tenant Registration" }} | Core Administration{% endblock %}
 
 {% block content %}
-<div class="dashboard-container px-2 sm:px-4 lg:px-6 py-4 sm:py-6 max-w-7xl mx-auto">
-  <!-- Breadcrumb -->
-  <nav class="flex items-center gap-2 mb-8 text-xs font-bold uppercase tracking-widest text-slate-400">
-    <a href="{% url 'admin_tenants' %}" class="hover:text-blue-600 transition-colors">Tenants</a>
-    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path>
-    </svg>
-    <span class="text-slate-900">{{ title|default:"Add Tenant" }}</span>
+<div class="tenant-form-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12">
+  
+  <!-- Navigation Breadcrumb -->
+  <nav class="flex items-center gap-2 text-sm font-bold text-slate-600">
+    <a href="{% url 'admin_tenants' %}" class="hover:text-slate-900 transition-colors">Tenants Registry</a>
+    <span class="text-slate-400">/</span>
+    <span class="text-slate-900 font-extrabold">{{ title|default:"Add Tenant" }}</span>
   </nav>
 
   <div class="flex flex-col lg:flex-row gap-8 items-start">
-    <!-- Left Column: Intake Studio -->
-    <div class="flex-1 space-y-6 w-full">
-      <header class="mb-8">
-        <h1 class="text-3xl font-sans font-bold tracking-tight text-slate-900">{{ title|default:"Tenant Registration" }}</h1>
-        <p class="text-sm text-slate-500 mt-1 font-medium">Register a new tenant profile. Secure login credentials will be generated automatically.</p>
+    
+    <!-- Left Workspace Column: Main Studio Form -->
+    <div class="flex-1 w-full space-y-6">
+      
+      <!-- Studio Header -->
+      <header class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
+        <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900">{{ title|default:"Tenant Registration Studio" }}</h1>
+        <p class="text-sm text-slate-700 mt-1 leading-relaxed">Fill in the prospective tenant credentials below. Initial compliance records and access keys will be instantiated automatically.</p>
       </header>
 
-      <form method="post" enctype="multipart/form-data" class="space-y-6">
+      <!-- Main Unified Form Card -->
+      <form method="post" enctype="multipart/form-data" class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden divide-y divide-slate-100">
         {% csrf_token %}
         
-        <!-- Section: Identity & Personal -->
-        <div class="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm">
-          <h3 class="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-6 flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-            1. Identity & Personal Details
-          </h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="space-y-2">
-              <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">First Name</label>
-              <input type="text" name="first_name" value="{{ form.first_name.value|default:'' }}" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none" placeholder="e.g. Alice" required>
-              {% if form.first_name.errors %}<p class="text-[10px] font-bold text-red-500 mt-1">{{ form.first_name.errors.0 }}</p>{% endif %}
+        <!-- Section 1: Identity & Personal Details -->
+        <div class="p-6 sm:p-8 space-y-5">
+          <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
+            <span class="flex items-center justify-center w-5 h-5 rounded-md bg-slate-100 text-slate-800 font-extrabold text-xs">1</span>
+            <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Identity Parameters</h3>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label class="block text-xs font-bold text-slate-800 mb-1.5">First Name <span class="text-rose-600">*</span></label>
+              <input type="text" name="first_name" value="{{ form.first_name.value|default:'' }}" 
+                     class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-400" 
+                     placeholder="e.g. Alice" required>
+              {% if form.first_name.errors %}
+                <p class="text-xs font-bold text-rose-600 mt-1.5">{{ form.first_name.errors.0 }}</p>
+              {% endif %}
             </div>
-            <div class="space-y-2">
-              <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Last Name</label>
-              <input type="text" name="last_name" value="{{ form.last_name.value|default:'' }}" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none" placeholder="e.g. Brown" required>
-              {% if form.last_name.errors %}<p class="text-[10px] font-bold text-red-500 mt-1">{{ form.last_name.errors.0 }}</p>{% endif %}
+
+            <div>
+              <label class="block text-xs font-bold text-slate-800 mb-1.5">Last Name <span class="text-rose-600">*</span></label>
+              <input type="text" name="last_name" value="{{ form.last_name.value|default:'' }}" 
+                     class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-400" 
+                     placeholder="e.g. Brown" required>
+              {% if form.last_name.errors %}
+                <p class="text-xs font-bold text-rose-600 mt-1.5">{{ form.last_name.errors.0 }}</p>
+              {% endif %}
             </div>
           </div>
         </div>
 
-        <!-- Section: Contact & Account -->
-        <div class="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm">
-          <h3 class="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-6 flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-            2. Contact & Account Credentials
-          </h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="space-y-2">
-              <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Email Address (Login)</label>
-              <input type="email" name="email" value="{{ form.email.value|default:'' }}" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none" placeholder="e.g. alice@example.com" required>
-              {% if form.email.errors %}<p class="text-[10px] font-bold text-red-500 mt-1">{{ form.email.errors.0 }}</p>{% endif %}
-              <p class="text-[9px] text-slate-400 font-medium">Used for portal access and official notifications.</p>
+        <!-- Section 2: Contact & Authentication Credentials -->
+        <div class="p-6 sm:p-8 space-y-5 bg-slate-50/30">
+          <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
+            <span class="flex items-center justify-center w-5 h-5 rounded-md bg-slate-100 text-slate-800 font-extrabold text-xs">2</span>
+            <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Contact & Access Keys</h3>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label class="block text-xs font-bold text-slate-800 mb-1.5">Email Address (Primary Login) <span class="text-rose-600">*</span></label>
+              <input type="email" name="email" value="{{ form.email.value|default:'' }}" 
+                     class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-400" 
+                     placeholder="e.g. alice@example.com" required>
+              {% if form.email.errors %}
+                <p class="text-xs font-bold text-rose-600 mt-1.5">{{ form.email.errors.0 }}</p>
+              {% endif %}
+              <p class="text-xs text-slate-500 mt-1.5 font-medium">Instantiates base role mapping and serves telemetry alert dispatch.</p>
             </div>
-            <div class="space-y-2">
-              <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Contact Number</label>
-              <input type="text" name="contact_no" value="{{ form.contact_no.value|default:'' }}" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none" placeholder="e.g. 09123456789">
-              {% if form.contact_no.errors %}<p class="text-[10px] font-bold text-red-500 mt-1">{{ form.contact_no.errors.0 }}</p>{% endif %}
+
+            <div>
+              <label class="block text-xs font-bold text-slate-800 mb-1.5">Mobile Number</label>
+              <input type="text" name="contact_no" value="{{ form.contact_no.value|default:'' }}" 
+                     class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-400" 
+                     placeholder="e.g. 09123456789">
+              {% if form.contact_no.errors %}
+                <p class="text-xs font-bold text-rose-600 mt-1.5">{{ form.contact_no.errors.0 }}</p>
+              {% endif %}
+              <p class="text-xs text-slate-500 mt-1.5 font-medium">Optional direct telephonic relay.</p>
             </div>
           </div>
         </div>
 
-        <!-- Section: Document Vault (Optional Attachments) -->
-        <div class="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm">
-          <h3 class="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-6 flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-            3. Document Uploads
-          </h3>
-          <div class="space-y-8">
-            <!-- Contract Row -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 rounded-2xl border border-slate-100 bg-slate-50/50">
-              <div class="space-y-2">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Lease Contract (PDF/Image)</label>
-                <input type="file" name="contract_file" class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-widest file:bg-blue-600 file:text-white hover:file:bg-blue-700 transition-all cursor-pointer">
-                <p class="text-[9px] text-slate-400 font-medium">Max 10MB. PDF, JPG, or PNG.</p>
-              </div>
-              <div class="space-y-2">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Contract Description</label>
-                <input type="text" name="contract_description" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none" placeholder="e.g. Initial Signed Agreement">
+        <!-- Section 3: Document Vault Uploads -->
+        <div class="p-6 sm:p-8 space-y-6">
+          <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
+            <span class="flex items-center justify-center w-5 h-5 rounded-md bg-slate-100 text-slate-800 font-extrabold text-xs">3</span>
+            <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Compliance Document Attachments</h3>
+          </div>
+
+          <div class="space-y-5">
+            <!-- Lease Contract Attachment -->
+            <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-4">
+              <span class="text-xs font-extrabold text-slate-800 block">A. Original Lease Agreement File</span>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-600 mb-1">Target Binary Upload</label>
+                  <input type="file" name="contract_file" 
+                         class="w-full text-xs text-slate-700 file:mr-3 file:py-2 file:px-3 file:rounded-md file:border file:border-slate-300 file:text-xs file:font-bold file:bg-white file:text-slate-800 hover:file:bg-slate-50 transition-colors cursor-pointer">
+                  <p class="text-[11px] text-slate-500 mt-1">Accepts standard PDF, JPG, or PNG formats.</p>
+                </div>
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-600 mb-1">Attachment Descriptor</label>
+                  <input type="text" name="contract_description" 
+                         class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-xs font-medium text-slate-900 outline-none" 
+                         placeholder="e.g. Master Leasing Instrument">
+                </div>
               </div>
             </div>
 
-            <!-- Valid ID Row -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 rounded-2xl border border-slate-100 bg-slate-50/50">
-              <div class="space-y-2">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Valid ID Upload</label>
-                <input type="file" name="valid_id_file" class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-widest file:bg-slate-900 file:text-white hover:file:bg-slate-800 transition-all cursor-pointer">
-                <p class="text-[9px] text-slate-400 font-medium">Clear copy of National ID or Passport.</p>
-              </div>
-              <div class="space-y-2">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">ID Description</label>
-                <input type="text" name="valid_id_description" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none" placeholder="e.g. Primary Government ID">
+            <!-- Valid Identification Upload -->
+            <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-4">
+              <span class="text-xs font-extrabold text-slate-800 block">B. Valid Identity Proof</span>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-600 mb-1">Target Binary Upload</label>
+                  <input type="file" name="valid_id_file" 
+                         class="w-full text-xs text-slate-700 file:mr-3 file:py-2 file:px-3 file:rounded-md file:border file:border-slate-300 file:text-xs file:font-bold file:bg-white file:text-slate-800 hover:file:bg-slate-50 transition-colors cursor-pointer">
+                  <p class="text-[11px] text-slate-500 mt-1">Clear reproduction of Government ID.</p>
+                </div>
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-600 mb-1">Attachment Descriptor</label>
+                  <input type="text" name="valid_id_description" 
+                         class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-xs font-medium text-slate-900 outline-none" 
+                         placeholder="e.g. Sovereign Biometric Identity">
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="flex items-center gap-4 pt-4">
-          <button type="submit" class="flex-1 bg-slate-900 text-white py-4 rounded-2xl font-sans font-bold text-sm hover:bg-slate-800 transition-all shadow-lg shadow-slate-100">
-            Finalize Registration
-          </button>
-          <a href="{{ back_url }}" class="px-8 py-4 bg-white border border-slate-200 text-slate-500 rounded-2xl font-sans font-bold text-sm hover:bg-slate-50 transition-all text-center">
-            Cancel
+        <!-- Form Submission Controls -->
+        <div class="p-6 bg-slate-50 flex flex-col sm:flex-row items-center gap-3 justify-end">
+          <a href="{{ back_url|default:'/admin-portal/tenants/' }}" class="w-full sm:w-auto px-5 py-2.5 bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 rounded-lg font-bold text-sm transition-colors text-center shadow-xs">
+            Abort Intake
           </a>
+          <button type="submit" class="w-full sm:w-auto px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-extrabold text-sm transition-colors text-center shadow-xs">
+            Instantiate Record
+          </button>
         </div>
+
       </form>
+
     </div>
 
-    <!-- Right Column: Activity & Analytics -->
-    <div class="w-full lg:w-[360px] space-y-6">
-      <div class="bg-slate-900 rounded-3xl border border-slate-800 p-8 shadow-sm text-white relative overflow-hidden">
-        <div class="relative z-10">
-          <h3 class="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-6 flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-            Recently Onboarded
-          </h3>
-          
-          <div class="space-y-6">
-            {% for tenant in recent_tenants %}
-            <div class="group cursor-default">
-              <div class="flex justify-between items-start mb-1">
-                <span class="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">ID: #{{ tenant.id }}</span>
-                <div class="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>
-              </div>
-              <h4 class="text-xs font-bold text-slate-100 group-hover:text-blue-400 transition-colors">{{ tenant.first_name }} {{ tenant.last_name }}</h4>
-              <p class="text-[10px] text-slate-500 truncate mt-1">{{ tenant.user.email }}</p>
-            </div>
-            {% if not forloop.last %}
-              <div class="h-px bg-slate-800 w-full my-4"></div>
-            {% endif %}
-            {% empty %}
-              <p class="text-[10px] text-slate-500 italic">No tenants onboarded yet.</p>
-            {% endfor %}
-          </div>
-        </div>
-
-        <!-- Background Design -->
-        <div class="absolute -right-8 -bottom-8 text-blue-600/5 rotate-12">
-            <svg class="w-64 h-64" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-            </svg>
-        </div>
-      </div>
-
-      <div class="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm">
-        <div class="flex items-center gap-3 text-slate-900 mb-6">
-          <div class="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center">
-            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-          </div>
-          <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Portfolio Integration</span>
-        </div>
+    <!-- Right Side Diagnostic Column -->
+    <div class="w-full lg:w-[340px] space-y-6 shrink-0">
+      
+      <!-- Recently Onboarded Panel -->
+      <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+        <h3 class="text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100 flex items-center gap-2">
+          <span>●</span> Registry Feed Snapshot
+        </h3>
         
         <div class="space-y-4">
-          <div class="flex justify-between items-center">
-            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total Capacity</span>
-            <span class="text-xs font-black text-slate-900">84%</span>
-          </div>
-          <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-            <div class="bg-blue-600 h-full rounded-full w-[84%] shadow-[0_0_8px_rgba(37,99,235,0.3)]"></div>
-          </div>
-          <div class="flex justify-between items-center pt-2">
-            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Onboarding Rate</span>
-            <div class="flex items-center gap-1 text-emerald-600">
-              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
-              <span class="text-[10px] font-black">+12%</span>
+          {% for tenant in recent_tenants %}
+            <div class="text-xs">
+              <div class="flex justify-between items-center text-slate-500 mb-0.5 font-semibold">
+                <span>Ref: #{{ tenant.id }}</span>
+                <span class="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 font-bold">Verified</span>
+              </div>
+              <div class="font-extrabold text-slate-900">{{ tenant.first_name }} {{ tenant.last_name }}</div>
+              <div class="text-slate-600 truncate mt-0.5">{{ tenant.user.email }}</div>
             </div>
+            {% if not forloop.last %}
+              <div class="h-px bg-slate-100 w-full my-2"></div>
+            {% endif %}
+          {% empty %}
+            <p class="text-xs text-slate-500 font-medium py-3 text-center">No cached additions detected.</p>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Capacity Diagnostic Panel -->
+      <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-3">
+        <span class="text-xs font-extrabold text-slate-800 uppercase tracking-wider block pb-2 border-b border-slate-100">
+          Storage Mapping
+        </span>
+        
+        <div class="space-y-2">
+          <div class="flex justify-between items-center text-xs">
+            <span class="text-slate-600 font-bold">Volume Allocated</span>
+            <span class="font-extrabold text-slate-900">84%</span>
+          </div>
+          <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+            <div class="bg-slate-800 h-full rounded-full w-[84%]"></div>
           </div>
         </div>
       </div>
+
     </div>
+
   </div>
+
 </div>
 {% endblock %}

@@ -2,109 +2,98 @@
 {% load l10n %}
 
 <div class="lease-schedule-preview h-full" id="lease-schedule-preview" style="display: none;">
-    <div class="glass-panel p-0 border-none shadow-2xl bg-slate-900 text-white overflow-hidden flex flex-col h-full sticky top-6">
-        <!-- Contract Header -->
-        <div class="p-6 bg-gradient-to-r from-blue-600 to-indigo-700">
-            <div class="flex justify-between items-center mb-1">
-                <span class="text-[10px] font-black uppercase tracking-widest text-blue-100">Draft Contract Preview</span>
-                <span class="px-2 py-0.5 rounded bg-white/20 text-[9px] font-black uppercase tracking-widest text-white">Live Ledger</span>
+    <div class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden flex flex-col h-full sticky top-6">
+        
+        <!-- Ledger Schedule Header -->
+        <div class="p-5 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+            <div>
+                <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block">Projection Schedule</span>
+                <h5 class="text-base font-extrabold text-slate-900 tracking-tight mt-0.5">Live Accounting Ledger</h5>
             </div>
-            <h5 class="text-xl font-display font-bold text-white flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                Lease Summary
-            </h5>
+            <span class="px-2 py-0.5 rounded bg-slate-200 text-slate-700 text-[10px] font-bold">12-Month Scope</span>
         </div>
 
-        <div class="p-6 space-y-8 flex-1 overflow-y-auto custom-scrollbar">
-            <!-- Move-in Cost Focus -->
-            <div class="bg-white/5 rounded-2xl p-5 border border-white/10">
-                <div class="flex justify-between items-center mb-4">
-                    <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Move-in Cost</span>
-                    <span class="text-2xl font-display font-bold text-blue-400" data-preview="total_move_in_cost">₱0.00</span>
+        <div class="p-5 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
+            
+            <!-- Move-in Cost Focus Box -->
+            <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                <div class="flex justify-between items-center mb-3">
+                    <span class="text-xs font-bold text-slate-700">Total Settlement Due</span>
+                    <strong class="text-xl font-black text-slate-900" data-preview="total_move_in_cost">₱0.00</strong>
                 </div>
-                <div class="space-y-3">
-                    <div class="flex justify-between text-xs font-medium text-slate-300">
-                        <span class="flex items-center gap-2">
-                            <div class="w-1.5 h-1.5 rounded-full bg-slate-500"></div>
-                            Monthly Rent
-                        </span>
-                        <strong data-preview="monthly_rent">₱0.00</strong>
+                <div class="space-y-2 pt-2 border-t border-slate-200/60 text-xs">
+                    <div class="flex justify-between text-slate-600">
+                        <span>Base Rental Charge</span>
+                        <strong class="text-slate-900" data-preview="monthly_rent">₱0.00</strong>
                     </div>
-                    <div class="flex justify-between text-xs font-medium text-slate-300">
-                        <span class="flex items-center gap-2">
-                            <div class="w-1.5 h-1.5 rounded-full bg-slate-500"></div>
-                            Advance (<span data-preview="advance_months">2</span> mo<span data-preview="advance_months_plural">s</span>)
-                        </span>
-                        <strong data-preview="advance_payment_amount">₱0.00</strong>
+                    <div class="flex justify-between text-slate-600">
+                        <span>Pre-Applied Advance (<span data-preview="advance_months">2</span> mo<span data-preview="advance_months_plural">s</span>)</span>
+                        <strong class="text-slate-900" data-preview="advance_payment_amount">₱0.00</strong>
                     </div>
-                    <div class="flex justify-between text-xs font-medium text-slate-300">
-                        <span class="flex items-center gap-2">
-                            <div class="w-1.5 h-1.5 rounded-full bg-slate-500"></div>
-                            Security Deposit
-                        </span>
-                        <strong data-preview="security_deposit">₱0.00</strong>
+                    <div class="flex justify-between text-slate-600">
+                        <span>Held Security Deposit</span>
+                        <strong class="text-slate-900" data-preview="security_deposit">₱0.00</strong>
                     </div>
                 </div>
             </div>
 
-            <!-- Milestone Timeline -->
-            <div class="space-y-4">
-                <h6 class="text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
-                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    Payment Milestones
-                </h6>
-                <div class="grid grid-cols-1 gap-3">
-                    <div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                        <div class="text-[9px] font-black uppercase tracking-widest text-amber-500 mb-1">Due at Move-in</div>
-                        <div class="text-sm font-bold text-slate-100" id="milestone-security">₱0.00</div>
-                        <div class="text-[10px] text-slate-500 mt-0.5">Date: <span id="milestone-movein-date">—</span></div>
+            <!-- Milestone Details -->
+            <div class="space-y-2.5">
+                <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500 block">Key Action Milestones</span>
+                <div class="grid grid-cols-2 gap-3 text-xs">
+                    <div class="p-3 bg-white border border-slate-200 rounded-lg shadow-2xs">
+                        <span class="text-[10px] font-bold text-amber-700 block mb-0.5">Move-in Date Target</span>
+                        <strong class="text-sm font-black text-slate-900 block" id="milestone-security">₱0.00</strong>
+                        <span class="text-[10px] text-slate-500 block mt-1">Commences: <strong class="text-slate-700" id="milestone-movein-date">—</strong></span>
                     </div>
-                    <div class="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                        <div class="text-[9px] font-black uppercase tracking-widest text-blue-400 mb-1">First Regular Rent</div>
-                        <div class="text-sm font-bold text-slate-100" id="milestone-first-rent">₱0.00</div>
-                        <div class="text-[10px] text-slate-500 mt-0.5">Due: <span id="milestone-first-rent-date">—</span></div>
+                    <div class="p-3 bg-white border border-slate-200 rounded-lg shadow-2xs">
+                        <span class="text-[10px] font-bold text-blue-700 block mb-0.5">First Regular Cycle</span>
+                        <strong class="text-sm font-black text-slate-900 block" id="milestone-first-rent">₱0.00</strong>
+                        <span class="text-[10px] text-slate-500 block mt-1">Target: <strong class="text-slate-700" id="milestone-first-rent-date">—</strong></span>
                     </div>
                 </div>
             </div>
 
-            <!-- Schedule Table -->
-            <div class="space-y-4">
-                <h6 class="text-[10px] font-black uppercase tracking-widest text-slate-500">Full 12-Month Projection</h6>
-                <div class="rounded-xl border border-white/5 overflow-hidden">
-                    <table class="w-full text-left text-[10px]" id="monthly-schedule-table">
-                        <thead class="bg-white/5 text-slate-500 font-black uppercase tracking-tighter">
+            <!-- Full Year Projection Table -->
+            <div class="space-y-2">
+                <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500 block">Full 12-Month Trajectory</span>
+                <div class="border border-slate-200 rounded-lg overflow-hidden">
+                    <table class="w-full text-left text-xs" id="monthly-schedule-table">
+                        <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200 text-[11px]">
                             <tr>
-                                <th class="px-4 py-2">Month</th>
-                                <th class="px-4 py-2">Due Date</th>
-                                <th class="px-4 py-2 text-right">Amount</th>
+                                <th class="px-3 py-2">Cycle</th>
+                                <th class="px-3 py-2">Due Date</th>
+                                <th class="px-3 py-2 text-right">Amount</th>
                             </tr>
                         </thead>
-                        <tbody id="monthly-schedule-body" class="text-slate-300">
-                            <!-- Populated by JS -->
+                        <tbody id="monthly-schedule-body" class="text-slate-800 divide-y divide-slate-100">
+                            <!-- Dynamically populated by form JS -->
                         </tbody>
-                        <tfoot class="bg-white/5 border-t border-white/5">
-                            <tr class="font-bold text-blue-400">
-                                <td colspan="2" class="px-4 py-3 uppercase tracking-widest">Yearly Total</td>
-                                <td class="px-4 py-3 text-right text-xs" id="total-12-months">₱0.00</td>
+                        <tfoot class="bg-slate-50 border-t border-slate-200">
+                            <tr class="font-extrabold text-slate-900">
+                                <td colspan="2" class="px-3 py-2.5 text-xs text-slate-700">Calculated Contract Value</td>
+                                <td class="px-3 py-2.5 text-right text-sm text-slate-900" id="total-12-months">₱0.00</td>
                             </tr>
                         </tfoot>
                     </table>
                 </div>
             </div>
+
         </div>
 
-        <!-- Footer / QR (Only if GCash selected) -->
-        <div id="preview-gcash-footer" class="p-6 bg-blue-600/10 border-t border-white/5" style="display: none;">
-            <div class="flex items-center gap-4">
-                <div class="bg-white p-2 rounded-lg shrink-0">
-                    <img src="/static/img/gcash_qr3.jpg" class="w-16 h-16 rounded shadow-inner">
+        <!-- QR Instructions Box (Dynamic conditional display) -->
+        <div id="preview-gcash-footer" class="p-4 bg-slate-50 border-t border-slate-200" style="display: none;">
+            <div class="flex items-center gap-3">
+                <div class="bg-white p-1 rounded border border-slate-300 shrink-0">
+                    <img src="/static/img/gcash_qr3.jpg" class="w-12 h-12 object-contain" alt="QR Reference">
                 </div>
-                <div>
-                    <p class="text-[10px] font-black uppercase tracking-widest text-blue-400">Scan to Settle</p>
-                    <p class="text-[11px] text-slate-400 leading-relaxed">Quickly settle move-in costs via GCash. Use reference for tracking.</p>
+                <div class="text-xs">
+                    <strong class="font-bold text-slate-900 block">Scan to Transfer Remittance</strong>
+                    <span class="text-slate-600 block text-[11px] leading-tight mt-0.5">Settle initial move-in metrics directly via GCash instrument code.</span>
                 </div>
             </div>
         </div>
+
     </div>
 </div>
 
@@ -175,15 +164,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     const dueDate = calculateDueDate(startDate, i, dueDay);
                     let amount = monthlyRent;
                     let amountDisplay = '';
-                    let rowClass = 'border-b border-white/5';
                     
                     if (i < advanceMonths) {
                         if (i === 0) {
                             amount = totalMoveInCost;
-                            amountDisplay = `<span class="text-amber-400 font-bold">${formatCurrency(amount)}</span>`;
+                            amountDisplay = `<span class="text-amber-700 font-extrabold">${formatCurrency(amount)}</span>`;
                         } else {
                             amount = 0;
-                            amountDisplay = '<span class="text-emerald-500 font-bold tracking-widest">PREPAID</span>';
+                            amountDisplay = '<span class="text-emerald-700 font-extrabold tracking-wider text-[10px]">PREPAID</span>';
                         }
                     } else {
                         amountDisplay = formatCurrency(amount);
@@ -191,10 +179,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     
                     scheduleHTML += `
-                        <tr class="${rowClass} hover:bg-white/5 transition-colors">
-                            <td class="px-4 py-2.5 font-bold text-slate-500">Month ${monthNumber}</td>
-                            <td class="px-4 py-2.5 text-slate-400">${formatDate(dueDate)}</td>
-                            <td class="px-4 py-2.5 text-right font-medium">${amountDisplay}</td>
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-3 py-2 font-bold text-slate-700">Cycle ${monthNumber}</td>
+                            <td class="px-3 py-2 text-slate-600">${formatDate(dueDate)}</td>
+                            <td class="px-3 py-2 text-right font-medium text-slate-900">${amountDisplay}</td>
                         </tr>
                     `;
                 }
@@ -225,17 +213,8 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <style>
-.custom-scrollbar::-webkit-scrollbar { width: 4px; }
-.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
-
-#lease-schedule-preview {
-    animation: slideInRight 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes slideInRight {
-    from { opacity: 0; transform: translateX(30px); }
-    to { opacity: 1; transform: translateX(0); }
-}
+.custom-scrollbar::-webkit-scrollbar { width: 5px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 </style>

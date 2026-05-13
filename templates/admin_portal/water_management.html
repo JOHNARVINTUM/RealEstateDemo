@@ -1,172 +1,180 @@
 {% extends "admin_portal/base.html" %}
 {% load humanize %}
-{% block title %}Water Management | RealEstate360+{% endblock %}
+{% block title %}Water Utility Console | Real Estate Administration{% endblock %}
 
 {% block content %}
-<div class="dashboard-container px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
-  <!-- Header Section -->
-  <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-    <div class="flex-1">
-      <div class="flex items-center gap-3 mb-2">
-        <div class="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center text-white shadow-xl shadow-slate-200">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3c-1.5 2-5 6-5 9.5a5.5 5.5 0 0011 0C18 9 14.5 5 12 3z"></path>
-            </svg>
-        </div>
-        <h1 class="font-sans font-bold tracking-tight text-3xl sm:text-4xl text-slate-900 leading-tight">Water Management</h1>
-      </div>
-      <p class="text-sm text-slate-500 font-medium">Monitor property utility consumption, update base cubic meter rates, and process recurring sub-meter logs.</p>
-    </div>
+<div class="water-management-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
+  
+  <!-- Studio Top Title Block -->
+  <header class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
+    <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">Water Management Administration</h1>
+    <p class="text-sm text-slate-700 mt-1 leading-relaxed">Monitor property utility consumption sums, update base cubic meter rates, and compile recurring sub-meter logs.</p>
   </header>
 
-  <!-- Stats Grid -->
-  <section class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-    <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
-      <div class="stat-icon blue w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-        </svg>
-      </div>
+  <!-- Summary Metric Overview Cards (Consistent Iconless Layout) -->
+  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    
+    <!-- Total Units -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-blue-600 flex flex-col justify-between">
       <div>
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Units</p>
-        <p class="text-xl font-sans font-bold text-slate-900">{{ total_units }}</p>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Assigned Property Units</span>
+        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ total_units }}</div>
+      </div>
+      <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
+        <span class="text-blue-600 font-bold">●</span> Active units mapped
       </div>
     </div>
-    <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
-      <div class="stat-icon green w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-        </svg>
-      </div>
+
+    <!-- Completed Submissions -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-emerald-600 flex flex-col justify-between">
       <div>
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Completed</p>
-        <p class="text-xl font-sans font-bold text-slate-900">{{ filled_count }}</p>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Completed Records</span>
+        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ filled_count }}</div>
+      </div>
+      <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
+        <span class="text-emerald-600 font-bold">●</span> Readings recorded
       </div>
     </div>
-    <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3 border-l-4 border-l-red-500">
-      <div class="stat-icon red w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center text-red-600">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-        </svg>
-      </div>
+
+    <!-- Missing Submissions -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-rose-600 flex flex-col justify-between">
       <div>
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Missing</p>
-        <p class="text-xl font-sans font-bold text-slate-900">{{ missing_count }}</p>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Missing Records</span>
+        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ missing_count }}</div>
+      </div>
+      <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
+        <span class="text-rose-600 font-bold">●</span> Require input entry
       </div>
     </div>
-    {% if current_rate %}
-    <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
-      <div class="stat-icon indigo w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-600">
-        <span class="text-sm font-bold">₱</span>
-      </div>
+
+    <!-- Active Base Rate -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-indigo-600 flex flex-col justify-between">
       <div>
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Rate / m³</p>
-        <p class="text-xl font-sans font-bold text-slate-900">{{ current_rate }}</p>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Base Rate / m³</span>
+        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+          {% if current_rate %}₱{{ current_rate }}{% else %}<span class="text-slate-400 font-bold text-base">Unassigned</span>{% endif %}
+        </div>
+      </div>
+      <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
+        <span class="text-indigo-600 font-bold">●</span> Calculation factor
       </div>
     </div>
-    {% endif %}
+
   </section>
 
+  <!-- Master Multi-Column Grid Space -->
   <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-    <!-- Left Column: Settings & Filter -->
+    
+    <!-- Left Configuration & Timeline Column -->
     <div class="lg:col-span-4 space-y-6">
-      <!-- Water Rate Settings -->
-      <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-        <h2 class="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-          <svg class="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-          </svg>
-          Water Rate Settings
-        </h2>
+      
+      <!-- Water Rate Settings Box -->
+      <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-4">
+        <div class="pb-3 border-b border-slate-100">
+          <h2 class="text-base font-extrabold text-slate-900 tracking-tight">Water Rate Parameter</h2>
+          <p class="text-xs text-slate-600 mt-0.5">Establish billing constant for dynamic evaluation</p>
+        </div>
+
         <form method="post" action="{% url 'admin_water_rate' %}" class="space-y-4">
           {% csrf_token %}
           <div>
-            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Effective Date</label>
-            <input type="date" name="effective_date" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none" value="{{ today|date:'Y-m-d' }}" required>
+            <label class="block text-xs font-bold text-slate-800 mb-1">Effective Timestamp <span class="text-rose-600">*</span></label>
+            <input type="date" name="effective_date" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 outline-none" value="{{ today|date:'Y-m-d' }}" required>
           </div>
+          
           <div>
-            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Rate per m³ (₱)</label>
+            <label class="block text-xs font-bold text-slate-800 mb-1">Valuation Constant (₱ / m³) <span class="text-rose-600">*</span></label>
             <div class="relative">
-              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₱</span>
-              <input type="number" name="rate_per_cu_m" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-4 py-2.5 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none" step="0.01" min="0" value="{{ current_rate|default:'45.00' }}" required>
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">₱</span>
+              <input type="number" name="rate_per_cu_m" class="w-full bg-white border border-slate-300 rounded-lg pl-7 pr-3 py-2 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-slate-500 outline-none" step="0.01" min="0" value="{{ current_rate|default:'45.00' }}" required>
             </div>
           </div>
+          
           <div>
-            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Optional Notes</label>
-            <input type="text" name="notes" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. Summer increase">
+            <label class="block text-xs font-bold text-slate-800 mb-1">Operational Description</label>
+            <input type="text" name="notes" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 outline-none" placeholder="e.g. Standard Summer baseline">
           </div>
-          <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-            <span>Update Rate</span>
+          
+          <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-extrabold py-2.5 rounded-lg text-sm transition-colors text-center shadow-xs">
+            Commit Rate Adjustment
           </button>
         </form>
       </div>
 
-      <!-- Month/Year Selection -->
-      <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-        <h2 class="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-          <svg class="w-4 h-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path>
-          </svg>
-          Select Period
-        </h2>
+      <!-- Scope Timeline Selection Box -->
+      <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-4">
+        <div class="pb-3 border-b border-slate-100">
+          <h2 class="text-base font-extrabold text-slate-900 tracking-tight">Timeline Selection Scope</h2>
+          <p class="text-xs text-slate-600 mt-0.5">Filter targets by active logging bounds</p>
+        </div>
+
         <form method="get" class="space-y-4">
           <div class="grid grid-cols-2 gap-3">
-            <select name="month" class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-              {% for m_num, m_name in month_choices %}
-                <option value="{{ m_num }}" {% if month == m_num %}selected{% endif %}>{{ m_name }}</option>
-              {% endfor %}
-            </select>
-            <select name="year" class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-              {% for y in year_choices %}
-                <option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}</option>
-              {% endfor %}
-            </select>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1">Target Month</label>
+              <select name="month" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 outline-none cursor-pointer">
+                {% for m_num, m_name in month_choices %}
+                  <option value="{{ m_num }}" {% if month == m_num %}selected{% endif %}>{{ m_name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1">Target Year</label>
+              <select name="year" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 outline-none cursor-pointer">
+                {% for y in year_choices %}
+                  <option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+              </select>
+            </div>
           </div>
-          <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-xl transition-all">
-            View Readings
+          
+          <button type="submit" class="w-full bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 font-extrabold py-2.5 rounded-lg text-sm transition-colors text-center shadow-2xs">
+            Load Assigned Readings
           </button>
         </form>
       </div>
+
     </div>
 
-    <!-- Right Column: Bulk Readings Table -->
-    <div class="lg:col-span-8">
+    <!-- Right Target Execution Data Workspace Column -->
+    <div class="lg:col-span-8 space-y-6">
+      
+      <!-- Missing Constant System Alert Banner -->
       {% if not current_rate %}
-      <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-r-xl">
-        <div class="flex items-center gap-3 text-red-700">
-          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-          </svg>
-          <div>
-            <p class="font-bold">No Water Rate Set</p>
-            <p class="text-xs">Please set a water rate in the settings panel before entering readings.</p>
-          </div>
+      <div class="bg-rose-50 border border-rose-200 rounded-xl p-4 flex items-start gap-3">
+        <span class="w-6 h-6 rounded bg-rose-100 text-rose-800 font-extrabold flex items-center justify-center shrink-0 text-xs">!</span>
+        <div class="space-y-0.5">
+          <strong class="text-sm font-extrabold text-rose-900 block">Unassigned Utility Rate Constant</strong>
+          <p class="text-xs text-rose-700 leading-relaxed">Please instantiate an absolute base valuation parameter in the settings panel prior to processing unit sub-meter records.</p>
         </div>
       </div>
       {% endif %}
 
-      <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-        <div class="p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
-          <h2 class="text-lg font-bold text-slate-900">{{ month_name }} {{ year }} Readings</h2>
-          <div class="relative w-full md:w-64">
-            <form method="get" class="relative">
-              <input type="hidden" name="month" value="{{ month }}">
-              <input type="hidden" name="year" value="{{ year }}">
-              <input type="text" name="search" value="{{ search }}" placeholder="Search unit or tenant..." 
-                     class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none">
-              <div class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                </svg>
-              </div>
-            </form>
+      <!-- Core Master Bounded Container -->
+      <div class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+        
+        <!-- Table Scope Top Navigation Section -->
+        <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50/50">
+          <div>
+            <h2 class="text-base font-extrabold text-slate-900">{{ month_name }} {{ year }} Sub-Meter Index</h2>
+            <p class="text-xs text-slate-600 mt-0.5">Input current total values to automatically project sum dues</p>
           </div>
+          
+          <form method="get" class="w-full sm:w-auto relative min-w-[220px]">
+            <input type="hidden" name="month" value="{{ month }}">
+            <input type="hidden" name="year" value="{{ year }}">
+            <input type="text" name="search" value="{{ search }}" placeholder="Filter unit identifier or string..." 
+                   class="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 transition-all outline-none">
+            <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+            </span>
+          </form>
         </div>
 
+        <!-- Master Records Injection Loop Form -->
         <form method="post" action="{% url 'admin_water_process' %}">
           {% csrf_token %}
           <input type="hidden" name="month" value="{{ month }}">
@@ -175,40 +183,46 @@
           <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
               <thead>
-                <tr class="bg-slate-50/50">
-                  <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Unit & Tenant</th>
-                  <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Prev (m³)</th>
-                  <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Current Reading</th>
-                  <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Usage</th>
-                  <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Amount</th>
-                  <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Status</th>
+                <tr class="bg-slate-50 border-b border-slate-200">
+                  <th class="px-5 py-3 text-xs font-bold text-slate-700">Property & Contract Identity</th>
+                  <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Previous Base (m³)</th>
+                  <th class="px-5 py-3 text-xs font-bold text-slate-700">Logged Value (m³)</th>
+                  <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Consumed Sum</th>
+                  <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Projected Value</th>
+                  <th class="px-5 py-3 text-xs font-bold text-slate-700 text-center">State Status</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-slate-100">
+              <tbody class="divide-y divide-slate-200 text-sm">
                 {% for row in readings_data %}
-                <tr class="reading-row transition-colors duration-150 {% if row.has_reading %}bg-emerald-50/20{% else %}bg-white{% endif %}" data-lease="{{ row.lease_id }}">
+                <tr class="reading-row transition-colors {% if row.has_reading %}bg-emerald-50/40{% else %}bg-white{% endif %}" data-lease="{{ row.lease_id }}">
                   <input type="hidden" name="lease_ids" value="{{ row.lease_id }}">
-                  <td class="px-6 py-4">
-                    <div class="flex items-center gap-3">
-                      <div class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-[11px]">
+                  
+                  <!-- Contract Unit Mapping Column -->
+                  <td class="px-5 py-3.5">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-800 font-bold text-xs shrink-0 border border-slate-200">
                         {{ row.tenant_name|first|upper }}
                       </div>
-                      <div>
-                        <div class="font-bold text-slate-900 text-sm">Unit {{ row.unit_number }}</div>
-                        <div class="text-[10px] text-slate-500 truncate max-w-[120px]">{{ row.tenant_name }}</div>
+                      <div class="min-w-0">
+                        <div class="font-bold text-slate-900 text-sm">Unit Space #{{ row.unit_number }}</div>
+                        <div class="text-xs font-medium text-slate-600 truncate max-w-[140px]">{{ row.tenant_name }}</div>
                       </div>
                       {% if row.is_first_billing %}
-                        <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-100 text-blue-700 uppercase">First Bill</span>
+                        <span class="px-2 py-0.5 rounded bg-slate-900 text-white font-extrabold text-[10px] shrink-0 uppercase select-none">Initial Bill</span>
                       {% endif %}
                     </div>
                   </td>
-                  <td class="px-6 py-4 text-right text-sm text-slate-400 font-mono">
+
+                  <!-- Previous Data Column -->
+                  <td class="px-5 py-3.5 text-right font-mono font-bold text-slate-600">
                     {{ row.previous_reading|floatformat:2 }}
                   </td>
-                  <td class="px-6 py-4">
+
+                  <!-- Input Sub-Meter Reading Column -->
+                  <td class="px-5 py-3.5">
                     <input type="number" 
                            name="reading_{{ row.lease_id }}" 
-                           class="w-32 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none text-right transition-all reading-input" 
+                           class="w-28 bg-white border border-slate-300 rounded px-2.5 py-1 text-xs font-bold text-slate-900 focus:ring-2 focus:ring-slate-500 outline-none text-right transition-all reading-input" 
                            value="{{ row.current_reading|default:'' }}"
                            step="0.01"
                            min="0"
@@ -218,30 +232,37 @@
                            data-rate="{{ rate }}"
                            oninput="calculateRow(this)">
                   </td>
-                  <td class="px-6 py-4 text-right">
-                    <span class="text-sm font-bold text-slate-700 usage-display" id="usage_{{ row.lease_id }}">
+
+                  <!-- Sub-Meter Output Usage Hook Column -->
+                  <td class="px-5 py-3.5 text-right font-mono font-bold text-slate-800">
+                    <span class="usage-display" id="usage_{{ row.lease_id }}">
                       {% if row.has_reading %}{{ row.usage|floatformat:2 }}{% else %}-{% endif %}
                     </span>
                   </td>
-                  <td class="px-6 py-4 text-right">
-                    <span class="text-sm font-black text-slate-900 amount-display" id="amount_{{ row.lease_id }}">
+
+                  <!-- Calculated Financial Projected String Hook Column -->
+                  <td class="px-5 py-3.5 text-right">
+                    <strong class="amount-display text-slate-900 font-black" id="amount_{{ row.lease_id }}">
                       {% if row.has_reading %}₱{{ row.amount|intcomma }}{% else %}-{% endif %}
-                    </span>
+                    </strong>
                   </td>
-                  <td class="px-6 py-4 text-center">
+
+                  <!-- Inline Badge Status Column -->
+                  <td class="px-5 py-3.5 text-center">
                     {% if row.bill_paid %}
-                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase">Paid</span>
+                      <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-extrabold text-[10px] uppercase block select-none">Settled</span>
                     {% elif row.has_reading %}
-                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 uppercase">Done</span>
+                      <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-900 font-bold text-[10px] uppercase block select-none">Completed</span>
                     {% else %}
-                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 uppercase">Missing</span>
+                      <span class="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-extrabold text-[10px] uppercase block select-none">Pending</span>
                     {% endif %}
                   </td>
+
                 </tr>
                 {% empty %}
                 <tr>
-                  <td colspan="6" class="py-20 text-center text-slate-400 text-sm">
-                    No active leases found for this period.
+                  <td colspan="6" class="py-12 text-center bg-white">
+                    <strong class="text-xs text-slate-600 block">No target unit bindings configured for this timestamp scope.</strong>
                   </td>
                 </tr>
                 {% endfor %}
@@ -249,38 +270,38 @@
             </table>
           </div>
 
-          <div class="p-6 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
-            <p class="text-xs text-slate-500">
-              Usage and amounts are computed automatically based on the current rate.
-            </p>
-            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2" {% if not current_rate %}disabled{% endif %}>
-              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-              </svg>
-              <span>Save Readings & Compute Bills</span>
+          <!-- Bottom Execution Action Trigger Strip -->
+          <div class="p-5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <span class="text-xs text-slate-600 font-medium text-center sm:text-left leading-relaxed">
+              Consumptions scale automatically relative to the currently active valuation baseline factor.
+            </span>
+            <button type="submit" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white font-extrabold px-6 py-2.5 rounded-lg text-sm transition-colors text-center shadow-xs shrink-0" {% if not current_rate %}disabled{% endif %}>
+              Compile Logs & Trigger Ledger Integration
             </button>
           </div>
+
         </form>
       </div>
-      
-      <!-- Recompute Section -->
-      <div class="mt-8 flex justify-end">
-        <form method="post" action="{% url 'admin_water_recompute' %}" class="confirm-action" data-confirm="Recompute all water readings for {{ month_name }} {{ year }}? This will recalculate usage and amounts based on the latest rate.">
+
+      <!-- Advanced Recomputation Execution Link -->
+      <div class="flex justify-end pt-2">
+        <form method="post" action="{% url 'admin_water_recompute' %}" class="confirm-action inline-block" data-confirm="Recompute all water readings for {{ month_name }} {{ year }}? This will recalculate usage and amounts based on the latest rate.">
           {% csrf_token %}
           <input type="hidden" name="month" value="{{ month }}">
           <input type="hidden" name="year" value="{{ year }}">
-          <button type="submit" class="text-xs font-bold text-slate-400 hover:text-blue-600 transition-all flex items-center gap-1">
-            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-            </svg>
-            Recompute all readings for this month
+          <button type="submit" class="text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors underline bg-transparent border-none p-0 cursor-pointer">
+            Force Entire Timeline Recalculation Override
           </button>
         </form>
       </div>
+
     </div>
+
   </div>
+
 </div>
 
+<!-- Real-Time Client Sum Recalculation Engine -->
 <script>
   function calculateRow(input) {
     const current = parseFloat(input.value) || 0;
@@ -296,13 +317,13 @@
       document.getElementById('usage_' + leaseId).textContent = usage.toFixed(2);
       document.getElementById('amount_' + leaseId).textContent = '₱' + amount.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
       
-      // Update row styling
-      row.classList.add('bg-emerald-50/20');
+      // Update row styling to active record
+      row.classList.add('bg-emerald-50/40');
       row.classList.remove('bg-white');
     } else {
       document.getElementById('usage_' + leaseId).textContent = '-';
       document.getElementById('amount_' + leaseId).textContent = '-';
-      row.classList.remove('bg-emerald-50/20');
+      row.classList.remove('bg-emerald-50/40');
       row.classList.add('bg-white');
     }
   }

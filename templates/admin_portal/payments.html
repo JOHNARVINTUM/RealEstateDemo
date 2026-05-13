@@ -1,267 +1,269 @@
 {% extends "admin_portal/base.html" %}
 {% load humanize %}
-{% block title %}Payments Queue | RealEstate360+{% endblock %}
+{% block title %}Payments Queue | Real Estate Administration{% endblock %}
 
 {% block content %}
-<div class="dashboard-container px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
-  <!-- Header Section -->
-  <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-    <div class="flex-1">
-      <div class="flex items-center gap-3 mb-2">
-        <div class="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center text-white shadow-xl shadow-slate-200">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
-            </svg>
-        </div>
-        <h1 class="font-sans font-bold tracking-tight text-3xl sm:text-4xl text-slate-900 leading-tight">Payment Queue</h1>
-      </div>
-      <p class="text-sm text-slate-500 font-medium">Review, verify, and process submitted property payment transactions and reference settlements.</p>
-    </div>
+<div class="payments-queue-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
+  
+  <!-- Studio Top Title Block -->
+  <header class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
+    <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">Payment Queue Administration</h1>
+    <p class="text-sm text-slate-700 mt-1 leading-relaxed">Review, verify, and process submitted property payment transactions and scheduled face-to-face settlement logs.</p>
   </header>
 
-  <!-- Stats Grid -->
-  <section class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-    <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
-      <div class="stat-icon blue w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
-        </svg>
-      </div>
+  <!-- Summary Metric Overview Cards (Consistent Iconless Layout) -->
+  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    
+    <!-- Total Entries -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-blue-600 flex flex-col justify-between">
       <div>
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total</p>
-        <p class="text-xl font-sans font-bold text-slate-900">{{ payments|length }}</p>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Total Queue Records</span>
+        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ payments|length }}</div>
+      </div>
+      <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
+        <span class="text-blue-600 font-bold">●</span> Registered submissions
       </div>
     </div>
-    <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3 border-l-4 border-l-amber-500">
-      <div class="stat-icon amber w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center text-amber-600">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-        </svg>
-      </div>
+
+    <!-- Pending Action -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-amber-600 flex flex-col justify-between">
       <div>
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pending</p>
-        <p class="text-xl font-sans font-bold text-slate-900">{{ pending_count|default:0 }}</p>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Pending Verification</span>
+        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ pending_count|default:0 }}</div>
+      </div>
+      <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
+        <span class="text-amber-600 font-bold">●</span> Awaiting administrative decision
       </div>
     </div>
-    <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
-      <div class="stat-icon green w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-        </svg>
-      </div>
+
+    <!-- Approved Records -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-emerald-600 flex flex-col justify-between">
       <div>
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Approved</p>
-        <p class="text-xl font-sans font-bold text-slate-900">{{ approved_count|default:0 }}</p>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Approved Remittances</span>
+        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ approved_count|default:0 }}</div>
+      </div>
+      <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
+        <span class="text-emerald-600 font-bold">●</span> Verified and credited
       </div>
     </div>
-    <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
-      <div class="stat-icon red w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center text-red-600">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-        </svg>
-      </div>
+
+    <!-- Rejected Entries -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-rose-600 flex flex-col justify-between">
       <div>
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Rejected</p>
-        <p class="text-xl font-sans font-bold text-slate-900">{{ rejected_count|default:0 }}</p>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Rejected Entries</span>
+        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ rejected_count|default:0 }}</div>
+      </div>
+      <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
+        <span class="text-rose-600 font-bold">●</span> Invalid or duplicate logs
       </div>
     </div>
+
   </section>
 
-  <!-- Filter Panel -->
-  <div class="bg-white rounded-3xl border border-slate-200 p-4 shadow-sm mb-8 flex flex-col md:flex-row items-center gap-4">
-    <div class="relative flex-1 w-full">
+  <!-- Control & Filter Workspace Strip -->
+  <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
+    
+    <!-- Left Filter Form Search Input -->
+    <div class="w-full md:w-80">
       <form method="get" class="relative">
-        <input type="text" name="q" value="{{ q }}" placeholder="Search email, reference, or bill IDs..." 
-               class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none">
-        <div class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <input type="text" name="q" value="{{ q }}" placeholder="Filter email, identifier reference..." 
+               class="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 transition-all outline-none">
+        <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
           </svg>
-        </div>
+        </span>
         <input type="hidden" name="status" value="{{ status }}">
         <input type="hidden" name="method" value="{{ method }}">
       </form>
     </div>
+
+    <!-- Right Categorical Select Options -->
     <div class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
       <form method="get" class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
         <input type="hidden" name="q" value="{{ q }}">
-        <select name="method" onchange="this.form.submit()" class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none min-w-[140px]">
-          <option value="">All Methods</option>
+        
+        <select name="method" onchange="this.form.submit()" class="bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-slate-500 transition-all outline-none cursor-pointer min-w-[130px]">
+          <option value="">All Pay Methods</option>
           <option value="GCASH" {% if method == "GCASH" %}selected{% endif %}>GCash QR</option>
           <option value="CASH" {% if method == "CASH" %}selected{% endif %}>F2F Cash</option>
         </select>
-        <select name="status" onchange="this.form.submit()" class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none min-w-[140px]">
+        
+        <select name="status" onchange="this.form.submit()" class="bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-slate-500 transition-all outline-none cursor-pointer min-w-[130px]">
           <option value="">All Statuses</option>
           <option value="PENDING" {% if status == "PENDING" %}selected{% endif %}>Pending</option>
           <option value="APPROVED" {% if status == "APPROVED" %}selected{% endif %}>Approved</option>
           <option value="REJECTED" {% if status == "REJECTED" %}selected{% endif %}>Rejected</option>
         </select>
       </form>
+
       {% if q or status or method %}
-        <a href="{% url 'admin_payments' %}" class="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Clear Filters">
-          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-          </svg>
+        <a href="{% url 'admin_payments' %}" class="px-3 py-2 text-slate-600 hover:text-white hover:bg-slate-800 border border-slate-300 hover:border-slate-800 rounded-lg transition-colors text-xs font-bold flex items-center gap-1" title="Reset Filters">
+          <span>Reset</span>
         </a>
       {% endif %}
     </div>
+
   </div>
 
-  <!-- Main Table -->
-  <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+  <!-- Master Data Table Workspace Card -->
+  <div class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
     <div class="overflow-x-auto">
       <table class="w-full text-left border-collapse">
         <thead>
-          <tr class="bg-slate-50/50">
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tenant</th>
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Method</th>
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Amount</th>
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Reference / Schedule</th>
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Bills</th>
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Status</th>
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
+          <tr class="bg-slate-50 border-b border-slate-200">
+            <th class="px-5 py-3.5 text-xs font-bold text-slate-700">Contracting Tenant</th>
+            <th class="px-5 py-3.5 text-xs font-bold text-slate-700">Routing Channel</th>
+            <th class="px-5 py-3.5 text-xs font-bold text-slate-700 text-right">Sum Transacted</th>
+            <th class="px-5 py-3.5 text-xs font-bold text-slate-700">Identifier / Schedule Mapping</th>
+            <th class="px-5 py-3.5 text-xs font-bold text-slate-700">Target Bills Mapped</th>
+            <th class="px-5 py-3.5 text-xs font-bold text-slate-700 text-center">Status Track</th>
+            <th class="px-5 py-3.5 text-xs font-bold text-slate-700 text-right">Administrative Options</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-100">
+        <tbody class="divide-y divide-slate-200 text-sm">
           {% for p in page_obj %}
-          <tr class="hover:bg-slate-50/30 transition-colors duration-150 payment-row" data-method="{{ p.payment_method }}">
-            <td class="px-6 py-4">
-              <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-[11px]">
+          <tr class="hover:bg-slate-50/70 transition-colors payment-row" data-method="{{ p.payment_method }}">
+            
+            <!-- Contracting Tenant Column -->
+            <td class="px-5 py-4">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-800 font-bold text-xs shrink-0 border border-slate-200">
                   {{ p.user.email|first|upper }}
                 </div>
-                <div>
-                  <div class="font-bold text-slate-900 text-sm truncate max-w-[150px]">
+                <div class="min-w-0">
+                  <div class="font-bold text-slate-900 text-sm truncate max-w-[180px]">
                     {{ p.user.email }}
                   </div>
-                  <div class="text-[10px] text-slate-500">Tenant Payer</div>
+                  <div class="text-xs text-slate-600 font-medium">Tenant Entity</div>
                 </div>
               </div>
             </td>
-            <td class="px-6 py-4">
+
+            <!-- Routing Channel Column -->
+            <td class="px-5 py-4 shrink-0">
               {% if p.payment_method == "GCASH" %}
-                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 w-fit">
-                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"></path>
-                  </svg>
-                  <span class="text-[10px] font-bold uppercase tracking-tight">GCash QR</span>
-                </div>
+                <span class="inline-block px-2.5 py-1 rounded bg-blue-50 border border-blue-200 text-blue-800 text-[10px] font-extrabold uppercase select-none">
+                  GCash Remote
+                </span>
               {% else %}
-                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 w-fit">
-                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                  </svg>
-                  <span class="text-[10px] font-bold uppercase tracking-tight">F2F Cash</span>
-                </div>
+                <span class="inline-block px-2.5 py-1 rounded bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-extrabold uppercase select-none">
+                  F2F Cash Desk
+                </span>
               {% endif %}
             </td>
-            <td class="px-6 py-4 text-right">
-              <div class="text-sm font-black text-emerald-600">₱{{ p.amount|floatformat:2|intcomma }}</div>
-              <div class="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
-                {% if p.payment_type == "full" %}Full Payment{% else %}{{ p.payment_type }}{% endif %}
-              </div>
+
+            <!-- Sum Transacted Column -->
+            <td class="px-5 py-4 text-right">
+              <strong class="text-sm font-black text-slate-900 block">₱{{ p.amount|floatformat:2|intcomma }}</strong>
+              <span class="text-[10px] text-slate-600 font-bold uppercase block mt-0.5">
+                {% if p.payment_type == "full" %}Full Remittance{% else %}{{ p.payment_type }}{% endif %}
+              </span>
             </td>
-            <td class="px-6 py-4">
+
+            <!-- Identifier / Schedule Mapping Column -->
+            <td class="px-5 py-4">
               {% if p.payment_method == "GCASH" %}
-                <div class="text-sm font-mono font-bold text-slate-700">{{ p.reference_code }}</div>
-                <div class="text-[10px] text-slate-400">GCash Ref Code</div>
+                <strong class="text-xs font-mono font-bold text-slate-800 block">{{ p.reference_code }}</strong>
+                <span class="text-[10px] text-slate-500 block">GCash Token Ref</span>
               {% else %}
-                <div class="flex flex-col">
-                  <div class="flex items-center gap-1.5 text-sm font-bold text-slate-700">
-                    <svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path>
-                    </svg>
-                    {{ p.preferred_date|date:"M d, Y"|default:"No date" }}
-                  </div>
-                  <div class="text-[10px] text-slate-500 font-medium">
-                    {{ p.preferred_time|time:"g:i A"|default:"No time" }}
+                <div class="space-y-0.5">
+                  <strong class="text-xs font-bold text-slate-800 block">
+                    {{ p.preferred_date|date:"M d, Y"|default:"No Date Mapped" }}
+                  </strong>
+                  <div class="text-xs text-slate-600 font-medium">
+                    {{ p.preferred_time|time:"g:i A"|default:"No Time" }}
                     {% if p.tenant_note %}
-                      <span class="ml-1 text-slate-300">•</span>
-                      <span class="ml-1 italic text-slate-400" title="{{ p.tenant_note }}">"{{ p.tenant_note|truncatechars:20 }}"</span>
+                      <span class="mx-1 text-slate-300">|</span>
+                      <span class="italic text-slate-700" title="{{ p.tenant_note }}">"{{ p.tenant_note|truncatechars:28 }}"</span>
                     {% endif %}
                   </div>
                 </div>
               {% endif %}
             </td>
-            <td class="px-6 py-4">
-              <div class="flex flex-wrap gap-1 text-[10px] font-mono text-slate-600">
+
+            <!-- Target Bills Mapped Column -->
+            <td class="px-5 py-4">
+              <span class="inline-block bg-slate-50 border border-slate-200 rounded px-2 py-0.5 text-[11px] font-mono font-medium text-slate-700">
                 {{ p.bill_ids }}
-              </div>
+              </span>
             </td>
-            <td class="px-6 py-4 text-center">
+
+            <!-- Status Track Column -->
+            <td class="px-5 py-4 text-center">
               {% if p.status == 'APPROVED' %}
-                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase tracking-tight">Approved</span>
+                <span class="inline-block px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 font-extrabold text-[10px] uppercase select-none">
+                  Credited
+                </span>
               {% elif p.status == 'REJECTED' %}
-                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-100 text-red-700 uppercase tracking-tight">Rejected</span>
+                <span class="inline-block px-2 py-0.5 rounded bg-rose-100 text-rose-900 font-extrabold text-[10px] uppercase select-none">
+                  Declined
+                </span>
               {% else %}
-                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-tight animate-pulse">Pending</span>
+                <span class="inline-block px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-extrabold text-[10px] uppercase select-none">
+                  Pending Audit
+                </span>
               {% endif %}
-              <div class="text-[9px] text-slate-400 mt-1 font-medium">{{ p.created_at|date:"M d, H:i" }}</div>
+              <span class="block text-[10px] text-slate-500 font-medium mt-1">
+                {{ p.created_at|date:"M d, H:i" }}
+              </span>
             </td>
-            <td class="px-6 py-4 text-right">
-              <div class="flex justify-end items-center gap-2">
+
+            <!-- Administrative Options Column -->
+            <td class="px-5 py-4 text-right">
+              <div class="flex justify-end items-center gap-1.5">
                 {% if p.status == "PENDING" %}
+                  
+                  <!-- Conditional Route Appraisals -->
                   {% if p.payment_method == "GCASH" %}
-                    <form method="post" action="{% url 'admin_approve_payment' p.id %}" class="confirm-action" data-confirm="Approve ₱{{ p.amount|floatformat:2|intcomma }} GCash payment from {{ p.user.email }}?&#10;&#10;Reference: {{ p.reference_code }}&#10;Type: {{ p.payment_type }}&#10;Bills: {{ p.bill_ids }}">
+                    <form method="post" action="{% url 'admin_approve_payment' p.id %}" class="confirm-action inline-block" data-confirm="Approve ₱{{ p.amount|floatformat:2|intcomma }} GCash payment from {{ p.user.email }}?&#10;&#10;Reference: {{ p.reference_code }}&#10;Type: {{ p.payment_type }}&#10;Bills: {{ p.bill_ids }}">
                       {% csrf_token %}
-                      <button type="submit" class="p-2 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-all" title="Approve GCash Payment">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
+                      <button type="submit" class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded text-emerald-800 text-xs font-bold transition-colors" title="Authorize Transfer">
+                        Approve
                       </button>
                     </form>
                   {% else %}
                     {% if not p.schedule_confirmed %}
-                      <form method="post" action="{% url 'admin_confirm_schedule' p.id %}" class="confirm-action" data-confirm="Confirm F2F schedule for {{ p.user.email }}?&#10;&#10;Date: {{ p.preferred_date|date:'M d, Y' }}&#10;Time: {{ p.preferred_time|time:'g:i A' }}&#10;Tenant will be notified.">
+                      <form method="post" action="{% url 'admin_confirm_schedule' p.id %}" class="confirm-action inline-block" data-confirm="Confirm F2F schedule for {{ p.user.email }}?&#10;&#10;Date: {{ p.preferred_date|date:'M d, Y' }}&#10;Time: {{ p.preferred_time|time:'g:i A' }}&#10;Tenant will be notified.">
                         {% csrf_token %}
-                        <button type="submit" class="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-all" title="Confirm Schedule">
-                          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path>
-                          </svg>
+                        <button type="submit" class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded text-blue-800 text-xs font-bold transition-colors" title="Lock Appointment Schedule">
+                          Confirm Desk Link
                         </button>
                       </form>
                     {% else %}
-                      <form method="post" action="{% url 'admin_approve_payment' p.id %}" class="confirm-action" data-confirm="Confirm cash payment RECEIVED from {{ p.user.email }}?&#10;&#10;Amount: ₱{{ p.amount|floatformat:2|intcomma }}&#10;Scheduled: {{ p.preferred_date|date:'M d, Y' }} {{ p.preferred_time|time:'g:i A' }}&#10;Bills: {{ p.bill_ids }}">
+                      <form method="post" action="{% url 'admin_approve_payment' p.id %}" class="confirm-action inline-block" data-confirm="Confirm cash payment RECEIVED from {{ p.user.email }}?&#10;&#10;Amount: ₱{{ p.amount|floatformat:2|intcomma }}&#10;Scheduled: {{ p.preferred_date|date:'M d, Y' }} {{ p.preferred_time|time:'g:i A' }}&#10;Bills: {{ p.bill_ids }}">
                         {% csrf_token %}
-                        <button type="submit" class="p-2 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-all" title="Confirm Receipt of Cash">
-                          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                          </svg>
+                        <button type="submit" class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded text-emerald-800 text-xs font-bold transition-colors" title="Verify Cash Delivered">
+                          Receipt Cash
                         </button>
                       </form>
                     {% endif %}
                   {% endif %}
-                  
-                  <form method="post" action="{% url 'admin_reject_payment' p.id %}" class="confirm-action" data-confirm="Reject ₱{{ p.amount|floatformat:2|intcomma }} payment from {{ p.user.email }}?">
+
+                  <!-- Universal Pending Decliine Action -->
+                  <form method="post" action="{% url 'admin_reject_payment' p.id %}" class="confirm-action inline-block" data-confirm="Reject ₱{{ p.amount|floatformat:2|intcomma }} payment from {{ p.user.email }}?">
                     {% csrf_token %}
-                    <button type="submit" class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Reject Payment">
-                      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                      </svg>
+                    <button type="submit" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded text-rose-800 text-xs font-bold transition-colors" title="Reject Payment File">
+                      Decline
                     </button>
                   </form>
+
                 {% endif %}
-                
-                <a href="{% url 'admin_delete_payment' p.id %}" class="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete Record">
-                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                  </svg>
+
+                <!-- Record Drop Anchor -->
+                <a href="{% url 'admin_delete_payment' p.id %}" class="px-2 py-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors text-xs font-bold ml-1" title="Drop File Row">
+                  Drop
                 </a>
+
               </div>
             </td>
+
           </tr>
           {% empty %}
           <tr>
-            <td colspan="7" class="py-24 text-center">
-              <div class="flex flex-col items-center">
-                <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-200 mb-4">
-                  <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                  </svg>
-                </div>
-                <h3 class="text-sm font-bold text-slate-800">Queue is empty</h3>
-                <p class="text-xs text-slate-500 mt-1">All submitted payments have been processed.</p>
-              </div>
+            <td colspan="7" class="py-16 text-center bg-white">
+              <strong class="text-xs text-slate-600 block">The transactional review ledger is presently empty.</strong>
+              <p class="text-xs text-slate-500 mt-0.5">All scheduled records or queued token references have been successfully executed.</p>
             </td>
           </tr>
           {% endfor %}
@@ -269,56 +271,51 @@
       </table>
     </div>
 
-    <!-- Pagination Controls -->
+    <!-- Paginator State Injector Section -->
     {% if page_obj.paginator.num_pages > 1 %}
-    <div class="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
-      <div class="text-xs text-slate-500">
-        Showing <span class="font-bold text-slate-700">{{ page_obj.start_index }}</span> to <span class="font-bold text-slate-700">{{ page_obj.end_index }}</span> of <span class="font-bold text-slate-700">{{ page_obj.paginator.count }}</span> payments
+    <div class="px-5 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="text-xs text-slate-600 font-medium">
+        Presenting indices <strong class="text-slate-800 font-bold">{{ page_obj.start_index }}</strong> through <strong class="text-slate-800 font-bold">{{ page_obj.end_index }}</strong> of <strong class="text-slate-800 font-bold">{{ page_obj.paginator.count }}</strong> complete files
       </div>
+
       <div class="flex items-center gap-1">
         {% if page_obj.has_previous %}
           <a href="?page=1&q={{ q }}&status={{ status }}&method={{ method }}" 
-             class="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200" title="First Page">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
-            </svg>
+             class="px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
+            First
           </a>
           <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&status={{ status }}&method={{ method }}" 
-             class="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200" title="Previous Page">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-            </svg>
+             class="px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
+            Prev
           </a>
         {% endif %}
 
         <div class="flex items-center gap-1 px-2">
           {% for num in page_obj.paginator.page_range %}
             {% if page_obj.number == num %}
-              <span class="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-600 text-white text-xs font-bold shadow-lg shadow-blue-500/30">{{ num }}</span>
+              <span class="px-3 py-1.5 rounded bg-slate-800 text-white text-xs font-extrabold select-none">{{ num }}</span>
             {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
               <a href="?page={{ num }}&q={{ q }}&status={{ status }}&method={{ method }}" 
-                 class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:bg-white hover:text-blue-600 transition-all text-xs font-bold border border-transparent hover:border-slate-200">{{ num }}</a>
+                 class="px-3 py-1.5 rounded bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-colors">{{ num }}</a>
             {% endif %}
           {% endfor %}
         </div>
 
         {% if page_obj.has_next %}
           <a href="?page={{ page_obj.next_page_number }}&q={{ q }}&status={{ status }}&method={{ method }}" 
-             class="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200" title="Next Page">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-            </svg>
+             class="px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
+            Next
           </a>
           <a href="?page={{ page_obj.paginator.num_pages }}&q={{ q }}&status={{ status }}&method={{ method }}" 
-             class="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200" title="Last Page">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
-            </svg>
+             class="px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
+            Last
           </a>
         {% endif %}
       </div>
     </div>
     {% endif %}
+
   </div>
+
 </div>
 {% endblock %}

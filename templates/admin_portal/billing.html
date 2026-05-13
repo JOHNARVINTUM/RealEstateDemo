@@ -1,281 +1,280 @@
 {% extends "admin_portal/base.html" %}
 {% load humanize %}
-{% block title %}Billing & Ledger | RealEstate360+{% endblock %}
+{% block title %}Billing & Ledger | Real Estate Administration{% endblock %}
 
 {% block content %}
-<div class="dashboard-container px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
-  <!-- Header Section -->
-  <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-    <div class="flex-1">
-      <div class="flex items-center gap-3 mb-2">
-        <div class="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center text-white shadow-xl shadow-slate-200">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-            </svg>
-        </div>
-        <h1 class="font-sans font-bold tracking-tight text-3xl sm:text-4xl text-slate-900 leading-tight">Billing & Ledger</h1>
-      </div>
-      <p class="text-sm text-slate-500 font-medium">Monitor tenant ledger payments, track overdue balances, and manage upcoming lease charges.</p>
-    </div>
+<div class="billing-ledger-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
+  
+  <!-- Studio Top Title Block -->
+  <header class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
+    <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">Billing & Ledger Administration</h1>
+    <p class="text-sm text-slate-700 mt-1 leading-relaxed">Monitor tenant monthly ledger payment states, track overdue balances, and verify continuous lease generation.</p>
   </header>
 
-  <!-- Stats Grid -->
-  <section class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-    <!-- Paid -->
-    <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-2">
-      <div class="stat-icon green w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-        </svg>
-      </div>
+  <!-- Summary Metric Overview Cards -->
+  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+    
+    <!-- Paid Sum Box -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-emerald-600 flex flex-col justify-between">
       <div>
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Paid</p>
-        <p class="text-xl font-sans font-bold text-slate-900">{{ paid_count }}</p>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Fully Settled</span>
+        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ paid_count }}</div>
+      </div>
+      <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
+        <span class="text-emerald-600 font-bold">●</span> Cleared ledgers
       </div>
     </div>
-    <!-- Unpaid -->
-    <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-2">
-      <div class="stat-icon red w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center text-red-600">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-        </svg>
-      </div>
+
+    <!-- Unpaid Sum Box -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-rose-600 flex flex-col justify-between">
       <div>
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Unpaid</p>
-        <p class="text-xl font-sans font-bold text-slate-900">{{ unpaid_count }}</p>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Unpaid Targets</span>
+        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ unpaid_count }}</div>
+      </div>
+      <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
+        <span class="text-rose-600 font-bold">●</span> Outstanding bills
       </div>
     </div>
-    <!-- Overdue -->
-    <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-2 border-l-4 border-l-orange-500">
-      <div class="stat-icon orange w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center text-orange-600">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-        </svg>
-      </div>
+
+    <!-- Overdue Sum Box -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-orange-600 flex flex-col justify-between">
       <div>
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Overdue</p>
-        <p class="text-xl font-sans font-bold text-slate-900">{{ overdue_count }}</p>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Overdue Alerts</span>
+        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ overdue_count }}</div>
+      </div>
+      <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
+        <span class="text-orange-600 font-bold">●</span> Immediate attention
       </div>
     </div>
-    <!-- Partial -->
-    <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-2">
-      <div class="stat-icon amber w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center text-amber-600">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-        </svg>
-      </div>
+
+    <!-- Partial Sum Box -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-amber-600 flex flex-col justify-between">
       <div>
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Partial</p>
-        <p class="text-xl font-sans font-bold text-slate-900">{{ partial_count }}</p>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Partial Credits</span>
+        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ partial_count }}</div>
+      </div>
+      <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
+        <span class="text-amber-600 font-bold">●</span> Partially remitted
       </div>
     </div>
-    <!-- Upcoming -->
-    <div class="stat-card p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-2">
-      <div class="stat-icon slate w-10 h-10 bg-slate-50 rounded-lg flex items-center justify-center text-slate-600">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path>
-        </svg>
-      </div>
+
+    <!-- Upcoming Sum Box -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-slate-700 flex flex-col justify-between">
       <div>
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Upcoming</p>
-        <p class="text-xl font-sans font-bold text-slate-900">{{ upcoming_count }}</p>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Upcoming Queue</span>
+        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ upcoming_count }}</div>
+      </div>
+      <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
+        <span class="text-slate-700 font-bold">●</span> Projected cycles
       </div>
     </div>
+
   </section>
 
-  <!-- Tab Switcher & Filter Shell -->
-  <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-    <!-- Tabs -->
+  <!-- Filter Shell & Main Data Ledger Card -->
+  <div class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+    
+    <!-- Tab Navigation Strips -->
     <div class="flex border-b border-slate-200 bg-slate-50">
       <a href="?tab=active&q={{ q }}&status={{ status_filter }}&month={{ month_filter }}&year={{ year_filter }}"
-         class="px-8 py-4 text-sm font-bold transition-all duration-200 border-b-2 {% if active_tab == 'active' %}border-blue-600 text-blue-600 bg-white{% else %}border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50{% endif %} flex items-center gap-2">
-        <span>Active Bills</span>
-        <span class="px-2 py-0.5 rounded-full text-[10px] {% if active_tab == 'active' %}bg-blue-100 text-blue-700{% else %}bg-slate-200 text-slate-600{% endif %}">{{ unpaid_count }}</span>
+         class="px-6 py-3.5 text-sm font-bold transition-colors border-b-2 flex items-center gap-2 {% if active_tab == 'active' %}border-slate-900 text-slate-900 bg-white font-extrabold{% else %}border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/60{% endif %}">
+        <span>Active Billled Cycles</span>
+        <span class="px-2 py-0.5 rounded text-xs {% if active_tab == 'active' %}bg-slate-900 text-white font-bold{% else %}bg-slate-200 text-slate-700{% endif %}">{{ unpaid_count }}</span>
       </a>
+      
       <a href="?tab=upcoming&q={{ q }}&status={{ status_filter }}&month={{ month_filter }}&year={{ year_filter }}"
-         class="px-8 py-4 text-sm font-bold transition-all duration-200 border-b-2 {% if active_tab == 'upcoming' %}border-blue-600 text-blue-600 bg-white{% else %}border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50{% endif %} flex items-center gap-2">
-        <span>Upcoming Bills</span>
-        <span class="px-2 py-0.5 rounded-full text-[10px] {% if active_tab == 'upcoming' %}bg-blue-100 text-blue-700{% else %}bg-slate-200 text-slate-600{% endif %}">{{ upcoming_count }}</span>
+         class="px-6 py-3.5 text-sm font-bold transition-colors border-b-2 flex items-center gap-2 {% if active_tab == 'upcoming' %}border-slate-900 text-slate-900 bg-white font-extrabold{% else %}border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/60{% endif %}">
+        <span>Upcoming Cycles</span>
+        <span class="px-2 py-0.5 rounded text-xs {% if active_tab == 'upcoming' %}bg-slate-900 text-white font-bold{% else %}bg-slate-200 text-slate-700{% endif %}">{{ upcoming_count }}</span>
       </a>
     </div>
 
-    <!-- Filters Row -->
-    <div class="p-6 bg-white flex flex-col lg:flex-row items-center gap-4">
+    <!-- Filter Control Row -->
+    <div class="p-5 bg-white border-b border-slate-200 flex flex-col lg:flex-row items-center gap-4">
       <form class="flex flex-col md:flex-row items-center gap-3 w-full" method="get">
         <input type="hidden" name="tab" value="{{ active_tab }}" />
         
-        <!-- Search -->
-        <div class="relative w-full md:w-auto md:flex-1 min-w-[240px]">
-          <input type="text" name="q" value="{{ q }}" placeholder="Search email, unit, ref..." 
-                 class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 transition-all outline-none">
-          <div class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+        <!-- Filter Search String Input -->
+        <div class="relative w-full md:w-auto md:flex-1 min-w-[220px]">
+          <input type="text" name="q" value="{{ q }}" placeholder="Search email, unit ID, reference..." 
+                 class="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
             </svg>
-          </div>
+          </span>
         </div>
 
-        <!-- Month Filter -->
-        <select name="month" class="w-full md:w-auto bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-          <option value="">All Months</option>
+        <!-- Target Month Choice Dropdown -->
+        <select name="month" class="w-full md:w-auto bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 outline-none cursor-pointer">
+          <option value="">All Filter Months</option>
           {% for month_num, month_name in month_choices %}
             <option value="{{ month_num }}" {% if month_filter == month_num|stringformat:"s" %}selected{% endif %}>{{ month_name }}</option>
           {% endfor %}
         </select>
 
-        <!-- Year Filter -->
-        <select name="year" class="w-full md:w-auto bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-          <option value="">All Years</option>
+        <!-- Target Year Choice Dropdown -->
+        <select name="year" class="w-full md:w-auto bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 outline-none cursor-pointer">
+          <option value="">All Filter Years</option>
           {% for year in year_choices %}
             <option value="{{ year }}" {% if year_filter == year|stringformat:"s" %}selected{% endif %}>{{ year }}</option>
           {% endfor %}
         </select>
 
-        <!-- Status Filter (Active Tab Only) -->
+        <!-- Dynamic Status Choices (Active Mode Only) -->
         {% if active_tab == "active" %}
-        <select name="status" class="w-full md:w-auto bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-          <option value="">All Statuses</option>
+        <select name="status" class="w-full md:w-auto bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 outline-none cursor-pointer">
+          <option value="">All State Filters</option>
           <option value="UNPAID" {% if status_filter == "UNPAID" %}selected{% endif %}>Unpaid (incl. Partial)</option>
-          <option value="OVERDUE" {% if status_filter == "OVERDUE" %}selected{% endif %}>Overdue</option>
-          <option value="PARTIAL" {% if status_filter == "PARTIAL" %}selected{% endif %}>Partially Paid</option>
-          <option value="PAID" {% if status_filter == "PAID" %}selected{% endif %}>Paid</option>
+          <option value="OVERDUE" {% if status_filter == "OVERDUE" %}selected{% endif %}>Overdue Target</option>
+          <option value="PARTIAL" {% if status_filter == "PARTIAL" %}selected{% endif %}>Partially Settled</option>
+          <option value="PAID" {% if status_filter == "PAID" %}selected{% endif %}>Fully Settled</option>
         </select>
         {% endif %}
 
-        <!-- Filter Button -->
-        <button type="submit" class="w-full md:w-auto bg-slate-800 hover:bg-slate-900 text-white px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2">
-          <span>Filter</span>
+        <!-- Form Commit Execution Command -->
+        <button type="submit" class="w-full md:w-auto bg-slate-800 hover:bg-slate-900 text-white px-5 py-2 rounded-lg text-sm font-extrabold transition-colors flex items-center justify-center gap-1.5 shrink-0">
+          <span>Apply Parameters</span>
         </button>
 
         {% if q or status_filter or month_filter or year_filter %}
-        <a href="?tab={{ active_tab }}" class="text-xs font-bold text-blue-600 hover:text-blue-700 px-2 whitespace-nowrap">Clear All</a>
+          <a href="?tab={{ active_tab }}" class="text-xs font-extrabold text-slate-600 hover:text-slate-900 px-2 whitespace-nowrap underline">Clear Filters</a>
         {% endif %}
       </form>
     </div>
 
-    <!-- Table Container -->
+    <!-- Master Ledger Data Table -->
     <div class="overflow-x-auto">
       <table class="w-full text-left border-collapse">
         <thead>
-          <tr class="bg-slate-50/50">
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tenant & Unit</th>
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Billing Period</th>
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Due Date</th>
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Original</th>
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Remaining</th>
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Status</th>
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Reference</th>
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
+          <tr class="bg-slate-50 border-b border-slate-200">
+            <th class="px-5 py-3 text-xs font-bold text-slate-700">Account Mapping</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700">Target Period</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700">Cycle Due Date</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Original Base</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Outstanding Sum</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-center">State Indicator</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700">Remittance Key</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Inline Actions</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-100">
+        <tbody class="divide-y divide-slate-200 text-sm">
           {% for b in page_obj %}
-          <tr class="hover:bg-slate-50/30 transition-colors duration-150">
-            <td class="px-6 py-4">
-              <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-[11px]">
+          <tr class="hover:bg-slate-50 transition-colors">
+            
+            <!-- Account Information Mapping Column -->
+            <td class="px-5 py-3.5">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-800 font-bold text-xs shrink-0 border border-slate-200">
                   {% with tp=b.lease.tenant.tenantprofile %}
                     {% if tp and tp.first_name %}{{ tp.first_name|first }}{{ tp.last_name|first }}{% else %}{{ b.lease.tenant.email|first|upper }}{% endif %}
                   {% endwith %}
                 </div>
-                <div>
-                  <div class="font-bold text-slate-900 text-sm truncate max-w-[150px]">
+                <div class="min-w-0">
+                  <div class="font-bold text-slate-900 truncate max-w-[160px]">
                     {% with tp=b.lease.tenant.tenantprofile %}
                       {% if tp and tp.first_name %}{{ tp.first_name }} {{ tp.last_name }}{% else %}{{ b.lease.tenant.email }}{% endif %}
                     {% endwith %}
                   </div>
-                  <div class="text-[10px] text-slate-500">Unit {{ b.lease.unit.number }}</div>
+                  <div class="text-xs font-medium text-slate-600">Unit Space #{{ b.lease.unit.number }}</div>
                 </div>
               </div>
             </td>
-            <td class="px-6 py-4">
-              <div class="text-sm font-semibold text-slate-700">{{ b.billing_month|date:"M Y" }}</div>
+
+            <!-- Target Cycle Scope Column -->
+            <td class="px-5 py-3.5 font-bold text-slate-800">
+              {{ b.billing_month|date:"M Y" }}
             </td>
-            <td class="px-6 py-4 text-sm text-slate-600">
+
+            <!-- Due Bound Column -->
+            <td class="px-5 py-3.5 text-slate-700 font-medium">
               {{ b.due_date|date:"M d, Y"|default:"-" }}
             </td>
-            <td class="px-6 py-4 text-right text-sm font-medium text-slate-500">
+
+            <!-- Original Sum Base Column -->
+            <td class="px-5 py-3.5 text-right font-bold text-slate-700">
               ₱{{ b.total_due|floatformat:0|intcomma }}
             </td>
-            <td class="px-6 py-4 text-right">
+
+            <!-- Remaining Unpaid Logic Calculation Column -->
+            <td class="px-5 py-3.5 text-right">
               {% if b.total_balance > 0 %}
-                <span class="text-sm font-black text-red-600">₱{{ b.total_balance|floatformat:0|intcomma }}</span>
+                <strong class="text-rose-700 font-black">₱{{ b.total_balance|floatformat:0|intcomma }}</strong>
               {% elif b.status != "PAID" %}
-                <span class="text-sm font-black text-red-600">₱{{ b.total_due|floatformat:0|intcomma }}</span>
+                <strong class="text-rose-700 font-black">₱{{ b.total_due|floatformat:0|intcomma }}</strong>
               {% else %}
-                <span class="text-slate-300">—</span>
+                <span class="text-slate-400 font-bold">—</span>
               {% endif %}
             </td>
-            <td class="px-6 py-4 text-center">
+
+            <!-- Current Core Ledger Tag Column -->
+            <td class="px-5 py-3.5 text-center">
               <div class="flex flex-col items-center gap-1">
                 {% if b.billing_state == "PAID" %}
-                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase">Paid</span>
+                  <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-extrabold text-[10px] uppercase">Paid</span>
                 {% elif b.billing_state == "OVERDUE" %}
-                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 uppercase animate-pulse">Overdue</span>
+                  <span class="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-extrabold text-[10px] uppercase">Overdue</span>
                 {% elif b.billing_state == "DUE" %}
-                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 uppercase">Due</span>
+                  <span class="px-2 py-0.5 rounded bg-orange-100 text-orange-800 font-extrabold text-[10px] uppercase">Due</span>
                 {% elif b.billing_state == "UPCOMING" %}
-                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 uppercase">Upcoming</span>
+                  <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-bold text-[10px] uppercase">Upcoming</span>
                 {% endif %}
                 
                 {% if b.status == "PARTIALLY_PAID" and b.billing_state != "PAID" %}
-                  <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-700 uppercase">Partial</span>
+                  <span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold text-[9px] uppercase block">Partial Credit</span>
                 {% endif %}
               </div>
             </td>
-            <td class="px-6 py-4">
-              <div class="text-[11px] font-mono text-slate-500">{{ b.payment_reference|default:"-" }}</div>
+
+            <!-- Secondary Reference Column -->
+            <td class="px-5 py-3.5">
+              <div class="text-xs font-mono font-bold text-slate-800">{{ b.payment_reference|default:"-" }}</div>
               {% if b.paid_at %}
-                <div class="text-[9px] text-slate-400 mt-0.5">on {{ b.paid_at|date:"M d, Y" }}</div>
+                <span class="text-[10px] text-slate-500 block mt-0.5">on {{ b.paid_at|date:"M d, Y" }}</span>
               {% endif %}
             </td>
-            <td class="px-6 py-4 text-right">
-              <div class="flex justify-end items-center gap-2">
+
+            <!-- Data Operations inline Forms Column -->
+            <td class="px-5 py-3.5 text-right">
+              <div class="flex justify-end items-center gap-1.5">
                 {% if active_tab == "active" %}
                   {% if b.status != "PAID" %}
-                    <form method="post" action="{% url 'admin_mark_bill_paid' b.id %}" class="confirm-action" data-confirm="Mark bill #{{ b.id }} as PAID? This clears the remaining balance.">
+                    <form method="post" action="{% url 'admin_mark_bill_paid' b.id %}" class="confirm-action inline-block" data-confirm="Mark bill #{{ b.id }} as PAID? This clears the remaining balance.">
                       {% csrf_token %}
-                      <button type="submit" class="p-2 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-all" title="Mark Paid">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
+                      <button type="submit" class="px-2.5 py-1 rounded bg-slate-100 hover:bg-emerald-600 hover:text-white text-slate-800 font-bold text-xs transition-colors" title="Mark Fully Settled">
+                        Settle Bill
                       </button>
                     </form>
                   {% else %}
-                    <form method="post" action="{% url 'admin_mark_bill_unpaid' b.id %}" class="confirm-action" data-confirm="Reset bill #{{ b.id }} to UNPAID?">
+                    <form method="post" action="{% url 'admin_mark_bill_unpaid' b.id %}" class="confirm-action inline-block" data-confirm="Reset bill #{{ b.id }} to UNPAID?">
                       {% csrf_token %}
-                      <button type="submit" class="p-2 text-orange-500 hover:bg-orange-50 rounded-lg transition-all" title="Mark Unpaid">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
+                      <button type="submit" class="px-2.5 py-1 rounded bg-slate-100 hover:bg-orange-600 hover:text-white text-slate-800 font-bold text-xs transition-colors" title="Mark Unpaid Cycle">
+                        Reset Status
                       </button>
                     </form>
                   {% endif %}
                 {% endif %}
                 
-                <a href="{% url 'admin_delete_bill' b.id %}" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete Record">
-                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <a href="{% url 'admin_delete_bill' b.id %}" class="p-1.5 text-slate-400 hover:text-rose-600 rounded transition-colors inline-block" title="Remove Cycle Instance">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                   </svg>
                 </a>
               </div>
             </td>
+
           </tr>
           {% empty %}
           <tr>
-            <td colspan="8" class="py-20 text-center">
+            <td colspan="8" class="py-12 text-center bg-white">
               <div class="flex flex-col items-center">
-                <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4">
-                  <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                  </svg>
-                </div>
-                <h3 class="text-sm font-bold text-slate-800">No billing records found</h3>
-                <p class="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
+                <span class="w-12 h-12 rounded bg-slate-100 flex items-center justify-center text-slate-400 mb-2 font-bold">!</span>
+                <strong class="text-sm text-slate-800 block">No target billing records matched criteria</strong>
+                <p class="text-xs text-slate-600 mt-0.5">
                   {% if active_tab == "upcoming" %}
-                    No upcoming bills generated yet.
+                    Upcoming projections are clear.
                   {% else %}
-                    Try adjusting your filters or search query.
+                    Try unsetting current query scopes or text filters.
                   {% endif %}
                 </p>
               </div>
@@ -286,56 +285,50 @@
       </table>
     </div>
 
-    <!-- Pagination Controls -->
+    <!-- Paginator Footer Strip -->
     {% if page_obj.paginator.num_pages > 1 %}
-    <div class="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
-      <div class="text-xs text-slate-500">
-        Showing <span class="font-bold text-slate-700">{{ page_obj.start_index }}</span> to <span class="font-bold text-slate-700">{{ page_obj.end_index }}</span> of <span class="font-bold text-slate-700">{{ page_obj.paginator.count }}</span> records
+    <div class="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="text-xs text-slate-600 font-medium">
+        Showing <strong class="text-slate-900">{{ page_obj.start_index }}</strong> to <strong class="text-slate-900">{{ page_obj.end_index }}</strong> of <strong class="text-slate-900">{{ page_obj.paginator.count }}</strong> calculated records
       </div>
       <div class="flex items-center gap-1">
         {% if page_obj.has_previous %}
           <a href="?page=1&tab={{ active_tab }}&q={{ q }}&status={{ status_filter }}&month={{ month_filter }}&year={{ year_filter }}" 
-             class="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200" title="First Page">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
-            </svg>
+             class="px-2.5 py-1 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors" title="Initial Page">
+            &laquo; First
           </a>
           <a href="?page={{ page_obj.previous_page_number }}&tab={{ active_tab }}&q={{ q }}&status={{ status_filter }}&month={{ month_filter }}&year={{ year_filter }}" 
-             class="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200" title="Previous Page">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-            </svg>
+             class="px-2.5 py-1 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors" title="Previous Page">
+            &lsaquo; Prev
           </a>
         {% endif %}
 
-        <div class="flex items-center gap-1 px-2">
+        <div class="flex items-center gap-1 px-1">
           {% for num in page_obj.paginator.page_range %}
             {% if page_obj.number == num %}
-              <span class="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-600 text-white text-xs font-bold shadow-lg shadow-blue-500/30">{{ num }}</span>
+              <span class="px-2.5 py-1 rounded bg-slate-800 text-white font-extrabold text-xs select-none">{{ num }}</span>
             {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
               <a href="?page={{ num }}&tab={{ active_tab }}&q={{ q }}&status={{ status_filter }}&month={{ month_filter }}&year={{ year_filter }}" 
-                 class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:bg-white hover:text-blue-600 transition-all text-xs font-bold border border-transparent hover:border-slate-200">{{ num }}</a>
+                 class="px-2.5 py-1 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">{{ num }}</a>
             {% endif %}
           {% endfor %}
         </div>
 
         {% if page_obj.has_next %}
           <a href="?page={{ page_obj.next_page_number }}&tab={{ active_tab }}&q={{ q }}&status={{ status_filter }}&month={{ month_filter }}&year={{ year_filter }}" 
-             class="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200" title="Next Page">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-            </svg>
+             class="px-2.5 py-1 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors" title="Next Page">
+            Next &rsaquo;
           </a>
           <a href="?page={{ page_obj.paginator.num_pages }}&tab={{ active_tab }}&q={{ q }}&status={{ status_filter }}&month={{ month_filter }}&year={{ year_filter }}" 
-             class="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200" title="Last Page">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
-            </svg>
+             class="px-2.5 py-1 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors" title="Final Page">
+            Last &raquo;
           </a>
         {% endif %}
       </div>
     </div>
     {% endif %}
+
   </div>
+
 </div>
 {% endblock %}

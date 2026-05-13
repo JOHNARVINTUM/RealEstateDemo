@@ -1,174 +1,198 @@
 {% extends "admin_portal/base.html" %}
 {% load humanize %}
-{% block title %}Tenants Management | RealEstate360+{% endblock %}
+{% block title %}Tenants Directory | Core Administration{% endblock %}
 
 {% block content %}
-<div class="dashboard-container px-2 sm:px-4 lg:px-6 py-4 sm:py-6 max-w-7xl mx-auto">
+<div class="tenants-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-8 pb-12">
+  
   <!-- Header Section -->
-  <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
-    <div class="flex-1">
-      <div class="flex items-center gap-3 mb-2">
-        <div class="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center text-white shadow-xl shadow-slate-200">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-            </svg>
-        </div>
-        <h1 class="font-sans font-bold tracking-tight text-3xl sm:text-4xl text-slate-900 leading-tight">Tenants Portfolio</h1>
+  <header class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <span class="inline-block w-3 h-3 rounded-full bg-blue-600"></span>
+        <span class="text-sm font-semibold text-slate-700">Lease Administration Registry</span>
       </div>
-      <p class="text-sm text-slate-500 font-medium">Search, manage, and monitor tenant profiles across your property assets.</p>
+      <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900">Tenants Portfolio</h1>
+      <p class="text-base text-slate-700 mt-1 leading-relaxed">Search, manage, and monitor verified tenant profiles and their credential status.</p>
     </div>
-    <div class="flex flex-wrap gap-3">
-      <a href="{% url 'admin_create_tenant_profile' %}" class="group relative inline-flex items-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-[1.25rem] font-bold text-sm transition-all duration-300 hover:bg-slate-800 hover:shadow-2xl hover:shadow-slate-200 hover:-translate-y-0.5 overflow-hidden">
-        <div class="absolute inset-0 bg-gradient-to-tr from-blue-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-        <div class="relative flex items-center justify-center w-6 h-6 bg-blue-600 rounded-lg group-hover:scale-110 transition-transform shadow-lg shadow-blue-500/30">
-          <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-          </svg>
-        </div>
-        <span class="relative">Add New Tenant</span>
+    
+    <div class="shrink-0 w-full sm:w-auto">
+      <a href="{% url 'admin_create_tenant_profile' %}" class="inline-flex items-center gap-2 w-full sm:w-auto justify-center px-5 py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-sm font-extrabold transition-colors shadow-xs">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
+        </svg>
+        <span>Add New Tenant</span>
       </a>
     </div>
   </header>
 
-  <!-- Stats Grid -->
-  <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-    <div class="stat-card p-8 bg-white rounded-3xl border border-slate-100 shadow-sm flex items-center gap-6 group hover:shadow-xl hover:shadow-slate-100 transition-all duration-300">
-      <div class="stat-icon blue w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
-        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-        </svg>
-      </div>
+  <!-- Metrics Statistics Row -->
+  <section class="grid grid-cols-1 md:grid-cols-3 gap-5">
+    
+    <!-- Total Profiles Card -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-blue-600 flex flex-col justify-between">
       <div>
-        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Profiles</p>
-        <p class="text-3xl font-sans font-bold text-slate-900">{{ total_tenants_count|intcomma }}</p>
+        <span class="text-sm font-bold text-slate-700 block mb-1">Total Profiles</span>
+        <div class="text-3xl font-black text-slate-900 tracking-tight">{{ total_tenants_count|intcomma }}</div>
+      </div>
+      <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
+        <span class="text-blue-600 font-bold">●</span> Cumulative registered accounts
       </div>
     </div>
-    <div class="stat-card p-8 bg-white rounded-3xl border border-slate-100 shadow-sm flex items-center gap-6 group hover:shadow-xl hover:shadow-slate-100 transition-all duration-300">
-      <div class="stat-icon green w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform">
-        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-        </svg>
-      </div>
+
+    <!-- Active Leases Card -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-emerald-600 flex flex-col justify-between">
       <div>
-        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Active Leases</p>
-        <p class="text-3xl font-sans font-bold text-slate-900">{{ active_tenants_count|intcomma }}</p>
+        <span class="text-sm font-bold text-slate-700 block mb-1">Active Leases</span>
+        <div class="text-3xl font-black text-slate-900 tracking-tight">{{ active_tenants_count|intcomma }}</div>
+      </div>
+      <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
+        <span class="text-emerald-600 font-bold">●</span> Compliant leasing records
       </div>
     </div>
-    <div class="stat-card p-8 bg-white rounded-3xl border border-slate-100 shadow-sm flex items-center gap-6 group hover:shadow-xl hover:shadow-slate-100 transition-all duration-300">
-      <div class="stat-icon orange w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-600 group-hover:scale-110 transition-transform">
-        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-        </svg>
-      </div>
+
+    <!-- New Registrations Card -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-amber-600 flex flex-col justify-between">
       <div>
-        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">New Registrations</p>
-        <p class="text-3xl font-sans font-bold text-slate-900">{{ new_tenants_count|intcomma }}</p>
+        <span class="text-sm font-bold text-slate-700 block mb-1">Recent Registrations</span>
+        <div class="text-3xl font-black text-slate-900 tracking-tight">{{ new_tenants_count|intcomma }}</div>
+      </div>
+      <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
+        <span class="text-amber-600 font-bold">●</span> Pending full background intake
       </div>
     </div>
+
   </section>
 
-  <!-- Filter & Table Section -->
-  <div class="bg-white rounded-[1.25rem] border border-slate-200 shadow-sm overflow-hidden">
-    <div class="p-8 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-6">
-      <div class="relative w-full md:w-96">
-        <form method="get" class="relative group">
-          <input type="text" name="q" value="{{ q }}" placeholder="Search name, email, or contact..." 
-                 class="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-[1.25rem] text-sm font-medium focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none">
-          <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors">
+  <!-- Table Container Workspace -->
+  <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+    
+    <!-- Top Filter & Search Bar -->
+    <div class="p-5 border-b border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
+      
+      <div class="w-full sm:w-96">
+        <form method="get" class="relative flex items-center">
+          <div class="absolute left-3.5 text-slate-500">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
             </svg>
           </div>
+          <input type="text" name="q" value="{{ q }}" placeholder="Search by name, email, or contact number..." 
+                 class="w-full pl-11 pr-20 py-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 outline-none transition-all placeholder:text-slate-400">
           {% if q %}
-          <a href="{% url 'admin_tenants' %}" class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black uppercase tracking-widest text-blue-600 hover:text-blue-700">Clear</a>
+            <a href="{% url 'admin_tenants' %}" class="absolute right-3.5 text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded transition-colors">
+              Clear
+            </a>
           {% endif %}
           <button type="submit" class="hidden">Search</button>
         </form>
       </div>
-      
-      <div class="flex items-center gap-3">
-        <span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Property Registry</span>
-        <div class="flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
-            <span class="text-xs font-black text-slate-900">{{ page_obj.paginator.count }}</span>
-            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Profiles</span>
+
+      <div class="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+        <span class="text-xs font-bold text-slate-500">Registry Snapshot</span>
+        <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-xs">
+          <span class="text-sm font-black text-slate-900">{{ page_obj.paginator.count }}</span>
+          <span class="text-xs font-bold text-slate-600">Total Entries</span>
         </div>
       </div>
+
     </div>
 
+    <!-- Data Grid Table -->
     <div class="overflow-x-auto">
       <table class="w-full text-left border-collapse">
         <thead>
-          <tr class="bg-slate-50/30">
-            <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Tenant Name</th>
-            <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Contact Details</th>
-            <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Account Status</th>
-            <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Actions</th>
+          <tr class="bg-slate-100 border-b border-slate-200">
+            <th class="px-6 py-4 text-xs font-extrabold text-slate-700 uppercase tracking-wider">Tenant Identity</th>
+            <th class="px-6 py-4 text-xs font-extrabold text-slate-700 uppercase tracking-wider">Contact Protocols</th>
+            <th class="px-6 py-4 text-xs font-extrabold text-slate-700 uppercase tracking-wider">Account Standing</th>
+            <th class="px-6 py-4 text-xs font-extrabold text-slate-700 uppercase tracking-wider text-right">Administrative Actions</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-100">
+        <tbody class="divide-y divide-slate-200">
           {% for t in page_obj %}
-          <tr class="hover:bg-slate-50/50 transition-all duration-200 group">
-            <td class="px-8 py-6">
-              <div class="flex items-center gap-4">
-                <div class="w-12 h-12 rounded-2xl bg-blue-100/50 flex items-center justify-center text-blue-700 font-sans font-bold text-base shadow-sm group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                  {{ t.first_name|first }}{{ t.last_name|first }}
+            <tr class="hover:bg-slate-50 transition-colors group">
+              
+              <!-- Tenant Identity -->
+              <td class="px-6 py-4">
+                <div class="flex items-center gap-3.5">
+                  <div class="shrink-0 w-12 h-12 rounded-xl bg-slate-100 border border-slate-300 flex items-center justify-center text-slate-800 font-extrabold text-base shadow-xs group-hover:bg-slate-800 group-hover:text-white transition-colors">
+                    {{ t.first_name|first }}{{ t.last_name|first }}
+                  </div>
+                  <div>
+                    <div class="text-base font-extrabold text-slate-900 tracking-tight">{{ t.first_name }} {{ t.last_name }}</div>
+                    <div class="text-xs font-bold text-slate-500 mt-0.5">System Reference: #{{ t.id|stringformat:"04d" }}</div>
+                  </div>
                 </div>
-                <div>
-                  <div class="font-bold text-slate-900 tracking-tight">{{ t.first_name }} {{ t.last_name }}</div>
-                  <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">ID: #{{ t.id|stringformat:"04d" }}</div>
+              </td>
+
+              <!-- Contact Protocols -->
+              <td class="px-6 py-4">
+                <div class="text-sm font-bold text-slate-800">{{ t.user.email }}</div>
+                <div class="text-xs font-semibold text-slate-600 mt-1 flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                  </svg>
+                  <span>{{ t.contact_no|default:"Unverified Mobile" }}</span>
                 </div>
-              </div>
-            </td>
-            <td class="px-8 py-6">
-              <div class="text-sm font-bold text-slate-700">{{ t.user.email }}</div>
-              <div class="text-[10px] font-medium text-slate-400 mt-1 uppercase tracking-wider">{{ t.contact_no|default:"Unverified" }}</div>
-            </td>
-            <td class="px-8 py-6">
-              <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest {% if t.user.is_active %}bg-emerald-50 text-emerald-600 border border-emerald-100{% else %}bg-slate-100 text-slate-500 border border-slate-200{% endif %}">
-                <span class="w-1.5 h-1.5 rounded-full {% if t.user.is_active %}bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]{% else %}bg-slate-400{% endif %}"></span>
-                {% if t.user.is_active %}Active Account{% else %}Suspended{% endif %}
-              </span>
-            </td>
-            <td class="px-8 py-6 text-right">
-              <div class="flex justify-end items-center gap-3">
-                <a href="{% url 'admin_tenant_detail' t.id %}" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all shadow-sm border border-transparent hover:border-blue-100" title="View Details">
-                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                  </svg>
-                </a>
-                <a href="{% url 'admin_edit_tenant' t.id %}" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-all shadow-sm border border-transparent hover:border-amber-100" title="Edit Profile">
-                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                  </svg>
-                </a>
-                <form method="post" action="{% url 'admin_delete_tenant' t.id %}" class="confirm-action"
-                      data-confirm="{% if t.has_records %}Deactivate{% else %}Delete{% endif %} tenant {{ t.first_name }} {{ t.last_name }}?">
-                  {% csrf_token %}
-                  <button type="submit" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all shadow-sm border border-transparent hover:border-red-100" title="Archive / Purge">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+              </td>
+
+              <!-- Account Standing -->
+              <td class="px-6 py-4">
+                <span class="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-bold {% if t.user.is_active %}bg-emerald-50 text-emerald-800 border border-emerald-200{% else %}bg-slate-100 text-slate-600 border border-slate-300{% endif %}">
+                  <span class="w-2 h-2 rounded-full {% if t.user.is_active %}bg-emerald-600{% else %}bg-slate-400{% endif %}"></span>
+                  {% if t.user.is_active %}Active Status{% else %}Suspended{% endif %}
+                </span>
+              </td>
+
+              <!-- Administrative Actions -->
+              <td class="px-6 py-4 text-right">
+                <div class="flex justify-end items-center gap-2">
+                  <a href="{% url 'admin_tenant_detail' t.id %}" class="inline-flex items-center gap-1 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold transition-colors shadow-xs" title="View Profile Detail">
+                    <svg class="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                     </svg>
-                  </button>
-                </form>
-              </div>
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="4" class="py-24 text-center bg-slate-50/20">
-              <div class="flex flex-col items-center">
-                <div class="w-24 h-24 bg-white border border-slate-100 rounded-3xl flex items-center justify-center text-slate-200 mb-6 shadow-xl shadow-slate-100">
-                  <svg class="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                  </svg>
+                    <span>View</span>
+                  </a>
+                  
+                  <a href="{% url 'admin_edit_tenant' t.id %}" class="inline-flex items-center gap-1 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 rounded-lg text-xs font-bold transition-colors shadow-xs" title="Modify Credentials">
+                    <svg class="w-4 h-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
+                    <span>Edit</span>
+                  </a>
+                  
+                  <form method="post" action="{% url 'admin_delete_tenant' t.id %}" class="confirm-action inline-block"
+                        data-confirm="{% if t.has_records %}Deactivate{% else %}Delete{% endif %} tenant {{ t.first_name }} {{ t.last_name }}?">
+                    {% csrf_token %}
+                    <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-white hover:bg-rose-50 text-rose-700 border border-slate-300 hover:border-rose-300 rounded-lg text-xs font-bold transition-colors shadow-xs" title="Archive Account">
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                      </svg>
+                    </button>
+                  </form>
                 </div>
-                <h3 class="text-xl font-bold text-slate-800 uppercase tracking-widest">No tenants found</h3>
-                <p class="text-sm text-slate-400 mt-2 max-w-xs mx-auto font-medium">Refine your search parameters or initiate a new tenant registration.</p>
-                <a href="{% url 'admin_create_tenant_profile' %}" class="mt-8 px-8 py-3 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all">+ Register First Tenant</a>
-              </div>
-            </td>
-          </tr>
+              </td>
+
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="4" class="py-16 text-center bg-slate-50/50">
+                <div class="max-w-sm mx-auto flex flex-col items-center">
+                  <div class="w-16 h-16 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 mb-4 shadow-xs">
+                    <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                  </div>
+                  <h3 class="text-base font-extrabold text-slate-900">No Tenant Records Present</h3>
+                  <p class="text-sm text-slate-600 mt-1 leading-relaxed">Adjust your active keyword filter or register a new identity profile to load the index.</p>
+                  <a href="{% url 'admin_create_tenant_profile' %}" class="mt-5 inline-flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-extrabold transition-colors shadow-xs">
+                    + Intake Tenant Profile
+                  </a>
+                </div>
+              </td>
+            </tr>
           {% endfor %}
         </tbody>
       </table>
@@ -176,42 +200,44 @@
 
     <!-- Pagination Footer -->
     {% if page_obj.paginator.num_pages > 1 %}
-    <div class="p-8 bg-slate-50/50 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-6">
-      <div class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-        Showing Page <span class="text-slate-900">{{ page_obj.number }}</span> of <span class="text-slate-900">{{ page_obj.paginator.num_pages }}</span>
-      </div>
-      
-      <div class="flex items-center gap-2">
-        {% if page_obj.has_previous %}
-        <a href="?page=1{% if q %}&q={{ q }}{% endif %}" class="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm" title="First Page">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path></svg>
-        </a>
-        <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}" class="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7"></path></svg>
-        </a>
-        {% endif %}
-
-        <div class="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
-          {% for num in page_obj.paginator.page_range %}
-            {% if page_obj.number == num %}
-              <span class="w-8 h-8 flex items-center justify-center bg-slate-900 text-white rounded-lg text-xs font-black">{{ num }}</span>
-            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-              <a href="?page={{ num }}{% if q %}&q={{ q }}{% endif %}" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-lg text-xs font-bold transition-all">{{ num }}</a>
-            {% endif %}
-          {% endfor %}
+      <div class="p-5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div class="text-sm font-bold text-slate-700">
+          Showing Page <span class="text-slate-900 font-black">{{ page_obj.number }}</span> of <span class="text-slate-900 font-black">{{ page_obj.paginator.num_pages }}</span>
         </div>
+        
+        <div class="flex items-center gap-1.5">
+          {% if page_obj.has_previous %}
+            <a href="?page=1{% if q %}&q={{ q }}{% endif %}" class="inline-flex items-center justify-center px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors" title="First Page">
+              « First
+            </a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}" class="inline-flex items-center justify-center px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors" title="Previous Page">
+              ‹ Prev
+            </a>
+          {% endif %}
 
-        {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}" class="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg>
-        </a>
-        <a href="?page={{ page_obj.paginator.num_pages }}{% if q %}&q={{ q }}{% endif %}" class="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm" title="Last Page">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg>
-        </a>
-        {% endif %}
+          <div class="flex items-center gap-1 px-1">
+            {% for num in page_obj.paginator.page_range %}
+              {% if page_obj.number == num %}
+                <span class="px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-black shadow-xs">{{ num }}</span>
+              {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <a href="?page={{ num }}{% if q %}&q={{ q }}{% endif %}" class="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-lg text-xs font-bold transition-colors">{{ num }}</a>
+              {% endif %}
+            {% endfor %}
+          </div>
+
+          {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}" class="inline-flex items-center justify-center px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors" title="Next Page">
+              Next ›
+            </a>
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if q %}&q={{ q }}{% endif %}" class="inline-flex items-center justify-center px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors" title="Last Page">
+              Last »
+            </a>
+          {% endif %}
+        </div>
       </div>
-    </div>
     {% endif %}
+
   </div>
+
 </div>
 {% endblock %}

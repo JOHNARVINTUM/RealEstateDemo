@@ -253,6 +253,10 @@ class TenantRiskClassification(models.Model):
     last_payment_date = models.DateTimeField(null=True, blank=True, help_text="Last successful payment date")
     is_new_tenant = models.BooleanField(default=False, help_text="Tenant with less than 3 months of payment history")
     risk_factors = models.JSONField(default=dict, help_text="JSON object storing risk factors")
+    rf_risk_level = models.CharField(max_length=10, choices=RISK_LEVELS, null=True, blank=True)
+    rf_risk_probability = models.FloatField(null=True, blank=True)
+    rf_top_factors = models.JSONField(default=list, blank=True)
+    rf_model_version = models.CharField(max_length=50, blank=True, default="")
     updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
     

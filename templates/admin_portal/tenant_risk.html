@@ -82,6 +82,40 @@
 
   </section>
 
+  {% if rf_metrics %}
+  <section class="bg-white border border-indigo-200 rounded-xl p-5 shadow-xs">
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+          <h2 class="text-base font-extrabold text-slate-900">Random Forest Classifier</h2>
+        </div>
+        <p class="text-xs text-slate-600 mt-1 font-medium">
+          Predicts late/unpaid tenant risk using historical billing behavior. Model version: <strong>{{ rf_metrics.model_version }}</strong>
+        </p>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-center">
+          <span class="text-[10px] uppercase font-extrabold text-slate-500 block">Accuracy</span>
+          <strong class="text-sm text-slate-900">{{ rf_metrics.accuracy|floatformat:2 }}</strong>
+        </div>
+        <div class="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-center">
+          <span class="text-[10px] uppercase font-extrabold text-slate-500 block">Precision</span>
+          <strong class="text-sm text-slate-900">{{ rf_metrics.precision|floatformat:2 }}</strong>
+        </div>
+        <div class="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-center">
+          <span class="text-[10px] uppercase font-extrabold text-slate-500 block">Recall</span>
+          <strong class="text-sm text-slate-900">{{ rf_metrics.recall|floatformat:2 }}</strong>
+        </div>
+        <div class="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-center">
+          <span class="text-[10px] uppercase font-extrabold text-slate-500 block">F1</span>
+          <strong class="text-sm text-slate-900">{{ rf_metrics.f1|floatformat:2 }}</strong>
+        </div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
   <!-- Filter & Sort Navigation Control Strip -->
   <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
     
@@ -134,7 +168,8 @@
           <tr class="bg-slate-50 border-b border-slate-200">
             <th class="px-5 py-3.5 text-xs font-bold text-slate-700">Account Identity</th>
             <th class="px-5 py-3.5 text-xs font-bold text-slate-700 text-center">Calculated Tier</th>
-            <th class="px-5 py-3.5 text-xs font-bold text-slate-700 text-center">Score Ratio</th>
+            <th class="px-5 py-3.5 text-xs font-bold text-slate-700 text-center">Rule Score</th>
+            <th class="px-5 py-3.5 text-xs font-bold text-indigo-700 text-center">RF Prediction</th>
             <th class="px-5 py-3.5 text-xs font-bold text-slate-700 text-center">Lateness & Arrears</th>
             <th class="px-5 py-3.5 text-xs font-bold text-slate-700">Assessment Factors Breakdown</th>
             <th class="px-5 py-3.5 text-xs font-bold text-slate-700 text-right">Direct Navigation</th>
@@ -196,6 +231,26 @@
               </div>
             </td>
 
+            <!-- Random Forest Column -->
+            <td class="px-5 py-4 text-center">
+              {% if r.rf_risk_level %}
+                <div class="inline-flex flex-col items-center gap-1">
+                  {% if r.rf_risk_level == 'LOW' %}
+                    <span class="px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-900 font-extrabold text-[10px] uppercase select-none block">RF Low</span>
+                  {% elif r.rf_risk_level == 'MEDIUM' %}
+                    <span class="px-2.5 py-0.5 rounded bg-amber-100 text-amber-900 font-extrabold text-[10px] uppercase select-none block">RF Medium</span>
+                  {% else %}
+                    <span class="px-2.5 py-0.5 rounded bg-rose-100 text-rose-900 font-extrabold text-[10px] uppercase select-none block">RF High</span>
+                  {% endif %}
+                  <span class="text-[10px] text-slate-600 font-bold">
+                    Prob: {{ r.rf_risk_probability|floatformat:2 }}
+                  </span>
+                </div>
+              {% else %}
+                <span class="text-xs text-slate-400 font-semibold">Not trained</span>
+              {% endif %}
+            </td>
+
             <!-- Lateness & Arrears Column -->
             <td class="px-5 py-4 text-center">
               <div class="inline-flex items-center gap-4 bg-slate-50 border border-slate-200 rounded px-3 py-1 text-xs">
@@ -237,6 +292,17 @@
                     <span class="text-slate-600 font-medium">Recency Link:</span>
                     <strong class="text-slate-900 font-bold">{% if r.last_payment_date %}Active{% else %}None{% endif %}</strong>
                   </div>
+                  {% if r.rf_top_factors %}
+                    <div class="col-span-2 pt-1 mt-1 border-t border-slate-100">
+                      <span class="text-[10px] uppercase font-extrabold text-indigo-600 block mb-1">RF Signals</span>
+                      {% for factor in r.rf_top_factors %}
+                        <div class="flex items-center justify-between">
+                          <span class="text-slate-500 font-medium truncate">{{ factor.feature }}</span>
+                          <strong class="text-indigo-700 font-bold font-mono">{{ factor.value }}</strong>
+                        </div>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
                 </div>
               {% else %}
                 <span class="text-xs text-slate-500 block italic">Pending sufficient baseline cycle updates</span>
@@ -254,7 +320,7 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="6" class="py-16 text-center bg-white">
+            <td colspan="7" class="py-16 text-center bg-white">
               <strong class="text-xs text-slate-600 block">No target risk profiles matched configured filter parameters.</strong>
               <p class="text-xs text-slate-500 mt-0.5">Please reset search definitions or instantiate a total recalculation event.</p>
             </td>

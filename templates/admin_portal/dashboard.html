@@ -105,22 +105,56 @@
     
     <!-- Left Workspace Column (2 span) -->
     <div class="lg:col-span-2 space-y-8">
-      
+
+      <!-- Shared filter for all trend charts -->
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div>
+          <h2 class="text-xl font-extrabold text-slate-900 tracking-tight">Monthly Trends</h2>
+          <p class="text-sm text-slate-600 mt-0.5">Revenue, water usage, and maintenance — filtered together</p>
+        </div>
+        <select id="monthFilter" class="bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-slate-500 focus:border-slate-500 block p-2.5 font-bold w-full sm:w-auto">
+          <option value="12">Past 12 Months</option>
+          <option value="6">Past 6 Months</option>
+          <option value="3">Past 3 Months</option>
+        </select>
+      </div>
+
       <!-- Revenue Performance line chart -->
       <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 pb-3 border-b border-slate-100">
-          <div>
-            <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Revenue Trajectory</h2>
-            <p class="text-sm text-slate-700 mt-0.5">Historical comparison of billed totals against base lease valuations</p>
-          </div>
-          <select id="monthFilter" class="bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-slate-500 focus:border-slate-500 block p-2.5 font-bold w-full sm:w-auto">
-            <option value="12">Past 12 Months</option>
-            <option value="6">Past 6 Months</option>
-            <option value="3">Past 3 Months</option>
-          </select>
+        <div class="mb-4 pb-3 border-b border-slate-100">
+          <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Revenue Trajectory</h2>
+          <p class="text-sm text-slate-700 mt-0.5">Historical comparison of billed totals against base lease valuations</p>
         </div>
         <div class="h-[300px] w-full">
           <canvas id="rentChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Water Usage line chart -->
+      <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
+        <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
+          <div>
+            <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Utility Flow Tracker</h2>
+            <p class="text-sm text-slate-700 mt-0.5">Total monthly water consumption across all units</p>
+          </div>
+          <span class="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded">m³</span>
+        </div>
+        <div class="h-[300px] w-full">
+          <canvas id="waterChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Maintenance Trend bar chart -->
+      <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
+        <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
+          <div>
+            <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Maintenance Trend</h2>
+            <p class="text-sm text-slate-700 mt-0.5">Monthly service request volume</p>
+          </div>
+          <span class="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded">requests</span>
+        </div>
+        <div class="h-[300px] w-full">
+          <canvas id="maintenanceChart"></canvas>
         </div>
       </div>
 
@@ -226,20 +260,6 @@
         </div>
       </div>
 
-      <!-- Water Monitoring Utility Graph -->
-      <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
-        <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
-          <div>
-            <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Utility Flow Tracker</h2>
-            <p class="text-sm text-slate-700 mt-0.5">Volumetric water consumption</p>
-          </div>
-          <span class="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded">m³</span>
-        </div>
-        <div class="h-[200px] w-full">
-          <canvas id="waterChart"></canvas>
-        </div>
-      </div>
-
     </div>
 
   </div>
@@ -248,34 +268,111 @@
 
 <!-- Data pass-through for JS Chart Rendering -->
 {{ monthly_income_data|json_script:"monthly_income_data" }}
+{{ water_usage_data|json_script:"water_usage_data" }}
+{{ maintenance_trend_data|json_script:"maintenance_trend_data" }}
 {{ months_labels|json_script:"months_labels" }}
 
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     const rentCtx = document.getElementById('rentChart');
-    if (!rentCtx) return;
+    const waterCtx = document.getElementById('waterChart');
+    const maintenanceCtx = document.getElementById('maintenanceChart');
+    if (!rentCtx || !waterCtx || !maintenanceCtx) return;
 
     const monthlyIncomeDataElement = document.getElementById('monthly_income_data');
+    const waterUsageDataElement = document.getElementById('water_usage_data');
+    const maintenanceTrendDataElement = document.getElementById('maintenance_trend_data');
     const monthsLabelsElement = document.getElementById('months_labels');
     const monthFilter = document.getElementById('monthFilter');
 
-    if (!monthlyIncomeDataElement || !monthsLabelsElement || !monthFilter) return;
+    if (!monthlyIncomeDataElement || !waterUsageDataElement || !maintenanceTrendDataElement || !monthsLabelsElement || !monthFilter) return;
 
-    let chart = null;
     const fullMonthlyData = JSON.parse(monthlyIncomeDataElement.textContent);
+    const fullWaterData = JSON.parse(waterUsageDataElement.textContent);
+    const fullMaintenanceData = JSON.parse(maintenanceTrendDataElement.textContent);
     const fullMonthsLabels = JSON.parse(monthsLabelsElement.textContent);
 
-    function updateChart(monthsToShow) {
-      const endIndex = fullMonthlyData.length;
+    function getFilteredSeries(data, monthsToShow) {
+      const endIndex = data.length;
       const startIndex = Math.max(0, endIndex - monthsToShow);
-      const filteredData = fullMonthlyData.slice(startIndex, endIndex);
-      const filteredLabels = fullMonthsLabels.slice(startIndex, endIndex);
+      return data.slice(startIndex, endIndex);
+    }
+
+    function getFilteredLabels(monthsToShow) {
+      const endIndex = fullMonthsLabels.length;
+      const startIndex = Math.max(0, endIndex - monthsToShow);
+      return fullMonthsLabels.slice(startIndex, endIndex);
+    }
+
+    function baseOptions(tickCallback) {
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            align: 'end',
+            labels: {
+              usePointStyle: true,
+              padding: 16,
+              font: {
+                family: "'Outfit', sans-serif",
+                size: 13,
+                weight: '700'
+              },
+              color: '#1e293b'
+            }
+          },
+          tooltip: {
+            backgroundColor: '#0f172a',
+            titleColor: '#f8fafc',
+            bodyColor: '#e2e8f0',
+            borderColor: '#334155',
+            borderWidth: 1,
+            padding: 12,
+            boxPadding: 6,
+            titleFont: { size: 13, weight: 'bold' },
+            bodyFont: { size: 13 },
+            usePointStyle: true
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: {
+              display: true,
+              color: '#f1f5f9',
+              drawBorder: false
+            },
+            ticks: {
+              font: { family: "'Outfit', sans-serif", size: 12, weight: '600' },
+              color: '#475569',
+              callback: tickCallback
+            }
+          },
+          x: {
+            grid: { display: false },
+            ticks: {
+              font: { family: "'Outfit', sans-serif", size: 12, weight: '600' },
+              color: '#475569'
+            }
+          }
+        }
+      };
+    }
+
+    function updateCharts(monthsToShow) {
+      const filteredRevenueData = getFilteredSeries(fullMonthlyData, monthsToShow);
+      const filteredWaterData = getFilteredSeries(fullWaterData, monthsToShow);
+      const filteredMaintenanceData = getFilteredSeries(fullMaintenanceData, monthsToShow);
+      const filteredLabels = getFilteredLabels(monthsToShow);
 
       const chartData = {
         labels: filteredLabels,
         datasets: [{
           label: 'Billed Revenue',
-          data: filteredData.map(item => item.actual),
+          data: filteredRevenueData.map(item => item.actual),
           borderColor: '#1e293b',
           backgroundColor: 'rgba(30, 41, 59, 0.05)',
           borderWidth: 3,
@@ -288,7 +385,7 @@
           fill: true
         }, {
           label: 'Expected Base Valuation',
-          data: filteredData.map(item => item.expected),
+          data: filteredRevenueData.map(item => item.expected),
           borderColor: '#64748b',
           backgroundColor: 'transparent',
           borderWidth: 2,
@@ -302,82 +399,66 @@
       const existingChart = Chart.getChart(rentCtx);
       if (existingChart) existingChart.destroy();
 
-      chart = new Chart(rentCtx, {
+      new Chart(rentCtx, {
         type: 'line',
         data: chartData,
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: true,
-              position: 'top',
-              align: 'end',
-              labels: {
-                usePointStyle: true,
-                padding: 16,
-                font: {
-                  family: "'Outfit', sans-serif",
-                  size: 13,
-                  weight: '700'
-                },
-                color: '#1e293b'
-              }
-            },
-            tooltip: {
-              backgroundColor: '#0f172a',
-              titleColor: '#f8fafc',
-              bodyColor: '#e2e8f0',
-              borderColor: '#334155',
-              borderWidth: 1,
-              padding: 12,
-              boxPadding: 6,
-              titleFont: { size: 13, weight: 'bold' },
-              bodyFont: { size: 13 },
-              usePointStyle: true,
-              callbacks: {
-                label: function (context) {
-                  let label = context.dataset.label || '';
-                  if (label) label += ': ';
-                  if (context.parsed.y !== null) {
-                    label += new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(context.parsed.y);
-                  }
-                  return label;
-                }
-              }
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              grid: {
-                display: true,
-                color: '#f1f5f9',
-                drawBorder: false
-              },
-              ticks: {
-                font: { family: "'Outfit', sans-serif", size: 12, weight: '600' },
-                color: '#475569',
-                callback: function (value) {
-                  if (value >= 1000) return '₱' + (value / 1000) + 'k';
-                  return '₱' + value;
-                }
-              }
-            },
-            x: {
-              grid: { display: false },
-              ticks: {
-                font: { family: "'Outfit', sans-serif", size: 12, weight: '600' },
-                color: '#475569'
-              }
-            }
-          }
-        }
+        options: baseOptions(function (value) {
+          if (value >= 1000) return '₱' + (value / 1000) + 'k';
+          return '₱' + value;
+        })
+      });
+
+      const existingWaterChart = Chart.getChart(waterCtx);
+      if (existingWaterChart) existingWaterChart.destroy();
+
+      new Chart(waterCtx, {
+        type: 'line',
+        data: {
+          labels: filteredLabels,
+          datasets: [{
+            label: 'Water Consumption',
+            data: filteredWaterData.map(item => item.consumption),
+            borderColor: '#0f766e',
+            backgroundColor: 'rgba(15, 118, 110, 0.08)',
+            borderWidth: 3,
+            pointBackgroundColor: '#fff',
+            pointBorderColor: '#0f766e',
+            pointBorderWidth: 2.5,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            tension: 0.25,
+            fill: true
+          }]
+        },
+        options: baseOptions(function (value) {
+          return value + ' m³';
+        })
+      });
+
+      const existingMaintenanceChart = Chart.getChart(maintenanceCtx);
+      if (existingMaintenanceChart) existingMaintenanceChart.destroy();
+
+      new Chart(maintenanceCtx, {
+        type: 'bar',
+        data: {
+          labels: filteredLabels,
+          datasets: [{
+            label: 'Maintenance Requests',
+            data: filteredMaintenanceData.map(item => item.count),
+            backgroundColor: 'rgba(124, 58, 237, 0.16)',
+            borderColor: '#7c3aed',
+            borderWidth: 2,
+            borderRadius: 6
+          }]
+        },
+        options: baseOptions(function (value) {
+          return value;
+        })
       });
     }
 
-    updateChart(12);
-    monthFilter.addEventListener('change', (e) => updateChart(parseInt(e.target.value)));
+    updateCharts(12);
+    monthFilter.addEventListener('change', (e) => updateCharts(parseInt(e.target.value)));
   });
 </script>
 {% endblock %}

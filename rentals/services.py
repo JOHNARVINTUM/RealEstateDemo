@@ -284,6 +284,12 @@ class TenantRiskService:
             
             # Check if tenant is new (less than 3 months of payment history)
             is_new_tenant = TenantRiskService._is_new_tenant(tenant)
+            rf_prediction = None
+            try:
+                from accounts.ml.tenant_risk_model import predict_tenant_risk
+                rf_prediction = predict_tenant_risk(tenant)
+            except Exception as e:
+                logger.warning(f"Random Forest tenant risk prediction unavailable for {tenant.email}: {e}")
             
             # Create or update risk classification
             risk_classification, created = TenantRiskClassification.objects.update_or_create(
@@ -299,7 +305,11 @@ class TenantRiskService:
                         'payment_consistency': TenantRiskService._calculate_payment_consistency(tenant),
                         'current_payment_status': TenantRiskService._calculate_current_payment_status(tenant),
                         'payment_method_reliability': TenantRiskService._calculate_payment_method_reliability(tenant)
-                    }
+                    },
+                    'rf_risk_level': rf_prediction.get('risk_level') if rf_prediction else None,
+                    'rf_risk_probability': rf_prediction.get('probability') if rf_prediction else None,
+                    'rf_top_factors': rf_prediction.get('top_factors') if rf_prediction else [],
+                    'rf_model_version': rf_prediction.get('model_version') if rf_prediction else "",
                 }
             )
             

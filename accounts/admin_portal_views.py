@@ -19,6 +19,7 @@ from billing.models import MonthlyBill
 from billing.services import ensure_bills_since_move_in, set_bill_status, approve_manual_payment, reject_manual_payment
 from payments.models import ManualPayment
 from maintenance.models import MaintenanceRequest
+from water.models import WaterReading
 
 
 def debug_lease_form(request):
@@ -103,9 +104,13 @@ def admin_dashboard(request):
     vacant_units = Unit.objects.filter(is_active=True).count() - occupied_units
 
     today = timezone.now().date()
-    # Monthly revenue includes rent, water, and interest for the current billing month.
+    # Monthly revenue includes rent, water, and interest for PAID bills in the current billing month.
     total_revenue = (
-        MonthlyBill.objects.filter(billing_month__year=today.year, billing_month__month=today.month)
+        MonthlyBill.objects.filter(
+            billing_month__year=today.year,
+            billing_month__month=today.month,
+            status="PAID"
+        )
         .aggregate(
             total=Sum(
                 ExpressionWrapper(F("base_rent") + F("water_amount") + F("interest"),
@@ -124,6 +129,8 @@ def admin_dashboard(request):
     
     # Get monthly rental income data for the past 12 months including current month
     monthly_income_data = []
+    water_usage_data = []
+    maintenance_trend_data = []
     months_labels = []
     
     # Calculate months from 11 months ago to current month (inclusive)
@@ -147,11 +154,12 @@ def admin_dashboard(request):
             
             month_date = datetime(month_year, month_month, 1).date()
         
-        # Get monthly revenue (rent + water + interest) for this billing month
+        # Get monthly revenue (rent + water + interest) for PAID bills in this billing month
         actual_revenue = (
             MonthlyBill.objects.filter(
                 billing_month__year=month_date.year,
-                billing_month__month=month_date.month
+                billing_month__month=month_date.month,
+                status="PAID"
             ).aggregate(
                 total=Sum(
                     ExpressionWrapper(F("base_rent") + F("water_amount") + F("interest"),
@@ -172,10 +180,31 @@ def admin_dashboard(request):
             'actual': float(actual_revenue),
             'expected': float(expected_revenue)
         })
+        monthly_water_usage = (
+            WaterReading.objects.filter(
+                reading_month__year=month_date.year,
+                reading_month__month=month_date.month
+            ).aggregate(total=Sum("consumption"))["total"] or 0
+        )
+        monthly_maintenance_count = MaintenanceRequest.objects.filter(
+            created_at__year=month_date.year,
+            created_at__month=month_date.month
+        ).count()
+
+        water_usage_data.append({
+            'month': month_date.strftime('%b %Y'),
+            'consumption': float(monthly_water_usage)
+        })
+        maintenance_trend_data.append({
+            'month': month_date.strftime('%b %Y'),
+            'count': monthly_maintenance_count
+        })
         months_labels.append(month_date.strftime('%b'))
     
     # Reverse to show oldest to newest
     monthly_income_data.reverse()
+    water_usage_data.reverse()
+    maintenance_trend_data.reverse()
     months_labels.reverse()
 
     # Get notifications for admin (all notifications, not just user-specific)
@@ -196,6 +225,8 @@ def admin_dashboard(request):
         "unread_notifications": unread_notifications,
         "unread_count": unread_count,
         "monthly_income_data": monthly_income_data,
+        "water_usage_data": water_usage_data,
+        "maintenance_trend_data": maintenance_trend_data,
         "months_labels": months_labels,
     })
 
@@ -1228,7 +1259,8 @@ def admin_tenant_risk(request):
     if q:
         risk_classifications = risk_classifications.filter(
             Q(tenant__email__icontains=q) |
-            Q(tenant__tenantprofile__full_name__icontains=q)
+            Q(tenant__tenantprofile__first_name__icontains=q) |
+            Q(tenant__tenantprofile__last_name__icontains=q)
         )
 
     # Sorting
@@ -1249,6 +1281,12 @@ def admin_tenant_risk(request):
     medium_risk_count = TenantRiskClassification.objects.filter(risk_level='MEDIUM').count()
     high_risk_count = TenantRiskClassification.objects.filter(risk_level='HIGH').count()
     new_tenant_count = TenantRiskClassification.objects.filter(is_new_tenant=True).count()
+    rf_metrics = None
+    try:
+        from accounts.ml.tenant_risk_model import load_model_metrics
+        rf_metrics = load_model_metrics()
+    except Exception:
+        rf_metrics = None
     
     context = {
         'page_obj': page_obj,
@@ -1260,6 +1298,7 @@ def admin_tenant_risk(request):
         'medium_risk_count': medium_risk_count,
         'high_risk_count': high_risk_count,
         'new_tenant_count': new_tenant_count,
+        'rf_metrics': rf_metrics,
     }
     
     return render(request, "admin_portal/tenant_risk.html", context)
@@ -1613,4 +1652,192 @@ def admin_delete_attachment(request, attachment_id: int):
         "message": f"Delete attachment '{attachment.filename}'? This cannot be undone.",
         "post_url": reverse("admin_delete_attachment", args=[attachment.id]),
         "back_url": reverse("admin_tenant_attachments", args=[tenant_id]),
+    })
+
+
+@admin_required
+def admin_forecasting(request):
+    today = timezone.now().date()
+    current_month_start = today.replace(day=1)
+
+    def _month_date(i):
+        y, m = current_month_start.year, current_month_start.month - i
+        while m <= 0:
+            m += 12
+            y -= 1
+        return datetime(y, m, 1).date()
+
+    def _moving_avg_forecast(series, window=3, steps=3):
+        if len(series) < window:
+            return [round(sum(series) / max(len(series), 1), 2)] * steps
+        tail = series[-window:]
+        forecasts = []
+        buf = list(tail)
+        for _ in range(steps):
+            val = round(sum(buf[-window:]) / window, 2)
+            forecasts.append(val)
+            buf.append(val)
+        return forecasts
+
+    def _accuracy_metrics(series, window=3, test_steps=3):
+        import math
+        n = len(series)
+        if n < window + test_steps:
+            return {"rmse": None, "mae": None, "mape": None}
+        train = series[:n - test_steps]
+        actual = series[n - test_steps:]
+        preds = []
+        buf = list(train)
+        for _ in range(test_steps):
+            val = sum(buf[-window:]) / window
+            preds.append(val)
+            buf.append(val)
+        errors = [a - p for a, p in zip(actual, preds)]
+        mae  = round(sum(abs(e) for e in errors) / test_steps, 2)
+        rmse = round(math.sqrt(sum(e ** 2 for e in errors) / test_steps), 2)
+        non_zero = [(a, e) for a, e in zip(actual, errors) if a != 0]
+        mape = round(sum(abs(e / a) for a, e in non_zero) / len(non_zero) * 100, 2) if non_zero else None
+        return {"rmse": rmse, "mae": mae, "mape": mape}
+
+    def _clean_series(series):
+        s = list(series)
+        while s and s[-1] == 0:
+            s.pop()
+        return s
+
+    def _sarima_forecast(series, order=(0,1,1), seasonal_order=(1,1,1,12), steps=6):
+        try:
+            import warnings
+            import numpy as np
+            from statsmodels.tsa.statespace.sarimax import SARIMAX
+            s = _clean_series(series)
+            if len(s) < 18:
+                return None, None, None
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')
+                model = SARIMAX(s, order=order, seasonal_order=seasonal_order,
+                                enforce_stationarity=False, enforce_invertibility=False)
+                fit = model.fit(disp=False)
+            forecast_obj = fit.get_forecast(steps=steps)
+            mean = [round(float(v), 2) for v in forecast_obj.predicted_mean]
+            ci = np.array(forecast_obj.conf_int(alpha=0.2))
+            lower = [round(float(v), 2) for v in ci[:, 0]]
+            upper = [round(float(v), 2) for v in ci[:, 1]]
+            return mean, lower, upper
+        except Exception:
+            return None, None, None
+
+    def _sarima_metrics(series, order=(0,1,1), seasonal_order=(1,1,1,12), test_steps=6):
+        try:
+            import math
+            import warnings
+            import numpy as np
+            from statsmodels.tsa.statespace.sarimax import SARIMAX
+            s = _clean_series(series)
+            n = len(s)
+            if n < 18:
+                return {"rmse": None, "mae": None, "mape": None}
+            train = s[:n - test_steps]
+            actual = s[n - test_steps:]
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')
+                model = SARIMAX(train, order=order, seasonal_order=seasonal_order,
+                                enforce_stationarity=False, enforce_invertibility=False)
+                fit = model.fit(disp=False)
+            preds = [float(v) for v in fit.get_forecast(steps=test_steps).predicted_mean]
+            errors = [a - p for a, p in zip(actual, preds)]
+            mae  = round(sum(abs(e) for e in errors) / test_steps, 2)
+            rmse = round(math.sqrt(sum(e ** 2 for e in errors) / test_steps), 2)
+            non_zero = [(a, e) for a, e in zip(actual, errors) if a != 0]
+            mape = round(sum(abs(e / a) for a, e in non_zero) / len(non_zero) * 100, 2) if non_zero else None
+            return {"rmse": rmse, "mae": mae, "mape": mape}
+        except Exception:
+            return {"rmse": None, "mae": None, "mape": None}
+
+    def _next_month_labels(steps=3):
+        labels = []
+        y, m = current_month_start.year, current_month_start.month
+        for _ in range(steps):
+            m += 1
+            if m > 12:
+                m = 1
+                y += 1
+            labels.append(datetime(y, m, 1).strftime('%b %Y'))
+        return labels
+
+    revenue_series, water_series, maintenance_series, hist_labels = [], [], [], []
+
+    for i in range(24, -1, -1):
+        md = _month_date(i)
+        rev = float(
+            MonthlyBill.objects.filter(
+                billing_month__year=md.year,
+                billing_month__month=md.month,
+            ).aggregate(
+                total=Sum(ExpressionWrapper(
+                    F("base_rent") + F("water_amount") + F("interest"),
+                    output_field=DecimalField()
+                ))
+            )["total"] or 0
+        )
+        water = float(
+            WaterReading.objects.filter(
+                reading_month__year=md.year,
+                reading_month__month=md.month,
+            ).aggregate(total=Sum("consumption"))["total"] or 0
+        )
+        maint = MaintenanceRequest.objects.filter(
+            created_at__year=md.year,
+            created_at__month=md.month,
+        ).count()
+
+        revenue_series.append(rev)
+        water_series.append(water)
+        maintenance_series.append(maint)
+        hist_labels.append(md.strftime('%b %Y'))
+
+    forecast_labels = _next_month_labels(3)
+    revenue_forecast = _moving_avg_forecast(revenue_series, window=3, steps=3)
+    water_forecast = _moving_avg_forecast(water_series, window=3, steps=3)
+    maintenance_forecast = _moving_avg_forecast(maintenance_series, window=3, steps=3)
+
+    revenue_metrics = _accuracy_metrics(revenue_series)
+    water_metrics = _accuracy_metrics(water_series)
+    maintenance_metrics = _accuracy_metrics(maintenance_series)
+
+    rev_sarima_fc, rev_sarima_lower, rev_sarima_upper = _sarima_forecast(
+        revenue_series, order=(0,1,1), seasonal_order=(1,1,1,12), steps=6)
+    water_sarima_fc, water_sarima_lower, water_sarima_upper = _sarima_forecast(
+        water_series, order=(0,1,1), seasonal_order=(1,1,1,12), steps=6)
+
+    revenue_sarima_metrics = _sarima_metrics(revenue_series, order=(0,1,1), seasonal_order=(1,1,1,12))
+    water_sarima_metrics   = _sarima_metrics(water_series,   order=(0,1,1), seasonal_order=(1,1,1,12))
+
+    hist_revenue_last12 = revenue_series[-36:]
+    hist_water_last12 = water_series[-36:]
+    hist_maintenance_last12 = maintenance_series[-36:]
+    hist_labels_last12 = hist_labels[-36:]
+
+    return render(request, "admin_portal/forecasting.html", {
+        "hist_labels": hist_labels_last12,
+        "hist_revenue": hist_revenue_last12,
+        "hist_water": hist_water_last12,
+        "hist_maintenance": hist_maintenance_last12,
+        "forecast_labels": forecast_labels,
+        "revenue_forecast": revenue_forecast,
+        "water_forecast": water_forecast,
+        "maintenance_forecast": maintenance_forecast,
+        "revenue_metrics": revenue_metrics,
+        "water_metrics": water_metrics,
+        "maintenance_metrics": maintenance_metrics,
+        "rev_sarima_fc": rev_sarima_fc,
+        "rev_sarima_lower": rev_sarima_lower,
+        "rev_sarima_upper": rev_sarima_upper,
+        "water_sarima_fc": water_sarima_fc,
+        "water_sarima_lower": water_sarima_lower,
+        "water_sarima_upper": water_sarima_upper,
+        "revenue_sarima_metrics": revenue_sarima_metrics,
+        "water_sarima_metrics": water_sarima_metrics,
+        "sarima_available": rev_sarima_fc is not None,
+        "unread_count": Notification.objects.filter(is_read=False).count(),
     })

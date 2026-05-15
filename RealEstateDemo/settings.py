@@ -89,11 +89,11 @@ WSGI_APPLICATION = 'RealEstateDemo.wsgi.application'
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("SUPABASE_DB_NAME", "postgres"),
-        "USER": os.getenv("SUPABASE_DB_USER", "postgres"),
-        "PASSWORD": os.getenv("SUPABASE_DB_PASSWORD", ""),
-        "HOST": os.getenv("SUPABASE_DB_HOST", "localhost"),
-        "PORT": os.getenv("SUPABASE_DB_PORT", "5432"),
+        "NAME": "postgres",
+        "USER": "postgres.ezrxfodgrztlajiiilfz",
+        "PASSWORD": "Ripdemo999-",
+        "HOST": "aws-1-ap-northeast-1.pooler.supabase.com",
+        "PORT": "6543",
     }
 }
 

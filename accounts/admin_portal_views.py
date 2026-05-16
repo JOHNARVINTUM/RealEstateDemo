@@ -1724,7 +1724,14 @@ def admin_forecasting(request):
             lower = [round(float(v), 2) for v in ci[:, 0]]
             upper = [round(float(v), 2) for v in ci[:, 1]]
             return mean, lower, upper
-        except Exception:
+        except ImportError:
+            # statsmodels not installed - return None to indicate SARIMA unavailable
+            return None, None, None
+        except Exception as e:
+            # Log other errors but return None to prevent page crashes
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"SARIMA forecast error: {e}")
             return None, None, None
 
     def _sarima_metrics(series, order=(0,1,1), seasonal_order=(1,1,1,12), test_steps=6):
@@ -1751,7 +1758,14 @@ def admin_forecasting(request):
             non_zero = [(a, e) for a, e in zip(actual, errors) if a != 0]
             mape = round(sum(abs(e / a) for a, e in non_zero) / len(non_zero) * 100, 2) if non_zero else None
             return {"rmse": rmse, "mae": mae, "mape": mape}
-        except Exception:
+        except ImportError:
+            # statsmodels not installed - return None metrics
+            return {"rmse": None, "mae": None, "mape": None}
+        except Exception as e:
+            # Log other errors but return None to prevent page crashes
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"SARIMA metrics error: {e}")
             return {"rmse": None, "mae": None, "mape": None}
 
     def _next_month_labels(steps=3):

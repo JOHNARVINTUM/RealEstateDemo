@@ -200,37 +200,42 @@
 
     <!-- Pagination Footer -->
     {% if page_obj.paginator.num_pages > 1 %}
-      <div class="p-5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4">
-        <div class="text-sm font-bold text-slate-700">
-          Showing Page <span class="text-slate-900 font-black">{{ page_obj.number }}</span> of <span class="text-slate-900 font-black">{{ page_obj.paginator.num_pages }}</span>
+      <div class="p-5 bg-slate-50 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div class="flex items-center text-[10px] sm:text-xs text-slate-700 font-bold whitespace-nowrap leading-none mb-1 md:mb-0">
+          <span>Showing <strong class="text-slate-900 font-black">{{ page_obj.start_index }}-{{ page_obj.end_index }}</strong> of <strong class="text-slate-900 font-black">{{ page_obj.paginator.count }}</strong> profiles</span>
         </div>
         
-        <div class="flex items-center gap-1.5">
+        <div class="flex flex-wrap md:flex-nowrap items-center justify-center md:justify-end gap-1 sm:gap-1.5">
           {% if page_obj.has_previous %}
-            <a href="?page=1{% if q %}&q={{ q }}{% endif %}" class="inline-flex items-center justify-center px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors" title="First Page">
-              « First
+            <a href="?page=1{% if q %}&q={{ q }}{% endif %}" 
+               class="inline-flex items-center whitespace-nowrap px-2 py-1 sm:px-2.5 sm:py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors" title="First Page">
+              &laquo;&nbsp;First
             </a>
-            <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}" class="inline-flex items-center justify-center px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors" title="Previous Page">
-              ‹ Prev
+            <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}" 
+               class="inline-flex items-center whitespace-nowrap px-2 py-1 sm:px-2.5 sm:py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors" title="Previous Page">
+              &lsaquo;&nbsp;Prev
             </a>
           {% endif %}
 
-          <div class="flex items-center gap-1 px-1">
+          <div class="flex items-center gap-1">
             {% for num in page_obj.paginator.page_range %}
               {% if page_obj.number == num %}
-                <span class="px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-black shadow-xs">{{ num }}</span>
+                <span class="inline-flex items-center justify-center min-w-[28px] px-2 py-1 sm:px-3 sm:py-1.5 rounded bg-slate-800 text-white text-xs font-extrabold select-none shadow-sm">{{ num }}</span>
               {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                <a href="?page={{ num }}{% if q %}&q={{ q }}{% endif %}" class="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-lg text-xs font-bold transition-colors">{{ num }}</a>
+                <a href="?page={{ num }}{% if q %}&q={{ q }}{% endif %}" 
+                   class="inline-flex items-center justify-center min-w-[28px] px-2 py-1 sm:px-3 sm:py-1.5 rounded bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-colors">{{ num }}</a>
               {% endif %}
             {% endfor %}
           </div>
 
           {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}" class="inline-flex items-center justify-center px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors" title="Next Page">
-              Next ›
+            <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}" 
+               class="inline-flex items-center whitespace-nowrap px-2 py-1 sm:px-2.5 sm:py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors" title="Next Page">
+              Next&nbsp;&rsaquo;
             </a>
-            <a href="?page={{ page_obj.paginator.num_pages }}{% if q %}&q={{ q }}{% endif %}" class="inline-flex items-center justify-center px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors" title="Last Page">
-              Last »
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if q %}&q={{ q }}{% endif %}" 
+               class="inline-flex items-center whitespace-nowrap px-2 py-1 sm:px-2.5 sm:py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors" title="Last Page">
+              Last&nbsp;&raquo;
             </a>
           {% endif %}
         </div>

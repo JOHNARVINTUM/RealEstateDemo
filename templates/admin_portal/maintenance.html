@@ -3,7 +3,7 @@
 {% block title %}Maintenance Requests | Real Estate Administration{% endblock %}
 
 {% block content %}
-<div class="maintenance-queue-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
+<div class="maintenance-queue-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6 py-4 sm:py-6 overflow-x-hidden w-full max-w-full">
   
   <!-- Studio Top Title Block -->
   <header class="bg-white border border-slate-200 rounded-xl p-8 shadow-xs">
@@ -61,10 +61,10 @@
   </section>
 
   <!-- Filters -->
-  <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col lg:flex-row items-center justify-between gap-6">
+  <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
     
     <!-- Search -->
-    <div class="w-full lg:w-96">
+    <div class="w-full md:flex-1 md:max-w-[300px] lg:max-w-md">
       <form method="get" class="relative">
         <input type="text" name="q" value="{{ q }}" placeholder="Search for names, units..." 
                class="w-full pl-12 pr-4 py-3 bg-white border-2 border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:border-slate-800 focus:ring-0 transition-all outline-none">
@@ -79,18 +79,18 @@
     </div>
 
     <!-- Dropdowns -->
-    <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
-      <form method="get" class="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
+    <div class="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+      <form method="get" class="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
         <input type="hidden" name="q" value="{{ q }}">
         
-        <select name="priority" onchange="this.form.submit()" class="bg-white border-2 border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-800 focus:border-slate-800 transition-all outline-none cursor-pointer min-w-[150px] appearance-none">
+        <select name="priority" onchange="this.form.submit()" class="bg-white border-2 border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-800 focus:border-slate-800 transition-all outline-none cursor-pointer w-full md:w-[150px] appearance-none">
           <option value="">All Urgency</option>
           <option value="HIGH" {% if priority == "HIGH" %}selected{% endif %}>High Urgency</option>
           <option value="MEDIUM" {% if priority == "MEDIUM" %}selected{% endif %}>Medium Urgency</option>
           <option value="LOW" {% if priority == "LOW" %}selected{% endif %}>Low Urgency</option>
         </select>
         
-        <select name="status" onchange="this.form.submit()" class="bg-white border-2 border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-800 focus:border-slate-800 transition-all outline-none cursor-pointer min-w-[150px] appearance-none">
+        <select name="status" onchange="this.form.submit()" class="bg-white border-2 border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-800 focus:border-slate-800 transition-all outline-none cursor-pointer w-full md:w-[150px] appearance-none">
           <option value="">All Statuses</option>
           <option value="PENDING" {% if status == "PENDING" %}selected{% endif %}>Waiting</option>
           <option value="IN_PROGRESS" {% if status == "IN_PROGRESS" %}selected{% endif %}>Being Fixed</option>
@@ -108,9 +108,9 @@
   </div>
 
   <!-- Table Card -->
-  <div class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
-    <div class="overflow-x-auto">
-      <table class="w-full text-left border-collapse">
+  <div id="maintenance-table" class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+    <div class="overflow-x-auto custom-scrollbar">
+      <table class="w-full text-left border-collapse min-w-[1000px]">
         <thead>
           <tr class="bg-slate-50 border-b border-slate-200">
             <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Tenant & Unit</th>
@@ -226,45 +226,46 @@
 
     <!-- Paginator -->
     {% if page_obj.paginator.num_pages > 1 %}
-    <div class="px-8 py-6 bg-white border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-      <div class="text-sm text-slate-500 font-bold">
-        Showing <strong class="text-slate-900 font-black">{{ page_obj.start_index }}</strong> to <strong class="text-slate-900 font-black">{{ page_obj.end_index }}</strong> of <strong class="text-slate-900 font-black">{{ page_obj.paginator.count }}</strong> jobs
+    <div class="px-4 py-4 bg-white border-t border-slate-100 flex flex-row items-center justify-between gap-4 rounded-b-xl">
+      <div class="flex items-center text-[10px] sm:text-xs text-slate-500 font-bold whitespace-nowrap leading-none">
+        <span>Showing <strong class="text-slate-900 font-black">{{ page_obj.start_index }}-{{ page_obj.end_index }}</strong> of <strong class="text-slate-900 font-black">{{ page_obj.paginator.count }}</strong> jobs</span>
       </div>
 
-      <div class="flex items-center gap-2">
+      <div class="flex flex-nowrap items-center justify-end gap-1 sm:gap-2">
         {% if page_obj.has_previous %}
-          <a href="?page=1&q={{ q }}&status={{ status }}&priority={{ priority }}" 
-             class="px-4 py-2 bg-white border-2 border-slate-200 rounded-xl text-sm font-black text-slate-700 hover:bg-slate-50 transition-all">
-            First
+          <a href="?page=1&q={{ q }}&status={{ status }}&priority={{ priority }}#maintenance-table" 
+             class="inline-flex items-center whitespace-nowrap px-2 py-1 sm:px-2.5 sm:py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
+            &laquo;&nbsp;First
           </a>
-          <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&status={{ status }}&priority={{ priority }}" 
-             class="px-4 py-2 bg-white border-2 border-slate-200 rounded-xl text-sm font-black text-slate-700 hover:bg-slate-50 transition-all">
-            Prev
+          <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&status={{ status }}&priority={{ priority }}#maintenance-table" 
+             class="inline-flex items-center whitespace-nowrap px-2 py-1 sm:px-2.5 sm:py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
+            &lsaquo;&nbsp;Prev
           </a>
         {% endif %}
 
-        <div class="flex items-center gap-1 px-2">
+        <div class="flex items-center gap-1">
           {% for num in page_obj.paginator.page_range %}
             {% if page_obj.number == num %}
-              <span class="px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-black select-none">{{ num }}</span>
+              <span class="inline-flex items-center justify-center min-w-[28px] px-2 py-1 sm:px-3 sm:py-1.5 rounded bg-slate-900 text-white text-xs font-extrabold select-none">{{ num }}</span>
             {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-              <a href="?page={{ num }}&q={{ q }}&status={{ status }}&priority={{ priority }}" 
-                 class="px-4 py-2 rounded-xl bg-white border-2 border-slate-100 text-slate-700 hover:bg-slate-50 text-sm font-black transition-all">{{ num }}</a>
+              <a href="?page={{ num }}&q={{ q }}&status={{ status }}&priority={{ priority }}#maintenance-table" 
+                 class="inline-flex items-center justify-center min-w-[28px] px-2 py-1 sm:px-3 sm:py-1.5 rounded bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-colors">{{ num }}</a>
             {% endif %}
           {% endfor %}
         </div>
 
         {% if page_obj.has_next %}
-          <a href="?page={{ page_obj.next_page_number }}&q={{ q }}&status={{ status }}&priority={{ priority }}" 
-             class="px-4 py-2 bg-white border-2 border-slate-200 rounded-xl text-sm font-black text-slate-700 hover:bg-slate-50 transition-all">
-            Next
+          <a href="?page={{ page_obj.next_page_number }}&q={{ q }}&status={{ status }}&priority={{ priority }}#maintenance-table" 
+             class="inline-flex items-center whitespace-nowrap px-2 py-1 sm:px-2.5 sm:py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
+            Next&nbsp;&rsaquo;
           </a>
-          <a href="?page={{ page_obj.paginator.num_pages }}&q={{ q }}&status={{ status }}&priority={{ priority }}" 
-             class="px-4 py-2 bg-white border-2 border-slate-200 rounded-xl text-sm font-black text-slate-700 hover:bg-slate-50 transition-all">
-            Last
+          <a href="?page={{ page_obj.paginator.num_pages }}&q={{ q }}&status={{ status }}&priority={{ priority }}#maintenance-table" 
+             class="inline-flex items-center whitespace-nowrap px-2 py-1 sm:px-2.5 sm:py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
+            Last&nbsp;&raquo;
           </a>
         {% endif %}
       </div>
+    </div>
     </div>
     {% endif %}
 

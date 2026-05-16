@@ -3,7 +3,7 @@
 {% block title %}Payments Queue | Real Estate Administration{% endblock %}
 
 {% block content %}
-<div class="payments-queue-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
+<div class="payments-queue-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6 py-4 sm:py-6 overflow-x-hidden w-full max-w-full">
   
   <!-- Studio Top Title Block -->
   <header class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
@@ -273,47 +273,47 @@
 
     <!-- Paginator State Injector Section -->
     {% if page_obj.paginator.num_pages > 1 %}
-    <div class="px-5 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
-      <div class="text-xs text-slate-600 font-medium">
-        Presenting indices <strong class="text-slate-800 font-bold">{{ page_obj.start_index }}</strong> through <strong class="text-slate-800 font-bold">{{ page_obj.end_index }}</strong> of <strong class="text-slate-800 font-bold">{{ page_obj.paginator.count }}</strong> complete files
+    <div class="px-5 py-4 bg-slate-50 border-t border-slate-200 flex flex-col md:flex-row items-center justify-between gap-3">
+      <div class="flex items-center text-[10px] sm:text-xs text-slate-600 font-bold whitespace-nowrap leading-none">
+        <span>Showing <strong class="text-slate-800 font-bold">{{ page_obj.start_index }}-{{ page_obj.end_index }}</strong> of <strong class="text-slate-800 font-bold">{{ page_obj.paginator.count }}</strong> records</span>
       </div>
 
-      <div class="flex items-center gap-1">
+      <div class="flex flex-nowrap items-center justify-end gap-1 sm:gap-2">
         {% if page_obj.has_previous %}
           <a href="?page=1&q={{ q }}&status={{ status }}&method={{ method }}" 
-             class="px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
-            First
+             class="inline-flex items-center whitespace-nowrap px-2 py-1 sm:px-2.5 sm:py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
+            &laquo;&nbsp;First
           </a>
           <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&status={{ status }}&method={{ method }}" 
-             class="px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
-            Prev
+             class="inline-flex items-center whitespace-nowrap px-2 py-1 sm:px-2.5 sm:py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
+            &lsaquo;&nbsp;Prev
           </a>
         {% endif %}
 
-        <div class="flex items-center gap-1 px-2">
+        <div class="flex items-center gap-1 px-1">
           {% for num in page_obj.paginator.page_range %}
             {% if page_obj.number == num %}
-              <span class="px-3 py-1.5 rounded bg-slate-800 text-white text-xs font-extrabold select-none">{{ num }}</span>
+              <span class="inline-flex items-center justify-center min-w-[28px] px-2 py-1 sm:px-3 sm:py-1.5 rounded bg-slate-800 text-white text-xs font-extrabold select-none">{{ num }}</span>
             {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
               <a href="?page={{ num }}&q={{ q }}&status={{ status }}&method={{ method }}" 
-                 class="px-3 py-1.5 rounded bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-colors">{{ num }}</a>
+                 class="inline-flex items-center justify-center min-w-[28px] px-2 py-1 sm:px-3 sm:py-1.5 rounded bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-colors">{{ num }}</a>
             {% endif %}
           {% endfor %}
         </div>
 
         {% if page_obj.has_next %}
           <a href="?page={{ page_obj.next_page_number }}&q={{ q }}&status={{ status }}&method={{ method }}" 
-             class="px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
-            Next
+             class="inline-flex items-center whitespace-nowrap px-2 py-1 sm:px-2.5 sm:py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
+            Next&nbsp;&rsaquo;
           </a>
           <a href="?page={{ page_obj.paginator.num_pages }}&q={{ q }}&status={{ status }}&method={{ method }}" 
-             class="px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
-            Last
+             class="inline-flex items-center whitespace-nowrap px-2 py-1 sm:px-2.5 sm:py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
+            Last&nbsp;&raquo;
           </a>
         {% endif %}
       </div>
     </div>
-    {% endif %}
+{% endif %}
 
   </div>
 

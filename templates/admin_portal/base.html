@@ -34,7 +34,9 @@
     <!-- Mobile Header -->
     <div class="mobile-nav-header">
       <div class="flex items-center gap-3">
-        <img src="{% static 'img/accounts/RealEstate360+ Logo2 jpg.jpg' %}" alt="Logo" class="w-8 h-8 object-contain">
+        <div class="brand-logo-shell w-9 h-9 bg-white rounded-xl flex justify-center items-center shrink-0 shadow-sm p-1.5">
+          <img src="{% static 'img/accounts/RealEstate360+ Logo2 jpg.jpg' %}" alt="Logo" class="w-full h-full object-contain">
+        </div>
         <span class="text-white font-display font-semibold text-lg">RealEstate360<span class="text-blue-500">+</span></span>
       </div>
       <button id="mobileSidebarToggle" class="p-2 text-white hover:bg-blue-900/50 rounded-lg transition-colors">

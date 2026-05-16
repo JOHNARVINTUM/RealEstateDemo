@@ -286,7 +286,7 @@ aside.sidebar {
   width: 96px;
   height: 96px;
   margin: 0 auto 1rem;
-  border-radius: 999px;
+  border-radius: 1.15rem;
   background: #fff;
   padding: 0.75rem;
   display: grid;
@@ -1208,6 +1208,10 @@ button.link {
 
   main.flex-1 {
     padding: 1.5rem !important;
+    margin-left: 0 !important;
+  }
+
+  body.sidebar-collapsed main.flex-1 {
     margin-left: 0 !important;
   }
 
@@ -2228,6 +2232,17 @@ body.mobile-sidebar-open {
     width: 100% !important;
   }
 
+  .mobile-nav-header .brand-logo-shell {
+    width: 38px !important;
+    height: 38px !important;
+    padding: 0.4rem !important;
+    margin: 0 !important;
+    border-radius: 0.75rem !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+  }
+
   aside.sidebar {
     position: fixed !important;
     left: -320px !important;
@@ -2298,7 +2313,7 @@ body.mobile-sidebar-open {
     width: 80px !important;
     height: 80px !important;
     margin: 0 auto !important;
-    border-radius: 999px !important;
+    border-radius: 1.15rem !important;
     padding: 0.75rem !important;
     display: flex !important;
   }
@@ -2339,7 +2354,8 @@ body.mobile-sidebar-open {
 
   main.flex-1,
   .layout>main,
-  body main {
+  body main,
+  body.sidebar-collapsed main.flex-1 {
     margin-left: 0 !important;
     padding: 80px 1rem 2rem !important; /* Adjusted for mobile header */
     width: 100% !important;

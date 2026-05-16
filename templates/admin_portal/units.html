@@ -5,7 +5,7 @@
 {% block title %}Property Portfolio | Real Estate Administration{% endblock %}
 
 {% block content %}
-<div class="units-grid-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
+<div id="units-container" class="units-grid-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
   
   <!-- Studio Top Title Block -->
   <header class="bg-white border border-slate-200 rounded-xl p-8 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -203,10 +203,10 @@
       Showing <strong class="text-slate-900 font-black">{{ page_obj.start_index }}</strong> to <strong class="text-slate-900 font-black">{{ page_obj.end_index }}</strong> of <strong class="text-slate-900 font-black">{{ page_obj.paginator.count }}</strong> rooms
     </div>
 
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center justify-center gap-3">
       {% if page_obj.has_previous %}
-        <a href="?page=1&search={{ search_query }}&status={{ status_filter }}" class="px-5 py-3 bg-white border-2 border-slate-200 rounded-xl text-sm font-black text-slate-700 hover:bg-slate-50 transition-all">First</a>
-        <a href="?page={{ page_obj.previous_page_number }}&search={{ search_query }}&status={{ status_filter }}" class="px-5 py-3 bg-white border-2 border-slate-200 rounded-xl text-sm font-black text-slate-700 hover:bg-slate-50 transition-all">Prev</a>
+        <a href="?page=1&search={{ search_query }}&status={{ status_filter }}#units-container" class="px-5 py-3 bg-white border-2 border-slate-200 rounded-xl text-sm font-black text-slate-700 hover:bg-slate-50 transition-all">First</a>
+        <a href="?page={{ page_obj.previous_page_number }}&search={{ search_query }}&status={{ status_filter }}#units-container" class="px-5 py-3 bg-white border-2 border-slate-200 rounded-xl text-sm font-black text-slate-700 hover:bg-slate-50 transition-all">Prev</a>
       {% endif %}
 
       <div class="flex items-center gap-2 px-4">
@@ -214,14 +214,14 @@
           {% if page_obj.number == num %}
             <span class="px-5 py-3 rounded-xl bg-slate-900 text-white text-sm font-black shadow-lg">{{ num }}</span>
           {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-            <a href="?page={{ num }}&search={{ search_query }}&status={{ status_filter }}" class="px-5 py-3 rounded-xl bg-white border-2 border-slate-100 text-slate-700 hover:bg-slate-50 text-sm font-black transition-all">{{ num }}</a>
+            <a href="?page={{ num }}&search={{ search_query }}&status={{ status_filter }}#units-container" class="px-5 py-3 rounded-xl bg-white border-2 border-slate-100 text-slate-700 hover:bg-slate-50 text-sm font-black transition-all">{{ num }}</a>
           {% endif %}
         {% endfor %}
       </div>
 
       {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}&search={{ search_query }}&status={{ status_filter }}" class="px-5 py-3 bg-white border-2 border-slate-200 rounded-xl text-sm font-black text-slate-700 hover:bg-slate-50 transition-all">Next</a>
-        <a href="?page={{ page_obj.paginator.num_pages }}&search={{ search_query }}&status={{ status_filter }}" class="px-5 py-3 bg-white border-2 border-slate-200 rounded-xl text-sm font-black text-slate-700 hover:bg-slate-50 transition-all">Last</a>
+        <a href="?page={{ page_obj.next_page_number }}&search={{ search_query }}&status={{ status_filter }}#units-container" class="px-5 py-3 bg-white border-2 border-slate-200 rounded-xl text-sm font-black text-slate-700 hover:bg-slate-50 transition-all">Next</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}&search={{ search_query }}&status={{ status_filter }}#units-container" class="px-5 py-3 bg-white border-2 border-slate-200 rounded-xl text-sm font-black text-slate-700 hover:bg-slate-50 transition-all">Last</a>
       {% endif %}
     </div>
   </div>

@@ -165,9 +165,9 @@
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
-  <div class="bg-white border border-slate-200 rounded-xl shadow-xs">
-    <div class="w-full">
-      <table class="w-full text-left border-collapse table-fixed">
+  <div id="reliability-table" class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+    <div class="overflow-x-auto overflow-y-hidden custom-scrollbar">
+      <table class="w-full text-left border-collapse min-w-[1000px]">
         <colgroup>
           <col class="w-[28%]">
           <col class="w-[14%]">
@@ -360,13 +360,13 @@
         Presenting indices <strong class="text-slate-800 font-bold">{{ page_obj.start_index }}</strong> through <strong class="text-slate-800 font-bold">{{ page_obj.end_index }}</strong> of <strong class="text-slate-800 font-bold">{{ page_obj.paginator.count }}</strong> recorded profiles
       </div>
 
-      <div class="flex items-center gap-1">
+      <div class="flex flex-wrap items-center justify-center gap-1">
         {% if page_obj.has_previous %}
-          <a href="?page=1&q={{ q }}&risk={{ risk }}&sort={{ sort }}" 
+          <a href="?page=1&q={{ q }}&risk={{ risk }}&sort={{ sort }}#reliability-table" 
              class="px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
             First
           </a>
-          <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&risk={{ risk }}&sort={{ sort }}" 
+          <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&risk={{ risk }}&sort={{ sort }}#reliability-table" 
              class="px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
             Prev
           </a>
@@ -377,18 +377,18 @@
             {% if page_obj.number == num %}
               <span class="px-3 py-1.5 rounded bg-slate-800 text-white text-xs font-extrabold select-none">{{ num }}</span>
             {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-              <a href="?page={{ num }}&q={{ q }}&risk={{ risk }}&sort={{ sort }}" 
+              <a href="?page={{ num }}&q={{ q }}&risk={{ risk }}&sort={{ sort }}#reliability-table" 
                  class="px-3 py-1.5 rounded bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-colors">{{ num }}</a>
             {% endif %}
           {% endfor %}
         </div>
 
         {% if page_obj.has_next %}
-          <a href="?page={{ page_obj.next_page_number }}&q={{ q }}&risk={{ risk }}&sort={{ sort }}" 
+          <a href="?page={{ page_obj.next_page_number }}&q={{ q }}&risk={{ risk }}&sort={{ sort }}#reliability-table" 
              class="px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
             Next
           </a>
-          <a href="?page={{ page_obj.paginator.num_pages }}&q={{ q }}&risk={{ risk }}&sort={{ sort }}" 
+          <a href="?page={{ page_obj.paginator.num_pages }}&q={{ q }}&risk={{ risk }}&sort={{ sort }}#reliability-table" 
              class="px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
             Last
           </a>

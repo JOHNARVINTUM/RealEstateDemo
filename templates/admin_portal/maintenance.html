@@ -6,71 +6,71 @@
 <div class="maintenance-queue-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
   
   <!-- Studio Top Title Block -->
-  <header class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
-    <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">Property Maintenance Administration</h1>
-    <p class="text-sm text-slate-700 mt-1 leading-relaxed">Review unit repair logs, coordinate facility dispatching operations, and monitor ongoing resolution tracks.</p>
+  <header class="bg-white border border-slate-200 rounded-xl p-8 shadow-xs">
+    <h1 class="text-3xl md:text-4xl font-black tracking-tight text-slate-900 leading-tight">Maintenance</h1>
+    <p class="text-base text-slate-600 mt-2 font-bold leading-relaxed">Keep track of repairs, see what's being fixed, and check completed jobs.</p>
   </header>
 
-  <!-- Summary Metric Overview Cards (Consistent Iconless Layout) -->
-  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+  <!-- Summary Metric Overview Cards -->
+  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
     
-    <!-- Total Maintenance Logs -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-blue-600 flex flex-col justify-between">
+    <!-- Total Requests -->
+    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs border-l-4 border-l-slate-800 flex flex-col justify-between">
       <div>
-        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Total Registered Requests</span>
-        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ total_count }}</div>
+        <span class="text-sm font-black text-slate-500 uppercase tracking-wider block mb-1">Total Jobs</span>
+        <div class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">{{ total_count }}</div>
       </div>
-      <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
-        <span class="text-blue-600 font-bold">●</span> Total tickets recorded
+      <div class="text-xs font-bold text-slate-500 mt-3 flex items-center gap-1.5">
+        <span class="text-slate-400">●</span> All reports ever made
       </div>
     </div>
 
-    <!-- Pending Dispatch -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-amber-600 flex flex-col justify-between">
+    <!-- Waiting -->
+    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs border-l-4 border-l-amber-500 flex flex-col justify-between">
       <div>
-        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Pending Diagnostics</span>
-        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ pending_count }}</div>
+        <span class="text-sm font-black text-slate-500 uppercase tracking-wider block mb-1">Waiting</span>
+        <div class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">{{ pending_count }}</div>
       </div>
-      <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
-        <span class="text-amber-600 font-bold">●</span> Awaiting verification
+      <div class="text-xs font-bold text-slate-500 mt-3 flex items-center gap-1.5">
+        <span class="text-amber-500">●</span> Needs attention
       </div>
     </div>
 
-    <!-- In Progress Scope -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-purple-600 flex flex-col justify-between">
+    <!-- Being Fixed -->
+    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs border-l-4 border-l-indigo-600 flex flex-col justify-between">
       <div>
-        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Active Repair Dispatches</span>
-        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ in_progress_count }}</div>
+        <span class="text-sm font-black text-slate-500 uppercase tracking-wider block mb-1">Being Fixed</span>
+        <div class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">{{ in_progress_count }}</div>
       </div>
-      <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
-        <span class="text-purple-600 font-bold">●</span> Technicians executing
+      <div class="text-xs font-bold text-slate-500 mt-3 flex items-center gap-1.5">
+        <span class="text-indigo-600">●</span> Worker is busy fixing
       </div>
     </div>
 
-    <!-- Resolved Facilities -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-emerald-600 flex flex-col justify-between">
+    <!-- Finished -->
+    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs border-l-4 border-l-emerald-500 flex flex-col justify-between">
       <div>
-        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Resolved Facilities</span>
-        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ resolved_count }}</div>
+        <span class="text-sm font-black text-slate-500 uppercase tracking-wider block mb-1">Finished</span>
+        <div class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">{{ resolved_count }}</div>
       </div>
-      <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
-        <span class="text-emerald-600 font-bold">●</span> Verified repairs finalized
+      <div class="text-xs font-bold text-slate-500 mt-3 flex items-center gap-1.5">
+        <span class="text-emerald-500">●</span> Successfully repaired
       </div>
     </div>
 
   </section>
 
-  <!-- Filter & Categorical Navigation Strip -->
-  <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
+  <!-- Filters -->
+  <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col lg:flex-row items-center justify-between gap-6">
     
-    <!-- Left Filter Form Search Input -->
-    <div class="w-full md:w-80">
+    <!-- Search -->
+    <div class="w-full lg:w-96">
       <form method="get" class="relative">
-        <input type="text" name="q" value="{{ q }}" placeholder="Filter tenant identity, unit label..." 
-               class="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 transition-all outline-none">
-        <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400">
-          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        <input type="text" name="q" value="{{ q }}" placeholder="Search for names, units..." 
+               class="w-full pl-12 pr-4 py-3 bg-white border-2 border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:border-slate-800 focus:ring-0 transition-all outline-none">
+        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
           </svg>
         </span>
         <input type="hidden" name="status" value="{{ status }}">
@@ -78,138 +78,145 @@
       </form>
     </div>
 
-    <!-- Right Categorical Select Options -->
-    <div class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
-      <form method="get" class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+    <!-- Dropdowns -->
+    <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
+      <form method="get" class="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
         <input type="hidden" name="q" value="{{ q }}">
         
-        <select name="priority" onchange="this.form.submit()" class="bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-slate-500 transition-all outline-none cursor-pointer min-w-[130px]">
-          <option value="">All Priorities</option>
-          <option value="HIGH" {% if priority == "HIGH" %}selected{% endif %}>High Priority</option>
-          <option value="MEDIUM" {% if priority == "MEDIUM" %}selected{% endif %}>Medium Priority</option>
-          <option value="LOW" {% if priority == "LOW" %}selected{% endif %}>Low Priority</option>
+        <select name="priority" onchange="this.form.submit()" class="bg-white border-2 border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-800 focus:border-slate-800 transition-all outline-none cursor-pointer min-w-[150px] appearance-none">
+          <option value="">All Urgency</option>
+          <option value="HIGH" {% if priority == "HIGH" %}selected{% endif %}>High Urgency</option>
+          <option value="MEDIUM" {% if priority == "MEDIUM" %}selected{% endif %}>Medium Urgency</option>
+          <option value="LOW" {% if priority == "LOW" %}selected{% endif %}>Low Urgency</option>
         </select>
         
-        <select name="status" onchange="this.form.submit()" class="bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-slate-500 transition-all outline-none cursor-pointer min-w-[130px]">
-          <option value="">All Ticket Statuses</option>
-          <option value="PENDING" {% if status == "PENDING" %}selected{% endif %}>Pending Diagnostics</option>
-          <option value="IN_PROGRESS" {% if status == "IN_PROGRESS" %}selected{% endif %}>Active Repair</option>
-          <option value="RESOLVED" {% if status == "RESOLVED" %}selected{% endif %}>Resolved File</option>
+        <select name="status" onchange="this.form.submit()" class="bg-white border-2 border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-800 focus:border-slate-800 transition-all outline-none cursor-pointer min-w-[150px] appearance-none">
+          <option value="">All Statuses</option>
+          <option value="PENDING" {% if status == "PENDING" %}selected{% endif %}>Waiting</option>
+          <option value="IN_PROGRESS" {% if status == "IN_PROGRESS" %}selected{% endif %}>Being Fixed</option>
+          <option value="RESOLVED" {% if status == "RESOLVED" %}selected{% endif %}>Fixed</option>
         </select>
       </form>
 
       {% if q or status or priority %}
-        <a href="{% url 'admin_maintenance' %}" class="px-3 py-2 text-slate-600 hover:text-white hover:bg-slate-800 border border-slate-300 hover:border-slate-800 rounded-lg transition-colors text-xs font-bold flex items-center gap-1" title="Reset Configured Parameters">
-          <span>Reset</span>
+        <a href="{% url 'admin_maintenance' %}" class="px-6 py-3 text-slate-600 hover:text-white hover:bg-slate-900 border-2 border-slate-200 hover:border-slate-900 rounded-xl transition-all text-sm font-black flex items-center gap-2">
+          Reset
         </a>
       {% endif %}
     </div>
 
   </div>
 
-  <!-- Master Data Table Workspace Card -->
+  <!-- Table Card -->
   <div class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
     <div class="overflow-x-auto">
       <table class="w-full text-left border-collapse">
         <thead>
           <tr class="bg-slate-50 border-b border-slate-200">
-            <th class="px-5 py-3.5 text-xs font-bold text-slate-700">Contracting Client & Unit</th>
-            <th class="px-5 py-3.5 text-xs font-bold text-slate-700 text-center">Configured Severity</th>
-            <th class="px-5 py-3.5 text-xs font-bold text-slate-700 text-center">Execution Scope</th>
-            <th class="px-5 py-3.5 text-xs font-bold text-slate-700">Reported Descriptive Payload</th>
-            <th class="px-5 py-3.5 text-xs font-bold text-slate-700">Resolution Summary Track</th>
-            <th class="px-5 py-3.5 text-xs font-bold text-slate-700 text-right">Direct Modification</th>
+            <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Tenant & Unit</th>
+            <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-center">Urgency</th>
+            <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-center">Status</th>
+            <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Problem</th>
+            <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Solution</th>
+            <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-right">Action</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-200 text-sm">
+        <tbody class="divide-y divide-slate-100">
           {% for r in page_obj %}
-          <tr class="hover:bg-slate-50/70 transition-colors maintenance-row" data-priority="{{ r.priority }}">
+          <tr class="hover:bg-slate-50/50 transition-colors">
             
-            <!-- Contracting Client & Unit Column -->
-            <td class="px-5 py-4">
-              <div class="flex items-center gap-2.5">
-                <div class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-800 font-bold text-xs shrink-0 border border-slate-200">
+            <!-- Tenant & Unit -->
+            <td class="px-6 py-5">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-800 font-black text-sm shrink-0 border border-slate-200">
                   {{ r.lease.tenant.email|first|upper }}
                 </div>
                 <div class="min-w-0">
-                  <div class="font-bold text-slate-900 text-sm truncate max-w-[180px]">
+                  <div class="font-black text-slate-900 text-sm truncate max-w-[200px]">
                     {{ r.lease.tenant.email }}
                   </div>
-                  <div class="text-xs font-extrabold text-blue-700">Unit #{{ r.lease.unit.number }}</div>
+                  <div class="text-xs font-black text-indigo-600">Unit #{{ r.lease.unit.number }}</div>
                 </div>
               </div>
             </td>
 
-            <!-- Configured Severity Column -->
-            <td class="px-5 py-4 text-center">
-              {% if r.priority == 'HIGH' %}
-                <span class="inline-block px-2.5 py-0.5 rounded bg-rose-100 text-rose-900 font-extrabold text-[10px] uppercase select-none border border-rose-200">
+            <!-- Urgency -->
+            <td class="px-6 py-5 text-center">
+              {% if r.priority == 'HIGH' or r.priority == 'URGENT' %}
+                <span class="inline-flex px-3 py-1 rounded-lg bg-rose-50 text-rose-700 font-black text-[11px] uppercase tracking-wider border border-rose-100">
                   High
                 </span>
               {% elif r.priority == 'MEDIUM' %}
-                <span class="inline-block px-2.5 py-0.5 rounded bg-amber-100 text-amber-900 font-extrabold text-[10px] uppercase select-none">
+                <span class="inline-flex px-3 py-1 rounded-lg bg-amber-50 text-amber-700 font-black text-[11px] uppercase tracking-wider border border-amber-100">
                   Medium
                 </span>
               {% else %}
-                <span class="inline-block px-2.5 py-0.5 rounded bg-slate-100 text-slate-700 font-extrabold text-[10px] uppercase select-none">
+                <span class="inline-flex px-3 py-1 rounded-lg bg-slate-100 text-slate-600 font-black text-[11px] uppercase tracking-wider border border-slate-200">
                   Low
                 </span>
               {% endif %}
             </td>
 
-            <!-- Execution Scope Column -->
-            <td class="px-5 py-4 text-center">
+            <!-- Status -->
+            <td class="px-6 py-5 text-center">
               {% if r.status == 'RESOLVED' %}
-                <span class="inline-block px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-900 font-extrabold text-[10px] uppercase select-none">
-                  Resolved
+                <span class="inline-flex px-3 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-black text-[11px] uppercase tracking-wider border border-emerald-100">
+                  Fixed
                 </span>
               {% elif r.status == 'IN_PROGRESS' %}
-                <span class="inline-block px-2.5 py-0.5 rounded bg-purple-100 text-purple-900 font-extrabold text-[10px] uppercase select-none">
-                  Active Dispatch
+                <span class="inline-flex px-3 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-black text-[11px] uppercase tracking-wider border border-indigo-100">
+                  Being fixed
                 </span>
               {% else %}
-                <span class="inline-block px-2.5 py-0.5 rounded bg-amber-100 text-amber-900 font-extrabold text-[10px] uppercase select-none">
-                  Pending
+                <span class="inline-flex px-3 py-1 rounded-lg bg-amber-50 text-amber-700 font-black text-[11px] uppercase tracking-wider border border-amber-100">
+                  Waiting
                 </span>
               {% endif %}
-              <span class="block text-[10px] text-slate-500 font-medium mt-1">
-                {{ r.created_at|date:"M d, H:i" }}
+              <span class="block text-[10px] text-slate-400 font-black mt-1 uppercase tracking-tighter">
+                {{ r.created_at|date:"M d" }}
               </span>
             </td>
 
-            <!-- Reported Descriptive Payload Column -->
-            <td class="px-5 py-4">
-              <div class="text-xs text-slate-800 leading-relaxed font-medium max-w-sm" title="{{ r.description }}">
-                {{ r.description|truncatechars:95 }}
+            <!-- Problem -->
+            <td class="px-6 py-5">
+              <div class="text-sm text-slate-700 leading-relaxed font-bold max-w-sm">
+                {{ r.description|truncatechars:100 }}
               </div>
             </td>
 
-            <!-- Resolution Summary Track Column -->
-            <td class="px-5 py-4">
+            <!-- Solution -->
+            <td class="px-6 py-5">
               {% if r.status == 'RESOLVED' %}
-                <div class="text-xs">
-                  <strong class="text-slate-900 font-bold block">Assigned: {{ r.fixed_by|default:"Internal Facility Dispatch" }}</strong>
-                  <span class="text-[10px] text-slate-500 block font-medium mt-0.5">Finalized: {{ r.resolved_at|date:"M d, Y - H:i" }}</span>
+                <div class="text-sm">
+                  <span class="text-slate-900 font-black block">{{ r.fixed_by|default:"Main Worker" }}</span>
+                  <span class="text-[11px] text-slate-500 block font-bold mt-0.5">Finished {{ r.resolved_at|date:"M d, Y" }}</span>
                 </div>
               {% else %}
-                <span class="text-xs text-slate-400 italic block">Awaiting physical implementation sign-off...</span>
+                <span class="text-sm text-slate-400 italic font-bold">Not fixed yet...</span>
               {% endif %}
             </td>
 
-            <!-- Direct Modification Column -->
-            <td class="px-5 py-4 text-right">
+            <!-- Action -->
+            <td class="px-6 py-5 text-right">
               <a href="{% url 'admin_update_maintenance' r.id %}" 
-                 class="inline-block px-3 py-1.5 bg-white border border-slate-300 text-slate-700 hover:text-white hover:bg-slate-800 rounded font-bold text-xs transition-colors shrink-0">
-                Update Row
+                 class="inline-flex px-5 py-2.5 bg-white border-2 border-slate-200 text-slate-900 hover:bg-slate-900 hover:text-white hover:border-slate-900 rounded-xl font-black text-sm transition-all shadow-xs">
+                Update
               </a>
             </td>
 
           </tr>
           {% empty %}
           <tr>
-            <td colspan="6" class="py-16 text-center bg-white">
-              <strong class="text-xs text-slate-600 block">No target facility reports matched configured query definitions.</strong>
-              <p class="text-xs text-slate-500 mt-0.5">Please reset active lookup strings or verify active module logs.</p>
+            <td colspan="6" class="py-24 text-center bg-white">
+              <div class="max-w-xs mx-auto">
+                <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100">
+                  <svg class="w-8 h-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                  </svg>
+                </div>
+                <strong class="text-lg font-black text-slate-900 block">No requests found</strong>
+                <p class="text-sm text-slate-500 mt-2 font-bold leading-relaxed">Try searching for something else or reset the filters.</p>
+              </div>
             </td>
           </tr>
           {% endfor %}
@@ -217,21 +224,21 @@
       </table>
     </div>
 
-    <!-- Paginator State Injector Section -->
+    <!-- Paginator -->
     {% if page_obj.paginator.num_pages > 1 %}
-    <div class="px-5 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
-      <div class="text-xs text-slate-600 font-medium">
-        Presenting indices <strong class="text-slate-800 font-bold">{{ page_obj.start_index }}</strong> through <strong class="text-slate-800 font-bold">{{ page_obj.end_index }}</strong> of <strong class="text-slate-800 font-bold">{{ page_obj.paginator.count }}</strong> complete request files
+    <div class="px-8 py-6 bg-white border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="text-sm text-slate-500 font-bold">
+        Showing <strong class="text-slate-900 font-black">{{ page_obj.start_index }}</strong> to <strong class="text-slate-900 font-black">{{ page_obj.end_index }}</strong> of <strong class="text-slate-900 font-black">{{ page_obj.paginator.count }}</strong> jobs
       </div>
 
-      <div class="flex items-center gap-1">
+      <div class="flex items-center gap-2">
         {% if page_obj.has_previous %}
           <a href="?page=1&q={{ q }}&status={{ status }}&priority={{ priority }}" 
-             class="px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
+             class="px-4 py-2 bg-white border-2 border-slate-200 rounded-xl text-sm font-black text-slate-700 hover:bg-slate-50 transition-all">
             First
           </a>
           <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&status={{ status }}&priority={{ priority }}" 
-             class="px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
+             class="px-4 py-2 bg-white border-2 border-slate-200 rounded-xl text-sm font-black text-slate-700 hover:bg-slate-50 transition-all">
             Prev
           </a>
         {% endif %}
@@ -239,21 +246,21 @@
         <div class="flex items-center gap-1 px-2">
           {% for num in page_obj.paginator.page_range %}
             {% if page_obj.number == num %}
-              <span class="px-3 py-1.5 rounded bg-slate-800 text-white text-xs font-extrabold select-none">{{ num }}</span>
+              <span class="px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-black select-none">{{ num }}</span>
             {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
               <a href="?page={{ num }}&q={{ q }}&status={{ status }}&priority={{ priority }}" 
-                 class="px-3 py-1.5 rounded bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-colors">{{ num }}</a>
+                 class="px-4 py-2 rounded-xl bg-white border-2 border-slate-100 text-slate-700 hover:bg-slate-50 text-sm font-black transition-all">{{ num }}</a>
             {% endif %}
           {% endfor %}
         </div>
 
         {% if page_obj.has_next %}
           <a href="?page={{ page_obj.next_page_number }}&q={{ q }}&status={{ status }}&priority={{ priority }}" 
-             class="px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
+             class="px-4 py-2 bg-white border-2 border-slate-200 rounded-xl text-sm font-black text-slate-700 hover:bg-slate-50 transition-all">
             Next
           </a>
           <a href="?page={{ page_obj.paginator.num_pages }}&q={{ q }}&status={{ status }}&priority={{ priority }}" 
-             class="px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors">
+             class="px-4 py-2 bg-white border-2 border-slate-200 rounded-xl text-sm font-black text-slate-700 hover:bg-slate-50 transition-all">
             Last
           </a>
         {% endif %}

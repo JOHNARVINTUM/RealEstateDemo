@@ -2,18 +2,19 @@
 {% load static %}
 {% load humanize %}
 
-{% block title %}Edit Profile: {{ tenant.full_name }} | Core Administration{% endblock %}
+{% block title %}Edit Profile: {{ tenant.full_name }} - RealEstate360+{% endblock %}
 
 {% block content %}
 <div class="tenant-edit-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12">
   
-  <!-- Navigation Breadcrumb -->
-  <nav class="flex items-center gap-2 text-sm font-bold text-slate-600">
-    <a href="{% url 'admin_tenants' %}" class="hover:text-slate-900 transition-colors">Tenants Registry</a>
-    <span class="text-slate-400">/</span>
-    <a href="{% url 'admin_tenant_detail' tenant.id %}" class="hover:text-slate-900 transition-colors">Portfolio Detail</a>
-    <span class="text-slate-400">/</span>
-    <span class="text-slate-900 font-extrabold">Modify Profile</span>
+  <!-- Navigation: Simple Back Button -->
+  <nav class="flex items-center">
+    <a href="{{ back_url|default:'/admin-portal/tenants/' }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
+      <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
+      </svg>
+      <span>Back</span>
+    </a>
   </nav>
 
   <div class="flex flex-col lg:flex-row gap-8 items-start">
@@ -22,9 +23,9 @@
     <div class="flex-1 w-full space-y-6">
       
       <!-- Studio Header -->
-      <header class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
-        <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">Edit Tenant Credentials</h1>
-        <p class="text-sm text-slate-700 mt-1 leading-relaxed">Update administrative fields, secure login descriptors, and access scopes for <strong class="text-slate-900">{{ tenant.full_name }}</strong>.</p>
+      <header class="bg-white border border-slate-200 rounded-xl p-8 shadow-xs">
+        <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 leading-tight">Edit Profile</h1>
+        <p class="text-slate-600 mt-3 text-xl font-medium leading-relaxed">Update the account information and personal details for <strong class="text-slate-900">{{ tenant.full_name }}</strong>.</p>
       </header>
 
       <!-- Main Consolidated Edit Form Card -->
@@ -33,30 +34,30 @@
         
         <!-- Section 1: Account Identification & Access Scope -->
         <div class="p-6 sm:p-8 space-y-5">
-          <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
-            <span class="flex items-center justify-center w-5 h-5 rounded-md bg-slate-100 text-slate-800 font-extrabold text-xs">1</span>
-            <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Identity & Access Scopes</h3>
+          <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
+            <span class="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-800 font-extrabold text-sm">1</span>
+            <h3 class="text-xl font-extrabold text-slate-900 tracking-tight">Account Info</h3>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label class="block text-xs font-bold text-slate-800 mb-1.5">Primary Email Address <span class="text-rose-600">*</span></label>
+              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Email Address <span class="text-rose-600">*</span></label>
               <input type="email" name="email" value="{{ form.email.value|default:'' }}" 
-                     class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none" required>
+                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none" required>
               {% if form.email.errors %}
-                <p class="text-xs font-bold text-rose-600 mt-1.5">{{ form.email.errors.0 }}</p>
+                <p class="text-sm font-bold text-rose-600 mt-2">{{ form.email.errors.0 }}</p>
               {% endif %}
             </div>
 
             <div>
-              <label class="block text-xs font-bold text-slate-800 mb-1.5">System Username <span class="text-rose-600">*</span></label>
+              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Username <span class="text-rose-600">*</span></label>
               <input type="text" name="username" value="{{ form.username.value|default:'' }}" 
-                     class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none" required>
+                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none" required>
             </div>
 
             <div>
-              <label class="block text-xs font-bold text-slate-800 mb-1.5">Account System Role</label>
-              <select name="role" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none cursor-pointer">
+              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Role</label>
+               <select name="role" class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none cursor-pointer">
                 {% for value, label in form.fields.role.choices %}
                   <option value="{{ value }}" {% if form.role.value == value %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
@@ -65,8 +66,8 @@
 
             <div class="flex items-center pt-2 sm:pt-6">
               <label class="inline-flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" name="is_active" class="w-4 h-4 rounded border-slate-300 text-slate-800 focus:ring-slate-500 cursor-pointer" {% if form.is_active.value %}checked{% endif %}>
-                <span class="text-xs font-extrabold text-slate-800 select-none">Grant Active System Access</span>
+                <input type="checkbox" name="is_active" class="w-5 h-5 rounded border-slate-300 text-slate-800 focus:ring-slate-500 cursor-pointer" {% if form.is_active.value %}checked{% endif %}>
+                <span class="text-sm font-extrabold text-slate-800 select-none uppercase tracking-wider">Active Account</span>
               </label>
             </div>
           </div>
@@ -74,28 +75,28 @@
 
         <!-- Section 2: Core Personal Details -->
         <div class="p-6 sm:p-8 space-y-5 bg-slate-50/30">
-          <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
-            <span class="flex items-center justify-center w-5 h-5 rounded-md bg-slate-100 text-slate-800 font-extrabold text-xs">2</span>
-            <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Core Personal Details</h3>
+          <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
+            <span class="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-800 font-extrabold text-sm">2</span>
+            <h3 class="text-xl font-extrabold text-slate-900 tracking-tight">Personal Info</h3>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label class="block text-xs font-bold text-slate-800 mb-1.5">First Name <span class="text-rose-600">*</span></label>
+              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">First Name <span class="text-rose-600">*</span></label>
               <input type="text" name="first_name" value="{{ form.first_name.value|default:'' }}" 
-                     class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none" required>
+                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none" required>
             </div>
 
             <div>
-              <label class="block text-xs font-bold text-slate-800 mb-1.5">Last Name <span class="text-rose-600">*</span></label>
+              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Last Name <span class="text-rose-600">*</span></label>
               <input type="text" name="last_name" value="{{ form.last_name.value|default:'' }}" 
-                     class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none" required>
+                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none" required>
             </div>
 
             <div class="md:col-span-2">
-              <label class="block text-xs font-bold text-slate-800 mb-1.5">Contact Number</label>
+              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Phone Number</label>
               <input type="text" name="contact_no" value="{{ form.contact_no.value|default:'' }}" 
-                     class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-400" 
+                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-400" 
                      placeholder="+63 9XX XXX XXXX">
             </div>
           </div>
@@ -103,27 +104,27 @@
 
         <!-- Section 3: Manual Authentication Protocols -->
         <div class="p-6 sm:p-8 space-y-5">
-          <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
-            <span class="flex items-center justify-center w-5 h-5 rounded-md bg-slate-100 text-slate-800 font-extrabold text-xs">3</span>
-            <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Manual Authentication Protocols</h3>
+          <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
+            <span class="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-800 font-extrabold text-sm">3</span>
+            <h3 class="text-xl font-extrabold text-slate-900 tracking-tight">Change Password</h3>
           </div>
 
-          <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-600 font-medium">
-            <strong>Note:</strong> Leave the fields below empty unless you are intentionally overriding this profile's standard password keys.
+          <div class="p-4 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600 font-medium leading-relaxed">
+            <strong>Note:</strong> Leave these blank if you don't want to change the password.
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label class="block text-xs font-bold text-slate-800 mb-1.5">New Password Override</label>
+              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">New Password</label>
               <input type="password" name="new_password" 
-                     class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-300" 
+                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-300" 
                      placeholder="••••••••">
             </div>
 
             <div>
-              <label class="block text-xs font-bold text-slate-800 mb-1.5">Confirm Password Override</label>
+              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Confirm Password</label>
               <input type="password" name="confirm_password" 
-                     class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-300" 
+                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-300" 
                      placeholder="••••••••">
             </div>
           </div>
@@ -131,28 +132,28 @@
 
         <!-- Section 4: Document Updating Integration -->
         <div class="p-6 sm:p-8 space-y-5 bg-slate-50/30">
-          <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
-            <span class="flex items-center justify-center w-5 h-5 rounded-md bg-slate-100 text-slate-800 font-extrabold text-xs">4</span>
-            <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Compliance Files Management</h3>
+          <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
+            <span class="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-800 font-extrabold text-sm">4</span>
+            <h3 class="text-xl font-extrabold text-slate-900 tracking-tight">Documents</h3>
           </div>
 
           <div class="space-y-6">
             <!-- Master Lease Instrument Update -->
             <div class="p-4 rounded-xl border border-slate-200 bg-white shadow-2xs space-y-3">
-              <span class="text-xs font-extrabold text-slate-800 block">A. Leasing Agreement Binary</span>
+              <span class="text-sm font-extrabold text-slate-800 block uppercase tracking-wider">Lease Agreement</span>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-[11px] font-bold text-slate-600 mb-1">Target Binary Replacement</label>
+                  <label class="block text-sm font-bold text-slate-600 mb-2 uppercase tracking-wider">Upload New File</label>
                   <input type="file" name="contract_file" 
-                         class="w-full text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-slate-300 file:text-xs file:font-bold file:bg-slate-50 file:text-slate-800 hover:file:bg-slate-100 transition-colors cursor-pointer">
-                  <p class="text-[11px] text-slate-500 mt-1 font-medium">
-                    Status: <strong class="text-slate-700">{% if tenant.contract_file %}Cached File Active{% else %}No File Present{% endif %}</strong>
+                         class="w-full text-base text-slate-700 file:mr-3 file:py-2 file:px-4 file:rounded-md file:border file:border-slate-300 file:text-sm file:font-bold file:bg-slate-50 file:text-slate-800 hover:file:bg-slate-100 transition-colors cursor-pointer">
+                  <p class="text-sm text-slate-500 mt-2 font-medium">
+                    Status: <strong class="text-slate-700">{% if tenant.contract_file %}File Uploaded{% else %}No File Yet{% endif %}</strong>
                   </p>
                 </div>
                 <div>
-                  <label class="block text-[11px] font-bold text-slate-600 mb-1">Instrument Descriptor</label>
+                  <label class="block text-sm font-bold text-slate-600 mb-2 uppercase tracking-wider">Description</label>
                   <textarea name="contract_description" rows="2" 
-                            class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-xs font-medium text-slate-900 outline-none resize-none placeholder:text-slate-400" 
+                            class="w-full px-4 py-3 bg-white border border-slate-300 rounded-md text-base font-medium text-slate-900 outline-none resize-none placeholder:text-slate-400" 
                             placeholder="Contract specifics or updates...">{{ form.contract_description.value|default:'' }}</textarea>
                 </div>
               </div>
@@ -160,21 +161,21 @@
 
             <!-- Identity Instrument Update -->
             <div class="p-4 rounded-xl border border-slate-200 bg-white shadow-2xs space-y-3">
-              <span class="text-xs font-extrabold text-slate-800 block">B. Verification Identity Binary</span>
+              <span class="text-sm font-extrabold text-slate-800 block uppercase tracking-wider">Valid ID</span>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-[11px] font-bold text-slate-600 mb-1">Target Binary Replacement</label>
+                  <label class="block text-sm font-bold text-slate-600 mb-2 uppercase tracking-wider">Upload New File</label>
                   <input type="file" name="valid_id_file" 
-                         class="w-full text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-slate-300 file:text-xs file:font-bold file:bg-slate-50 file:text-slate-800 hover:file:bg-slate-100 transition-colors cursor-pointer">
-                  <p class="text-[11px] text-slate-500 mt-1 font-medium">
-                    Status: <strong class="text-slate-700">{% if tenant.valid_id_file %}Cached File Active{% else %}No File Present{% endif %}</strong>
+                         class="w-full text-base text-slate-700 file:mr-3 file:py-2 file:px-4 file:rounded-md file:border file:border-slate-300 file:text-sm file:font-bold file:bg-slate-50 file:text-slate-800 hover:file:bg-slate-100 transition-colors cursor-pointer">
+                  <p class="text-sm text-slate-500 mt-2 font-medium">
+                    Status: <strong class="text-slate-700">{% if tenant.valid_id_file %}File Uploaded{% else %}No File Yet{% endif %}</strong>
                   </p>
                 </div>
                 <div>
-                  <label class="block text-[11px] font-bold text-slate-600 mb-1">Instrument Descriptor</label>
+                  <label class="block text-sm font-bold text-slate-600 mb-2 uppercase tracking-wider">Description</label>
                   <textarea name="valid_id_description" rows="2" 
-                            class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-xs font-medium text-slate-900 outline-none resize-none placeholder:text-slate-400" 
-                            placeholder="ID type description or expiration metrics...">{{ form.valid_id_description.value|default:'' }}</textarea>
+                            class="w-full px-4 py-3 bg-white border border-slate-300 rounded-md text-base font-medium text-slate-900 outline-none resize-none placeholder:text-slate-400" 
+                            placeholder="e.g. Driver's License, Passport...">{{ form.valid_id_description.value|default:'' }}</textarea>
                 </div>
               </div>
             </div>
@@ -183,11 +184,11 @@
 
         <!-- Form Submission Button Bar -->
         <div class="p-6 bg-slate-50 flex flex-col sm:flex-row items-center gap-3 justify-end">
-          <a href="{{ back_url|default:'/admin-portal/tenants/' }}" class="w-full sm:w-auto px-5 py-2.5 bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 rounded-lg font-bold text-sm transition-colors text-center shadow-xs">
-            Abort Modifications
+          <a href="{{ back_url|default:'/admin-portal/tenants/' }}" class="w-full sm:w-auto px-6 py-3 bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 rounded-lg font-bold text-base transition-colors text-center shadow-xs">
+            Cancel
           </a>
-          <button type="submit" class="w-full sm:w-auto px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-extrabold text-sm transition-colors text-center shadow-xs">
-            Commit Profile State
+          <button type="submit" class="w-full sm:w-auto px-8 py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-extrabold text-base transition-colors text-center shadow-xs">
+            Save Changes
           </button>
         </div>
 
@@ -200,24 +201,24 @@
       
       <!-- Account Overview Panel -->
       <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-3">
-        <span class="text-xs font-extrabold text-slate-800 uppercase tracking-wider block pb-2 border-b border-slate-100">
-          Account Overview
+        <span class="text-sm font-extrabold text-slate-800 uppercase tracking-wider block pb-3 border-b border-slate-100">
+          Account Status
         </span>
         
-        <div class="space-y-2 text-xs">
+        <div class="space-y-3 text-sm font-medium">
           <div class="flex justify-between items-center">
-            <span class="text-slate-500 font-medium">Access Permission</span>
-            <strong class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase {% if tenant.user.is_active %}bg-emerald-100 text-emerald-800{% else %}bg-rose-100 text-rose-800{% endif %}">
-              {% if tenant.user.is_active %}Active State{% else %}Suspended{% endif %}
+            <span class="text-slate-500">Status</span>
+            <strong class="px-2.5 py-1 rounded text-xs font-extrabold uppercase {% if tenant.user.is_active %}bg-emerald-100 text-emerald-800{% else %}bg-rose-100 text-rose-800{% endif %}">
+              {% if tenant.user.is_active %}Active{% else %}Suspended{% endif %}
             </strong>
           </div>
-          <div class="pt-1.5 border-t border-slate-100 flex justify-between items-center">
-            <span class="text-slate-500 font-medium">Identity Role</span>
-            <strong class="text-slate-900 font-bold">{{ tenant.user.get_role_display }}</strong>
+          <div class="pt-2 border-t border-slate-100 flex justify-between items-center">
+            <span class="text-slate-500">Role</span>
+            <strong class="text-slate-900 font-bold text-base">{{ tenant.user.get_role_display }}</strong>
           </div>
-          <div class="pt-1.5 border-t border-slate-100 flex justify-between items-center">
-            <span class="text-slate-500 font-medium">System Reference</span>
-            <strong class="text-slate-800 font-mono font-bold">#{{ tenant.id|stringformat:"04d" }}</strong>
+          <div class="pt-2 border-t border-slate-100 flex justify-between items-center">
+            <span class="text-slate-500">Tenant ID</span>
+            <strong class="text-slate-800 font-mono font-bold text-base">#{{ tenant.id|stringformat:"04d" }}</strong>
           </div>
         </div>
       </div>

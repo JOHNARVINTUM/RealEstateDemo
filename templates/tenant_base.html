@@ -3,10 +3,32 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'admin_portal/css/admin.css' %}">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Inter:wght@400;500;700;800&family=MuseoModerno:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
-  /* Practical & Authentic Tenant Portal Styling */
+  /* Premium & Accessible Tenant Portal Styling */
   
-  /* Form Field Styling */
+  :root {
+    --tenant-primary: #0f172a;
+    --tenant-bg: #f8fafc;
+    --tenant-card-bg: #ffffff;
+    --tenant-border: #e2e8f0;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    color: #0f172a;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Outfit', sans-serif;
+  }
+
+  .font-display {
+    font-family: 'MuseoModerno', sans-serif;
+  }
+  
+  /* Form Field Styling - Larger & Clearer */
   .tenant-form select,
   .tenant-form input[type="text"],
   .tenant-form input[type="email"],
@@ -15,14 +37,14 @@
   .tenant-form input[type="tel"],
   .tenant-form textarea {
     width: 100%;
-    border: 1px solid #cbd5e1;
-    border-radius: 0.5rem;
-    padding: 0.625rem 0.875rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 1rem;
+    padding: 1rem 1.25rem;
     background-color: #ffffff;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-    font-size: 0.9375rem;
+    transition: all 0.2s ease;
+    font-size: 1.125rem;
     color: #0f172a;
-    font-weight: 500;
+    font-weight: 600;
   }
   
   .tenant-form select:focus,
@@ -34,109 +56,94 @@
   .tenant-form textarea:focus {
     border-color: #0f172a;
     outline: none;
-    box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
+    box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.05);
   }
   
-  /* Form Labels */
+  /* Form Labels - Bold & Readable */
   .tenant-form label {
     display: block;
-    margin-bottom: 0.375rem;
-    color: #334155;
-    font-size: 0.875rem;
-    font-weight: 700;
+    margin-bottom: 0.75rem;
+    color: #0f172a;
+    font-size: 1.125rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
   }
   
-  /* Form Buttons */
+  /* Form Buttons - Premium Feel */
   .tenant-form button[type="submit"] {
     background-color: #0f172a;
     color: white;
     border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.5rem;
-    font-weight: 700;
-    font-size: 0.9375rem;
-    transition: background-color 0.15s ease;
+    padding: 1.25rem 2.5rem;
+    border-radius: 1.25rem;
+    font-weight: 900;
+    font-size: 1.25rem;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15);
   }
   
   .tenant-form button[type="submit"]:hover {
     background-color: #1e293b;
+    transform: translateY(-2px);
+    box-shadow: 0 20px 30px -10px rgba(15, 23, 42, 0.2);
+  }
+
+  .tenant-form button[type="submit"]:active {
+    transform: translateY(0);
   }
   
-  /* Messages */
+  /* Messages - High Contrast */
   .tenant-form .errorlist {
     list-style: none;
     padding: 0;
-    margin: 0.5rem 0 0 0;
+    margin: 1rem 0 0 0;
   }
   
   .tenant-form .errorlist li {
-    background-color: #fee2e2;
+    background-color: #fef2f2;
     color: #991b1b;
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.375rem;
-    font-size: 0.875rem;
-    font-weight: 600;
-    border-left: 3px solid #dc2626;
+    padding: 1rem 1.25rem;
+    border-radius: 1rem;
+    font-size: 1rem;
+    font-weight: 700;
+    border-left: 6px solid #dc2626;
   }
   
   .tenant-form .success-message {
     background-color: #f0fdf4;
     color: #166534;
-    padding: 0.75rem 1rem;
-    border-radius: 0.375rem;
-    font-size: 0.875rem;
-    font-weight: 600;
-    border-left: 3px solid #16a34a;
-    margin-bottom: 1rem;
+    padding: 1.25rem 1.5rem;
+    border-radius: 1rem;
+    font-size: 1.125rem;
+    font-weight: 700;
+    border-left: 6px solid #16a34a;
+    margin-bottom: 2rem;
   }
   
-  /* Practical Cards */
+  /* Premium Cards */
   .tenant-card {
     background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 0.75rem;
-    padding: 1.5rem;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+    border: 2px solid #f1f5f9;
+    border-radius: 2rem;
+    padding: 2.5rem;
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.04);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
   }
   
   /* Readable Status Badges */
   .status-badge {
     display: inline-flex;
     align-items: center;
-    padding: 0.25rem 0.625rem;
-    border-radius: 0.375rem;
-    font-size: 0.75rem;
-    font-weight: 700;
+    padding: 0.5rem 1rem;
+    border-radius: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.025em;
+    letter-spacing: 0.05em;
   }
   
-  .status-badge.success {
-    background-color: #f0fdf4;
-    color: #166534;
-    border: 1px solid #bbf7d0;
-  }
-  
-  .status-badge.warning {
-    background-color: #fefbeb;
-    color: #b45309;
-    border: 1px solid #fde68a;
-  }
-  
-  .status-badge.error {
-    background-color: #fef2f2;
-    color: #991b1b;
-    border: 1px solid #fecaca;
-  }
-  
-  .status-badge.info {
-    background-color: #f8fafc;
-    color: #334155;
-    border: 1px solid #e2e8f0;
-  }
-  
-  /* Sidebar */
+  /* Sidebar - Dark & Sleek */
   .tenant-sidebar {
     background-color: #0f172a;
     position: fixed !important;
@@ -145,40 +152,36 @@
     height: 100vh !important;
     z-index: 1000 !important;
     overflow-y: auto !important;
-    transition: width 0.3s ease !important;
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
   }
   
   .tenant-sidebar .nav-item {
-    transition: background-color 0.15s ease, color 0.15s ease;
+    transition: all 0.2s ease;
+    margin: 0.25rem 0;
   }
   
   .tenant-sidebar .nav-item:hover {
-    background-color: #1e293b;
+    background-color: rgba(255, 255, 255, 0.05);
     color: #ffffff;
   }
   
   .tenant-sidebar .nav-item.active {
-    background-color: #1e293b;
+    background-color: #3b82f6;
     color: #ffffff;
-    border-left: 4px solid #3b82f6;
-    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
   }
 
   /* Tenant Sidebar Collapse Behavior */
   body.tenant-collapsed .tenant-sidebar {
-    width: 88px !important;
+    width: 100px !important;
   }
 
   body.tenant-collapsed .tenant-sidebar .brand-text,
-  body.tenant-collapsed .tenant-sidebar .nav-text {
+  body.tenant-collapsed .tenant-sidebar .nav-text,
+  body.tenant-collapsed .tenant-sidebar .brand-name {
     opacity: 0;
     width: 0;
     display: none !important;
-  }
-
-  body.tenant-collapsed .tenant-sidebar .brand-container {
-    padding-left: 0.75rem;
-    padding-right: 0.75rem;
   }
 
   body.tenant-collapsed .tenant-sidebar .brand-header {
@@ -186,64 +189,56 @@
   }
 
   body.tenant-collapsed .tenant-sidebar .tenant-brand-logo {
-    width: 44px;
-    height: 44px;
-  }
-
-  body.tenant-collapsed .tenant-sidebar .brand-name {
-    display: none !important;
+    width: 56px;
+    height: 56px;
   }
 
   body.tenant-collapsed .tenant-sidebar .nav-item,
   body.tenant-collapsed .tenant-sidebar button {
     justify-content: center;
-    padding-left: 0;
-    padding-right: 0;
+    padding: 1rem 0;
   }
 
   body.tenant-collapsed #tenantToggleIcon {
     transform: rotate(180deg);
   }
-  
-  /* Override neon gradient utilities to map to readable dark text */
-  .text-gradient {
-    background: none !important;
-    -webkit-text-fill-color: initial !important;
-    color: #0f172a !important;
-  }
 
-  /* Main Workspace Offset for Fixed Sidebar */
+  /* Main Workspace Offset */
   main.flex-1 {
     margin-left: 288px !important;
-    transition: margin-left 0.3s ease !important;
+    transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
   }
 
   body.tenant-collapsed main.flex-1 {
-    margin-left: 88px !important;
+    margin-left: 100px !important;
   }
 
-  /* Loading State */
-  .loading {
-    opacity: 0.7;
-    pointer-events: none;
-  }
-
-  /* Tenant Workspace Background Pattern - Distinct from Admin Squares */
+  /* Background Pattern */
   .tenant-workspace-bg {
     background-color: #f8fafc;
-    background-image: radial-gradient(rgba(148, 163, 184, 0.22) 1px, transparent 1px);
-    background-size: 28px 28px;
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.03) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.03) 0px, transparent 50%);
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="min-h-screen flex tenant-workspace-bg font-['Poppins',_sans-serif]">
+<div class="min-h-screen flex tenant-workspace-bg">
 
   {% include "includes/tenant_sidebar.html" %}
 
-  <main class="flex-1 px-4 py-6 overflow-y-auto transition-all duration-300">
-    <div class="max-w-6xl mx-auto animate-fade-in">
+  <main class="flex-1 px-8 py-10 overflow-y-auto">
+    <div class="max-w-7xl mx-auto animate-fade-in">
       {% block tenant_content %}{% endblock %}
     </div>
   </main>
@@ -254,7 +249,6 @@
   document.addEventListener('DOMContentLoaded', function () {
     const toggleBtn = document.getElementById('tenantSidebarToggle');
     if (toggleBtn) {
-      // Load stored state
       if (localStorage.getItem('tenantSidebarCollapsed') === 'true') {
         document.body.classList.add('tenant-collapsed');
       }

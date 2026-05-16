@@ -5,283 +5,212 @@
 {% block title %}{{ title|default:"Unit Registration" }} | Real Estate Administration{% endblock %}
 
 {% block content %}
-<div class="unit-registration-studio max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
+<div class="unit-form-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6">
   
-  <!-- Navigation Breadcrumb Path -->
-  <nav class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-600">
-    <a href="{% url 'admin_units' %}" class="hover:text-slate-900 transition-colors">Portfolio Inventory</a>
-    <span class="text-slate-400">/</span>
-    <span class="text-slate-900">{{ title|default:"Add Unit" }}</span>
+  <!-- Navigation: Consistent Back Button -->
+  <nav class="flex items-center pt-4 sm:pt-6">
+    <a href="{{ back_url }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
+      <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
+      </svg>
+      <span>Back</span>
+    </a>
   </nav>
 
-  <div class="flex flex-col lg:flex-row gap-6 items-start">
+  <div class="flex flex-col gap-8 items-start">
     
-    <!-- Left Column: Primary Registration Studio Form Workspace -->
-    <div class="flex-1 space-y-6 w-full">
+    <!-- Main Workspace Column -->
+    <div class="flex-1 w-full space-y-6">
       
-      <!-- Studio Profile Scope -->
-      <header class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
-        <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">{{ title|default:"Unit Registration Studio" }}</h1>
-        <p class="text-xs text-slate-600 mt-1 leading-relaxed">
+      <!-- Studio Header -->
+      <header class="bg-white border border-slate-200 rounded-xl p-8 shadow-xs">
+        <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900">
+          {% if action == "Add" %}Add a New Room{% else %}Edit Room Details{% endif %}
+        </h1>
+        <p class="text-slate-600 mt-3 text-xl font-medium leading-relaxed">
           {% if action == "Add" %}
-            Register a new structural property asset record into the central operational ledger.
+            Add a new room to your property list and set its details.
           {% else %}
-            Update structural specifications, rental scaling metrics, and cinematic capture elements.
+            Update the room's details, price, and photos.
           {% endif %}
         </p>
       </header>
 
-      <form method="post" enctype="multipart/form-data" class="space-y-6">
+      <form method="post" enctype="multipart/form-data" class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden divide-y divide-slate-100">
         {% csrf_token %}
         
-        <!-- Section 1: Identity & Positioning -->
-        <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
-          <h3 class="text-xs font-extrabold uppercase tracking-wide text-slate-800 mb-4 pb-2 border-b border-slate-100">
-            1. Identity & Layout Positioning
-          </h3>
+        <!-- Section 1: Room Information -->
+        <div class="p-6 sm:p-8 space-y-5">
+          <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
+            <span class="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-800 font-extrabold text-sm">1</span>
+            <h3 class="text-xl font-extrabold text-slate-900 tracking-tight">Room Information</h3>
+          </div>
           
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            
-            <div class="space-y-1">
-              <label class="block text-xs font-bold text-slate-800">
-                Unit Number <span class="text-rose-600">*</span>
-              </label>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Room Number <span class="text-rose-600">*</span></label>
               <input type="text" name="number" value="{{ form.number.value|default:'' }}" 
-                     class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-slate-500 transition-all outline-none" 
+                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-400" 
                      placeholder="e.g. 101" required>
               {% if form.number.errors %}
-                <span class="block text-[11px] font-bold text-rose-600 mt-1">
-                  {{ form.number.errors.0 }}
-                </span>
+                <p class="text-sm font-bold text-rose-600 mt-2">{{ form.number.errors.0 }}</p>
               {% endif %}
             </div>
 
-            <div class="space-y-1">
-              <label class="block text-xs font-bold text-slate-800">
-                Structural Layout Type
-              </label>
-              <select name="unit_type" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-slate-500 transition-all outline-none cursor-pointer">
+            <div>
+              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Room Type</label>
+              <select name="unit_type" class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none cursor-pointer">
                 {% for value, label in form.fields.unit_type.choices %}
                   <option value="{{ value }}" {% if form.unit_type.value == value %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
               </select>
             </div>
 
-            <div class="space-y-1">
-              <label class="block text-xs font-bold text-slate-800">
-                Configured Floor Level <span class="text-rose-600">*</span>
-              </label>
+            <div>
+              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Floor Number <span class="text-rose-600">*</span></label>
               <input type="number" name="floor_level" value="{{ form.floor_level.value|default:'1' }}" 
-                     class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-slate-500 transition-all outline-none" required>
+                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none" required>
             </div>
-
           </div>
         </div>
 
-        <!-- Section 2: Pricing & Scale Parameters -->
-        <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
-          <h3 class="text-xs font-extrabold uppercase tracking-wide text-slate-800 mb-4 pb-2 border-b border-slate-100">
-            2. Pricing Scaling & Operational Track
-          </h3>
+        <!-- Section 2: Price & Availability -->
+        <div class="p-6 sm:p-8 space-y-5 bg-slate-50/30">
+          <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
+            <span class="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-800 font-extrabold text-sm">2</span>
+            <h3 class="text-xl font-extrabold text-slate-900 tracking-tight">Price & Availability</h3>
+          </div>
           
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            
-            <div class="space-y-1">
-              <label class="block text-xs font-bold text-slate-800">
-                Monthly Rent Rate (PHP) <span class="text-rose-600">*</span>
-              </label>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Monthly Rent (₱) <span class="text-rose-600">*</span></label>
               <input type="number" step="0.01" name="monthly_rent" value="{{ form.monthly_rent.value|default:'10000.00' }}" 
-                     class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-slate-500 transition-all outline-none" required>
-              <span class="block text-[10px] text-slate-500 font-medium">Standard baseline monthly settlement rate.</span>
+                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none" required>
+              <p class="text-xs text-slate-500 mt-2 font-medium">Monthly cost for the tenant.</p>
             </div>
 
-            <div class="space-y-1">
-              <label class="block text-xs font-bold text-slate-800">
-                Floor Area Size (SQM) <span class="text-rose-600">*</span>
-              </label>
+            <div>
+              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Room Size (sqm) <span class="text-rose-600">*</span></label>
               <input type="number" step="0.01" name="size_sqm" value="{{ form.size_sqm.value|default:'25.00' }}" 
-                     class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-slate-500 transition-all outline-none" required>
+                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none" required>
             </div>
 
-            <div class="space-y-1">
-              <label class="block text-xs font-bold text-slate-800">
-                Operational Status Track
-              </label>
-              <select name="status" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-slate-500 transition-all outline-none cursor-pointer">
+            <div>
+              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Current Status</label>
+              <select name="status" class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none cursor-pointer">
                 {% for value, label in form.fields.status.choices %}
                   <option value="{{ value }}" {% if form.status.value == value %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
               </select>
             </div>
-
           </div>
         </div>
 
-        <!-- Section 3: Descriptive Profile Features -->
-        <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
-          <h3 class="text-xs font-extrabold uppercase tracking-wide text-slate-800 mb-4 pb-2 border-b border-slate-100">
-            3. Descriptive Features & Highlight Parameters
-          </h3>
+        <!-- Section 3: Description & Amenities -->
+        <div class="p-6 sm:p-8 space-y-5">
+          <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
+            <span class="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-800 font-extrabold text-sm">3</span>
+            <h3 class="text-xl font-extrabold text-slate-900 tracking-tight">Description & Amenities</h3>
+          </div>
           
-          <div class="space-y-4">
-            
-            <div class="space-y-1">
-              <label class="block text-xs font-bold text-slate-800">
-                Structural Asset Description
-              </label>
-              <textarea name="description" rows="4" 
-                        class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 leading-relaxed focus:ring-2 focus:ring-slate-500 transition-all outline-none" 
-                        placeholder="Detail the spatial arrangement, natural lighting views, and specific utility integrations...">{{ form.description.value|default:'' }}</textarea>
+          <div class="space-y-5">
+            <div>
+              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">About this Room</label>
+              <textarea name="description" rows="5" 
+                        class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 leading-relaxed focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-400" 
+                        placeholder="Describe the room, views, and features...">{{ form.description.value|default:'' }}</textarea>
             </div>
 
-            <div class="space-y-1">
-              <label class="block text-xs font-bold text-slate-800">
-                Integrated Amenities (Comma-Separated Array Strings)
-              </label>
+            <div>
+              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Amenities (separated by commas)</label>
               <input type="text" name="amenities" value="{{ form.amenities.value|default:'' }}" 
-                     class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-slate-500 transition-all outline-none" 
-                     placeholder="e.g. Split-Type AC, Ultra-High Speed Fiber Optic Links, Private Lanai Block">
+                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-400" 
+                     placeholder="e.g. Air Conditioning, WiFi, Balcony">
             </div>
-
           </div>
         </div>
 
-        <!-- Section 4: Visual Asset Collection Management -->
-        <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
-          
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-4 pb-2 border-b border-slate-100">
-            <h3 class="text-xs font-extrabold uppercase tracking-wide text-slate-800">
-              4. Visual Collection Portfolio
-            </h3>
-            <span class="text-[10px] font-bold text-slate-500">
-              Capacity Constraints: Max 5 Asset Captures
-            </span>
+        <!-- Section 4: Photos -->
+        <div class="p-6 sm:p-8 space-y-6 bg-slate-50/30">
+          <div class="flex items-center justify-between gap-3 pb-3 border-b border-slate-100">
+            <div class="flex items-center gap-3">
+              <span class="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-800 font-extrabold text-sm">4</span>
+              <h3 class="text-xl font-extrabold text-slate-900 tracking-tight">Photos</h3>
+            </div>
+            <span class="text-xs font-bold text-slate-500 bg-white px-3 py-1 border border-slate-200 rounded-full">Max 5 photos</span>
           </div>
           
-          <div class="space-y-6">
-            
-            <!-- Standard Bounded Upload Selector Trigger -->
-            <div class="bg-slate-50 border border-slate-300 rounded-xl p-6 text-center hover:bg-slate-100 transition-colors cursor-pointer">
+          <div class="space-y-8">
+            <!-- Upload Box -->
+            <div class="bg-white border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:bg-slate-50 hover:border-slate-400 transition-all cursor-pointer group relative">
               <input type="file" name="images" id="images" multiple accept="image/*" class="sr-only" onchange="handleImagePreview(event)">
               <label for="images" class="cursor-pointer block">
-                <span class="inline-block px-4 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 mb-2 shadow-2xs select-none">
-                  Browse Local Captures Directory
-                </span>
-                <span class="block text-xs font-bold text-slate-900">Select structural photography media buffers</span>
-                <span class="block text-[10px] text-slate-500 mt-0.5">Verified captures increase portfolio scanning selection speeds considerably.</span>
+                <div class="w-16 h-16 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                  <svg class="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                  </svg>
+                </div>
+                <span class="inline-block px-5 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-800 mb-2 shadow-xs">Choose Photos</span>
+                <p class="text-sm font-medium text-slate-900">Select photos from your computer</p>
+                <p class="text-xs text-slate-500 mt-1 font-bold italic">Good photos help tenants decide faster!</p>
               </label>
             </div>
 
-            <!-- Upload Realtime Client Previews Array -->
-            <div id="imagePreviewContainer" class="hidden space-y-2">
-              <strong class="text-xs font-bold text-slate-700 block">Staged Upload Buffers</strong>
-              <div id="previewGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            <!-- Previews Grid -->
+            <div id="imagePreviewContainer" class="hidden space-y-4">
+              <strong class="text-sm font-extrabold text-slate-700 block uppercase tracking-wider">New Photos to Upload</strong>
+              <div id="previewGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-6"></div>
             </div>
 
-            <!-- Active Registered Repository Images Scope -->
+            <!-- Existing Images Grid -->
             {% if action == "Edit" and unit_images %}
-            <div class="space-y-2.5">
-              <strong class="text-xs font-bold text-slate-700 block">Registered Verified Repository Output</strong>
-              
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="existingImagesGrid">
+            <div class="space-y-4">
+              <strong class="text-sm font-extrabold text-slate-700 block uppercase tracking-wider">Current Room Photos</strong>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-6" id="existingImagesGrid">
                 {% for image in unit_images %}
-                  
-                  <!-- Saved Image Configuration Wrapper -->
-                  <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs relative flex flex-col justify-between h-56" data-image-id="{{ image.id }}">
-                    
-                    <div class="relative h-32 bg-slate-100">
-                      <img src="{{ image.image.url }}" alt="Asset Capture" class="w-full h-full object-cover">
-                      
-                      <!-- Featured Badge String -->
+                  <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs relative flex flex-col h-72" data-image-id="{{ image.id }}">
+                    <div class="relative h-44 bg-slate-100">
+                      <img src="{{ image.image.url }}" alt="Room Photo" class="w-full h-full object-cover">
                       {% if image.is_primary %}
-                        <span class="absolute top-2 left-2 px-2 py-0.5 bg-slate-800 text-white rounded text-[9px] font-bold select-none">
-                          Featured
-                        </span>
+                        <span class="absolute top-3 left-3 px-3 py-1 bg-slate-900 text-white rounded-md text-[10px] font-extrabold uppercase tracking-wider shadow-lg">Main Photo</span>
                       {% endif %}
-
-                      <!-- Direct Drop File Tag -->
                       <button type="button" onclick="removeExistingImage('{{ image.id }}')" 
-                              class="absolute top-2 right-2 px-2 py-1 bg-white/90 hover:bg-rose-50 text-rose-700 rounded text-[10px] font-bold border border-slate-200 transition-colors select-none" title="Drop File Record">
-                        Drop
+                              class="absolute top-3 right-3 p-2 bg-white/95 hover:bg-rose-600 hover:text-white text-rose-600 rounded-lg border border-slate-200 transition-all shadow-md" title="Delete Photo">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
                       </button>
                     </div>
-
-                    <!-- Options Subform Parameter Control -->
-                    <div class="p-2.5 bg-slate-50 border-t border-slate-100 space-y-2 mt-auto">
+                    <div class="p-4 bg-slate-50 border-t border-slate-100 space-y-3 mt-auto">
                       <input type="text" name="caption_{{ image.id }}" value="{{ image.caption }}" 
-                             placeholder="Asset metadata caption string..." 
-                             class="w-full bg-white border border-slate-300 rounded px-2 py-1 text-[11px] font-medium text-slate-800 outline-none">
-                      
-                      <label class="flex items-center gap-1.5 cursor-pointer select-none">
+                             placeholder="Add a caption..." 
+                             class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-slate-500 transition-all">
+                      <label class="flex items-center gap-2 cursor-pointer select-none">
                         <input type="radio" name="primary_image" value="{{ image.id }}" {% if image.is_primary %}checked{% endif %} 
-                               class="w-3 h-3 text-slate-800 border-slate-300 focus:ring-slate-500 cursor-pointer">
-                        <span class="text-[10px] font-bold text-slate-700">Set Primary Asset</span>
+                               class="w-4 h-4 text-slate-900 border-slate-300 focus:ring-slate-900 cursor-pointer">
+                        <span class="text-xs font-extrabold text-slate-700 uppercase tracking-tight">Set as Main Photo</span>
                       </label>
                     </div>
-
                   </div>
-
                 {% endfor %}
               </div>
-
             </div>
             {% endif %}
-
           </div>
-          
-          <!-- Storage Buffer Mapping for Dropped Files -->
           <input type="hidden" id="deletedImages" name="deleted_images" value="">
         </div>
 
-        <!-- Submission Triggers Group -->
-        <div class="pt-2 flex items-center gap-3">
-          <button type="submit" class="flex-1 py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-extrabold text-xs transition-colors text-center shadow-xs">
-            {% if action == "Add" %}
-              Finalize Registration Execution
-            {% else %}
-              Commit Structural Parameter Updates
-            {% endif %}
-          </button>
-          
-          <a href="{{ back_url }}" class="px-6 py-3 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg font-bold text-xs text-center transition-colors">
+        <!-- Form Submission Controls -->
+        <div class="p-6 bg-slate-50 flex flex-col sm:flex-row items-center gap-3 justify-end">
+          <a href="{{ back_url }}" class="w-full sm:w-auto px-6 py-3 bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 rounded-lg font-bold text-base transition-colors text-center shadow-xs">
             Cancel
           </a>
+          <button type="submit" class="w-full sm:w-auto px-8 py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-extrabold text-base transition-colors text-center shadow-xs">
+            {% if action == "Add" %}Save Room{% else %}Save Changes{% endif %}
+          </button>
         </div>
 
       </form>
-
-    </div>
-
-    <!-- Right Column: Context Guidelines Monitor -->
-    <div class="w-full lg:w-80 shrink-0 space-y-6">
-
-      <!-- Realtime Operations Telemetry -->
-      <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-xs space-y-3">
-        <strong class="text-xs text-slate-800 font-bold block pb-1.5 border-b border-slate-200">
-          Telemetry Update Stream
-        </strong>
-        
-        <div class="space-y-2.5 text-xs">
-          
-          <div>
-            <div class="flex items-center gap-1.5">
-              <span class="w-1.5 h-1.5 rounded-full bg-slate-800 shrink-0"></span>
-              <strong class="text-slate-900 font-bold">Unit 204 Updated</strong>
-            </div>
-            <span class="text-[10px] text-slate-500 block pl-3">Rate metrics synchronized successfully.</span>
-          </div>
-
-          <div>
-            <div class="flex items-center gap-1.5">
-              <span class="w-1.5 h-1.5 rounded-full bg-slate-800 shrink-0"></span>
-              <strong class="text-slate-900 font-bold">Media Upload Executed</strong>
-            </div>
-            <span class="text-[10px] text-slate-500 block pl-3">Penthouse assets cached onto database layer.</span>
-          </div>
-
-        </div>
-
-      </div>
 
     </div>
 
@@ -289,7 +218,7 @@
 
 </div>
 
-<!-- Realtime Client Array Preview and Drop Handler Sequence -->
+<!-- Scripts -->
 <script>
 let uploadedFiles = [];
 let deletedImageIds = [];
@@ -302,7 +231,7 @@ function handleImagePreview(event) {
   
   const existingCount = document.querySelectorAll('#existingImagesGrid [data-image-id]').length;
   if (existingCount + files.length > maxImages) {
-    alert(`Maximum 5 images allowed. You already have ${existingCount} images.`);
+    alert(`Maximum 5 photos allowed. You already have ${existingCount} photos.`);
     event.target.value = '';
     return;
   }
@@ -316,19 +245,21 @@ function handleImagePreview(event) {
       const reader = new FileReader();
       reader.onload = function(e) {
         const previewDiv = document.createElement('div');
-        previewDiv.className = 'bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs relative flex flex-col justify-between h-56';
+        previewDiv.className = 'bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs relative flex flex-col h-72';
         previewDiv.innerHTML = `
-          <div class="relative h-32 bg-slate-100">
-            <img src="\${e.target.result}" class="w-full h-full object-cover">
-            <button type="button" onclick="removePreview(\${index})" class="absolute top-2 right-2 px-2 py-1 bg-white/90 hover:bg-rose-50 text-rose-700 rounded text-[10px] font-bold border border-slate-200 transition-colors select-none" title="Drop Temporary Asset">
-              Drop
+          <div class="relative h-44 bg-slate-100">
+            <img src="${e.target.result}" class="w-full h-full object-cover">
+            <button type="button" onclick="removePreview(${index})" class="absolute top-3 right-3 p-2 bg-white/90 hover:bg-rose-600 hover:text-white text-rose-600 rounded-lg border border-slate-200 transition-all shadow-md">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+              </svg>
             </button>
           </div>
-          <div class="p-2.5 bg-slate-50 border-t border-slate-100 space-y-2 mt-auto">
-            <input type="text" name="new_caption_\${index}" placeholder="Add metadata caption..." class="w-full bg-white border border-slate-300 rounded px-2 py-1 text-[11px] font-medium text-slate-800 outline-none">
-            <label class="flex items-center gap-1.5 cursor-pointer select-none">
-              <input type="radio" name="primary_image" value="new_\${index}" class="w-3 h-3 text-slate-800 border-slate-300 focus:ring-slate-500 cursor-pointer">
-              <span class="text-[10px] font-bold text-slate-700">Set Primary Asset</span>
+          <div class="p-4 bg-slate-50 border-t border-slate-100 space-y-3 mt-auto">
+            <input type="text" name="new_caption_${index}" placeholder="Add a caption..." class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-slate-500 transition-all">
+            <label class="flex items-center gap-2 cursor-pointer select-none">
+              <input type="radio" name="primary_image" value="new_${index}" class="w-4 h-4 text-slate-900 border-slate-300 focus:ring-slate-900 cursor-pointer">
+              <span class="text-xs font-extrabold text-slate-700 uppercase tracking-tight">Set as Main Photo</span>
             </label>
           </div>
         `;
@@ -350,7 +281,7 @@ function removePreview(index) {
 }
 
 function removeExistingImage(imageId) {
-  const imageDiv = document.querySelector(`[data-image-id="\${imageId}"]`);
+  const imageDiv = document.querySelector(`[data-image-id="${imageId}"]`);
   if (imageDiv) {
     imageDiv.remove();
     deletedImageIds.push(imageId);
@@ -363,7 +294,7 @@ document.querySelector('form').addEventListener('submit', function(e) {
   const existingCount = document.querySelectorAll('#existingImagesGrid [data-image-id]').length;
   if (existingCount + (fileInput?.files?.length || 0) > 5) {
     e.preventDefault();
-    alert('Maximum 5 images allowed.');
+    alert('Maximum 5 photos allowed.');
     return;
   }
   

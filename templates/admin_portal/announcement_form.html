@@ -3,75 +3,78 @@
 {% block title %}{{ title }} | Real Estate Administration{% endblock %}
 
 {% block content %}
-<div class="announcement-form-studio max-w-5xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
+<div class="announcement-form-studio max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6 py-6 sm:py-8">
   
-  <!-- Navigation Breadcrumb Path -->
-  <nav class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-600">
-    <a href="{% url 'admin_announcements' %}" class="hover:text-slate-900 transition-colors">Broadcast Center</a>
-    <span class="text-slate-400">/</span>
-    <span class="text-slate-900">{{ title }}</span>
+  <!-- Navigation: Consistent Back Button -->
+  <nav class="flex items-center">
+    <a href="{% url 'admin_announcements' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
+      <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
+      </svg>
+      <span>Back</span>
+    </a>
   </nav>
 
-  <div class="flex flex-col lg:flex-row gap-6">
+  <div class="flex flex-col lg:flex-row gap-8 items-start">
     
-    <!-- Left Column: Primary Document Editor Workspace -->
-    <div class="flex-1">
-      <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
+    <!-- Column: Primary Editor -->
+    <div class="flex-1 w-full max-w-4xl mx-auto">
+      <div class="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
         
-        <!-- Document Title Scope -->
-        <header class="mb-6 pb-4 border-b border-slate-200">
-          <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">{{ title }}</h1>
-          <p class="text-xs text-slate-600 mt-1 leading-relaxed">Compose communication strings to target occupants. Provide explicit contextual parameters.</p>
+        <!-- Header -->
+        <header class="mb-8 pb-6 border-b border-slate-100">
+          <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900">{{ title }}</h1>
+          <p class="text-xl text-slate-600 mt-3 leading-relaxed font-medium">Write a message or update for all your tenants to see.</p>
         </header>
 
-        <form method="post" class="space-y-5">
+        <form method="post" class="space-y-6">
           {% csrf_token %}
           
-          <!-- Broadcast Title Parameter Input -->
-          <div class="space-y-1.5">
-            <label class="block text-xs font-bold text-slate-800">
-              Broadcast Title
+          <!-- Title -->
+          <div class="space-y-2">
+            <label class="block text-sm font-black text-slate-800 uppercase tracking-widest">
+              Announcement Title
             </label>
             <input type="text" name="title" value="{{ form.title.value|default:'' }}" 
-                   class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm font-bold text-slate-900 focus:ring-2 focus:ring-slate-500 transition-all outline-none"
-                   placeholder="e.g. Scheduled Facility Inspection Parameters">
+                   class="w-full px-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-xl text-lg font-bold text-slate-900 focus:bg-white focus:border-slate-900 transition-all outline-none"
+                   placeholder="e.g. Scheduled Maintenance for Monday">
             {% if form.title.errors %}
-              <span class="block text-[11px] font-bold text-rose-600 mt-1">
+              <span class="block text-sm font-bold text-rose-600 mt-1">
                 {{ form.title.errors.0 }}
               </span>
             {% endif %}
           </div>
 
-          <!-- Message Body Textarea Block -->
-          <div class="space-y-1.5">
-            <label class="block text-xs font-bold text-slate-800">
-              Message Body Payload
+          <!-- Body -->
+          <div class="space-y-2">
+            <label class="block text-sm font-black text-slate-800 uppercase tracking-widest">
+              Message
             </label>
-            <textarea name="body" rows="8" 
-                      class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-800 leading-relaxed focus:ring-2 focus:ring-slate-500 transition-all outline-none"
-                      placeholder="Type complete detailed bulletin payload parameters here...">{{ form.body.value|default:'' }}</textarea>
+            <textarea name="body" rows="10" 
+                      class="w-full px-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-xl text-lg font-medium text-slate-800 leading-relaxed focus:bg-white focus:border-slate-900 transition-all outline-none"
+                      placeholder="Type your message here...">{{ form.body.value|default:'' }}</textarea>
             {% if form.body.errors %}
-              <span class="block text-[11px] font-bold text-rose-600 mt-1">
+              <span class="block text-sm font-bold text-rose-600 mt-1">
                 {{ form.body.errors.0 }}
               </span>
             {% endif %}
           </div>
 
-          <!-- Activation Toggle Boolean Control -->
-          <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center gap-2.5">
+          <!-- Toggle -->
+          <div class="p-6 bg-slate-50 border-2 border-slate-100 rounded-2xl flex items-center gap-4 group cursor-pointer">
             <input type="checkbox" name="is_active" id="id_is_active" {% if form.is_active.value %}checked{% endif %} 
-                   class="w-4 h-4 rounded border-slate-300 text-slate-800 focus:ring-slate-500 cursor-pointer">
-            <label for="id_is_active" class="text-xs font-bold text-slate-800 cursor-pointer select-none">
-              Make this broadcast viewable instantly upon submission validation
+                   class="w-6 h-6 rounded-lg border-2 border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer transition-all">
+            <label for="id_is_active" class="text-base font-black text-slate-800 cursor-pointer select-none group-hover:text-slate-900">
+              Post this announcement immediately
             </label>
           </div>
 
-          <!-- Form Confirmation Actions Strip -->
-          <div class="pt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <button type="submit" class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-extrabold text-xs transition-colors text-center shadow-xs">
-              {% if ann %}Edit Announcement{% else %}Make Announcement{% endif %}
+          <!-- Actions -->
+          <div class="pt-6 flex flex-col sm:flex-row items-center gap-4">
+            <button type="submit" class="w-full sm:flex-1 py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-black text-lg transition-all shadow-md active:scale-95 text-center">
+              {% if ann %}Update Announcement{% else %}Post Announcement{% endif %}
             </button>
-            <a href="{% url 'admin_announcements' %}" class="px-5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg font-bold text-xs text-center transition-colors">
+            <a href="{% url 'admin_announcements' %}" class="w-full sm:w-auto px-8 py-4 bg-white border-2 border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl font-black text-lg text-center transition-all">
               Cancel
             </a>
           </div>
@@ -79,63 +82,6 @@
         </form>
 
       </div>
-    </div>
-
-    <!-- Right Column: Recent Activity Log Monitor -->
-    <div class="w-full lg:w-80 shrink-0 space-y-6">
-      
-      <!-- Stream Preview Monitor Card -->
-      <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
-        <h3 class="text-xs font-extrabold uppercase tracking-wide text-slate-800 mb-4 pb-2 border-b border-slate-100">
-          Recent Broadcasts Stream
-        </h3>
-        
-        <div class="space-y-4">
-          {% for item in recent_items %}
-          <div class="text-xs">
-            <div class="flex justify-between items-center mb-0.5">
-              <span class="text-[10px] font-bold text-slate-500">
-                {{ item.created_at|date:"M d, Y" }}
-              </span>
-              {% if item.is_active %}
-                <span class="inline-block w-1.5 h-1.5 rounded-full bg-blue-600" title="Active on Stream"></span>
-              {% else %}
-                <span class="inline-block w-1.5 h-1.5 rounded-full bg-slate-300" title="Draft State"></span>
-              {% endif %}
-            </div>
-            
-            <strong class="text-slate-900 font-bold block truncate" title="{{ item.title }}">
-              {{ item.title }}
-            </strong>
-            
-            <p class="text-[11px] text-slate-600 line-clamp-2 mt-0.5 font-medium leading-relaxed" title="{{ item.body }}">
-              {{ item.body|truncatechars:60 }}
-            </p>
-          </div>
-          
-          {% if not forloop.last %}
-            <div class="h-px bg-slate-100 w-full my-2"></div>
-          {% endif %}
-          
-          {% empty %}
-          <span class="text-xs text-slate-400 italic block">No secondary active histories present.</span>
-          {% endfor %}
-        </div>
-
-      </div>
-      
-      <!-- Embedded Historical Metadata Node -->
-      {% if ann %}
-      <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-xs">
-        <strong class="text-xs text-slate-800 font-bold block mb-1">
-          Creation Profile Log
-        </strong>
-        <p class="text-xs text-slate-600 leading-relaxed font-medium">
-          This bulletin item was instantiated natively on <strong class="text-slate-900 font-bold">{{ ann.created_at|date:"F d, Y" }}</strong>.
-        </p>
-      </div>
-      {% endif %}
-
     </div>
 
   </div>

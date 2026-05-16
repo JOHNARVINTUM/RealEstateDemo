@@ -7,8 +7,8 @@
   
   <!-- Studio Top Title Block -->
   <header class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
-    <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">Water Management Administration</h1>
-    <p class="text-sm text-slate-700 mt-1 leading-relaxed">Monitor property utility consumption sums, update base cubic meter rates, and compile recurring sub-meter logs.</p>
+    <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">Water Usage</h1>
+    <p class="text-sm text-slate-700 mt-1 leading-relaxed">Track how much water units use, set the price per cubic meter, and record meter readings.</p>
   </header>
 
   <!-- Summary Metric Overview Cards (Consistent Iconless Layout) -->
@@ -17,7 +17,7 @@
     <!-- Total Units -->
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-blue-600 flex flex-col justify-between">
       <div>
-        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Assigned Property Units</span>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Units with Water</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ total_units }}</div>
       </div>
       <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
@@ -28,7 +28,7 @@
     <!-- Completed Submissions -->
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-emerald-600 flex flex-col justify-between">
       <div>
-        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Completed Records</span>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Readings Added</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ filled_count }}</div>
       </div>
       <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
@@ -39,7 +39,7 @@
     <!-- Missing Submissions -->
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-rose-600 flex flex-col justify-between">
       <div>
-        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Missing Records</span>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Still Missing</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ missing_count }}</div>
       </div>
       <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
@@ -50,7 +50,7 @@
     <!-- Active Base Rate -->
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-indigo-600 flex flex-col justify-between">
       <div>
-        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Base Rate / m³</span>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Price per m³</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
           {% if current_rate %}₱{{ current_rate }}{% else %}<span class="text-slate-400 font-bold text-base">Unassigned</span>{% endif %}
         </div>
@@ -71,8 +71,8 @@
       <!-- Water Rate Settings Box -->
       <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-4">
         <div class="pb-3 border-b border-slate-100">
-          <h2 class="text-base font-extrabold text-slate-900 tracking-tight">Water Rate Parameter</h2>
-          <p class="text-xs text-slate-600 mt-0.5">Establish billing constant for dynamic evaluation</p>
+          <h2 class="text-base font-extrabold text-slate-900 tracking-tight">Water Price</h2>
+          <p class="text-xs text-slate-600 mt-0.5">Set the price for water usage</p>
         </div>
 
         <form method="post" action="{% url 'admin_water_rate' %}" class="space-y-4">
@@ -83,7 +83,7 @@
           </div>
           
           <div>
-            <label class="block text-xs font-bold text-slate-800 mb-1">Valuation Constant (₱ / m³) <span class="text-rose-600">*</span></label>
+            <label class="block text-xs font-bold text-slate-800 mb-1">Price (₱ per m³) <span class="text-rose-600">*</span></label>
             <div class="relative">
               <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">₱</span>
               <input type="number" name="rate_per_cu_m" class="w-full bg-white border border-slate-300 rounded-lg pl-7 pr-3 py-2 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-slate-500 outline-none" step="0.01" min="0" value="{{ current_rate|default:'45.00' }}" required>
@@ -96,7 +96,7 @@
           </div>
           
           <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-extrabold py-2.5 rounded-lg text-sm transition-colors text-center shadow-xs">
-            Commit Rate Adjustment
+            Save Price
           </button>
         </form>
       </div>
@@ -145,8 +145,8 @@
       <div class="bg-rose-50 border border-rose-200 rounded-xl p-4 flex items-start gap-3">
         <span class="w-6 h-6 rounded bg-rose-100 text-rose-800 font-extrabold flex items-center justify-center shrink-0 text-xs">!</span>
         <div class="space-y-0.5">
-          <strong class="text-sm font-extrabold text-rose-900 block">Unassigned Utility Rate Constant</strong>
-          <p class="text-xs text-rose-700 leading-relaxed">Please instantiate an absolute base valuation parameter in the settings panel prior to processing unit sub-meter records.</p>
+          <strong class="text-sm font-extrabold text-rose-900 block">Water Price Not Set</strong>
+          <p class="text-xs text-rose-700 leading-relaxed">Please set the water price in the settings on the left before adding readings.</p>
         </div>
       </div>
       {% endif %}
@@ -184,12 +184,12 @@
             <table class="w-full text-left border-collapse">
               <thead>
                 <tr class="bg-slate-50 border-b border-slate-200">
-                  <th class="px-5 py-3 text-xs font-bold text-slate-700">Property & Contract Identity</th>
-                  <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Previous Base (m³)</th>
-                  <th class="px-5 py-3 text-xs font-bold text-slate-700">Logged Value (m³)</th>
-                  <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Consumed Sum</th>
-                  <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Projected Value</th>
-                  <th class="px-5 py-3 text-xs font-bold text-slate-700 text-center">State Status</th>
+                  <th class="px-5 py-3 text-xs font-bold text-slate-700">Tenant & Room</th>
+                  <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Last Reading (m³)</th>
+                  <th class="px-5 py-3 text-xs font-bold text-slate-700">Current Reading (m³)</th>
+                  <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Usage</th>
+                  <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Total Price</th>
+                  <th class="px-5 py-3 text-xs font-bold text-slate-700 text-center">Status</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-200 text-sm">
@@ -276,7 +276,7 @@
               Consumptions scale automatically relative to the currently active valuation baseline factor.
             </span>
             <button type="submit" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white font-extrabold px-6 py-2.5 rounded-lg text-sm transition-colors text-center shadow-xs shrink-0" {% if not current_rate %}disabled{% endif %}>
-              Compile Logs & Trigger Ledger Integration
+              Save & Create Bills
             </button>
           </div>
 

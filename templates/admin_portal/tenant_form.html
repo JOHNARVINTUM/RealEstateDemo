@@ -7,11 +7,14 @@
 {% block content %}
 <div class="tenant-form-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12">
   
-  <!-- Navigation Breadcrumb -->
-  <nav class="flex items-center gap-2 text-sm font-bold text-slate-600">
-    <a href="{% url 'admin_tenants' %}" class="hover:text-slate-900 transition-colors">Tenants Registry</a>
-    <span class="text-slate-400">/</span>
-    <span class="text-slate-900 font-extrabold">{{ title|default:"Add Tenant" }}</span>
+  <!-- Navigation: Simple Back Button -->
+  <nav class="flex items-center">
+    <a href="{{ back_url|default:'/admin-portal/tenants/' }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
+      <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
+      </svg>
+      <span>Back</span>
+    </a>
   </nav>
 
   <div class="flex flex-col lg:flex-row gap-8 items-start">
@@ -20,9 +23,9 @@
     <div class="flex-1 w-full space-y-6">
       
       <!-- Studio Header -->
-      <header class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
-        <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900">{{ title|default:"Tenant Registration Studio" }}</h1>
-        <p class="text-sm text-slate-700 mt-1 leading-relaxed">Fill in the prospective tenant credentials below. Initial compliance records and access keys will be instantiated automatically.</p>
+      <header class="bg-white border border-slate-200 rounded-xl p-8 shadow-xs">
+        <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900">{{ title|default:"Add New Tenant" }}</h1>
+        <p class="text-slate-600 mt-3 text-xl font-medium leading-relaxed">Enter the details for the new tenant below. Account access will be set up automatically.</p>
       </header>
 
       <!-- Main Unified Form Card -->
@@ -31,29 +34,29 @@
         
         <!-- Section 1: Identity & Personal Details -->
         <div class="p-6 sm:p-8 space-y-5">
-          <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
-            <span class="flex items-center justify-center w-5 h-5 rounded-md bg-slate-100 text-slate-800 font-extrabold text-xs">1</span>
-            <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Identity Parameters</h3>
+          <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
+            <span class="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-800 font-extrabold text-sm">1</span>
+            <h3 class="text-xl font-extrabold text-slate-900 tracking-tight">Identity</h3>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label class="block text-xs font-bold text-slate-800 mb-1.5">First Name <span class="text-rose-600">*</span></label>
+              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">First Name <span class="text-rose-600">*</span></label>
               <input type="text" name="first_name" value="{{ form.first_name.value|default:'' }}" 
-                     class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-400" 
+                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-400" 
                      placeholder="e.g. Alice" required>
               {% if form.first_name.errors %}
-                <p class="text-xs font-bold text-rose-600 mt-1.5">{{ form.first_name.errors.0 }}</p>
+                <p class="text-sm font-bold text-rose-600 mt-2">{{ form.first_name.errors.0 }}</p>
               {% endif %}
             </div>
 
             <div>
-              <label class="block text-xs font-bold text-slate-800 mb-1.5">Last Name <span class="text-rose-600">*</span></label>
+              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Last Name <span class="text-rose-600">*</span></label>
               <input type="text" name="last_name" value="{{ form.last_name.value|default:'' }}" 
-                     class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-400" 
+                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-400" 
                      placeholder="e.g. Brown" required>
               {% if form.last_name.errors %}
-                <p class="text-xs font-bold text-rose-600 mt-1.5">{{ form.last_name.errors.0 }}</p>
+                <p class="text-sm font-bold text-rose-600 mt-2">{{ form.last_name.errors.0 }}</p>
               {% endif %}
             </div>
           </div>
@@ -61,78 +64,78 @@
 
         <!-- Section 2: Contact & Authentication Credentials -->
         <div class="p-6 sm:p-8 space-y-5 bg-slate-50/30">
-          <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
-            <span class="flex items-center justify-center w-5 h-5 rounded-md bg-slate-100 text-slate-800 font-extrabold text-xs">2</span>
-            <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Contact & Access Keys</h3>
+          <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
+            <span class="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-800 font-extrabold text-sm">2</span>
+            <h3 class="text-xl font-extrabold text-slate-900 tracking-tight">Contact Information</h3>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label class="block text-xs font-bold text-slate-800 mb-1.5">Email Address (Primary Login) <span class="text-rose-600">*</span></label>
+              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Email <span class="text-rose-600">*</span></label>
               <input type="email" name="email" value="{{ form.email.value|default:'' }}" 
-                     class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-400" 
+                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-400" 
                      placeholder="e.g. alice@example.com" required>
               {% if form.email.errors %}
-                <p class="text-xs font-bold text-rose-600 mt-1.5">{{ form.email.errors.0 }}</p>
+                <p class="text-sm font-bold text-rose-600 mt-2">{{ form.email.errors.0 }}</p>
               {% endif %}
-              <p class="text-xs text-slate-500 mt-1.5 font-medium">Instantiates base role mapping and serves telemetry alert dispatch.</p>
+              <p class="text-xs text-slate-500 mt-2 font-medium">This will be used for their login.</p>
             </div>
 
             <div>
-              <label class="block text-xs font-bold text-slate-800 mb-1.5">Mobile Number</label>
+              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Phone Number</label>
               <input type="text" name="contact_no" value="{{ form.contact_no.value|default:'' }}" 
-                     class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-400" 
+                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-400" 
                      placeholder="e.g. 09123456789">
               {% if form.contact_no.errors %}
-                <p class="text-xs font-bold text-rose-600 mt-1.5">{{ form.contact_no.errors.0 }}</p>
+                <p class="text-sm font-bold text-rose-600 mt-2">{{ form.contact_no.errors.0 }}</p>
               {% endif %}
-              <p class="text-xs text-slate-500 mt-1.5 font-medium">Optional direct telephonic relay.</p>
+              <p class="text-xs text-slate-500 mt-2 font-medium">Optional.</p>
             </div>
           </div>
         </div>
 
-        <!-- Section 3: Document Vault Uploads -->
+        <!-- Section 3: Documents -->
         <div class="p-6 sm:p-8 space-y-6">
-          <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
-            <span class="flex items-center justify-center w-5 h-5 rounded-md bg-slate-100 text-slate-800 font-extrabold text-xs">3</span>
-            <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Compliance Document Attachments</h3>
+          <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
+            <span class="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-800 font-extrabold text-sm">3</span>
+            <h3 class="text-xl font-extrabold text-slate-900 tracking-tight">Documents</h3>
           </div>
 
           <div class="space-y-5">
             <!-- Lease Contract Attachment -->
-            <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-4">
-              <span class="text-xs font-extrabold text-slate-800 block">A. Original Lease Agreement File</span>
+            <div class="p-5 rounded-xl border border-slate-200 bg-white shadow-2xs space-y-4">
+              <span class="text-sm font-extrabold text-slate-800 block uppercase tracking-wider">Lease Agreement</span>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-[11px] font-bold text-slate-600 mb-1">Target Binary Upload</label>
+                  <label class="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">Upload File</label>
                   <input type="file" name="contract_file" 
-                         class="w-full text-xs text-slate-700 file:mr-3 file:py-2 file:px-3 file:rounded-md file:border file:border-slate-300 file:text-xs file:font-bold file:bg-white file:text-slate-800 hover:file:bg-slate-50 transition-colors cursor-pointer">
-                  <p class="text-[11px] text-slate-500 mt-1">Accepts standard PDF, JPG, or PNG formats.</p>
+                         class="w-full text-base text-slate-700 file:mr-3 file:py-2 file:px-4 file:rounded-md file:border file:border-slate-300 file:text-sm file:font-bold file:bg-slate-50 file:text-slate-800 hover:file:bg-slate-100 transition-colors cursor-pointer">
+                  <p class="text-xs text-slate-500 mt-2 font-medium">Accepts PDF, JPG, or PNG.</p>
                 </div>
                 <div>
-                  <label class="block text-[11px] font-bold text-slate-600 mb-1">Attachment Descriptor</label>
+                  <label class="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">Description</label>
                   <input type="text" name="contract_description" 
-                         class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-xs font-medium text-slate-900 outline-none" 
-                         placeholder="e.g. Master Leasing Instrument">
+                         class="w-full px-4 py-3 bg-white border border-slate-300 rounded-md text-base font-medium text-slate-900 outline-none" 
+                         placeholder="e.g. Contract, Agreement">
                 </div>
               </div>
             </div>
 
             <!-- Valid Identification Upload -->
-            <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-4">
-              <span class="text-xs font-extrabold text-slate-800 block">B. Valid Identity Proof</span>
+            <div class="p-5 rounded-xl border border-slate-200 bg-white shadow-2xs space-y-4">
+              <span class="text-sm font-extrabold text-slate-800 block uppercase tracking-wider">Valid ID</span>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-[11px] font-bold text-slate-600 mb-1">Target Binary Upload</label>
+                  <label class="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">Upload File</label>
                   <input type="file" name="valid_id_file" 
-                         class="w-full text-xs text-slate-700 file:mr-3 file:py-2 file:px-3 file:rounded-md file:border file:border-slate-300 file:text-xs file:font-bold file:bg-white file:text-slate-800 hover:file:bg-slate-50 transition-colors cursor-pointer">
-                  <p class="text-[11px] text-slate-500 mt-1">Clear reproduction of Government ID.</p>
+                         class="w-full text-base text-slate-700 file:mr-3 file:py-2 file:px-4 file:rounded-md file:border file:border-slate-300 file:text-sm file:font-bold file:bg-slate-50 file:text-slate-800 hover:file:bg-slate-100 transition-colors cursor-pointer">
+                  <p class="text-xs text-slate-500 mt-2 font-medium">Clear photo of government ID.</p>
                 </div>
                 <div>
-                  <label class="block text-[11px] font-bold text-slate-600 mb-1">Attachment Descriptor</label>
+                  <label class="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">Description</label>
                   <input type="text" name="valid_id_description" 
-                         class="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-xs font-medium text-slate-900 outline-none" 
-                         placeholder="e.g. Sovereign Biometric Identity">
+                         class="w-full px-4 py-3 bg-white border border-slate-300 rounded-md text-base font-medium text-slate-900 outline-none" 
+                         placeholder="e.g. Driver's License">
                 </div>
               </div>
             </div>
@@ -141,11 +144,11 @@
 
         <!-- Form Submission Controls -->
         <div class="p-6 bg-slate-50 flex flex-col sm:flex-row items-center gap-3 justify-end">
-          <a href="{{ back_url|default:'/admin-portal/tenants/' }}" class="w-full sm:w-auto px-5 py-2.5 bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 rounded-lg font-bold text-sm transition-colors text-center shadow-xs">
-            Abort Intake
+          <a href="{{ back_url|default:'/admin-portal/tenants/' }}" class="w-full sm:w-auto px-6 py-3 bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 rounded-lg font-bold text-base transition-colors text-center shadow-xs">
+            Cancel
           </a>
-          <button type="submit" class="w-full sm:w-auto px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-extrabold text-sm transition-colors text-center shadow-xs">
-            Instantiate Record
+          <button type="submit" class="w-full sm:w-auto px-8 py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-extrabold text-base transition-colors text-center shadow-xs">
+            Add Tenant
           </button>
         </div>
 
@@ -153,52 +156,9 @@
 
     </div>
 
-    <!-- Right Side Diagnostic Column -->
-    <div class="w-full lg:w-[340px] space-y-6 shrink-0">
-      
-      <!-- Recently Onboarded Panel -->
-      <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
-        <h3 class="text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100 flex items-center gap-2">
-          <span>●</span> Registry Feed Snapshot
-        </h3>
-        
-        <div class="space-y-4">
-          {% for tenant in recent_tenants %}
-            <div class="text-xs">
-              <div class="flex justify-between items-center text-slate-500 mb-0.5 font-semibold">
-                <span>Ref: #{{ tenant.id }}</span>
-                <span class="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 font-bold">Verified</span>
-              </div>
-              <div class="font-extrabold text-slate-900">{{ tenant.first_name }} {{ tenant.last_name }}</div>
-              <div class="text-slate-600 truncate mt-0.5">{{ tenant.user.email }}</div>
-            </div>
-            {% if not forloop.last %}
-              <div class="h-px bg-slate-100 w-full my-2"></div>
-            {% endif %}
-          {% empty %}
-            <p class="text-xs text-slate-500 font-medium py-3 text-center">No cached additions detected.</p>
-          {% endfor %}
-        </div>
-      </div>
+    <!-- Right Column removed per user request (Registry Feed Snapshot and Storage Mapping) -->
 
-      <!-- Capacity Diagnostic Panel -->
-      <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-3">
-        <span class="text-xs font-extrabold text-slate-800 uppercase tracking-wider block pb-2 border-b border-slate-100">
-          Storage Mapping
-        </span>
-        
-        <div class="space-y-2">
-          <div class="flex justify-between items-center text-xs">
-            <span class="text-slate-600 font-bold">Volume Allocated</span>
-            <span class="font-extrabold text-slate-900">84%</span>
-          </div>
-          <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-            <div class="bg-slate-800 h-full rounded-full w-[84%]"></div>
-          </div>
-        </div>
-      </div>
-
-    </div>
+  </div>
 
   </div>
 

@@ -1,103 +1,101 @@
 {% extends "tenant_base.html" %}
-{% block title %}Issue Dispatch Studio - RealEstate360+{% endblock %}
-{% block meta_description %}Submit an authorized engineering preservation request — administration teams dispatch appropriate technical resources upon review.{% endblock %}
+{% block title %}Report a Problem | RealEstate360+{% endblock %}
+{% block meta_description %}Tell us if something needs fixing in your room.{% endblock %}
 
 {% block tenant_content %}
 
   <!-- Page Header -->
-  <div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+  <div class="mb-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 border-b-2 border-slate-100 pb-8">
     <div>
-      <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Issue Dispatch Studio</h1>
-      <p class="text-slate-500 font-medium mt-1 text-sm">Submit itemized physical engineering requests for scheduled administrative review</p>
+      <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">Report a Problem</h1>
+      <p class="text-lg text-slate-500 font-bold mt-2">Tell us what needs fixing in your room.</p>
     </div>
-    <!-- SLA Indicator -->
-    <div class="bg-white border border-slate-200 px-3 py-1.5 rounded-md shadow-sm w-fit">
-      <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Target Resolution SLA</span>
-      <span class="text-xs font-bold text-slate-800">Standard Action Item</span>
+    <!-- Response Standard -->
+    <div class="bg-white border-2 border-slate-100 px-6 py-4 rounded-2xl shadow-sm w-fit">
+      <span class="text-xs font-black text-slate-400 block uppercase tracking-widest mb-1">Response time</span>
+      <span class="text-xl font-black text-slate-800">Standard</span>
     </div>
   </div>
 
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-10 mb-10">
 
-    <!-- Transmittal Logging Console -->
+    <!-- Problem Details -->
     <div class="lg:col-span-2">
-      <div class="tenant-card">
-        <div class="border-b border-slate-100 pb-4 mb-5">
-          <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wide">Engineering Dispatch Parameters</h2>
-          <p class="text-xs text-slate-500 font-medium mt-0.5">Fill in technical details mapping to required structural interventions</p>
+      <div class="tenant-card p-10">
+        <div class="border-b-2 border-slate-50 pb-6 mb-8">
+          <h2 class="text-2xl font-black text-slate-900">What's wrong?</h2>
+          <p class="text-lg text-slate-500 font-bold mt-1">Please fill out the form below.</p>
         </div>
 
-        <form method="post" class="space-y-4 tenant-form">
+        <form method="post" class="space-y-8 tenant-form">
           {% csrf_token %}
           
-          <!-- Category Selector -->
+          <!-- Type -->
           <div>
-            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Category Scope</label>
+            <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3">Type</label>
             {{ form.category }}
           </div>
 
-          <!-- Title Input -->
+          <!-- Title -->
           <div>
-            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Issue Summary Title</label>
+            <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3">Short Title</label>
             {{ form.title }}
           </div>
 
-          <!-- Description Textarea -->
+          <!-- Description -->
           <div>
-            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Detailed Architectural Coordinates</label>
+            <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3">Description</label>
             {{ form.description }}
-            <p class="text-[11px] text-slate-400 mt-1 font-medium italic">* Provide granular context including explicit rooms or specific physical fixtures.</p>
+            <p class="text-sm text-slate-400 mt-3 font-bold italic">* Tell us exactly what and where the problem is (e.g. kitchen sink, bedroom light).</p>
           </div>
 
-          <!-- Submit Button -->
-          <div class="pt-2">
+          <!-- Submit -->
+          <div class="pt-4">
             <button type="submit"
-                    class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-lg text-xs uppercase tracking-wider transition-colors shadow-sm">
-              Commit Engineering Log
+                    class="w-full bg-slate-900 hover:bg-slate-800 text-white font-black py-5 rounded-2xl text-xl shadow-lg active:scale-95 transition-all">
+              Submit Report
             </button>
           </div>
         </form>
       </div>
     </div>
 
-    <!-- Active Metadata Panel -->
-    <div class="space-y-6">
-      <div class="tenant-card">
-        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Target Node Allocation</h2>
+    <!-- My Room Info -->
+    <div class="space-y-8">
+      <div class="tenant-card p-8">
+        <h2 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-6">My Room</h2>
         
         {% if lease %}
-          <div class="p-4 bg-slate-50 rounded-lg border border-slate-200/80">
-            <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Assigned Unit Identification</span>
-            <span class="text-xl font-bold text-slate-900 block mt-0.5">Unit {{ lease.unit.number }}</span>
+          <div class="p-6 bg-slate-50 rounded-2xl border-2 border-slate-100">
+            <span class="text-xs font-black text-slate-400 block uppercase tracking-widest mb-1">Room Number</span>
+            <span class="text-3xl font-black text-slate-900 block">Room {{ lease.unit.number }}</span>
             
-            <div class="mt-4 pt-3 border-t border-slate-200/60">
-              <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Tenant Mapping String</span>
-              <span class="font-bold text-slate-700 block mt-0.5 text-xs truncate">{{ request.user.email }}</span>
+            <div class="mt-6 pt-6 border-t-2 border-slate-200/50">
+              <span class="text-xs font-black text-slate-400 block uppercase tracking-widest mb-1">My Email</span>
+              <span class="font-black text-slate-700 block text-base truncate">{{ request.user.email }}</span>
             </div>
           </div>
         {% else %}
-          <div class="p-4 bg-rose-50 text-rose-900 rounded-lg border border-rose-200 text-xs font-medium">
-            System initialization blocked: No active lease binding detected. Technical logs cannot link to undefined units.
+          <div class="p-6 bg-rose-50 text-rose-700 rounded-2xl border-2 border-rose-100 text-lg font-black">
+            You can't report a problem yet because you haven't been assigned a room.
           </div>
         {% endif %}
       </div>
 
-      <!-- Critical Notice Array -->
-      <div class="p-4 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600 leading-relaxed">
-        <span class="font-bold text-slate-900 block mb-1">Critical Priority Directives</span>
-        For acute structural failures (e.g. live electrical sparking, structural piping rupture), override scheduled queues and dispatch local facilities security teams immediately.
+      <!-- Emergency Notice -->
+      <div class="p-8 rounded-3xl bg-amber-50 border-2 border-amber-100 text-lg text-slate-700 leading-relaxed shadow-sm">
+        <span class="font-black text-slate-900 block mb-2 uppercase tracking-widest text-sm">Emergency</span>
+        For major emergencies like fire, flooding, or live wires, please <span class="font-black text-rose-600 underline">call the front desk</span> immediately.
       </div>
     </div>
 
   </div>
 
-  <!-- Form style initialization override script to guarantee input element scaling -->
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       const inputs = document.querySelectorAll('.tenant-form select, .tenant-form input[type="text"], .tenant-form textarea');
       inputs.forEach(el => {
-        el.classList.add('border', 'border-slate-300', 'rounded-lg', 'px-3.5', 'py-2.5', 'text-sm', 'font-medium', 'text-slate-900', 'bg-white', 'focus:outline-none', 'focus:border-slate-900', 'transition-colors');
-        // If textarea, set standard line metrics
+        el.classList.add('w-full', 'border-2', 'border-slate-100', 'rounded-2xl', 'px-6', 'py-4', 'text-lg', 'font-black', 'text-slate-900', 'bg-white', 'focus:border-slate-900', 'transition-all');
         if (el.tagName === 'TEXTAREA' && !el.getAttribute('rows')) {
           el.setAttribute('rows', '5');
         }

@@ -10,10 +10,10 @@
     <div>
       <div class="flex items-center gap-2 mb-1">
         <span class="inline-block w-3 h-3 rounded-full bg-blue-600"></span>
-        <span class="text-sm font-semibold text-slate-700">Lease Administration Registry</span>
+        <span class="text-sm font-semibold text-slate-700">Manage Tenants</span>
       </div>
-      <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900">Tenants Portfolio</h1>
-      <p class="text-base text-slate-700 mt-1 leading-relaxed">Search, manage, and monitor verified tenant profiles and their credential status.</p>
+      <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900">Tenants</h1>
+      <p class="text-base text-slate-700 mt-1 leading-relaxed">Find and manage all your tenants in one place.</p>
     </div>
     
     <div class="shrink-0 w-full sm:w-auto">
@@ -32,7 +32,7 @@
     <!-- Total Profiles Card -->
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-blue-600 flex flex-col justify-between">
       <div>
-        <span class="text-sm font-bold text-slate-700 block mb-1">Total Profiles</span>
+        <span class="text-sm font-bold text-slate-700 block mb-1">All Tenants</span>
         <div class="text-3xl font-black text-slate-900 tracking-tight">{{ total_tenants_count|intcomma }}</div>
       </div>
       <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
@@ -43,7 +43,7 @@
     <!-- Active Leases Card -->
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-emerald-600 flex flex-col justify-between">
       <div>
-        <span class="text-sm font-bold text-slate-700 block mb-1">Active Leases</span>
+        <span class="text-sm font-bold text-slate-700 block mb-1">Active Rooms</span>
         <div class="text-3xl font-black text-slate-900 tracking-tight">{{ active_tenants_count|intcomma }}</div>
       </div>
       <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
@@ -54,7 +54,7 @@
     <!-- New Registrations Card -->
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-amber-600 flex flex-col justify-between">
       <div>
-        <span class="text-sm font-bold text-slate-700 block mb-1">Recent Registrations</span>
+        <span class="text-sm font-bold text-slate-700 block mb-1">New Tenants</span>
         <div class="text-3xl font-black text-slate-900 tracking-tight">{{ new_tenants_count|intcomma }}</div>
       </div>
       <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
@@ -103,9 +103,9 @@
       <table class="w-full text-left border-collapse min-w-[900px]">
         <thead>
           <tr class="bg-slate-100 border-b border-slate-200">
-            <th class="px-6 py-4 text-xs font-extrabold text-slate-700 uppercase tracking-wider">Tenant Identity</th>
-            <th class="px-6 py-4 text-xs font-extrabold text-slate-700 uppercase tracking-wider">Contact Protocols</th>
-            <th class="px-6 py-4 text-xs font-extrabold text-slate-700 uppercase tracking-wider">Account Standing</th>
+            <th class="px-6 py-4 text-xs font-extrabold text-slate-700 uppercase tracking-wider">Tenant</th>
+            <th class="px-6 py-4 text-xs font-extrabold text-slate-700 uppercase tracking-wider">Contact Info</th>
+            <th class="px-6 py-4 text-xs font-extrabold text-slate-700 uppercase tracking-wider">Status</th>
             <th class="px-6 py-4 text-xs font-extrabold text-slate-700 uppercase tracking-wider text-right">Actions</th>
           </tr>
         </thead>
@@ -185,8 +185,8 @@
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
                     </svg>
                   </div>
-                  <h3 class="text-base font-extrabold text-slate-900">No Tenant Records Present</h3>
-                  <p class="text-sm text-slate-600 mt-1 leading-relaxed">Adjust your active keyword filter or register a new identity profile to load the index.</p>
+                  <h3 class="text-base font-extrabold text-slate-900">No Tenants Found</h3>
+                  <p class="text-sm text-slate-600 mt-1 leading-relaxed">Try a different search or add a new tenant.</p>
                   <a href="{% url 'admin_create_tenant_profile' %}" class="mt-5 inline-flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-extrabold transition-colors shadow-xs">
                     + Intake Tenant Profile
                   </a>

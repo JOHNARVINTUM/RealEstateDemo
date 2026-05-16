@@ -1,113 +1,108 @@
 {% extends "tenant_base.html" %}
 {% load humanize %}
-{% block title %}Electronic Remittance Clearance - RealEstate360+{% endblock %}
-{% block meta_description %}Process electronic clearing transmittals via integrated manual QR scan and input receipt reference metrics.{% endblock %}
+{% block title %}Pay via GCash | RealEstate360+{% endblock %}
+{% block meta_description %}Send your payment via GCash easily.{% endblock %}
 
 {% block tenant_content %}
 
   <!-- Page Header -->
-  <div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+  <div class="mb-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 border-b-2 border-slate-100 pb-8">
     <div>
-      <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Electronic Remittance Clearance</h1>
-      <p class="text-slate-500 mt-1 font-medium text-sm">Transfer certified digital settlements and submit validation parameters for account posting</p>
+      <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">Pay via GCash</h1>
+      <p class="text-lg text-slate-500 font-bold mt-2">Send your payment and enter the receipt details below.</p>
     </div>
-    <!-- Clearing Endpoint Tag -->
-    <div class="bg-white border border-slate-200 px-3 py-1.5 rounded-md shadow-sm w-fit">
-      <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Gateway Hub</span>
-      <span class="text-xs font-bold text-slate-800">GCash Electronic Ledger</span>
+    <!-- System Status -->
+    <div class="bg-white border-2 border-slate-100 px-6 py-4 rounded-2xl shadow-sm w-fit">
+      <span class="text-xs font-black text-slate-400 block uppercase tracking-widest mb-1">System</span>
+      <span class="text-lg font-black text-slate-800">GCash</span>
     </div>
   </div>
 
   {% if error %}
-    <!-- Explicit Form Error Capture -->
-    <div class="mb-8 bg-rose-50 border border-rose-200 text-rose-900 rounded-lg p-4 flex items-start gap-3 shadow-sm">
-      <svg class="w-5 h-5 shrink-0 text-rose-700 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+    <div class="mb-10 bg-rose-50 border-2 border-rose-100 text-rose-700 rounded-[2rem] p-8 flex items-start gap-4 shadow-sm">
+      <div class="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      </div>
       <div>
-        <p class="font-bold text-xs uppercase tracking-wider text-rose-900">Transmittal Parameter Error</p>
-        <p class="text-xs font-medium mt-0.5">{{ error }}</p>
+        <p class="text-sm font-black uppercase tracking-widest text-rose-400 mb-1">Payment Error</p>
+        <p class="text-xl font-black">{{ error }}</p>
       </div>
     </div>
   {% endif %}
 
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-10">
 
-    <!-- Outgoing Settlement Coordinates -->
-    <div class="tenant-card h-fit flex flex-col justify-between">
+    <!-- Payment Coordinates -->
+    <div class="tenant-card p-10 h-fit flex flex-col justify-between">
       <div>
-        <div class="border-b border-slate-100 pb-4 mb-4">
-          <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wide">Destination Clearing Credentials</h2>
-          <p class="text-xs text-slate-500 font-medium mt-0.5">Authorized corporate transmittal endpoints for electronic processing</p>
+        <div class="border-b-2 border-slate-50 pb-6 mb-8">
+          <h2 class="text-2xl font-black text-slate-900">GCash Details</h2>
+          <p class="text-lg text-slate-500 font-bold mt-1">Send your payment to this account.</p>
         </div>
 
-        <!-- Staged Liability Base -->
-        <div class="p-4 rounded-lg bg-slate-50 border border-slate-200/80 mb-5 flex justify-between items-center">
+        <div class="p-8 rounded-[2rem] bg-slate-900 text-white mb-8 flex justify-between items-center shadow-xl">
           <div>
-            <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Settlement Amount Required</span>
-            <span class="text-3xl font-bold text-slate-900 block mt-0.5">₱{{ amount_to_pay|floatformat:2|intcomma }}</span>
+            <span class="text-xs font-black text-slate-400 block uppercase tracking-widest mb-1">Amount to Pay</span>
+            <span class="text-4xl font-black block">₱{{ amount_to_pay|floatformat:2|intcomma }}</span>
           </div>
-          <div class="text-slate-300 font-mono text-2xl font-bold select-none">
-            [E-PAY]
-          </div>
-        </div>
-
-        <!-- Target Endpoint Metrics -->
-        <div class="space-y-3 mb-6">
-          <div class="p-3 rounded-md bg-white border border-slate-200 flex justify-between items-center">
-            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Account Routing Number</span>
-            <span class="text-sm font-mono font-bold text-slate-900">{{ gcash_number }}</span>
-          </div>
-
-          <div class="p-3 rounded-md bg-white border border-slate-200 flex justify-between items-center">
-            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Corporate Identity</span>
-            <span class="text-sm font-bold text-slate-900">{{ gcash_name }}</span>
+          <div class="text-slate-700 font-black text-2xl select-none hidden sm:block">
+            EPAY
           </div>
         </div>
 
-        <!-- Embedded QR Display Frame -->
-        <div class="pt-4 border-t border-slate-100 text-center">
-          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-3">Scan Authorized Endpoint Identifier</span>
-          <div class="p-3 bg-white border border-slate-200 rounded-lg inline-block shadow-sm">
-            <img src="/static/img/gcash_qr3.jpg" alt="Endpoint Identifier" class="w-40 h-40 object-contain mx-auto block">
+        <div class="space-y-4 mb-10">
+          <div class="p-6 rounded-2xl bg-slate-50 border-2 border-slate-100 flex justify-between items-center">
+            <span class="text-sm font-black text-slate-400 uppercase tracking-widest">Send to Number</span>
+            <span class="text-xl font-black text-slate-900">{{ gcash_number }}</span>
+          </div>
+
+          <div class="p-6 rounded-2xl bg-slate-50 border-2 border-slate-100 flex justify-between items-center">
+            <span class="text-sm font-black text-slate-400 uppercase tracking-widest">Account Name</span>
+            <span class="text-xl font-black text-slate-900">{{ gcash_name }}</span>
+          </div>
+        </div>
+
+        <div class="pt-8 border-t-2 border-slate-50 text-center">
+          <span class="text-sm font-black text-slate-400 uppercase tracking-widest block mb-4">Scan QR Code</span>
+          <div class="p-6 bg-white border-2 border-slate-100 rounded-3xl inline-block shadow-sm">
+            <img src="/static/img/gcash_qr3.jpg" alt="Payment QR" class="w-48 h-48 object-contain mx-auto block">
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Verification Handshake Form -->
-    <div class="tenant-card">
-      <div class="border-b border-slate-100 pb-4 mb-5">
-        <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wide">Validation Handshake Console</h2>
-        <p class="text-xs text-slate-500 font-medium mt-0.5">Input electronic transmittal receipts mapping to completed clearing tasks</p>
+    <!-- Verification Form -->
+    <div class="tenant-card p-10">
+      <div class="border-b-2 border-slate-50 pb-6 mb-8">
+        <h2 class="text-2xl font-black text-slate-900">Verify My Payment</h2>
+        <p class="text-lg text-slate-500 font-bold mt-1">Enter your GCash reference number.</p>
       </div>
 
-      <form method="post" class="space-y-4">
+      <form method="post" class="space-y-8">
         {% csrf_token %}
         <input type="hidden" name="amount" value="{{ amount_to_pay }}">
         <input type="hidden" name="bill_ids" value="{{ bill_ids }}">
         <input type="hidden" name="payment_type" value="{{ payment_type|default:'full' }}">
 
-        <!-- Trace String Input -->
         <div>
-          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-            Gateway Trace Reference Code <span class="text-rose-700">*</span>
+          <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-4">
+            Receipt Reference Number <span class="text-rose-600">*</span>
           </label>
           <input type="text" name="reference_code" required
-                 class="w-full border border-slate-300 rounded-lg px-4 py-3 text-base font-mono tracking-wider font-bold text-slate-900 bg-white focus:outline-none focus:border-slate-900 transition-colors"
-                 placeholder="e.g. REF-1023456789012">
-          <p class="text-[11px] text-slate-400 mt-1">Input the unique numerical string found on your endpoint transmittal log</p>
+                 class="w-full border-2 border-slate-100 rounded-2xl px-8 py-5 text-xl font-black tracking-wider text-slate-900 bg-white focus:border-slate-900 transition-all shadow-sm"
+                 placeholder="Enter 13-digit number">
+          <p class="text-sm text-slate-400 mt-4 font-bold italic">* Check your GCash receipt for this number.</p>
         </div>
 
-        <!-- Lifecycle Notification Alert -->
-        <div class="p-3.5 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600 leading-relaxed">
-          <span class="font-bold text-slate-900 block mb-0.5">State Processing Lock</span>
-          Log entry transitions to <span class="font-bold text-slate-900">PENDING_VERIFICATION</span> immediately upon submission. Property accounts teams review linked transmittals prior to automated statement clearances.
+        <div class="p-8 rounded-[2rem] bg-slate-50 border-2 border-slate-100 text-lg text-slate-600 leading-relaxed shadow-sm">
+          <span class="font-black text-slate-900 block mb-2 uppercase tracking-widest text-sm">What happens next?</span>
+          We will check your payment details. Your status will show as <span class="font-black text-slate-900">Pending</span> until we confirm the receipt.
         </div>
 
-        <!-- Submit Button -->
-        <div class="pt-2">
+        <div class="pt-4">
           <button type="submit"
-                  class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-lg text-xs uppercase tracking-wider transition-colors shadow-sm">
-            Finalize Validation Handshake
+                  class="w-full bg-slate-900 hover:bg-slate-800 text-white font-black py-6 rounded-2xl text-xl transition-all shadow-xl active:scale-95">
+            Submit for Verification
           </button>
         </div>
       </form>

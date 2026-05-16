@@ -3,72 +3,72 @@
 {% block title %}Broadcast Center | Real Estate Administration{% endblock %}
 
 {% block content %}
-<div class="announcements-center-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
+<div class="announcements-center-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-8 pb-12 px-2 sm:px-4 lg:px-6 py-6 sm:py-8">
   
   <!-- Studio Top Title Block -->
-  <header class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+  <header class="bg-white border border-slate-200 rounded-xl p-8 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
     <div>
-      <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">Property Announcements Center</h1>
-      <p class="text-sm text-slate-700 mt-1 leading-relaxed">Compose, schedule, and broadcast official administrative bulletins to registered property occupants.</p>
+      <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 leading-tight">Announcements</h1>
+      <p class="text-lg text-slate-600 mt-2 leading-relaxed font-medium">Post updates and news for all your tenants to see.</p>
     </div>
     
     <div class="w-full sm:w-auto shrink-0">
       <a href="{% url 'admin_create_announcement' %}" 
-         class="block w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white font-extrabold px-5 py-2.5 rounded-lg text-sm transition-colors text-center shadow-xs">
-        Make Announcement
+         class="block w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white font-black px-6 py-3.5 rounded-xl text-base transition-all shadow-md active:scale-95 text-center">
+        + Add New
       </a>
     </div>
   </header>
 
-  <!-- Summary Metric Overview Cards (Consistent Iconless Layout) -->
-  <section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+  <!-- Summary Metric Overview Cards -->
+  <section class="grid grid-cols-1 sm:grid-cols-3 gap-6">
     
-    <!-- Total Sent Bulletins -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-slate-700 flex flex-col justify-between">
+    <!-- Total Sent Bulletins (SWAPPED TO AMBER) -->
+    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm border-l-8 border-l-amber-500 flex flex-col justify-between">
       <div>
-        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Total Broadcast Transmissions</span>
-        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ total_count }}</div>
+        <span class="text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest block mb-2">Total Posts</span>
+        <div class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">{{ total_count }}</div>
       </div>
-      <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
-        <span class="text-slate-700 font-bold">●</span> Total archives dispatched
+      <div class="text-sm text-slate-500 mt-4 font-bold flex items-center gap-2">
+        <span class="text-amber-500 font-black text-lg">●</span> Everything ever posted
       </div>
     </div>
 
     <!-- Active Broadcasts -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-blue-600 flex flex-col justify-between">
+    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm border-l-8 border-l-blue-600 flex flex-col justify-between">
       <div>
-        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Active Broadcast Streams</span>
-        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ active_count }}</div>
+        <span class="text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest block mb-2">Live Now</span>
+        <div class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">{{ active_count }}</div>
       </div>
-      <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
-        <span class="text-blue-600 font-bold">●</span> Visible on occupant feeds
+      <div class="text-sm text-slate-500 mt-4 font-bold flex items-center gap-2">
+        <span class="text-blue-600 font-black text-lg">●</span> Currently visible
       </div>
     </div>
 
-    <!-- Monthly Dispatches -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-amber-600 flex flex-col justify-between">
+    <!-- Archives (RENAMED FROM POSTS THIS MONTH, SWAPPED TO SLATE) -->
+    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm border-l-8 border-l-slate-700 flex flex-col justify-between">
       <div>
-        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Current Cycle Dispatches</span>
-        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ this_month_count }}</div>
+        <span class="text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest block mb-2">Archives</span>
+        <div class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">{{ this_month_count }}</div>
       </div>
-      <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
-        <span class="text-amber-600 font-bold">●</span> Active monthly cycle logs
+      <div class="text-sm text-slate-500 mt-4 font-bold flex items-center gap-2">
+        <span class="text-slate-700 font-black text-lg">●</span> Post history
       </div>
     </div>
 
   </section>
 
   <!-- Control & Search Filter Strip -->
-  <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+  <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6">
     
-    <!-- Search Bar Form Input -->
-    <div class="w-full sm:w-96">
-      <form method="get" class="relative">
-        <input type="text" name="q" value="{{ q }}" placeholder="Search title parameters or content strings..." 
-               class="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 transition-all outline-none">
-        <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400">
-          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+    <!-- Search Bar -->
+    <div class="w-full sm:w-1/2">
+      <form method="get" class="relative group">
+        <input type="text" name="q" value="{{ q }}" placeholder="Search by title or message..." 
+               class="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-slate-900 transition-all outline-none">
+        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors">
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
           </svg>
         </span>
       </form>
@@ -76,9 +76,9 @@
 
     <!-- Active Search Clears Link -->
     {% if q %}
-      <div class="w-full sm:w-auto text-right">
-        <a href="{% url 'admin_announcements' %}" class="inline-block px-3 py-2 text-slate-600 hover:text-white hover:bg-slate-800 border border-slate-300 hover:border-slate-800 rounded-lg transition-colors text-xs font-bold" title="Reset Configured Searches">
-          Reset Filter
+      <div class="w-full sm:w-auto">
+        <a href="{% url 'admin_announcements' %}" class="inline-flex items-center justify-center px-6 py-3 bg-white hover:bg-slate-50 border-2 border-slate-200 text-slate-700 rounded-xl transition-all text-sm font-black uppercase tracking-wider" title="Reset Configured Searches">
+          Clear Search
         </a>
       </div>
     {% endif %}
@@ -86,61 +86,57 @@
   </div>
 
   <!-- Announcement Cards Stream Grid -->
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
     {% for a in items %}
     
-    <!-- Broadcast Document Layout Card -->
-    <div class="bg-white border border-slate-200 rounded-xl flex flex-col justify-between shadow-xs overflow-hidden border-l-4 {% if a.is_active %}border-l-blue-600{% else %}border-l-slate-400{% endif %}">
+    <!-- Broadcast Card -->
+    <div class="bg-white border border-slate-200 rounded-2xl flex flex-col justify-between shadow-sm overflow-hidden border-t-8 {% if a.is_active %}border-t-blue-600{% else %}border-t-slate-300{% endif %} hover:shadow-md transition-shadow">
       
-      <!-- Card Context View Header -->
-      <div class="p-5">
-        
-        <!-- Status Badges & Created Sequence -->
-        <div class="flex justify-between items-center mb-3">
-          <span class="inline-block px-2 py-0.5 rounded text-[10px] font-extrabold uppercase select-none {% if a.is_active %}bg-blue-50 text-blue-800 border border-blue-200{% else %}bg-slate-50 text-slate-600 border border-slate-200{% endif %}">
-            {% if a.is_active %}Live Bulletin{% else %}Private Draft{% endif %}
+      <div class="p-8">
+        <!-- Status Badges -->
+        <div class="flex justify-between items-center mb-6">
+          <span class="inline-block px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest select-none {% if a.is_active %}bg-blue-50 text-blue-800 border border-blue-200{% else %}bg-slate-100 text-slate-600 border border-slate-200{% endif %}">
+            {% if a.is_active %}Live{% else %}Draft{% endif %}
           </span>
-          <span class="text-xs font-bold text-slate-500">
+          <span class="text-sm font-bold text-slate-400">
             {{ a.created_at|date:"M d, Y" }}
           </span>
         </div>
 
-        <!-- Descriptive Bulletin Title -->
-        <h3 class="text-base sm:text-lg font-bold text-slate-900 leading-tight mb-2 line-clamp-2" title="{{ a.title }}">
+        <!-- Title -->
+        <h3 class="text-xl sm:text-2xl font-black text-slate-900 leading-tight mb-4 line-clamp-2" title="{{ a.title }}">
           {{ a.title }}
         </h3>
 
-        <!-- Main Bounded Descriptive Body -->
-        <p class="text-xs sm:text-sm text-slate-700 leading-relaxed line-clamp-4 font-medium" title="{{ a.body }}">
+        <!-- Body -->
+        <p class="text-base text-slate-600 leading-relaxed line-clamp-4 font-bold" title="{{ a.body }}">
           {{ a.body }}
         </p>
 
       </div>
 
-      <!-- Footer Author & Action Controls Strip -->
-      <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2 mt-auto">
+      <!-- Footer Actions -->
+      <div class="p-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-4 mt-auto">
         
-        <!-- Author Metadata Block -->
-        <div class="flex items-center gap-2 min-w-0">
-          <div class="w-6 h-6 rounded bg-slate-200 border border-slate-300 flex items-center justify-center text-[10px] font-extrabold text-slate-700 shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-slate-900 text-[12px] font-black text-white flex items-center justify-center shadow-sm">
             {{ a.created_by.email|first|upper|default:"A" }}
           </div>
-          <span class="text-xs font-bold text-slate-600 truncate">
-            Admin Author
+          <span class="text-xs font-black text-slate-800 uppercase tracking-tight">
+            Admin
           </span>
         </div>
 
-        <!-- Direct Row File Updates Links -->
-        <div class="flex items-center gap-1 shrink-0">
+        <div class="flex items-center gap-2">
           <a href="{% url 'admin_edit_announcement' a.id %}" 
-             class="px-2.5 py-1 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded text-xs font-bold transition-colors" title="Update Content Payload">
+             class="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-900 rounded-lg text-xs font-black uppercase tracking-wider transition-all shadow-xs">
             Edit
           </a>
 
-          <form method="post" action="{% url 'admin_delete_announcement' a.id %}" class="confirm-action inline-block" data-confirm="Permanently delete this broadcast? This action cannot be undone.">
+          <form method="post" action="{% url 'admin_delete_announcement' a.id %}" class="confirm-action inline-block" data-confirm="Permanently delete this announcement? This cannot be undone.">
             {% csrf_token %}
-            <button type="submit" class="px-2.5 py-1 bg-white border border-slate-300 hover:bg-rose-50 text-rose-700 rounded text-xs font-bold transition-colors ml-1" title="Drop Broadcast Log">
-              Drop
+            <button type="submit" class="px-4 py-2 bg-white border border-slate-200 hover:bg-rose-600 hover:text-white hover:border-rose-600 text-rose-600 rounded-lg text-xs font-black uppercase tracking-wider transition-all shadow-xs">
+              Delete
             </button>
           </form>
         </div>
@@ -151,13 +147,18 @@
 
     {% empty %}
     
-    <!-- Empty Stream Response Block -->
-    <div class="col-span-full py-16 text-center bg-white border border-slate-200 rounded-xl p-6">
-      <strong class="text-xs sm:text-sm text-slate-700 block">No operational bulletins present inside the designated ledger view.</strong>
-      <p class="text-xs text-slate-500 mt-1 max-w-md mx-auto">Your active messaging stream is currently vacant. Trigger the module generation actions to dispatch new global content.</p>
+    <!-- Empty Response Block -->
+    <div class="col-span-full py-24 text-center bg-white border border-slate-200 rounded-2xl p-8">
+      <div class="w-20 h-20 bg-slate-50 border border-slate-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
+        <svg class="w-10 h-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9.5a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path>
+        </svg>
+      </div>
+      <h3 class="text-xl font-black text-slate-900">No announcements yet.</h3>
+      <p class="text-slate-500 mt-2 font-bold max-w-md mx-auto">Start by posting your first news update for your tenants.</p>
       
-      <a href="{% url 'admin_create_announcement' %}" class="inline-block mt-4 px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold transition-colors">
-        Make Announcement
+      <a href="{% url 'admin_create_announcement' %}" class="inline-block mt-8 px-8 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-black transition-all shadow-lg active:scale-95">
+        + Add New
       </a>
     </div>
 

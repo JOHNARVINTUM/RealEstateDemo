@@ -5,264 +5,246 @@
 {% block title %}Unit {{ unit.number }} Details | Real Estate Administration{% endblock %}
 
 {% block content %}
-<div class="unit-comprehensive-ledger max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
+<div class="unit-detail-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6">
   
-  <!-- Navigation Breadcrumbs & Options Line -->
-  <nav class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-    <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-600">
-      <a href="{% url 'admin_units' %}" class="hover:text-slate-900 transition-colors">Property Portfolio</a>
-      <span class="text-slate-400">/</span>
-      <span class="text-slate-900">Unit {{ unit.number }} Specifications</span>
-    </div>
-    
-    <div class="w-full sm:w-auto shrink-0">
-      <a href="{% url 'admin_edit_unit' unit.id %}" 
-         class="block w-full sm:w-auto bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold px-4 py-2 rounded-lg text-xs transition-colors text-center shadow-2xs">
-        Modify Specifications
-      </a>
-    </div>
+  <!-- Navigation: Consistent Back Button -->
+  <nav class="flex items-center justify-between gap-4 pt-4 sm:pt-6">
+    <a href="{% url 'admin_units' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
+      <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
+      </svg>
+      <span>Back</span>
+    </a>
+
+    <a href="{% url 'admin_edit_unit' unit.id %}" class="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-sm font-extrabold transition-colors shadow-xs">
+      Edit Details
+    </a>
   </nav>
 
-  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
     
-    <!-- Left Column: Core Infrastructure Parameters -->
-    <div class="lg:col-span-8 space-y-6">
+    <!-- Left Column: Media & Core Info -->
+    <div class="lg:col-span-8 space-y-8">
       
-      <!-- Staged Asset Captures Media Carousel Component -->
-      <section class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs relative">
+      <!-- Photo Showcase -->
+      <section class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm relative group">
         
-        <div class="relative h-80 sm:h-96 bg-slate-100 overflow-hidden">
-          {% if unit.get_image_count > 0 %}
-            {% for unit_image in unit.get_all_images %}
-              <div class="carousel-slide absolute inset-0 opacity-0 transition-opacity duration-700 ease-in-out {% if forloop.first %}opacity-100 active{% endif %}" data-slide="{{ forloop.counter0 }}">
-                <img src="{{ unit_image.image.url }}" alt="Technical Capture" class="w-full h-full object-cover">
+        <div class="relative h-96 sm:h-[480px] bg-slate-100 overflow-hidden">
+          {% if unit_images %}
+            {% for unit_image in unit_images %}
+              <div class="carousel-slide absolute inset-0 transition-opacity duration-700 ease-in-out {% if forloop.first %}opacity-100 active{% else %}opacity-0{% endif %}" data-slide="{{ forloop.counter0 }}">
+                <img src="{{ unit_image.image.url }}" alt="Room Photo" class="w-full h-full object-cover">
                 
-                <!-- Bottom Metadata Label Row -->
                 {% if unit_image.caption %}
-                  <div class="absolute bottom-0 inset-x-0 bg-slate-900/80 backdrop-blur-xs p-3 text-white">
-                    <p class="text-xs font-medium text-slate-200">{{ unit_image.caption }}</p>
+                  <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-900/90 to-transparent p-8 pt-16">
+                    <p class="text-base font-bold text-white">{{ unit_image.caption }}</p>
                   </div>
                 {% endif %}
               </div>
             {% endfor %}
           {% else %}
-            <div class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 p-6 text-center">
-              <svg class="w-12 h-12 mb-2 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-              </svg>
-              <span class="text-xs font-bold text-slate-500 block">No Structural Captures Instantiated</span>
-              <span class="text-[10px] text-slate-400 mt-0.5">Please transition to the edit console to append local media objects.</span>
+            <div class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 p-8 text-center bg-slate-50">
+              <div class="w-20 h-20 bg-white border-2 border-slate-200 rounded-3xl flex items-center justify-center mb-4 shadow-sm">
+                <svg class="w-10 h-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+              </div>
+              <span class="text-lg font-black text-slate-600 block">No photos yet</span>
+              <p class="text-sm text-slate-500 mt-2 font-medium">Add photos to help tenants visualize the room.</p>
+              <a href="{% url 'admin_edit_unit' unit.id %}" class="mt-4 text-blue-600 font-bold hover:underline">Add Photos Now</a>
             </div>
           {% endif %}
 
-          <!-- Absolute Status Tag Labels -->
-          <div class="absolute top-3 left-3 flex items-center gap-2">
-            <span class="inline-block px-2.5 py-1 rounded text-[10px] font-extrabold uppercase tracking-wide select-none shadow-xs
+          <!-- Status & Unit Info Badges -->
+          <div class="absolute top-4 left-4 flex flex-wrap items-center gap-2">
+            <span class="inline-block px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl
               {% if unit.status == 'AVAILABLE' %}bg-emerald-600 text-white
-              {% elif unit.status == 'OCCUPIED' %}bg-blue-700 text-white
+              {% elif unit.status == 'OCCUPIED' %}bg-blue-600 text-white
               {% elif unit.status == 'MAINTENANCE' %}bg-amber-600 text-white
-              {% else %}bg-slate-700 text-white{% endif %}">
+              {% else %}bg-slate-800 text-white{% endif %}">
               {{ unit.get_status_display }}
             </span>
             
-            <span class="inline-block px-2.5 py-1 bg-white text-slate-900 border border-slate-200 rounded text-[10px] font-bold select-none shadow-xs">
+            <span class="inline-block px-4 py-2 bg-white/90 backdrop-blur-md text-slate-900 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl">
               Unit {{ unit.number }}
             </span>
           </div>
 
-          <!-- Carousel Paging Action Triggers -->
-          {% if unit.get_image_count > 1 %}
-            <div class="absolute inset-y-0 inset-x-2 flex items-center justify-between pointer-events-none">
-              <button onclick="previousSlide()" class="pointer-events-auto w-8 h-8 rounded-lg bg-white/80 hover:bg-white text-slate-800 flex items-center justify-center shadow-xs border border-slate-200 transition-colors select-none" title="Previous Slide">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
+          <!-- Carousel Controls -->
+          {% if unit_images|length > 1 %}
+            <div class="absolute inset-y-0 inset-x-4 flex items-center justify-between pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+              <button onclick="previousSlide()" class="pointer-events-auto w-12 h-12 rounded-2xl bg-white/95 hover:bg-white text-slate-800 flex items-center justify-center shadow-2xl border border-slate-100 transition-all active:scale-95" title="Previous">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7"></path></svg>
               </button>
-              <button onclick="nextSlide()" class="pointer-events-auto w-8 h-8 rounded-lg bg-white/80 hover:bg-white text-slate-800 flex items-center justify-center shadow-xs border border-slate-200 transition-colors select-none" title="Next Slide">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+              <button onclick="nextSlide()" class="pointer-events-auto w-12 h-12 rounded-2xl bg-white/95 hover:bg-white text-slate-800 flex items-center justify-center shadow-2xl border border-slate-100 transition-all active:scale-95" title="Next">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg>
               </button>
             </div>
+            
+            <!-- Indicators -->
+            <div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+              {% for unit_image in unit_images %}
+                <div class="w-2.5 h-2.5 rounded-full bg-white/40 border border-white/20 transition-all {% if forloop.first %}bg-white w-6{% endif %}" data-indicator="{{ forloop.counter0 }}"></div>
+              {% endfor %}
+            </div>
           {% endif %}
-
         </div>
-
       </section>
 
-      <!-- Asset Architectural Metrics & Provisioned Amenities -->
-      <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Room Details & Features -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
         
-        <!-- Asset Parameters -->
-        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col justify-between">
-          <div>
-            <h3 class="text-xs font-extrabold uppercase tracking-wide text-slate-800 mb-4 pb-2 border-b border-slate-100">
-              Technical Specifications
-            </h3>
-            
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <span class="text-[10px] font-bold text-slate-500 uppercase block">Unit Architecture</span>
-                <strong class="text-xs font-black text-slate-900 block mt-0.5">{{ unit.get_unit_type_display }}</strong>
-              </div>
-              <div>
-                <span class="text-[10px] font-bold text-slate-500 uppercase block">Spatial Layout</span>
-                <strong class="text-xs font-black text-slate-900 block mt-0.5">Floor {{ unit.floor_level }}</strong>
-              </div>
-              <div>
-                <span class="text-[10px] font-bold text-slate-500 uppercase block">Configured Surface</span>
-                <strong class="text-xs font-black text-slate-900 block mt-0.5">{{ unit.size_sqm|floatformat:0 }} SQM</strong>
-              </div>
-              <div>
-                <span class="text-[10px] font-bold text-slate-500 uppercase block">Primary Key ID</span>
-                <strong class="text-xs font-black text-slate-900 block mt-0.5">#{{ unit.id }}</strong>
-              </div>
+        <!-- Quick Information -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+          <h3 class="text-sm font-black uppercase tracking-wider text-slate-500 mb-6 flex items-center gap-3">
+            <span class="w-2 h-2 rounded-full bg-slate-900"></span>
+            Room Information
+          </h3>
+          
+          <div class="grid grid-cols-2 gap-y-8 gap-x-4">
+            <div>
+              <span class="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1">Room Type</span>
+              <strong class="text-lg font-black text-slate-900 block leading-tight">{{ unit.get_unit_type_display }}</strong>
+            </div>
+            <div>
+              <span class="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1">Floor Level</span>
+              <strong class="text-lg font-black text-slate-900 block leading-tight">Floor {{ unit.floor_level }}</strong>
+            </div>
+            <div>
+              <span class="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1">Total Size</span>
+              <strong class="text-lg font-black text-slate-900 block leading-tight">{{ unit.size_sqm|floatformat:0 }} SQM</strong>
+            </div>
+            <div>
+              <span class="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1">Room ID</span>
+              <strong class="text-lg font-black text-slate-900 block leading-tight">#{{ unit.id }}</strong>
             </div>
           </div>
 
           {% if unit.description %}
-            <div class="mt-4 pt-3 border-t border-slate-100">
-              <span class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Spatial Summary Description</span>
-              <p class="text-xs text-slate-700 leading-relaxed font-medium">
+            <div class="mt-10 pt-6 border-t-2 border-slate-50">
+              <span class="text-xs font-black text-slate-400 uppercase tracking-widest block mb-3">Room Description</span>
+              <p class="text-base text-slate-700 leading-relaxed font-bold">
                 {{ unit.description }}
               </p>
             </div>
           {% endif %}
         </div>
 
-        <!-- Integrated Amenities Scope -->
-        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col justify-between">
-          <div>
-            <h3 class="text-xs font-extrabold uppercase tracking-wide text-slate-800 mb-4 pb-2 border-b border-slate-100">
-              Provisioned Comfort Additions
-            </h3>
-            
-            {% if unit.amenities %}
-              <div class="space-y-2">
-                {% for amenity in unit.get_amenities_list %}
-                  <div class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 flex items-center gap-2 select-none">
-                    <span class="text-slate-500 font-extrabold">▪</span>
-                    <span>{{ amenity }}</span>
-                  </div>
-                {% endfor %}
+        <!-- Amenities -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+          <h3 class="text-sm font-black uppercase tracking-wider text-slate-500 mb-6 flex items-center gap-3">
+            <span class="w-2 h-2 rounded-full bg-slate-900"></span>
+            Features & Amenities
+          </h3>
+          
+          {% if amenities_list %}
+            <div class="grid grid-cols-1 gap-3">
+              {% for amenity in amenities_list %}
+                <div class="px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-black text-slate-800 flex items-center gap-3">
+                  <svg class="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  <span>{{ amenity }}</span>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="py-12 text-center">
+              <div class="w-16 h-16 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-slate-300">
+                <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
               </div>
-            {% else %}
-              <div class="py-8 text-center text-slate-400">
-                <span class="text-xs font-bold block">No auxiliary features assigned</span>
-                <span class="text-[10px] block mt-0.5">Basic raw space delivery parameters apply.</span>
-              </div>
-            {% endif %}
-          </div>
+              <span class="text-sm font-black text-slate-500">No amenities listed for this room.</span>
+            </div>
+          {% endif %}
         </div>
+      </div>
 
-      </section>
-
-      <!-- Occupancy Intelligence Tracking Block -->
-      <section class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
-        <h3 class="text-xs font-extrabold uppercase tracking-wide text-slate-800 mb-4 pb-2 border-b border-slate-100">
-          Occupancy Intelligence Monitor
+      <!-- Current Tenant Info -->
+      <section class="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+        <h3 class="text-sm font-black uppercase tracking-wider text-slate-500 mb-6 flex items-center gap-3">
+          <span class="w-2 h-2 rounded-full bg-slate-900"></span>
+          Occupancy Status
         </h3>
 
         {% if current_tenant %}
-          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            
-            <div class="flex items-center gap-3">
-              <div class="w-12 h-12 rounded-lg bg-slate-800 text-white flex items-center justify-center text-base font-black shrink-0 shadow-xs select-none">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+            <div class="flex items-center gap-5">
+              <div class="w-16 h-16 rounded-2xl bg-slate-900 text-white flex items-center justify-center text-2xl font-black shadow-xl">
                 {{ current_tenant.email|first|upper }}
               </div>
               
               <div>
-                <strong class="text-sm font-black text-slate-900 block leading-tight">
+                <strong class="text-xl font-black text-slate-900 block leading-tight">
                   {{ current_tenant.tenantprofile.full_name|default:current_tenant.email }}
                 </strong>
-                <span class="text-xs text-slate-500 block mt-0.5">Active Contracted Resident Account</span>
+                <span class="text-sm text-slate-500 font-bold mt-1 block">Current Tenant</span>
                 
-                <div class="flex items-center gap-2 mt-2">
-                  <span class="px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded text-[10px] font-bold select-none">
-                    Risk Assessment: Low
-                  </span>
-                  <span class="px-2 py-0.5 bg-blue-50 text-blue-800 border border-blue-200 rounded text-[10px] font-bold select-none">
-                    Payment Status: Optimal
-                  </span>
+                <div class="flex items-center gap-3 mt-3">
+                  <span class="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-lg text-[10px] font-black uppercase tracking-wider">Reliable Tenant</span>
+                  <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-lg text-[10px] font-black uppercase tracking-wider">Active Lease</span>
                 </div>
               </div>
             </div>
 
             <a href="{% url 'admin_tenant_detail' current_tenant.id %}" 
-               class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-extrabold transition-colors text-center w-full sm:w-auto shadow-xs">
-              View Profile Ledger
+               class="px-6 py-3 bg-white border-2 border-slate-200 hover:bg-slate-50 text-slate-800 rounded-xl font-black text-sm transition-all shadow-sm active:scale-95 whitespace-nowrap">
+              View Profile
             </a>
-
           </div>
         {% else %}
-          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-2">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
             <div>
-              <strong class="text-sm font-black text-slate-900 block">Unassigned Operational State</strong>
-              <p class="text-xs text-slate-600 mt-0.5">Property asset is currently unburdened and ready for client lease setup.</p>
+              <strong class="text-xl font-black text-slate-900 block">Room is currently Vacant</strong>
+              <p class="text-base text-slate-500 mt-2 font-bold leading-relaxed">This room is empty and ready for a new tenant.</p>
             </div>
 
             <a href="{% url 'admin_create_lease' %}?unit_id={{ unit.id }}" 
-               class="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-xs font-extrabold transition-colors text-center w-full sm:w-auto shadow-xs shrink-0">
-              Initialize Lease Protocol
+               class="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-base transition-all shadow-xl active:scale-95 whitespace-nowrap">
+              Assign a Tenant
             </a>
           </div>
         {% endif %}
       </section>
-
     </div>
 
-    <!-- Right Column: Operational Controls & Fiscal Value -->
-    <div class="lg:col-span-4 space-y-6">
+    <!-- Right Column: Financials & Actions -->
+    <div class="lg:col-span-4 space-y-8">
       
-      <!-- Financial Valuation Metrics -->
-      <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-4">
-        <h3 class="text-xs font-extrabold uppercase tracking-wide text-slate-800 pb-2 border-b border-slate-100">
-          Valuation Scaling Index
-        </h3>
-        
+      <!-- Financial Card -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm space-y-8">
         <div>
-          <span class="text-[10px] font-bold text-slate-500 uppercase block">Monthly Settlement Baseline</span>
-          <div class="flex items-baseline gap-1 mt-0.5">
-            <strong class="text-2xl font-black text-slate-900 tracking-tight">₱{{ unit.monthly_rent|floatformat:0|intcomma }}</strong>
-            <span class="text-xs text-slate-500 font-bold">/mo</span>
+          <h3 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Monthly Rent</h3>
+          <div class="flex items-baseline gap-2">
+            <strong class="text-4xl font-black text-slate-900 tracking-tight">₱{{ unit.monthly_rent|floatformat:0|intcomma }}</strong>
+            <span class="text-base text-slate-500 font-bold uppercase tracking-widest">/ month</span>
           </div>
-          <span class="text-[10px] text-emerald-700 font-bold block mt-1">▪ Synchronized with current local standard index</span>
         </div>
-
-        <div class="space-y-2 pt-2 border-t border-slate-100">
+        
+        <div class="space-y-4">
           {% if unit.status == 'AVAILABLE' %}
             <a href="{% url 'admin_create_lease' %}?unit_id={{ unit.id }}" 
-               class="block w-full py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-extrabold text-xs text-center transition-colors shadow-xs">
-              Contract Intake Link
+               class="block w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-center transition-all shadow-lg active:scale-95">
+              Start New Lease
             </a>
-          {% else %}
-            <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-              <strong class="text-slate-800 font-bold block">Assigned Active Lease</strong>
-              <span class="text-[10px] text-slate-500 block mt-0.5">Direct assignment actions restricted.</span>
-            </div>
           {% endif %}
-          
-          <a href="{% url 'admin_edit_unit' unit.id %}" 
-             class="block w-full py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg font-bold text-xs text-center transition-colors">
-            Modify Specification Keys
-          </a>
         </div>
       </div>
 
-
-
-      <!-- Critical Deactivation Area -->
-      <div class="bg-rose-50 border border-rose-200 rounded-xl p-5 space-y-3">
-        <h3 class="text-xs font-extrabold uppercase tracking-wide text-rose-900 pb-2 border-b border-rose-100">
-          Critical Portfolio Actions
-        </h3>
-        
-        <p class="text-[11px] text-rose-800 leading-relaxed font-medium">
-          Deactivating this structural asset drops dynamic list targeting from active catalog views while retaining internal history tables.
+      <!-- Danger Zone -->
+      <div class="bg-rose-50 border-2 border-rose-100 rounded-2xl p-8 space-y-4">
+        <h3 class="text-xs font-black uppercase tracking-widest text-rose-800">Hide from List</h3>
+        <p class="text-sm text-rose-700 font-bold leading-relaxed">
+          Hiding this room will remove it from the main list, but we'll still keep its records in our system.
         </p>
 
         <form method="POST" action="{% url 'admin_delete_unit' unit.id %}" class="confirm-action" 
-              data-confirm="Deactivate this property asset record? This action drops the listing from public indices.">
+              data-confirm="Hide this room from the list? You can still see its history later.">
           {% csrf_token %}
           <button type="submit" 
-                  class="w-full py-2.5 bg-white hover:bg-rose-600 text-rose-700 hover:text-white border border-rose-300 rounded-lg font-bold text-xs transition-colors text-center select-none shadow-2xs">
-            Deactivate Record Base
+                  class="w-full py-4 bg-white hover:bg-rose-600 text-rose-600 hover:text-white border-2 border-rose-200 rounded-xl font-black text-center transition-all shadow-sm select-none active:scale-95">
+            Hide this Room
           </button>
         </form>
       </div>
@@ -270,23 +252,32 @@
     </div>
 
   </div>
-
 </div>
 
-<!-- Realtime Client Array Gallery Transition Routines -->
 <script>
 let currentSlideIndex = 0;
 const slides = document.querySelectorAll('.carousel-slide');
+const indicators = document.querySelectorAll('[data-indicator]');
 const totalSlides = slides.length;
 
 function showSlide(index) {
   if (totalSlides === 0) return;
-  slides.forEach(slide => {
-    slide.style.opacity = '0';
-    slide.classList.remove('active');
+  
+  slides.forEach((slide, i) => {
+    slide.style.opacity = (i === index) ? '1' : '0';
+    if (i === index) slide.classList.add('active');
+    else slide.classList.remove('active');
   });
-  slides[index].style.opacity = '1';
-  slides[index].classList.add('active');
+
+  indicators.forEach((indicator, i) => {
+    if (i === index) {
+      indicator.classList.remove('bg-white/40', 'w-2.5');
+      indicator.classList.add('bg-white', 'w-6');
+    } else {
+      indicator.classList.add('bg-white/40', 'w-2.5');
+      indicator.classList.remove('bg-white', 'w-6');
+    }
+  });
 }
 
 function nextSlide() {
@@ -301,7 +292,7 @@ function previousSlide() {
   showSlide(currentSlideIndex);
 }
 
-// Automatic fading cycle
+// Auto-play
 if (totalSlides > 1) {
   setInterval(nextSlide, 8000);
 }

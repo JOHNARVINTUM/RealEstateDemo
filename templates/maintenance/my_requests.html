@@ -1,35 +1,36 @@
 {% extends "tenant_base.html" %}
-{% block title %}Maintenance History - RealEstate360+{% endblock %}
-{% block meta_description %}Track and manage your maintenance service requests.{% endblock %}
+{% load static %}
+{% block title %}My Repairs | RealEstate360+{% endblock %}
+{% block meta_description %}Check the status of your reported problems.{% endblock %}
 
 {% block tenant_content %}
 
   <!-- Page Header -->
-  <div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+  <div class="mb-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 border-b-2 border-slate-100 pb-8">
     <div>
-      <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Maintenance History</h1>
-      <p class="text-slate-500 font-medium mt-1 text-sm">Review logged engineering tasks and property preservation service requests</p>
+      <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">My Repairs</h1>
+      <p class="text-lg text-slate-500 font-bold mt-2">Check the status of your reported problems.</p>
     </div>
     <div>
       <a href="{% url 'report_issue' %}"
-         class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2.5 rounded-lg text-xs uppercase tracking-wider transition-colors inline-flex items-center gap-2 shadow-sm">
-        <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+         class="bg-slate-900 hover:bg-slate-800 text-white font-black px-8 py-4 rounded-2xl text-lg transition-all inline-flex items-center gap-3 shadow-lg active:scale-95">
+        <svg class="w-6 h-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
         </svg>
-        Log New Transmittal
+        Report a Problem
       </a>
     </div>
   </div>
 
-  <!-- Filters Array Console -->
-  <div class="tenant-card mb-8">
-    <div class="flex flex-wrap items-center justify-between gap-4">
-      <div class="flex flex-wrap items-center gap-4 flex-1">
-        <!-- Category Scope Dropdown -->
-        <div class="min-w-[160px] flex-1 sm:flex-initial">
-          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Filter Category Scope</label>
-          <select id="filterCategory" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 bg-white focus:outline-none focus:border-slate-900 transition-colors cursor-pointer shadow-sm">
-            <option value="ALL">All Categories</option>
+  <!-- Filters Console -->
+  <div class="tenant-card mb-10 p-8">
+    <div class="flex flex-wrap items-center justify-between gap-8">
+      <div class="flex flex-wrap items-center gap-6 flex-1">
+        <!-- Filter by Type -->
+        <div class="min-w-[200px] flex-1 sm:flex-initial">
+          <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3">Type</label>
+          <select id="filterCategory" class="w-full border-2 border-slate-100 rounded-2xl px-6 py-4 text-lg font-black text-slate-900 bg-white focus:border-slate-900 transition-all cursor-pointer shadow-sm">
+            <option value="ALL">All Types</option>
             <option value="PLUMBING">Plumbing</option>
             <option value="ELECTRICAL">Electrical</option>
             <option value="STRUCTURAL">Structural</option>
@@ -37,101 +38,94 @@
           </select>
         </div>
 
-        <!-- Dispatch Status Dropdown -->
-        <div class="min-w-[160px] flex-1 sm:flex-initial">
-          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Filter Dispatch Status</label>
-          <select id="filterStatus" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 bg-white focus:outline-none focus:border-slate-900 transition-colors cursor-pointer shadow-sm">
+        <!-- Filter by Status -->
+        <div class="min-w-[200px] flex-1 sm:flex-initial">
+          <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3">Status</label>
+          <select id="filterStatus" class="w-full border-2 border-slate-100 rounded-2xl px-6 py-4 text-lg font-black text-slate-900 bg-white focus:border-slate-900 transition-all cursor-pointer shadow-sm">
             <option value="ALL">All Statuses</option>
-            <option value="OPEN">Staged (Open)</option>
+            <option value="OPEN">New</option>
             <option value="IN_PROGRESS">In Progress</option>
             <option value="RESOLVED">Resolved</option>
-            <option value="CLOSED">Archived (Closed)</option>
+            <option value="CLOSED">Closed</option>
           </select>
         </div>
       </div>
 
-      <!-- Action Clear/Reset Filters -->
       <div class="self-end w-full sm:w-auto">
-        <button type="button" id="resetFiltersBtn" class="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 font-bold px-4 py-2 rounded-lg text-xs uppercase tracking-wider transition-colors inline-flex items-center justify-center">
-          Reset Filters
+        <button type="button" id="resetFiltersBtn" class="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-700 font-black px-8 py-4 rounded-2xl text-lg transition-all inline-flex items-center justify-center">
+          Clear
         </button>
       </div>
     </div>
   </div>
 
-  <!-- Service Requests Table Grid -->
-  <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mb-8">
-    <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+  <!-- Service Requests Table -->
+  <div class="bg-white border-2 border-slate-100 rounded-[2.5rem] shadow-sm overflow-hidden mb-10 p-2">
+    <div class="px-8 py-6 border-b-2 border-slate-50 bg-slate-50/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-t-[2rem]">
       <div>
-        <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wide">Registered Engineering Tasks</h2>
-        <p class="text-xs text-slate-500 font-medium">Aggregated list of current and archived issue dispatches</p>
+        <h2 class="text-2xl font-black text-slate-900 tracking-tight">Recent Reports</h2>
+        <p class="text-lg text-slate-500 font-bold mt-1">A list of all your repair requests.</p>
       </div>
-      <span class="text-xs font-bold text-slate-400">Total Entries: <span id="pageTotal">{{ requests|length }}</span></span>
+      <span class="px-4 py-2 bg-slate-200/50 text-slate-600 text-sm font-black rounded-xl uppercase tracking-widest">Total: <span id="pageTotal">{{ requests|length }}</span></span>
     </div>
 
-    <div class="overflow-x-auto">
-      <table class="w-full text-left border-collapse">
+    <div class="overflow-x-auto p-4">
+      <table class="w-full text-left border-separate border-spacing-y-3">
         <thead>
-          <tr class="bg-slate-100/75 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-            <th class="py-3 px-6">Timestamp Submitted</th>
-            <th class="py-3 px-6">Category Scope</th>
-            <th class="py-3 px-6">Issue Title</th>
-            <th class="py-3 px-6">Dispatch Status</th>
+          <tr class="text-xs font-black text-slate-400 uppercase tracking-widest">
+            <th class="py-3 px-6">Date</th>
+            <th class="py-3 px-6">Type</th>
+            <th class="py-3 px-6">Problem</th>
+            <th class="py-3 px-6">Status</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-200/60 text-sm">
+        <tbody class="text-lg">
           {% for r in requests %}
-            <tr class="maintenance-row hover:bg-slate-50/80 transition-colors"
+            <tr class="maintenance-row bg-slate-50 hover:bg-white border-2 border-transparent hover:border-slate-100 transition-all rounded-2xl"
                 data-category="{{ r.category }}"
                 data-status="{{ r.status }}">
-              <td class="py-3.5 px-6 font-medium text-slate-600 whitespace-nowrap">{{ r.created_at|date:"Y-m-d H:i" }}</td>
-              <td class="py-3.5 px-6 whitespace-nowrap">
-                <span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-slate-50 text-slate-700 border border-slate-200">{{ r.get_category_display }}</span>
+              <td class="py-6 px-6 font-black text-slate-500 text-base first:rounded-l-2xl whitespace-nowrap">{{ r.created_at|date:"M d, Y" }}</td>
+              <td class="py-6 px-6 whitespace-nowrap">
+                <span class="inline-block px-4 py-1 rounded-xl text-xs font-black bg-slate-200 text-slate-700 uppercase tracking-widest">{{ r.get_category_display }}</span>
               </td>
-              <td class="py-3.5 px-6 font-bold text-slate-900">{{ r.title }}</td>
-              <td class="py-3.5 px-6 whitespace-nowrap">
+              <td class="py-6 px-6 font-black text-slate-900">{{ r.title }}</td>
+              <td class="py-6 px-6 last:rounded-r-2xl whitespace-nowrap">
                 {% if r.status == "OPEN" %}
-                  <span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-200 uppercase">Staged (Open)</span>
+                  <span class="inline-block px-4 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-700 uppercase tracking-widest">New</span>
                 {% elif r.status == "IN_PROGRESS" %}
-                  <span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-blue-100 text-blue-900 border border-blue-200 uppercase">In Progress</span>
+                  <span class="inline-block px-4 py-1 rounded-full text-xs font-black bg-blue-100 text-blue-700 uppercase tracking-widest">Working on it</span>
                 {% elif r.status == "RESOLVED" %}
-                  <span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-200 uppercase">Resolved</span>
+                  <span class="inline-block px-4 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-700 uppercase tracking-widest">Fixed</span>
                 {% else %}
-                  <span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-800 border border-slate-300 uppercase">Archived</span>
+                  <span class="inline-block px-4 py-1 rounded-full text-xs font-black bg-slate-200 text-slate-600 uppercase tracking-widest">Closed</span>
                 {% endif %}
               </td>
             </tr>
           {% empty %}
             <tr id="emptyVaultRow">
-              <td colspan="4" class="py-12 px-6 text-center text-slate-500">
-                <div class="max-w-xs mx-auto">
-                  <p class="font-bold text-slate-700 text-base">No registered tasks</p>
-                  <p class="text-xs text-slate-400 mt-1">No property preservation logs mapped to your tenant identification strings.</p>
-                </div>
+              <td colspan="4" class="py-20 px-6 text-center text-slate-400 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-100">
+                <p class="text-2xl font-black">No repairs reported yet.</p>
               </td>
             </tr>
           {% endfor %}
           
-          <!-- Dynamic Filter Empty Result Placeholder -->
+          <!-- No Results -->
           <tr id="noResultsRow" style="display: none;">
-            <td colspan="4" class="py-12 px-6 text-center text-slate-500">
-              <div class="max-w-xs mx-auto">
-                <p class="font-bold text-slate-700 text-base">No exact match found</p>
-                <p class="text-xs text-slate-400 mt-1">Adjust Category Scope or Dispatch Status filters above to restore transmittal entries.</p>
-              </div>
+            <td colspan="4" class="py-20 px-6 text-center text-slate-400 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-100">
+              <p class="text-2xl font-black">Nothing found.</p>
+              <p class="text-lg font-bold mt-2">Try changing your filters.</p>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- Dynamic Client-Side Pagination Controls -->
-    <div class="px-6 py-3 border-t border-slate-200 bg-white flex flex-col sm:flex-row items-center justify-between gap-3" id="paginationWrapper" style="display: none;">
-      <div class="text-xs text-slate-500">
-        Showing <span id="pageStart" class="font-bold text-slate-700">0</span> to <span id="pageEnd" class="font-bold text-slate-700">0</span> of filtered entries
+    <!-- Pagination Controls -->
+    <div class="px-8 py-6 border-t-2 border-slate-50 bg-white flex flex-col sm:flex-row items-center justify-between gap-6" id="paginationWrapper" style="display: none;">
+      <div class="text-sm text-slate-400 font-black uppercase tracking-widest">
+        Showing <span id="pageStart" class="text-slate-900">0</span> - <span id="pageEnd" class="text-slate-900">0</span>
       </div>
-      <div class="flex items-center gap-1" id="pageButtons">
-        <!-- Dynamically injected pagination buttons -->
+      <div class="flex items-center gap-2" id="pageButtons">
       </div>
     </div>
   </div>
@@ -158,17 +152,14 @@
         const catVal = filterCategory ? filterCategory.value : 'ALL';
         const statVal = filterStatus ? filterStatus.value : 'ALL';
 
-        // Filter active rows matching both dataset filters
         filteredRows = rows.filter(r => {
           const matchCat = (catVal === 'ALL' || r.dataset.category === catVal);
           const matchStat = (statVal === 'ALL' || r.dataset.status === statVal);
           return matchCat && matchStat;
         });
 
-        // Update top counter indicator
         if (totalSpan) totalSpan.textContent = filteredRows.length;
 
-        // Check overall table availability
         if (rows.length > 0) {
           if (filteredRows.length === 0) {
             if (noResultsRow) noResultsRow.style.display = '';
@@ -190,19 +181,16 @@
         const total = filteredRows.length;
         const totalPages = Math.ceil(total / pageSize);
 
-        // Reset visibility state
         rows.forEach(r => r.style.display = 'none');
 
         if (total === 0) return;
 
-        // Guarantee bounds safety
         if (currentPage > totalPages) currentPage = totalPages;
         if (currentPage < 1) currentPage = 1;
 
         const start = (currentPage - 1) * pageSize;
         const end = Math.min(start + pageSize, total);
 
-        // Show range
         filteredRows.forEach((r, idx) => {
           if (idx >= start && idx < end) {
             r.style.display = '';
@@ -212,7 +200,6 @@
         if (startSpan) startSpan.textContent = start + 1;
         if (endSpan) endSpan.textContent = end;
 
-        // Populate controls UI
         if (!pageButtonsContainer) return;
         pageButtonsContainer.innerHTML = '';
 
@@ -223,33 +210,33 @@
           if (paginationWrapper) paginationWrapper.style.display = '';
         }
 
-        // Prev Trigger Button
+        // Prev
         const prevBtn = document.createElement('button');
         prevBtn.type = 'button';
-        prevBtn.textContent = 'Prev';
-        prevBtn.className = 'px-2.5 py-1 text-xs font-bold rounded border transition-colors mr-1 ' + 
-          (currentPage === 1 ? 'text-slate-300 border-slate-100 cursor-not-allowed bg-slate-50/50' : 'text-slate-700 border-slate-300 hover:bg-slate-50 bg-white');
+        prevBtn.innerHTML = '←';
+        prevBtn.className = 'w-10 h-10 flex items-center justify-center rounded-xl border-2 transition-all ' + 
+          (currentPage === 1 ? 'border-slate-50 text-slate-200 cursor-not-allowed' : 'border-slate-100 text-slate-900 hover:bg-slate-100');
         prevBtn.disabled = currentPage === 1;
         prevBtn.onclick = () => { currentPage--; renderPage(); };
         pageButtonsContainer.appendChild(prevBtn);
 
-        // Numeric Indicators Array
+        // Numbers
         for (let i = 1; i <= totalPages; i++) {
           const pageBtn = document.createElement('button');
           pageBtn.type = 'button';
           pageBtn.textContent = i;
-          pageBtn.className = 'w-7 h-7 text-xs font-bold rounded border transition-colors mx-0.5 flex items-center justify-center ' + 
-            (i === currentPage ? 'bg-slate-900 text-white border-slate-900' : 'text-slate-700 border-slate-300 hover:bg-slate-50 bg-white');
+          pageBtn.className = 'w-10 h-10 font-black rounded-xl border-2 transition-all ' + 
+            (i === currentPage ? 'bg-slate-900 text-white border-slate-900 shadow-lg' : 'border-slate-100 text-slate-900 hover:bg-slate-100');
           pageBtn.onclick = () => { currentPage = i; renderPage(); };
           pageButtonsContainer.appendChild(pageBtn);
         }
 
-        // Next Trigger Button
+        // Next
         const nextBtn = document.createElement('button');
         nextBtn.type = 'button';
-        nextBtn.textContent = 'Next';
-        nextBtn.className = 'px-2.5 py-1 text-xs font-bold rounded border transition-colors ml-1 ' + 
-          (currentPage === totalPages ? 'text-slate-300 border-slate-100 cursor-not-allowed bg-slate-50/50' : 'text-slate-700 border-slate-300 hover:bg-slate-50 bg-white');
+        nextBtn.innerHTML = '→';
+        nextBtn.className = 'w-10 h-10 flex items-center justify-center rounded-xl border-2 transition-all ' + 
+          (currentPage === totalPages ? 'border-slate-50 text-slate-200 cursor-not-allowed' : 'border-slate-100 text-slate-900 hover:bg-slate-100');
         nextBtn.disabled = currentPage === totalPages;
         nextBtn.onclick = () => { currentPage++; renderPage(); };
         pageButtonsContainer.appendChild(nextBtn);
@@ -266,7 +253,6 @@
         });
       }
 
-      // Initial assessment launch
       if (rows.length > 0) {
         applyFilters();
       }

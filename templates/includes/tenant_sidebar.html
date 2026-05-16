@@ -21,101 +21,101 @@
   </div>
 
   <!-- Nav -->
-  <nav class="px-4 py-6 space-y-1.5 flex-1 overflow-x-hidden" aria-label="Tenant navigation">
+  <nav class="px-4 py-8 space-y-2 flex-1 overflow-x-hidden" aria-label="Tenant navigation">
 
     <a href="{% url 'tenant_dashboard' %}"
-       class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg font-bold text-sm transition-colors overflow-hidden whitespace-nowrap
+       class="nav-item flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-base transition-all overflow-hidden whitespace-nowrap
               {% if request.resolver_match.url_name == 'tenant_dashboard' %}
                 active
               {% else %}
-                text-slate-300
+                text-slate-400 hover:text-white
               {% endif %}">
-      <!-- Dashboard icon -->
-      <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <!-- Home icon -->
+      <svg class="w-6 h-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
         <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
       </svg>
-      <span class="nav-text transition-all duration-300">Dashboard</span>
+      <span class="nav-text transition-all duration-300">Home</span>
     </a>
 
     <a href="{% url 'tenant_billing' %}"
-       class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg font-bold text-sm transition-colors overflow-hidden whitespace-nowrap
+       class="nav-item flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-base transition-all overflow-hidden whitespace-nowrap
               {% if request.resolver_match.url_name == 'tenant_billing' %}
                 active
               {% else %}
-                text-slate-300
+                text-slate-400 hover:text-white
               {% endif %}">
-      <!-- Billing icon -->
-      <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <!-- Bills icon -->
+      <svg class="w-6 h-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
       </svg>
-      <span class="nav-text transition-all duration-300">View Billing</span>
+      <span class="nav-text transition-all duration-300">Bills</span>
     </a>
 
     <a href="{% url 'tenant_pay_advance' %}"
-       class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg font-bold text-sm transition-colors overflow-hidden whitespace-nowrap
+       class="nav-item flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-base transition-all overflow-hidden whitespace-nowrap
               {% if request.resolver_match.url_name == 'tenant_pay_advance' or request.resolver_match.url_name == 'manual_gcash' %}
                 active
               {% else %}
-                text-slate-300
+                text-slate-400 hover:text-white
               {% endif %}">
       <!-- Payment icon -->
-      <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <svg class="w-6 h-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
         <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
       </svg>
-      <span class="nav-text transition-all duration-300">Make Payment</span>
+      <span class="nav-text transition-all duration-300">Make a Payment</span>
     </a>
 
     <a href="{% url 'maintenance_list' %}"
-       class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg font-bold text-sm transition-colors overflow-hidden whitespace-nowrap
+       class="nav-item flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-base transition-all overflow-hidden whitespace-nowrap
               {% if request.resolver_match.url_name == 'maintenance_list' %}
                 active
               {% else %}
-                text-slate-300
+                text-slate-400 hover:text-white
               {% endif %}">
-      <!-- Maintenance icon -->
-      <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <!-- Repairs icon -->
+      <svg class="w-6 h-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
         <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
         <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
-      <span class="nav-text transition-all duration-300">Maintenance</span>
+      <span class="nav-text transition-all duration-300">My Repairs</span>
     </a>
 
     <a href="{% url 'report_issue' %}"
-       class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg font-bold text-sm transition-colors overflow-hidden whitespace-nowrap
+       class="nav-item flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-base transition-all overflow-hidden whitespace-nowrap
               {% if request.resolver_match.url_name == 'report_issue' %}
                 active
               {% else %}
-                text-slate-300
+                text-slate-400 hover:text-white
               {% endif %}">
       <!-- Report icon -->
-      <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <svg class="w-6 h-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
       </svg>
-      <span class="nav-text transition-all duration-300">Report Issue</span>
+      <span class="nav-text transition-all duration-300">Report a Problem</span>
     </a>
 
   </nav>
 
   <!-- Toggle Button -->
   <div class="px-4 pb-4 overflow-hidden">
-    <button id="tenantSidebarToggle" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-colors overflow-hidden whitespace-nowrap">
-      <svg class="w-5 h-5 shrink-0 transition-transform duration-300" id="tenantToggleIcon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+    <button id="tenantSidebarToggle" class="w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-base text-slate-500 hover:bg-slate-800 hover:text-white transition-all overflow-hidden whitespace-nowrap">
+      <svg class="w-6 h-6 shrink-0 transition-transform duration-300" id="tenantToggleIcon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
         <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
       </svg>
-      <span class="nav-text transition-all duration-300">Collapse Sidebar</span>
+      <span class="nav-text transition-all duration-300">Hide Sidebar</span>
     </button>
   </div>
 
   <!-- Logout -->
-  <div class="px-4 py-4 border-t border-slate-800 overflow-hidden">
+  <div class="px-4 py-4 border-t-2 border-slate-800/50 overflow-hidden">
     <form method="post" action="{% url 'logout' %}">
       {% csrf_token %}
       <button type="submit"
-              class="w-full text-left flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-rose-950/30 hover:text-rose-400 transition-colors font-bold text-sm overflow-hidden whitespace-nowrap">
-        <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              class="w-full text-left flex items-center gap-4 px-6 py-4 rounded-2xl text-slate-500 hover:bg-rose-500 hover:text-white transition-all font-black text-base overflow-hidden whitespace-nowrap">
+        <svg class="w-6 h-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
         </svg>
-        <span class="nav-text transition-all duration-300">Logout</span>
+        <span class="nav-text transition-all duration-300">Sign Out</span>
       </button>
     </form>
   </div>

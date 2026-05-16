@@ -1,6 +1,6 @@
 {% extends "admin_portal/base.html" %}
 {% load humanize %}
-{% block title %}Dashboard | Core Administration{% endblock %}
+{% block title %}Home | RealEstate360+{% endblock %}
 
 {% block content %}
 <div class="dashboard-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-8 pb-12">
@@ -10,10 +10,10 @@
     <div>
       <div class="flex items-center gap-2 mb-1">
         <span class="inline-block w-3 h-3 rounded-full bg-emerald-500"></span>
-        <span class="text-sm font-semibold text-slate-700">Core Administration Console</span>
+        <span class="text-indigo-600 font-bold tracking-wider uppercase text-xs">Admin Home</span>
       </div>
-      <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900">System Dashboard</h1>
-      <p class="text-base text-slate-700 mt-1 leading-relaxed">Practical telemetry overview for live property status, leasing operations, and billing cycles.</p>
+      <h1 class="text-3xl md:text-4xl font-extrabold text-slate-900 mt-1">Dashboard</h1>
+      <p class="text-slate-600 mt-2 text-lg font-medium">A quick look at your properties, tenants, and bills.</p>
     </div>
     
     <div class="flex items-center gap-3 w-full md:w-auto">
@@ -27,22 +27,15 @@
         {% endif %}
       </a>
       
-      <a href="{% url 'admin_create_unit' %}" class="inline-flex items-center gap-2 px-5 py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-sm font-bold transition-colors shadow-xs shrink-0 justify-center">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-        </svg>
-        <span>Add Unit</span>
-      </a>
     </div>
   </header>
 
   <!-- Key Metrics Counters (Highly Readable & High Contrast) -->
   <section class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
     
-    <!-- Active Tenants -->
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-blue-600 flex flex-col justify-between">
       <div>
-        <span class="text-sm font-bold text-slate-700 block mb-1">Active Tenants</span>
+        <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Active Tenants</span>
         <div class="text-3xl font-black text-slate-900 tracking-tight">{{ total_tenants|intcomma }}</div>
       </div>
       <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
@@ -53,7 +46,7 @@
     <!-- Occupied Assets -->
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-emerald-600 flex flex-col justify-between">
       <div>
-        <span class="text-sm font-bold text-slate-700 block mb-1">Occupied Units</span>
+        <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Filled Units</span>
         <div class="text-3xl font-black text-slate-900 tracking-tight">{{ occupied_units|intcomma }}</div>
       </div>
       <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
@@ -64,7 +57,7 @@
     <!-- Available Units -->
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-purple-600 flex flex-col justify-between">
       <div>
-        <span class="text-sm font-bold text-slate-700 block mb-1">Available Units</span>
+        <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Empty Units</span>
         <div class="text-3xl font-black text-slate-900 tracking-tight">{{ available_units|intcomma }}</div>
       </div>
       <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
@@ -75,7 +68,7 @@
     <!-- Monthly Billed Revenue -->
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-slate-700 flex flex-col justify-between">
       <div>
-        <span class="text-sm font-bold text-slate-700 block mb-1">Current Month Billed</span>
+        <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Billed This Month</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight truncate" title="₱{{ total_revenue|floatformat:0|intcomma }}">
           ₱{{ total_revenue|floatformat:0|intcomma }}
         </div>
@@ -88,7 +81,7 @@
     <!-- Monthly Collected Cash -->
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-indigo-600 flex flex-col justify-between">
       <div>
-        <span class="text-sm font-bold text-slate-700 block mb-1">Current Month Collected</span>
+        <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Paid This Month</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight truncate" title="₱{{ monthly_collected|floatformat:0|intcomma }}">
           ₱{{ monthly_collected|floatformat:0|intcomma }}
         </div>
@@ -109,8 +102,8 @@
       <!-- Shared filter for all trend charts -->
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h2 class="text-xl font-extrabold text-slate-900 tracking-tight">Monthly Trends</h2>
-          <p class="text-sm text-slate-600 mt-0.5">Revenue, water usage, and maintenance — filtered together</p>
+          <h2 class="text-xl font-bold text-slate-900">Reports</h2>
+          <p class="text-sm text-slate-600 mt-0.5">Revenue, water usage, and repairs — all in one place.</p>
         </div>
         <select id="monthFilter" class="bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-slate-500 focus:border-slate-500 block p-2.5 font-bold w-full sm:w-auto">
           <option value="12">Past 12 Months</option>
@@ -122,8 +115,8 @@
       <!-- Revenue Performance line chart -->
       <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
         <div class="mb-4 pb-3 border-b border-slate-100">
-          <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Revenue Trajectory</h2>
-          <p class="text-sm text-slate-700 mt-0.5">Historical comparison of billed totals against base lease valuations</p>
+          <h3 class="text-lg font-bold text-slate-900">Income Over Time</h3>
+          <p class="text-sm text-slate-700 mt-0.5">Total amount billed compared to expected rent.</p>
         </div>
         <div class="h-[300px] w-full">
           <canvas id="rentChart"></canvas>
@@ -134,8 +127,8 @@
       <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
         <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
           <div>
-            <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Utility Flow Tracker</h2>
-            <p class="text-sm text-slate-700 mt-0.5">Total monthly water consumption across all units</p>
+            <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Water Usage</h2>
+            <p class="text-sm text-slate-700 mt-0.5">Total water used every month across all units.</p>
           </div>
           <span class="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded">m³</span>
         </div>
@@ -148,10 +141,10 @@
       <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
         <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
           <div>
-            <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Maintenance Trend</h2>
-            <p class="text-sm text-slate-700 mt-0.5">Monthly service request volume</p>
+            <h3 class="font-bold text-slate-900">Repair History</h3>
+            <p class="text-sm text-slate-500 mt-1">Total repair requests over time.</p>
           </div>
-          <span class="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded">requests</span>
+          <span class="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded">repairs</span>
         </div>
         <div class="h-[300px] w-full">
           <canvas id="maintenanceChart"></canvas>
@@ -162,8 +155,8 @@
       <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
         <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
           <div>
-            <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Property Management Console</h2>
-            <p class="text-sm text-slate-700 mt-0.5">Instantly scan category status and route directly to pre-filtered modules</p>
+            <h2 class="text-2xl font-extrabold text-slate-900">Property Management</h2>
+            <p class="text-sm text-slate-700 mt-0.5">Quickly check your properties and tenants.</p>
           </div>
         </div>
 
@@ -177,10 +170,10 @@
                 <span class="text-sm font-bold text-purple-800 bg-purple-50 px-2.5 py-0.5 rounded border border-purple-200">Available</span>
                 <span class="text-sm font-extrabold text-slate-900">{{ available_units }} units</span>
               </div>
-              <p class="text-sm text-slate-700 leading-relaxed mt-2">Vacant units prioritized for incoming tenant screening.</p>
+              <p class="text-sm text-slate-700 leading-relaxed mt-2">Units that are ready for new tenants.</p>
             </div>
             <a href="{% url 'admin_units' %}?status=AVAILABLE" class="mt-4 block text-center bg-white hover:bg-purple-50 border border-slate-300 text-purple-800 font-extrabold text-sm py-2 rounded transition-colors shadow-xs">
-              Scan Vacant Assets →
+              See Empty Units →
             </a>
           </div>
 
@@ -191,10 +184,10 @@
                 <span class="text-sm font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200">Occupied</span>
                 <span class="text-sm font-extrabold text-slate-900">{{ occupied_units }} units</span>
               </div>
-              <p class="text-sm text-slate-700 leading-relaxed mt-2">Assets under active monthly leasing contracts.</p>
+              <p class="text-sm text-slate-700 leading-relaxed mt-2">Units that have tenants.</p>
             </div>
             <a href="{% url 'admin_units' %}?status=OCCUPIED" class="mt-4 block text-center bg-white hover:bg-emerald-50 border border-slate-300 text-emerald-800 font-extrabold text-sm py-2 rounded transition-colors shadow-xs">
-              View Active Roster →
+              See Filled Units →
             </a>
           </div>
 
@@ -205,10 +198,10 @@
                 <span class="text-sm font-bold text-blue-800 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-200">Tenants</span>
                 <span class="text-sm font-extrabold text-slate-900">{{ total_tenants }} users</span>
               </div>
-              <p class="text-sm text-slate-700 leading-relaxed mt-2">Full repository of tenant accounts and compliance credentials.</p>
+              <p class="text-sm text-slate-700 leading-relaxed mt-2">List of all your tenants.</p>
             </div>
             <a href="{% url 'admin_tenants' %}" class="mt-4 block text-center bg-white hover:bg-blue-50 border border-slate-300 text-blue-800 font-extrabold text-sm py-2 rounded transition-colors shadow-xs">
-              Access Base Registry →
+              See All Tenants →
             </a>
           </div>
 
@@ -217,14 +210,11 @@
         <!-- Practical Action Footer -->
         <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div class="text-sm text-slate-800 leading-relaxed">
-            <span class="font-extrabold text-slate-900">Quick Administration:</span> Direct registry links to instantiate new records.
+            <span class="font-extrabold text-slate-900">Quick Actions:</span> Add new records here.
           </div>
           <div class="flex items-center gap-3 w-full sm:w-auto">
-            <a href="{% url 'admin_create_unit' %}" class="flex-1 sm:flex-none text-center px-4 py-2 bg-white hover:bg-slate-100 border border-slate-300 text-slate-900 font-extrabold text-sm rounded transition-colors">
-              + New Unit
-            </a>
             <a href="{% url 'admin_create_tenant_profile' %}" class="flex-1 sm:flex-none text-center px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-sm rounded transition-colors">
-              + Intake Tenant
+              + Add Tenant
             </a>
           </div>
         </div>
@@ -239,7 +229,7 @@
       <!-- Recent Notifications List -->
       <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col max-h-[460px]">
         <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100 shrink-0">
-          <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Notifications</h2>
+          <h3 class="text-lg font-bold text-slate-900">Unit Status</h3>
           <a href="{% url 'admin_notifications' %}" class="text-sm font-bold text-slate-800 hover:text-slate-900 underline">View All</a>
         </div>
         
@@ -254,7 +244,7 @@
             </div>
           {% empty %}
             <div class="text-center py-10 text-slate-500">
-              <p class="text-sm font-semibold">No system log alerts triggered.</p>
+              <p class="text-sm font-semibold">Everything is normal.</p>
             </div>
           {% endfor %}
         </div>

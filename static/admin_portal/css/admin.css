@@ -1,26 +1,26 @@
 :root {
   --bg: #f8fafc;
   --panel: #ffffff;
-  --panel-soft: #f8fbff;
-  --border: #e2e8f0;
+  --panel-soft: #f1f5f9;
+  --border: #cbd5e1;
   --text: #0f172a;
-  --muted: #64748b;
-  --primary: #172554;
-  --primary-soft: #1e3a8a;
-  --sidebar: #172554;
-  --sidebar-hover: rgba(255, 255, 255, 0.08);
-  --sidebar-active: rgba(30, 58, 138, 0.72);
-  --accent: #22c55e;
-  --accent-soft: #dcfce7;
-  --danger-soft: #fee2e2;
-  --warning-soft: #fef3c7;
-  --shadow-sm: 0 8px 24px rgba(15, 23, 42, 0.06);
-  --shadow-md: 0 18px 45px rgba(15, 23, 42, 0.1);
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.4);
-  --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
-  --primary-gradient: linear-gradient(135deg, #1e3a8a 0%, #172554 100%);
-  --accent-gradient: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  --muted: #475569; /* Darkened for better contrast */
+  --primary: #0f172a; /* Stronger primary */
+  --primary-soft: #1e293b;
+  --sidebar: #0f172a;
+  --sidebar-hover: rgba(255, 255, 255, 0.1);
+  --sidebar-active: #3b82f6;
+  --accent: #16a34a;
+  --accent-soft: #f0fdf4;
+  --danger-soft: #fef2f2;
+  --warning-soft: #fffbeb;
+  --shadow-sm: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-md: 0 12px 32px rgba(15, 23, 42, 0.12);
+  --glass-bg: rgba(255, 255, 255, 0.9);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  --card-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.08);
+  --primary-gradient: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  --accent-gradient: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
 }
 
 /* Premium Global Scrollbar */
@@ -144,11 +144,11 @@
 }
 
 .stat-value {
-  font-family: "Poppins", sans-serif;
-  font-size: 1.75rem;
-  font-weight: 700;
+  font-family: "Outfit", sans-serif;
+  font-size: 2rem;
+  font-weight: 800;
   color: var(--primary);
-  line-height: 1.2;
+  line-height: 1.1;
 }
 
 .stat-trend {
@@ -237,6 +237,8 @@ body {
   background-attachment: fixed;
   color: var(--text);
   font-family: "Outfit", sans-serif;
+  font-size: 18px; /* Increased from 16px */
+  line-height: 1.6;
 }
 
 .dashboard-header h1 {
@@ -344,14 +346,14 @@ aside.sidebar {
   border: 0;
   width: 100%;
   background: transparent;
-  color: #d7e3ff;
+  color: #f1f5f9;
   text-decoration: none;
   text-align: left;
-  padding: 0.92rem 1.15rem;
+  padding: 1rem 1.25rem;
   border-radius: 1rem;
   font-weight: 600;
-  font-size: 0.94rem;
-  transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+  font-size: 1.05rem; /* Slightly larger */
+  transition: all 0.2s ease;
 }
 
 .nav-item:hover {

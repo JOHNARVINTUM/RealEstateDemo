@@ -5,68 +5,71 @@
 {% block content %}
 <div class="maintenance-resolve-studio max-w-6xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
   
-  <!-- Navigation Breadcrumb -->
-  <nav class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-600">
-    <a href="{% url 'admin_maintenance' %}" class="hover:text-slate-900 transition-colors">Property Maintenance</a>
-    <span class="text-slate-400">/</span>
-    <span class="text-slate-900">Resolve Issue #{{ req.id }}</span>
+  <!-- Navigation: Simple Back Button -->
+  <nav class="flex items-center">
+    <a href="{{ back_url }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
+      <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
+      </svg>
+      <span>Back</span>
+    </a>
   </nav>
 
-  <div class="flex flex-col lg:flex-row gap-6">
+  <div class="flex flex-col lg:flex-row gap-8">
     
-    <!-- Left Column: Primary Descriptive Logs -->
+    <!-- Left Column: Problem Details -->
     <div class="flex-1 space-y-6">
       
-      <!-- Primary Core Context Card -->
-      <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
+      <!-- Main Info Card -->
+      <div class="bg-white border border-slate-200 rounded-xl p-8 shadow-xs">
         
-        <!-- Top Status Meta Rows -->
-        <div class="flex justify-between items-start mb-4">
-          <span class="px-2.5 py-1 bg-slate-100 border border-slate-200 text-slate-800 rounded text-xs font-extrabold uppercase tracking-tight select-none">
+        <!-- Category and Date -->
+        <div class="flex justify-between items-start mb-6">
+          <span class="px-4 py-1.5 bg-slate-100 border border-slate-200 text-slate-800 rounded-lg text-xs font-black uppercase tracking-tight select-none">
             {{ req.get_category_display }}
           </span>
           <div class="text-right">
-            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-tight block">Submitted Date</span>
-            <strong class="text-sm font-black text-slate-900">{{ req.created_at|date:"M d, Y" }}</strong>
+            <span class="text-[11px] font-black text-slate-500 uppercase tracking-tight block">Reported on</span>
+            <strong class="text-base font-black text-slate-900">{{ req.created_at|date:"M d, Y" }}</strong>
           </div>
         </div>
 
-        <!-- Descriptive Title Headers -->
-        <h1 class="text-xl sm:text-2xl font-black text-slate-900 mb-3 tracking-tight">{{ req.title }}</h1>
+        <!-- Problem Title -->
+        <h1 class="text-2xl sm:text-3xl font-black text-slate-900 mb-4 tracking-tight">{{ req.title }}</h1>
         
-        <!-- Descriptive Quote Box -->
-        <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6">
-          <span class="text-xs font-bold text-slate-500 uppercase tracking-tight block mb-1">Detailed Payload description</span>
-          <p class="text-slate-800 leading-relaxed text-sm font-medium whitespace-pre-wrap">"{{ req.description }}"</p>
+        <!-- Description Box -->
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-6 mb-8">
+          <span class="text-xs font-black text-slate-500 uppercase tracking-tight block mb-2">What needs fixing</span>
+          <p class="text-slate-800 leading-relaxed text-base font-bold whitespace-pre-wrap">{{ req.description }}</p>
         </div>
 
-        <!-- Tenant & Unit Reference Blocks -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <!-- Tenant & Unit Info -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
           
-          <!-- Tenant Metadata -->
-          <div class="p-4 bg-white border border-slate-200 rounded-lg shadow-xs">
-            <span class="text-[10px] font-bold text-slate-500 uppercase block mb-1.5">Contracting Tenant</span>
-            <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-800 font-bold text-xs shrink-0">
+          <!-- Tenant Info -->
+          <div class="p-5 bg-white border border-slate-200 rounded-xl shadow-xs">
+            <span class="text-[11px] font-black text-slate-500 uppercase block mb-2">Tenant</span>
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-800 font-black text-sm shrink-0">
                 {{ req.tenant.email|first|upper }}
               </div>
               <div class="min-w-0">
-                <div class="text-sm font-bold text-slate-900 truncate">{{ req.tenant.email }}</div>
-                <div class="text-xs text-slate-600 font-medium">Primary Contact User</div>
+                <div class="text-base font-black text-slate-900 truncate">{{ req.tenant.email }}</div>
+                <div class="text-xs text-slate-500 font-bold">Contact Person</div>
               </div>
             </div>
           </div>
 
-          <!-- Target Location Information -->
-          <div class="p-4 bg-white border border-slate-200 rounded-lg shadow-xs">
-            <span class="text-[10px] font-bold text-slate-500 uppercase block mb-1.5">Facility Location</span>
-            <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-800 font-bold text-xs shrink-0">
+          <!-- Unit Info -->
+          <div class="p-5 bg-white border border-slate-200 rounded-xl shadow-xs">
+            <span class="text-[11px] font-black text-slate-500 uppercase block mb-2">Location</span>
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-800 font-black text-sm shrink-0">
                 #
               </div>
               <div class="min-w-0">
-                <div class="text-sm font-bold text-slate-900">Unit #{{ req.lease.unit.number }}</div>
-                <div class="text-xs text-slate-600 font-medium">{{ req.lease.unit.get_unit_type_display }}</div>
+                <div class="text-base font-black text-slate-900">Unit #{{ req.lease.unit.number }}</div>
+                <div class="text-xs text-slate-500 font-bold">{{ req.lease.unit.get_unit_type_display }}</div>
               </div>
             </div>
           </div>
@@ -75,32 +78,41 @@
 
       </div>
 
-      <!-- Current Lifecycle Scope Overview Bar -->
-      <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <!-- Current Status Bar -->
+      <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
         <div>
-          <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-0.5">Current Action Flow Status</span>
-          <div class="text-lg font-black text-slate-900">
+          <span class="text-[11px] font-black text-slate-500 uppercase tracking-wide block mb-1">Status</span>
+          <div class="text-xl font-black text-slate-900">
             {% if req.status == 'RESOLVED' %}
-              <span class="text-emerald-700">Resolved Ticket</span>
+              <span class="text-emerald-700 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                Fixed
+              </span>
             {% elif req.status == 'IN_PROGRESS' %}
-              <span class="text-purple-700">Active Job Execution</span>
+              <span class="text-indigo-700 flex items-center gap-2">
+                <svg class="w-5 h-5 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                Being fixed
+              </span>
             {% else %}
-              <span class="text-amber-700">Awaiting Service Implementation</span>
+              <span class="text-amber-700 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Waiting to start
+              </span>
             {% endif %}
           </div>
         </div>
 
-        <span class="hidden sm:block w-px h-8 bg-slate-200"></span>
+        <span class="hidden sm:block w-px h-10 bg-slate-200"></span>
 
         <div class="sm:text-right">
-          <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-0.5">Configured Ticket Severity</span>
-          <div class="text-sm font-extrabold">
+          <span class="text-[11px] font-black text-slate-500 uppercase tracking-wide block mb-1">How urgent?</span>
+          <div class="text-base font-black">
             {% if req.priority == 'HIGH' or req.priority == 'URGENT' %}
-              <span class="text-rose-700 uppercase">{{ req.priority }}</span>
+              <span class="text-rose-700 uppercase tracking-wider">High</span>
             {% elif req.priority == 'MEDIUM' %}
-              <span class="text-amber-700 uppercase">Medium</span>
+              <span class="text-amber-700 uppercase tracking-wider">Medium</span>
             {% else %}
-              <span class="text-slate-700 uppercase">Low</span>
+              <span class="text-slate-600 uppercase tracking-wider">Low</span>
             {% endif %}
           </div>
         </div>
@@ -108,55 +120,58 @@
 
     </div>
 
-    <!-- Right Column: Administrative Configuration Form Studio -->
+    <!-- Right Column: Update Status Form -->
     <div class="w-full lg:w-96 shrink-0">
-      <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs sticky top-6">
+      <div class="bg-white border border-slate-200 rounded-xl p-8 shadow-xs sticky top-6">
         
-        <h2 class="text-base font-extrabold text-slate-900">Resolve Status Configurator</h2>
-        <p class="text-xs text-slate-600 mt-0.5 mb-5 leading-relaxed">Update ticket operational scope indices and assign designated facility technicians.</p>
+        <h2 class="text-lg font-black text-slate-900">Update Status</h2>
+        <p class="text-sm text-slate-500 mt-1 mb-6 font-bold leading-relaxed">Change the status or assign a worker to fix this.</p>
 
-        <form method="post" class="space-y-4">
+        <form method="post" class="space-y-5">
           {% csrf_token %}
           
           {% for field in form %}
-          <div class="space-y-1.5">
-            <label for="{{ field.id_for_label }}" class="block text-xs font-bold text-slate-800">
+          <div class="space-y-2">
+            <label for="{{ field.id_for_label }}" class="block text-sm font-black text-slate-800">
               {{ field.label }}
             </label>
             
             <div class="relative">
               {% if field.name == 'status' or field.name == 'priority' %}
                 <select name="{{ field.name }}" id="{{ field.id_for_label }}" 
-                        class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-slate-500 transition-all outline-none cursor-pointer">
+                        class="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-xl text-sm font-black text-slate-900 focus:border-slate-800 focus:ring-0 transition-all outline-none cursor-pointer appearance-none">
                   {% for val, label in field.field.choices %}
                     <option value="{{ val }}" {% if field.value == val %}selected{% endif %}>{{ label }}</option>
                   {% endfor %}
                 </select>
+                <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
               {% else %}
                 <input type="{{ field.field.widget.input_type|default:'text' }}" 
                        name="{{ field.name }}" 
                        id="{{ field.id_for_label }}" 
                        value="{{ field.value|default:'' }}"
                        placeholder="{{ field.label }}"
-                       class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 transition-all outline-none">
+                       class="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:border-slate-800 focus:ring-0 transition-all outline-none">
               {% endif %}
             </div>
 
             {% if field.errors %}
-              <span class="block text-[11px] font-bold text-rose-600 mt-1">
+              <span class="block text-xs font-black text-rose-600 mt-1">
                 {{ field.errors.0 }}
               </span>
             {% endif %}
           </div>
           {% endfor %}
 
-          <!-- Action Control Triggers -->
-          <div class="pt-4 space-y-2.5">
-            <button type="submit" class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-extrabold text-xs transition-colors text-center shadow-xs">
-              Confirm Status Revision
+          <!-- Buttons -->
+          <div class="pt-6 space-y-3">
+            <button type="submit" class="w-full py-4 bg-slate-900 hover:bg-black text-white rounded-xl font-black text-sm transition-all text-center shadow-lg active:scale-95">
+              Save Changes
             </button>
-            <a href="{% url 'admin_maintenance' %}" class="block w-full py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg font-bold text-xs text-center transition-colors">
-              Cancel Implementation
+            <a href="{{ back_url }}" class="block w-full py-3 bg-white border-2 border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl font-black text-sm text-center transition-all">
+              Cancel
             </a>
           </div>
 

@@ -1,135 +1,143 @@
 {% extends "tenant_base.html" %}
 {% load humanize %}
-{% block title %}Direct Transmittal Scheduling - RealEstate360+{% endblock %}
-{% block meta_description %}Schedule an official face-to-face administration transmittal log for physical settlements.{% endblock %}
+{% block title %}Pay in Cash | RealEstate360+{% endblock %}
+{% block meta_description %}Pick a time to pay your rent in cash at the office.{% endblock %}
 
 {% block tenant_content %}
 
   <!-- Page Header -->
-  <div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+  <div class="mb-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 border-b-2 border-slate-100 pb-8">
     <div>
-      <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Direct Transmittal Scheduling</h1>
-      <p class="text-slate-500 mt-1 font-medium text-sm">Coordinate secured face-to-face cash clearing with the property administration office</p>
+      <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">Pay in Cash</h1>
+      <p class="text-lg text-slate-500 font-bold mt-2">Pick a date and time to visit the office and pay in person.</p>
     </div>
-    <!-- Transmittal Protocol Tag -->
-    <div class="bg-white border border-slate-200 px-3 py-1.5 rounded-md shadow-sm w-fit">
-      <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Protocol Method</span>
-      <span class="text-xs font-bold text-slate-800">Physical Cash Clearing</span>
+    <!-- Method Tag -->
+    <div class="bg-white border-2 border-slate-100 px-6 py-4 rounded-2xl shadow-sm w-fit">
+      <span class="text-xs font-black text-slate-400 block uppercase tracking-widest mb-1">Method</span>
+      <span class="text-lg font-black text-slate-800">Cash</span>
     </div>
   </div>
 
   {% if error %}
-    <!-- Explicit Form Error Capture -->
-    <div class="mb-8 bg-rose-50 border border-rose-200 text-rose-900 rounded-lg p-4 flex items-start gap-3 shadow-sm">
-      <svg class="w-5 h-5 shrink-0 text-rose-700 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+    <div class="mb-10 bg-rose-50 border-2 border-rose-100 text-rose-700 rounded-[2rem] p-8 flex items-start gap-4 shadow-sm">
+      <div class="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      </div>
       <div>
-        <p class="font-bold text-xs uppercase tracking-wider text-rose-900">Transmittal Parameter Error</p>
-        <p class="text-xs font-medium mt-0.5">{{ error }}</p>
+        <p class="text-sm font-black uppercase tracking-widest text-rose-400 mb-1">Payment Error</p>
+        <p class="text-xl font-black">{{ error }}</p>
       </div>
     </div>
   {% endif %}
 
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-10">
 
-    <!-- Payment Protocol Summary -->
-    <div class="tenant-card h-fit flex flex-col justify-between">
+    <!-- Payment Summary -->
+    <div class="tenant-card p-10 h-fit flex flex-col justify-between">
       <div>
-        <div class="border-b border-slate-100 pb-4 mb-4">
-          <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wide">Transmittal Target Summary</h2>
-          <p class="text-xs text-slate-500 font-medium mt-0.5">Staged financial totals mapping to target interval scope</p>
+        <div class="border-b-2 border-slate-50 pb-6 mb-8">
+          <h2 class="text-2xl font-black text-slate-900">Payment Summary</h2>
+          <p class="text-lg text-slate-500 font-bold mt-1">What you are paying today.</p>
         </div>
 
-        <!-- Calculated Amount Base -->
-        <div class="p-4 rounded-lg bg-slate-50 border border-slate-200/80 mb-5 flex justify-between items-center">
+        <div class="p-8 rounded-[2rem] bg-slate-900 text-white mb-8 flex justify-between items-center shadow-xl">
           <div>
-            <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Staged Liability Base</span>
-            <span class="text-3xl font-bold text-slate-900 block mt-0.5">₱{{ amount_to_pay|floatformat:2|intcomma }}</span>
+            <span class="text-xs font-black text-slate-400 block uppercase tracking-widest mb-1">Amount to Pay</span>
+            <span class="text-4xl font-black block">₱{{ amount_to_pay|floatformat:2|intcomma }}</span>
           </div>
-          <div class="text-slate-300 font-mono text-2xl font-bold select-none">
-            [F2F]
-          </div>
-        </div>
-
-        <!-- Target Coverage Mode -->
-        <div class="mb-6">
-          <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider mb-1">Target Coverage Scope</span>
-          <div class="p-3 rounded-md bg-white border border-slate-200 font-bold text-xs text-slate-800">
-            {% if payment_type == "full" %}Comprehensive Settlement
-            {% elif payment_type == "rent_only" %}Restricted Split: Lease Rent Only
-            {% elif payment_type == "water_only" %}Restricted Split: Water Utility Only
-            {% else %}Comprehensive Settlement{% endif %}
+          <div class="text-slate-700 font-black text-2xl select-none hidden sm:block">
+            CASH
           </div>
         </div>
 
-        <!-- Directive Array -->
-        <div class="pt-4 border-t border-slate-100">
-          <span class="text-xs font-bold text-slate-900 block mb-2">Transmittal Lifecycle Flow</span>
-          <ol class="list-decimal list-inside space-y-1.5 text-xs font-medium text-slate-600">
-            <li>Select preferred date/time targets on the console</li>
-            <li>Submit scheduling parameters for real-time admin review</li>
-            <li>Status transitions to <span class="font-bold text-slate-900">PENDING_CONFIRMATION</span></li>
-            <li>Admin updates transmittal to confirm receiving direct cache</li>
+        <div class="mb-8">
+          <span class="text-xs font-black text-slate-400 block uppercase tracking-widest mb-2">Payment for</span>
+          <div class="p-4 rounded-2xl bg-slate-50 border-2 border-slate-100 font-black text-lg text-slate-800">
+            {% if payment_type == "full" %}Rent & Water
+            {% elif payment_type == "rent_only" %}Rent Only
+            {% elif payment_type == "water_only" %}Water Only
+            {% else %}Rent & Water{% endif %}
+          </div>
+        </div>
+
+        <div class="pt-8 border-t-2 border-slate-50">
+          <span class="text-sm font-black text-slate-900 block mb-4 uppercase tracking-widest">How to pay in person</span>
+          <ol class="space-y-4">
+            <li class="flex items-start gap-3">
+              <span class="w-6 h-6 rounded-full bg-slate-100 text-slate-900 font-black text-xs flex items-center justify-center shrink-0 mt-1">1</span>
+              <p class="text-lg text-slate-600 font-bold">Pick a date and time you want to visit.</p>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="w-6 h-6 rounded-full bg-slate-100 text-slate-900 font-black text-xs flex items-center justify-center shrink-0 mt-1">2</span>
+              <p class="text-lg text-slate-600 font-bold">Send your schedule to our office.</p>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="w-6 h-6 rounded-full bg-slate-100 text-slate-900 font-black text-xs flex items-center justify-center shrink-0 mt-1">3</span>
+              <p class="text-lg text-slate-600 font-bold">Wait for us to confirm your visit.</p>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="w-6 h-6 rounded-full bg-slate-100 text-slate-900 font-black text-xs flex items-center justify-center shrink-0 mt-1">4</span>
+              <p class="text-lg text-slate-600 font-bold">Visit the office and pay in cash.</p>
+            </li>
           </ol>
         </div>
       </div>
     </div>
 
-    <!-- Appointment Scheduling Form -->
-    <div class="tenant-card">
-      <div class="border-b border-slate-100 pb-4 mb-5">
-        <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wide">Appointment Parameters Console</h2>
-        <p class="text-xs text-slate-500 font-medium mt-0.5">Specify clear chronological coordinates for administrative meetup</p>
+    <!-- Scheduling Form -->
+    <div class="tenant-card p-10">
+      <div class="border-b-2 border-slate-50 pb-6 mb-8">
+        <h2 class="text-2xl font-black text-slate-900">Set Your Schedule</h2>
+        <p class="text-lg text-slate-500 font-bold mt-1">Select when you will visit the office.</p>
       </div>
 
-      <form method="post" class="space-y-4">
+      <form method="post" class="space-y-8">
         {% csrf_token %}
         <input type="hidden" name="amount" value="{{ amount_to_pay }}">
         <input type="hidden" name="bill_ids" value="{{ bill_ids }}">
         <input type="hidden" name="payment_type" value="{{ payment_type|default:'full' }}">
 
-        <!-- Preferred Date Input -->
+        <!-- Date -->
         <div>
-          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-            Preferred Clearing Date <span class="text-rose-700">*</span>
+          <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-4">
+            Date <span class="text-rose-600">*</span>
           </label>
           <input type="date" name="preferred_date" required
                  value="{{ preferred_date }}"
                  min="{% now 'Y-m-d' %}"
-                 class="w-full border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm font-medium text-slate-900 bg-white focus:outline-none focus:border-slate-900 transition-colors">
+                 class="w-full border-2 border-slate-100 rounded-2xl px-6 py-4 text-xl font-black text-slate-900 bg-white focus:border-slate-900 transition-all shadow-sm">
         </div>
 
-        <!-- Preferred Time Input -->
+        <!-- Time -->
         <div>
-          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-            Preferred Clearing Time <span class="text-slate-400 font-normal">(Optional)</span>
+          <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-4">
+            Time <span class="text-slate-400 font-bold">(Optional)</span>
           </label>
           <input type="time" name="preferred_time"
                  value="{{ preferred_time }}"
-                 class="w-full border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm font-medium text-slate-900 bg-white focus:outline-none focus:border-slate-900 transition-colors">
-          <p class="text-[11px] text-slate-400 mt-1">Leave empty if available during broad business operating ranges</p>
+                 class="w-full border-2 border-slate-100 rounded-2xl px-6 py-4 text-xl font-black text-slate-900 bg-white focus:border-slate-900 transition-all shadow-sm">
+          <p class="text-sm text-slate-400 mt-3 font-bold italic">* Leave empty if you can come anytime.</p>
         </div>
 
-        <!-- Submitting Instructions Note -->
+        <!-- Notes -->
         <div>
-          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-            Supplemental Transmittal Directives <span class="text-slate-400 font-normal">(Optional)</span>
+          <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-4">
+            Additional Notes <span class="text-slate-400 font-bold">(Optional)</span>
           </label>
           <textarea name="tenant_note" rows="3"
-                    class="w-full border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm font-medium text-slate-900 bg-white focus:outline-none focus:border-slate-900 transition-colors resize-none"
-                    placeholder="Provide specific notes mapped to your handover targets...">{{ tenant_note }}</textarea>
+                    class="w-full border-2 border-slate-100 rounded-2xl px-6 py-4 text-lg font-black text-slate-900 bg-white focus:border-slate-900 transition-all shadow-sm resize-none"
+                    placeholder="Tell us if you have any special requests...">{{ tenant_note }}</textarea>
         </div>
 
-        <!-- Persistence Alert -->
-        <div class="p-3.5 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600 leading-relaxed">
-          <span class="font-bold text-slate-900 block mb-0.5">Authorization Freeze Note</span>
-          Transmittal remains staged pending final physical caching log verification by property account reps.
+        <div class="p-8 rounded-[2rem] bg-slate-50 border-2 border-slate-100 text-lg text-slate-600 leading-relaxed shadow-sm">
+          <span class="font-black text-slate-900 block mb-2 uppercase tracking-widest text-sm">Wait for confirmation</span>
+          Your payment is only confirmed after we receive it at the office.
         </div>
 
-        <!-- Final Submit Trigger -->
-        <div class="pt-2">
+        <div class="pt-4">
           <button type="submit"
-                  class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-lg text-xs uppercase tracking-wider transition-colors shadow-sm">
-            Transmit Scheduling Log
+                  class="w-full bg-slate-900 hover:bg-slate-800 text-white font-black py-6 rounded-2xl text-xl transition-all shadow-xl active:scale-95">
+            Confirm Schedule
           </button>
         </div>
       </form>

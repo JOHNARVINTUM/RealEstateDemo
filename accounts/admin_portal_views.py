@@ -353,8 +353,8 @@ def admin_units(request):
     occupied_units_count = units.filter(status='OCCUPIED').count()
     maintenance_units_count = units.filter(status='MAINTENANCE').count()
 
-    # Pagination (9 per page for a perfect 3-column grid)
-    paginator = Paginator(units, 9)
+    # Pagination (6 per page)
+    paginator = Paginator(units, 6)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
@@ -669,10 +669,16 @@ Welcome notification sent to tenant with complete payment schedule.'''
             }
             schedule_preview = service.get_payment_schedule_preview(sample_data)
 
+    # Determine back URL: if unit_id is provided, go back to unit detail, else tenants list
+    back_url = reverse("admin_tenants")
+    u_id = request.GET.get("unit_id")
+    if u_id:
+        back_url = reverse("admin_unit_detail", args=[u_id])
+
     return render(request, "admin_portal/lease_form.html", {
         "title": "Add Lease",
         "form": form,
-        "back_url": reverse("admin_tenants"),
+        "back_url": back_url,
         "schedule_preview": schedule_preview,
         "gcash_name": getattr(settings, 'GCASH_NAME', ''),
         "gcash_number": getattr(settings, 'GCASH_NUMBER', ''),
@@ -785,10 +791,13 @@ def admin_edit_lease(request, lease_id: int):
             logger.exception("ensure_bills_since_move_in failed while editing lease id %s", getattr(lease, 'id', None))
             messages.warning(request, "Failed to update billing rows; please regenerate bills if needed.")
         return redirect("admin_tenant_detail", tenant_id=lease.tenant.tenantprofile.id if hasattr(lease.tenant, 'tenantprofile') else lease.tenant.id)
-    return render(request, "admin_portal/form.html", {
+    return render(request, "admin_portal/lease_form.html", {
         "title": "Edit Lease",
         "form": form,
         "back_url": reverse("admin_tenants"),
+        "schedule_preview": None,
+        "gcash_name": getattr(settings, 'GCASH_NAME', ''),
+        "gcash_number": getattr(settings, 'GCASH_NUMBER', ''),
     })
 
 

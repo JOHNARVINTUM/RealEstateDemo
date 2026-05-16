@@ -7,8 +7,8 @@
   
   <!-- Studio Top Title Block -->
   <header class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
-    <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">Billing & Ledger Administration</h1>
-    <p class="text-sm text-slate-700 mt-1 leading-relaxed">Monitor tenant monthly ledger payment states, track overdue balances, and verify continuous lease generation.</p>
+    <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">Rent & Bills</h1>
+    <p class="text-sm text-slate-700 mt-1 leading-relaxed">See who has paid rent, check for late payments, and manage bills.</p>
   </header>
 
   <!-- Summary Metric Overview Cards -->
@@ -17,7 +17,7 @@
     <!-- Paid Sum Box -->
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-emerald-600 flex flex-col justify-between">
       <div>
-        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Fully Settled</span>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Paid</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ paid_count }}</div>
       </div>
       <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
@@ -28,7 +28,7 @@
     <!-- Unpaid Sum Box -->
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-rose-600 flex flex-col justify-between">
       <div>
-        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Unpaid Targets</span>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Unpaid</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ unpaid_count }}</div>
       </div>
       <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
@@ -39,7 +39,7 @@
     <!-- Overdue Sum Box -->
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-orange-600 flex flex-col justify-between">
       <div>
-        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Overdue Alerts</span>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Late</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ overdue_count }}</div>
       </div>
       <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
@@ -50,7 +50,7 @@
     <!-- Partial Sum Box -->
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-amber-600 flex flex-col justify-between">
       <div>
-        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Partial Credits</span>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Partly Paid</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ partial_count }}</div>
       </div>
       <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
@@ -61,7 +61,7 @@
     <!-- Upcoming Sum Box -->
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-slate-700 flex flex-col justify-between">
       <div>
-        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Upcoming Queue</span>
+        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Coming Soon</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ upcoming_count }}</div>
       </div>
       <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
@@ -78,13 +78,13 @@
     <div class="flex border-b border-slate-200 bg-slate-50">
       <a href="?tab=active&q={{ q }}&status={{ status_filter }}&month={{ month_filter }}&year={{ year_filter }}"
          class="px-6 py-3.5 text-sm font-bold transition-colors border-b-2 flex items-center gap-2 {% if active_tab == 'active' %}border-slate-900 text-slate-900 bg-white font-extrabold{% else %}border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/60{% endif %}">
-        <span>Active Billled Cycles</span>
+        <span>Current Bills</span>
         <span class="px-2 py-0.5 rounded text-xs {% if active_tab == 'active' %}bg-slate-900 text-white font-bold{% else %}bg-slate-200 text-slate-700{% endif %}">{{ unpaid_count }}</span>
       </a>
       
       <a href="?tab=upcoming&q={{ q }}&status={{ status_filter }}&month={{ month_filter }}&year={{ year_filter }}"
          class="px-6 py-3.5 text-sm font-bold transition-colors border-b-2 flex items-center gap-2 {% if active_tab == 'upcoming' %}border-slate-900 text-slate-900 bg-white font-extrabold{% else %}border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/60{% endif %}">
-        <span>Upcoming Cycles</span>
+        <span>Next Bills</span>
         <span class="px-2 py-0.5 rounded text-xs {% if active_tab == 'upcoming' %}bg-slate-900 text-white font-bold{% else %}bg-slate-200 text-slate-700{% endif %}">{{ upcoming_count }}</span>
       </a>
     </div>
@@ -134,7 +134,7 @@
 
         <!-- Form Commit Execution Command -->
         <button type="submit" class="w-full md:w-auto bg-slate-800 hover:bg-slate-900 text-white px-5 py-2 rounded-lg text-sm font-extrabold transition-colors flex items-center justify-center gap-1.5 shrink-0">
-          <span>Apply Parameters</span>
+          <span>Apply Filters</span>
         </button>
 
         {% if q or status_filter or month_filter or year_filter %}
@@ -148,13 +148,13 @@
       <table class="w-full text-left border-collapse min-w-[1000px]">
         <thead>
           <tr class="bg-slate-50 border-b border-slate-200">
-            <th class="px-5 py-3 text-xs font-bold text-slate-700">Account Mapping</th>
-            <th class="px-5 py-3 text-xs font-bold text-slate-700">Target Period</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700">Tenant</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700">Month</th>
             <th class="px-5 py-3 text-xs font-bold text-slate-700">Due Date</th>
-            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Original Base</th>
-            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Outstanding</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Total Amount</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Still Owed</th>
             <th class="px-5 py-3 text-xs font-bold text-slate-700 text-center">Status</th>
-            <th class="px-5 py-3 text-xs font-bold text-slate-700">Remittance Key</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700">Reference #</th>
             <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Actions</th>
           </tr>
         </thead>

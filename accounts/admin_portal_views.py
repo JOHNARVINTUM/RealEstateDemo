@@ -1832,6 +1832,8 @@ def admin_forecasting(request):
     hist_maintenance_last12 = maintenance_series[-36:]
     hist_labels_last12 = hist_labels[-36:]
 
+   
+    
     return render(request, "admin_portal/forecasting.html", {
         "hist_labels": hist_labels_last12,
         "hist_revenue": hist_revenue_last12,

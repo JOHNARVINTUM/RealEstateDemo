@@ -69,7 +69,7 @@ if (rentCtx) {
           fill: true,
           tension: 0.4,
         });
-    }
+}
 /* Brand-styled Chart.js configurations */
 const BRAND_BLUE = '#172554';
 const BRAND_GREEN = '#22c55e';
@@ -158,7 +158,7 @@ if (rentCtx) {
 const waterCtx = document.getElementById('waterChart');
 if (waterCtx) {
   const ctx = waterCtx.getContext('2d');
-  
+
   // Create a beautiful water-like gradient
   const waterGradient = ctx.createLinearGradient(0, 0, 0, 400);
   waterGradient.addColorStop(0, 'rgba(6, 182, 212, 0.8)');   // Cyan-500
@@ -197,7 +197,76 @@ if (waterCtx) {
           padding: 12,
           displayColors: false,
           callbacks: {
-            label: function(context) {
+            label: function (context) {
+              return `Usage: ${context.parsed.y} m³`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: { color: 'rgba(226, 232, 240, 0.5)', drawBorder: false },
+          ticks: { font: { family: "'Outfit', sans-serif", size: 11 }, color: '#94a3b8' }
+        },
+        x: {
+          grid: { display: false },
+          ticks: { font: { family: "'Outfit', sans-serif", size: 11 }, color: '#94a3b8' }
+        }
+      }
+    }
+  });
+}
+  }
+
+updateChart(12);
+monthFilter.addEventListener('change', (e) => updateChart(parseInt(e.target.value)));
+}
+
+// Water Monitoring Chart with Water-Like Gradient
+const waterCtx = document.getElementById('waterChart');
+if (waterCtx) {
+  const ctx = waterCtx.getContext('2d');
+
+  // Create a beautiful water-like gradient
+  const waterGradient = ctx.createLinearGradient(0, 0, 0, 400);
+  waterGradient.addColorStop(0, 'rgba(6, 182, 212, 0.8)');   // Cyan-500
+  waterGradient.addColorStop(1, 'rgba(59, 130, 246, 0.1)');   // Blue-500 (faded)
+
+  new Chart(waterCtx, {
+    type: 'bar',
+    data: {
+      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+      datasets: [
+        {
+          label: 'Cubic Meters',
+          data: [185, 210, 178, 245, 198, 225],
+          backgroundColor: waterGradient,
+          borderColor: '#0891b2',
+          borderWidth: 1,
+          borderRadius: 12,
+          borderSkipped: false,
+          hoverBackgroundColor: 'rgba(6, 182, 212, 1)',
+          hoverBorderWidth: 2,
+          barPercentage: 0.6,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#fff',
+          titleColor: '#1e293b',
+          bodyColor: '#64748b',
+          borderColor: '#e2e8f0',
+          borderWidth: 1,
+          padding: 12,
+          displayColors: false,
+          callbacks: {
+            label: function (context) {
               return `Usage: ${context.parsed.y} m³`;
             }
           }

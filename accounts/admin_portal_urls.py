@@ -43,6 +43,7 @@ from .admin_portal_views import (
     admin_tenant_attachments,
     admin_view_attachment,
     admin_delete_attachment,
+    admin_forecasting,
 )
 from .admin_portal_views_water import (
     admin_water,
@@ -110,6 +111,7 @@ urlpatterns = [
     path("announcements/add/", admin_create_announcement, name="admin_create_announcement"),
     path("announcements/<int:ann_id>/edit/", admin_edit_announcement, name="admin_edit_announcement"),
     path("announcements/<int:ann_id>/delete/", admin_delete_announcement, name="admin_delete_announcement"),
-    
-       
+
+    # Forecasting
+    path("forecasting/", admin_forecasting, name="admin_forecasting"),
 ]

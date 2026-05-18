@@ -34,7 +34,10 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-sbxp8ed7w((5*+@u9^4@l
 DEBUG = not IS_PRODUCTION
 
 _allowed = os.environ.get('ALLOWED_HOSTS', '')
-ALLOWED_HOSTS = _allowed.split() if _allowed else ['localhost', '127.0.0.1', '.railway.app', '.up.railway.app']
+ALLOWED_HOSTS = _allowed.split() if _allowed else [
+    'localhost', '127.0.0.1',
+    '.railway.app', '.up.railway.app', 'healthcheck.railway.app',
+]
 
 
 # Application definition

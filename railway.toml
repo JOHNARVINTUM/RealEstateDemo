@@ -2,8 +2,6 @@
 builder = "NIXPACKS"
 
 [deploy]
-startCommand = "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn RealEstateDemo.wsgi --bind 0.0.0.0:$PORT --log-file -"
-healthcheckPath = "/login/"
-healthcheckTimeout = 300
+startCommand = "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn RealEstateDemo.wsgi --bind 0.0.0.0:$PORT --workers 2 --log-file -"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3

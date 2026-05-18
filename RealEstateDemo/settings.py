@@ -39,6 +39,12 @@ ALLOWED_HOSTS = _allowed.split() if _allowed else [
     '.railway.app', '.up.railway.app', 'healthcheck.railway.app',
 ]
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.railway.app',
+    'https://*.up.railway.app',
+    'http://localhost:8000',
+]
+
 
 # Application definition
 

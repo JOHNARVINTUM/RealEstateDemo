@@ -141,6 +141,16 @@
           <a href="?tab={{ active_tab }}" class="text-xs font-extrabold text-slate-600 hover:text-slate-900 px-2 whitespace-nowrap underline">Clear Filters</a>
         {% endif %}
       </form>
+
+      <!-- CSV Export Button -->
+      <a href="{% url 'admin_billing_export_csv' %}?month={{ month_filter }}&year={{ year_filter }}&status={{ status_filter }}"
+         class="w-full xl:w-auto inline-flex items-center justify-center gap-2 px-5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-sm font-extrabold transition-colors shrink-0"
+         title="Export current filters to CSV">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+        </svg>
+        <span>Export Report</span>
+      </a>
     </div>
 
     <!-- Master Ledger Data Table -->
@@ -164,21 +174,20 @@
             
             <!-- Account Information Mapping Column -->
             <td class="px-5 py-3.5">
-              <div class="flex items-center gap-2.5">
-                <div class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-800 font-bold text-xs shrink-0 border border-slate-200">
-                  {% with tp=b.lease.tenant.tenantprofile %}
-                    {% if tp and tp.first_name %}{{ tp.first_name|first }}{{ tp.last_name|first }}{% else %}{{ b.lease.tenant.email|first|upper }}{% endif %}
-                  {% endwith %}
+              {% with tp=b.lease.tenant.tenantprofile %}
+              <a href="{% if tp %}{% url 'admin_tenant_detail' tp.id %}{% else %}#{% endif %}"
+                 class="flex items-center gap-2.5 group hover:no-underline">
+                <div class="w-8 h-8 rounded bg-slate-100 group-hover:bg-slate-200 flex items-center justify-center text-slate-800 font-bold text-xs shrink-0 border border-slate-200 transition-colors">
+                  {% if tp and tp.first_name %}{{ tp.first_name|first }}{{ tp.last_name|first }}{% else %}{{ b.lease.tenant.email|first|upper }}{% endif %}
                 </div>
                 <div class="min-w-0">
-                  <div class="font-bold text-slate-900 truncate max-w-[160px]">
-                    {% with tp=b.lease.tenant.tenantprofile %}
-                      {% if tp and tp.first_name %}{{ tp.first_name }} {{ tp.last_name }}{% else %}{{ b.lease.tenant.email }}{% endif %}
-                    {% endwith %}
+                  <div class="font-bold text-slate-900 group-hover:text-indigo-700 truncate max-w-[160px] transition-colors">
+                    {% if tp and tp.first_name %}{{ tp.first_name }} {{ tp.last_name }}{% else %}{{ b.lease.tenant.email }}{% endif %}
                   </div>
                   <div class="text-xs font-medium text-slate-600">Unit Space #{{ b.lease.unit.number }}</div>
                 </div>
-              </div>
+              </a>
+              {% endwith %}
             </td>
 
             <!-- Target Cycle Scope Column -->
@@ -213,7 +222,7 @@
                 {% if b.billing_state == "PAID" %}
                   <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-extrabold text-[10px] uppercase">Paid</span>
                 {% elif b.billing_state == "OVERDUE" %}
-                  <span class="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-extrabold text-[10px] uppercase">Overdue</span>
+                  <span class="px-2 py-0.5 rounded bg-rose-600 text-white font-extrabold text-[10px] uppercase tracking-wide">Late</span>
                 {% elif b.billing_state == "DUE" %}
                   <span class="px-2 py-0.5 rounded bg-orange-100 text-orange-800 font-extrabold text-[10px] uppercase">Due</span>
                 {% elif b.billing_state == "UPCOMING" %}
@@ -243,6 +252,12 @@
                       {% csrf_token %}
                       <button type="submit" class="px-2.5 py-1 rounded bg-slate-100 hover:bg-emerald-600 hover:text-white text-slate-800 font-bold text-xs transition-colors" title="Mark Fully Settled">
                         {% if active_tab == 'active' %}Settle{% else %}Settle Bill{% endif %}
+                      </button>
+                    </form>
+                    <form method="post" action="{% url 'admin_send_bill_warning' b.id %}" class="confirm-action inline-block" data-confirm="Send billing warning email to {{ b.lease.tenant.email }} for {{ b.billing_month|date:'M Y' }}?">
+                      {% csrf_token %}
+                      <button type="submit" class="px-2.5 py-1 rounded bg-amber-50 hover:bg-amber-500 hover:text-white text-amber-700 border border-amber-200 font-bold text-xs transition-colors" title="Send warning email to tenant">
+                        Warn
                       </button>
                     </form>
                   {% else %}

@@ -42,5 +42,11 @@ class MaintenanceRequest(models.Model):
     fixed_by = models.CharField(max_length=120, blank=True, default="")
     resolved_at = models.DateTimeField(null=True, blank=True)
 
+    # NLP auto-prediction (English only — multilingual support is future work)
+    nlp_priority = models.CharField(max_length=10, blank=True, default="",
+        help_text="Priority predicted by NLP model from description text")
+    nlp_priority_confidence = models.FloatField(null=True, blank=True,
+        help_text="Confidence score (0.0-1.0) of the NLP priority prediction")
+
     def __str__(self):
         return f"{self.title} ({self.get_status_display()})"

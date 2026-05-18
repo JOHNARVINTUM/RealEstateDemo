@@ -11,6 +11,36 @@
     <p class="text-base text-slate-600 mt-2 font-bold leading-relaxed">Keep track of repairs, see what's being fixed, and check completed jobs.</p>
   </header>
 
+  <!-- NLP Model Metrics Card -->
+  {% if nlp_metrics %}
+  <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 font-black text-xs">AI</span>
+          <span class="text-sm font-black text-slate-900">NLP Priority Classifier</span>
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">TF-IDF + Logistic Regression</span>
+        </div>
+        <p class="text-xs text-slate-500 font-medium">Auto-predicts urgency from description text &mdash; English only</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-3 shrink-0">
+        <div class="text-center">
+          <div class="text-xl font-black text-slate-900">{{ nlp_metrics.accuracy_pct }}%</div>
+          <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Accuracy</div>
+        </div>
+        <div class="text-center">
+          <div class="text-xl font-black text-slate-900">{{ nlp_metrics.macro_f1|floatformat:2 }}</div>
+          <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Macro F1</div>
+        </div>
+        <div class="text-center">
+          <div class="text-xl font-black text-slate-900">{{ nlp_metrics.total_samples }}</div>
+          <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Trained On</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Summary Metric Overview Cards -->
   <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
     
@@ -115,6 +145,7 @@
           <tr class="bg-slate-50 border-b border-slate-200">
             <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Tenant & Unit</th>
             <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-center">Urgency</th>
+            <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-center">NLP Suggest</th>
             <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-center">Status</th>
             <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Problem</th>
             <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Solution</th>
@@ -144,7 +175,7 @@
             <td class="px-6 py-5 text-center">
               {% if r.priority == 'HIGH' or r.priority == 'URGENT' %}
                 <span class="inline-flex px-3 py-1 rounded-lg bg-rose-50 text-rose-700 font-black text-[11px] uppercase tracking-wider border border-rose-100">
-                  High
+                  {{ r.priority }}
                 </span>
               {% elif r.priority == 'MEDIUM' %}
                 <span class="inline-flex px-3 py-1 rounded-lg bg-amber-50 text-amber-700 font-black text-[11px] uppercase tracking-wider border border-amber-100">
@@ -154,6 +185,29 @@
                 <span class="inline-flex px-3 py-1 rounded-lg bg-slate-100 text-slate-600 font-black text-[11px] uppercase tracking-wider border border-slate-200">
                   Low
                 </span>
+              {% endif %}
+            </td>
+
+            <!-- NLP Prediction -->
+            <td class="px-6 py-5 text-center">
+              {% if r.nlp_priority %}
+                {% if r.nlp_priority == r.priority %}
+                  <span class="inline-flex flex-col items-center gap-0.5">
+                    <span class="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      {{ r.nlp_priority }}
+                    </span>
+                    <span class="text-[9px] text-slate-400 font-bold">{% widthratio r.nlp_priority_confidence 1 100 %}%&nbsp;&#10003;</span>
+                  </span>
+                {% else %}
+                  <span class="inline-flex flex-col items-center gap-0.5">
+                    <span class="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-orange-50 text-orange-700 border border-orange-200">
+                      {{ r.nlp_priority }}
+                    </span>
+                    <span class="text-[9px] text-orange-400 font-bold">{% widthratio r.nlp_priority_confidence 1 100 %}%&nbsp;&#9888;</span>
+                  </span>
+                {% endif %}
+              {% else %}
+                <span class="text-[10px] text-slate-300 font-bold">—</span>
               {% endif %}
             </td>
 

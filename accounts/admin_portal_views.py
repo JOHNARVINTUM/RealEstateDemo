@@ -2,7 +2,7 @@ from datetime import date, datetime, timedelta, timezone
 import logging
 
 from django.conf import settings
-from django.db.models import Sum, Q, F, ExpressionWrapper, DecimalField
+from django.db.models import Sum, Q, F, ExpressionWrapper, DecimalField, Exists, OuterRef
 from django.db import transaction
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -234,8 +234,13 @@ def admin_dashboard(request):
 @admin_required
 def admin_tenants(request):
     q = request.GET.get("q", "").strip()
+    lease_filter = request.GET.get("lease", "").strip()
 
-    tenants_list = TenantProfile.objects.select_related("user")
+    tenants_list = TenantProfile.objects.select_related("user").annotate(
+        has_active_lease=Exists(
+            Lease.objects.filter(tenant=OuterRef("user"), is_active=True)
+        )
+    )
     if q:
         tenants_list = tenants_list.filter(
             Q(first_name__icontains=q) |
@@ -244,6 +249,11 @@ def admin_tenants(request):
             Q(user__email__icontains=q) |
             Q(user__username__icontains=q)
         )
+
+    if lease_filter == "active":
+        tenants_list = tenants_list.filter(has_active_lease=True)
+    elif lease_filter == "none":
+        tenants_list = tenants_list.filter(has_active_lease=False)
 
     tenants_list = tenants_list.order_by("first_name", "last_name")
     
@@ -266,8 +276,9 @@ def admin_tenants(request):
     ).count()
 
     return render(request, "admin_portal/tenants.html", {
-        "page_obj": page_obj, 
+        "page_obj": page_obj,
         "q": q,
+        "lease_filter": lease_filter,
         "total_tenants_count": total_tenants_count,
         "active_tenants_count": active_tenants_count,
         "new_tenants_count": new_tenants_count,
@@ -1058,6 +1069,76 @@ def admin_delete_notification(request, notification_id):
 
 
 @admin_required
+def admin_billing_export_csv(request):
+    import csv
+    from calendar import month_abbr
+    month_filter  = request.GET.get("month", "").strip()
+    year_filter   = request.GET.get("year", "").strip()
+    status_filter = request.GET.get("status", "").strip()
+
+    bills = MonthlyBill.objects.select_related(
+        "lease", "lease__tenant", "lease__tenant__tenantprofile", "lease__unit"
+    ).order_by("-billing_month")
+
+    if month_filter:
+        bills = bills.filter(billing_month__month=month_filter)
+    if year_filter:
+        bills = bills.filter(billing_month__year=year_filter)
+    if status_filter:
+        bills = bills.filter(status=status_filter)
+
+    filename_parts = ["billing_report"]
+    if month_filter and year_filter:
+        try:
+            filename_parts.append(f"{month_abbr[int(month_filter)]}_{year_filter}")
+        except Exception:
+            pass
+    elif year_filter:
+        filename_parts.append(year_filter)
+    filename = "_".join(filename_parts) + ".csv"
+
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+    def peso(value):
+        return f"PHP {float(value):,.2f}"
+
+    writer = csv.writer(response)
+    writer.writerow([
+        "Tenant Name", "Email", "Unit", "Billing Month", "Due Date",
+        "Base Rent", "Water Amount", "Interest", "Total Due",
+        "Rent Paid", "Water Paid", "Total Balance",
+        "Status", "Payment Reference", "Paid At",
+    ])
+
+    for b in bills:
+        try:
+            tp = b.lease.tenant.tenantprofile
+            name = f"{tp.first_name} {tp.last_name}"
+        except Exception:
+            name = b.lease.tenant.email
+        writer.writerow([
+            name,
+            b.lease.tenant.email,
+            b.lease.unit.number,
+            b.billing_month.strftime("%B %Y"),
+            b.due_date.strftime("%Y-%m-%d") if b.due_date else "",
+            peso(b.base_rent),
+            peso(b.water_amount),
+            peso(b.interest),
+            peso(b.total_due),
+            peso(b.rent_paid),
+            peso(b.water_paid),
+            peso(b.total_balance),
+            b.get_status_display(),
+            b.payment_reference or "",
+            b.paid_at.strftime("%Y-%m-%d %H:%M") if b.paid_at else "",
+        ])
+
+    return response
+
+
+@admin_required
 def admin_billing(request):
     q = request.GET.get("q", "").strip()
     status_filter = request.GET.get("status", "").strip()
@@ -1170,6 +1251,59 @@ def admin_delete_bill(request, bill_id: int):
         "post_url": reverse("admin_delete_bill", args=[bill.id]),
         "back_url": reverse("admin_billing"),
     })
+
+
+@admin_required
+def admin_send_bill_warning(request, bill_id: int):
+    from django.core.mail import send_mail
+    from django.conf import settings as django_settings
+
+    bill = get_object_or_404(
+        MonthlyBill.objects.select_related("lease", "lease__tenant", "lease__unit"),
+        pk=bill_id
+    )
+    tenant = bill.lease.tenant
+    unit = bill.lease.unit
+
+    try:
+        tp = tenant.tenantprofile
+        name = f"{tp.first_name} {tp.last_name}"
+    except Exception:
+        name = tenant.email
+
+    billing_month = bill.billing_month.strftime("%B %Y")
+    balance = float(bill.total_balance) if bill.total_balance else float(bill.total_due)
+    due_date = bill.due_date.strftime("%B %d, %Y") if bill.due_date else "N/A"
+
+    subject = f"[REALESTATE360+] Billing Reminder – {billing_month}"
+    message = (
+        f"Dear {name},\n\n"
+        f"This is a friendly reminder that your bill for {billing_month} is still outstanding.\n\n"
+        f"  Unit:          {unit.number}\n"
+        f"  Billing Month: {billing_month}\n"
+        f"  Due Date:      {due_date}\n"
+        f"  Amount Due:    PHP {balance:,.2f}\n\n"
+        f"Please settle your balance at your earliest convenience to avoid any penalties.\n\n"
+        f"If you have already made your payment, please disregard this notice.\n\n"
+        f"Thank you,\n"
+        f"REALESTATE360+ Administration"
+    )
+
+    try:
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=django_settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[tenant.email],
+            fail_silently=False,
+        )
+        from django.contrib import messages
+        messages.success(request, f"Warning email sent to {tenant.email} for {billing_month}.")
+    except Exception as e:
+        from django.contrib import messages
+        messages.error(request, f"Failed to send email: {e}")
+
+    return redirect(f"{reverse('admin_billing')}?tab=active")
 
 
 @admin_required
@@ -1368,15 +1502,22 @@ def admin_maintenance(request):
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
+    try:
+        from accounts.ml.maintenance_nlp import load_metrics
+        nlp_metrics = load_metrics()
+    except Exception:
+        nlp_metrics = None
+
     return render(request, "admin_portal/maintenance.html", {
-        "page_obj": page_obj, 
-        "q": q, 
+        "page_obj": page_obj,
+        "q": q,
         "status": status,
         "priority": priority,
         "total_count": total_count,
         "pending_count": pending_count,
         "in_progress_count": in_progress_count,
-        "resolved_count": resolved_count
+        "resolved_count": resolved_count,
+        "nlp_metrics": nlp_metrics,
     })
 
 

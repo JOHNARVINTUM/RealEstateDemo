@@ -17,6 +17,9 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
+ENVIRONMENT = os.environ.get('ENVIRONMENT', 'development')
+IS_PRODUCTION = ENVIRONMENT == 'production'
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -25,12 +28,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-sbxp8ed7w((5*+@u9^4@l1p531h8ig(&_0wztx^9-*o98kld#w'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-sbxp8ed7w((5*+@u9^4@l1p531h8ig(&_0wztx^9-*o98kld#w')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = not IS_PRODUCTION
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost 127.0.0.1').split()
 
 
 # Application definition
@@ -54,6 +57,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -138,6 +142,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 STATICFILES_DIRS = [
     BASE_DIR / "static",
     BASE_DIR / "RealEstateDemo" / "static",
@@ -158,6 +164,6 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 # Note: For Gmail, you need to generate an App Password from Google Account settings
 # Go to: https://myaccount.google.com/apppasswords
-EMAIL_HOST_USER = getattr(locals(), 'EMAIL_HOST_USER', 'johnarvint999@gmail.com')  
-EMAIL_HOST_PASSWORD = getattr(locals(), 'EMAIL_HOST_PASSWORD', 'oecg oeyx agdc bsqi')  # Use 16-character App Password
-DEFAULT_FROM_EMAIL = 'REALESTATE360+ <johnarvint999@gmail.com>'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'johnarvint999@gmail.com')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'oecg oeyx agdc bsqi')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'REALESTATE360+ <johnarvint999@gmail.com>')

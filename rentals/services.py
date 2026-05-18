@@ -64,44 +64,46 @@ class TenantRiskService:
     def _calculate_payment_timeliness(tenant):
         """Calculate payment timeliness score (0-100)"""
         try:
-            # Get paid bills from last 6 months
+            today = timezone.now().date()
             six_months_ago = timezone.now() - timedelta(days=180)
-            paid_bills = MonthlyBill.objects.filter(
+
+            # All bills in last 6 months (paid and unpaid)
+            all_bills = MonthlyBill.objects.filter(
                 lease__tenant=tenant,
-                status='PAID',
-                paid_at__gte=six_months_ago
+                billing_month__gte=six_months_ago.date().replace(day=1)
             )
-            
-            # If no recent payments, check all payment history
-            if paid_bills.count() == 0:
-                all_paid_bills = MonthlyBill.objects.filter(
-                    lease__tenant=tenant,
-                    status='PAID'
-                )
-                
-                # If no payment history at all, give medium score
-                if all_paid_bills.count() == 0:
-                    return 50
-                
-                # Use all payment history instead
-                paid_bills = all_paid_bills
-            
-            # Calculate average days late
-            total_days_late = 0
+
+            # Fall back to full history if no recent bills
+            if all_bills.count() == 0:
+                all_bills = MonthlyBill.objects.filter(lease__tenant=tenant)
+
+            if all_bills.count() == 0:
+                return 50
+
             on_time_count = 0
-            
-            for bill in paid_bills:
-                if bill.paid_at and bill.due_date:
+            total_count = 0
+
+            for bill in all_bills:
+                # Skip upcoming bills (not yet due)
+                if bill.billing_month.replace(day=1) > today.replace(day=1):
+                    continue
+
+                total_count += 1
+
+                if bill.status == 'PAID' and bill.paid_at and bill.due_date:
                     days_late = (bill.paid_at.date() - bill.due_date).days
-                    if days_late <= 0:  # On time or early
+                    if days_late <= 0:
                         on_time_count += 1
-                    else:
-                        total_days_late += days_late
-            
-            total_bills = paid_bills.count()
-            on_time_percentage = (on_time_count / total_bills) * 100
-            
-            # Score based on on-time percentage
+                    # else: paid late — counts as not on time
+                elif bill.status in ('UNPAID', 'PARTIALLY_PAID'):
+                    # Overdue unpaid bill counts as not on time — do NOT increment on_time_count
+                    pass
+
+            if total_count == 0:
+                return 50
+
+            on_time_percentage = (on_time_count / total_count) * 100
+
             if on_time_percentage >= 90:
                 return 100
             elif on_time_percentage >= 75:
@@ -114,7 +116,7 @@ class TenantRiskService:
                 return 30
             else:
                 return 10
-                
+
         except Exception as e:
             logger.error(f"Error calculating payment timeliness: {e}")
             return 50

@@ -88,8 +88,23 @@
         </form>
       </div>
 
-      <div class="flex items-center justify-between sm:justify-end gap-3 shrink-0">
-        <span class="text-xs font-bold text-slate-500">Registry Snapshot</span>
+      <div class="flex items-center justify-between sm:justify-end gap-3 shrink-0 flex-wrap">
+        <!-- Lease Status Filter -->
+        <div class="flex items-center gap-1.5">
+          <span class="text-xs font-bold text-slate-500 mr-1">Lease:</span>
+          <a href="?{% if q %}q={{ q }}&{% endif %}lease=" 
+             class="px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors {% if not lease_filter %}bg-slate-800 text-white border-slate-800{% else %}bg-white text-slate-700 border-slate-300 hover:bg-slate-100{% endif %}">
+            All
+          </a>
+          <a href="?{% if q %}q={{ q }}&{% endif %}lease=active" 
+             class="px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors {% if lease_filter == 'active' %}bg-emerald-700 text-white border-emerald-700{% else %}bg-white text-slate-700 border-slate-300 hover:bg-slate-100{% endif %}">
+            Active Lease
+          </a>
+          <a href="?{% if q %}q={{ q }}&{% endif %}lease=none" 
+             class="px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors {% if lease_filter == 'none' %}bg-rose-700 text-white border-rose-700{% else %}bg-white text-slate-700 border-slate-300 hover:bg-slate-100{% endif %}">
+            No Lease
+          </a>
+        </div>
         <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-xs">
           <span class="text-sm font-black text-slate-900">{{ page_obj.paginator.count }}</span>
           <span class="text-xs font-bold text-slate-600">Total Entries</span>
@@ -139,10 +154,23 @@
 
               <!-- Account Standing -->
               <td class="px-6 py-4">
-                <span class="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-bold {% if t.user.is_active %}bg-emerald-50 text-emerald-800 border border-emerald-200{% else %}bg-slate-100 text-slate-600 border border-slate-300{% endif %}">
-                  <span class="w-2 h-2 rounded-full {% if t.user.is_active %}bg-emerald-600{% else %}bg-slate-400{% endif %}"></span>
-                  {% if t.user.is_active %}Active Status{% else %}Suspended{% endif %}
-                </span>
+                <div class="flex flex-col gap-1.5">
+                  <span class="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-bold {% if t.user.is_active %}bg-emerald-50 text-emerald-800 border border-emerald-200{% else %}bg-slate-100 text-slate-600 border border-slate-300{% endif %}">
+                    <span class="w-2 h-2 rounded-full {% if t.user.is_active %}bg-emerald-600{% else %}bg-slate-400{% endif %}"></span>
+                    {% if t.user.is_active %}Active Account{% else %}Suspended{% endif %}
+                  </span>
+                  {% if t.has_active_lease %}
+                    <span class="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-bold bg-blue-50 text-blue-800 border border-blue-200">
+                      <span class="w-2 h-2 rounded-full bg-blue-600"></span>
+                      Active Lease
+                    </span>
+                  {% else %}
+                    <span class="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                      <span class="w-2 h-2 rounded-full bg-rose-400"></span>
+                      No Lease
+                    </span>
+                  {% endif %}
+                </div>
               </td>
 
               <!-- Administrative Actions -->
@@ -207,11 +235,11 @@
         
         <div class="flex flex-wrap md:flex-nowrap items-center justify-center md:justify-end gap-1 sm:gap-1.5">
           {% if page_obj.has_previous %}
-            <a href="?page=1{% if q %}&q={{ q }}{% endif %}" 
+            <a href="?page=1{% if q %}&q={{ q }}{% endif %}{% if lease_filter %}&lease={{ lease_filter }}{% endif %}" 
                class="inline-flex items-center whitespace-nowrap px-2 py-1 sm:px-2.5 sm:py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors" title="First Page">
               &laquo;&nbsp;First
             </a>
-            <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}" 
+            <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if lease_filter %}&lease={{ lease_filter }}{% endif %}" 
                class="inline-flex items-center whitespace-nowrap px-2 py-1 sm:px-2.5 sm:py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors" title="Previous Page">
               &lsaquo;&nbsp;Prev
             </a>
@@ -222,18 +250,18 @@
               {% if page_obj.number == num %}
                 <span class="inline-flex items-center justify-center min-w-[28px] px-2 py-1 sm:px-3 sm:py-1.5 rounded bg-slate-800 text-white text-xs font-extrabold select-none shadow-sm">{{ num }}</span>
               {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                <a href="?page={{ num }}{% if q %}&q={{ q }}{% endif %}" 
+                <a href="?page={{ num }}{% if q %}&q={{ q }}{% endif %}{% if lease_filter %}&lease={{ lease_filter }}{% endif %}" 
                    class="inline-flex items-center justify-center min-w-[28px] px-2 py-1 sm:px-3 sm:py-1.5 rounded bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-colors">{{ num }}</a>
               {% endif %}
             {% endfor %}
           </div>
 
           {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}" 
+            <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if lease_filter %}&lease={{ lease_filter }}{% endif %}" 
                class="inline-flex items-center whitespace-nowrap px-2 py-1 sm:px-2.5 sm:py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors" title="Next Page">
               Next&nbsp;&rsaquo;
             </a>
-            <a href="?page={{ page_obj.paginator.num_pages }}{% if q %}&q={{ q }}{% endif %}" 
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if q %}&q={{ q }}{% endif %}{% if lease_filter %}&lease={{ lease_filter }}{% endif %}" 
                class="inline-flex items-center whitespace-nowrap px-2 py-1 sm:px-2.5 sm:py-1.5 bg-white border border-slate-300 rounded text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors" title="Last Page">
               Last&nbsp;&raquo;
             </a>

@@ -16,7 +16,15 @@ def report_issue(request):
             obj: MaintenanceRequest = form.save(commit=False)
             obj.tenant = user
             obj.lease = lease
-            # priority/status left for admin (defaults are fine)
+            # Run NLP priority prediction from description
+            try:
+                from accounts.ml.maintenance_nlp import predict_priority
+                result = predict_priority(obj.description)
+                if result.get("available"):
+                    obj.nlp_priority = result["priority"]
+                    obj.nlp_priority_confidence = result["confidence"]
+            except Exception:
+                pass
             obj.save()
             return redirect("maintenance_list")
     else:

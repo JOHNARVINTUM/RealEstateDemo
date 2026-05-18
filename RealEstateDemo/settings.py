@@ -33,7 +33,8 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-sbxp8ed7w((5*+@u9^4@l
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = not IS_PRODUCTION
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost 127.0.0.1').split()
+_allowed = os.environ.get('ALLOWED_HOSTS', '')
+ALLOWED_HOSTS = _allowed.split() if _allowed else ['localhost', '127.0.0.1', '.railway.app', '.up.railway.app']
 
 
 # Application definition

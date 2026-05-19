@@ -152,13 +152,22 @@ function toggleMoveInPaymentMethod() {
           </div>
 
           <div class="mt-4">
-            <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider" for="id_parking_type">Parking Slot</label>
-            <select name="parking_type" id="id_parking_type" onchange="updateParkingFee()" class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none cursor-pointer">
-              <option value="NONE" {% if form.parking_type.value == 'NONE' or not form.parking_type.value %}selected{% endif %}>No Parking – ₱0/mo</option>
-              <option value="MOTORCYCLE" {% if form.parking_type.value == 'MOTORCYCLE' %}selected{% endif %}>Motorcycle – ₱350/mo</option>
-              <option value="CAR" {% if form.parking_type.value == 'CAR' %}selected{% endif %}>Car – ₱2,500/mo</option>
-            </select>
-            <p class="text-[10px] text-slate-500 mt-2 font-bold uppercase tracking-tight">Added to monthly billing automatically.</p>
+            <label class="block text-sm font-bold text-slate-800 mb-3 uppercase tracking-wider">Parking Slots</label>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide" for="id_motorcycle_slots">Motorcycle <span class="text-slate-400 font-medium normal-case">₱350 each/mo</span></label>
+                <input type="number" name="motorcycle_slots" id="id_motorcycle_slots" value="{{ form.motorcycle_slots.value|default:0 }}" min="0" max="10"
+                       oninput="updateParkingFee()"
+                       class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide" for="id_car_slots">Car <span class="text-slate-400 font-medium normal-case">₱2,500 each/mo</span></label>
+                <input type="number" name="car_slots" id="id_car_slots" value="{{ form.car_slots.value|default:0 }}" min="0" max="10"
+                       oninput="updateParkingFee()"
+                       class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none">
+              </div>
+            </div>
+            <p class="text-[10px] text-slate-500 mt-2 font-bold uppercase tracking-tight">Added to monthly billing automatically. Mix motorcycle and car slots freely.</p>
           </div>
         </div>
 

@@ -105,8 +105,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const gcashPreviewFooter = document.getElementById('preview-gcash-footer');
     
     if (form && previewContainer) {
-        const fields = ['id_monthly_rent', 'id_advance_months', 'id_security_deposit', 'id_start_date', 'id_due_day', 'id_parking_type'];        
-        const PARKING_FEES = { 'NONE': 0, 'MOTORCYCLE': 350, 'CAR': 2500 };
+        const fields = ['id_monthly_rent', 'id_advance_months', 'id_security_deposit', 'id_start_date', 'id_due_day', 'id_motorcycle_slots', 'id_car_slots'];
         
         function formatCurrency(amount) {
             return '₱' + amount.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -130,8 +129,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const securityDeposit = parseFloat(document.getElementById('id_security_deposit')?.value || monthlyRent);
             const startDateInput = document.getElementById('id_start_date')?.value;
             const dueDay = parseInt(document.getElementById('id_due_day')?.value || 5);
-            const parkingType = document.getElementById('id_parking_type')?.value || 'NONE';
-            const parkingFee = PARKING_FEES[parkingType] || 0;
+            const motorcycleSlots = parseInt(document.getElementById('id_motorcycle_slots')?.value || 0);
+            const carSlots = parseInt(document.getElementById('id_car_slots')?.value || 0);
+            const parkingFee = (motorcycleSlots * 350) + (carSlots * 2500);
             
             // Toggle GCash footer in preview
             const paymentMethod = document.querySelector('input[name="move_in_payment_method"]:checked')?.value;
@@ -146,7 +146,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 const advancePaymentAmount = monthlyTotal * advanceMonths;
                 const totalMoveInCost = securityDeposit + advancePaymentAmount;
                 
-                document.querySelector('[data-preview="monthly_rent"]').textContent = formatCurrency(monthlyRent) + (parkingFee > 0 ? ` + ₱${parkingFee.toLocaleString('en-PH')} parking` : '');
+                let parkingLabel = '';
+                if (motorcycleSlots > 0 && carSlots > 0) parkingLabel = ` + \u20b1${parkingFee.toLocaleString('en-PH')} parking (${motorcycleSlots} moto + ${carSlots} car)`;
+                else if (motorcycleSlots > 0) parkingLabel = ` + \u20b1${parkingFee.toLocaleString('en-PH')} parking (${motorcycleSlots} motorcycle${motorcycleSlots > 1 ? 's' : ''})`;
+                else if (carSlots > 0) parkingLabel = ` + \u20b1${parkingFee.toLocaleString('en-PH')} parking (${carSlots} car${carSlots > 1 ? 's' : ''})`;
+                document.querySelector('[data-preview="monthly_rent"]').textContent = formatCurrency(monthlyRent) + parkingLabel;
                 document.querySelector('[data-preview="advance_months"]').textContent = advanceMonths;
                 document.querySelector('[data-preview="advance_months_plural"]').textContent = advanceMonths === 1 ? '' : 's';
                 document.querySelector('[data-preview="advance_payment_amount"]').textContent = formatCurrency(advancePaymentAmount);
@@ -180,7 +184,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     } else {
                         amount = monthlyTotal;
                         amountDisplay = parkingFee > 0
-                            ? `${formatCurrency(monthlyRent)} <span class="text-slate-500 text-[10px] font-bold">+₱${parkingFee.toLocaleString('en-PH')} parking</span>`
+                            ? `${formatCurrency(monthlyRent)} <span class="text-slate-500 text-[10px] font-bold">+\u20b1${parkingFee.toLocaleString('en-PH')} parking</span>`
                             : formatCurrency(amount);
                         total12Months += amount;
                     }
@@ -214,9 +218,11 @@ document.addEventListener('DOMContentLoaded', function() {
             radio.addEventListener('change', updatePreview);
         });
 
-        // Watch parking type
-        const parkingSelect = document.getElementById('id_parking_type');
-        if (parkingSelect) parkingSelect.addEventListener('change', updatePreview);
+        // Watch parking slot inputs
+        ['id_motorcycle_slots', 'id_car_slots'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) { el.addEventListener('input', updatePreview); el.addEventListener('change', updatePreview); }
+        });
         
         updatePreview();
     }

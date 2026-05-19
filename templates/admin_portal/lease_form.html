@@ -17,7 +17,7 @@ function handleUnitSelection(selectElement) {
     
     if (selectedOption && selectedOption.value && monthlyRentInput) {
         const optionText = selectedOption.textContent;
-        const rentMatch = optionText.match(/PHP\s+([\d,]+\.?\d*)/);
+        const rentMatch = optionText.match(/[₱PHP]\s*([\d,]+\.?\d*)/);
         
         if (rentMatch) {
             const rent = rentMatch[1].replace(/,/g, '');

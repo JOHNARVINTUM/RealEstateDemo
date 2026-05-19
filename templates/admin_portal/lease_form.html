@@ -32,6 +32,12 @@ function handleUnitSelection(selectElement) {
     }
 }
 
+function updateParkingFee() {
+    const event = new Event('input', { bubbles: true });
+    const rentInput = document.getElementById('id_monthly_rent');
+    if (rentInput) rentInput.dispatchEvent(event);
+}
+
 function toggleMoveInPaymentMethod() {
     const selected = document.querySelector('input[name="move_in_payment_method"]:checked')?.value;
     const gcashSection = document.getElementById('gcash-movein-section');
@@ -143,6 +149,16 @@ function toggleMoveInPaymentMethod() {
                      class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none">
               <p class="text-[10px] text-slate-500 mt-2 font-bold uppercase tracking-tight">Number of months paid in advance.</p>
             </div>
+          </div>
+
+          <div class="mt-4">
+            <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider" for="id_parking_type">Parking Slot</label>
+            <select name="parking_type" id="id_parking_type" onchange="updateParkingFee()" class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none cursor-pointer">
+              <option value="NONE" {% if form.parking_type.value == 'NONE' or not form.parking_type.value %}selected{% endif %}>No Parking – ₱0/mo</option>
+              <option value="MOTORCYCLE" {% if form.parking_type.value == 'MOTORCYCLE' %}selected{% endif %}>Motorcycle – ₱350/mo</option>
+              <option value="CAR" {% if form.parking_type.value == 'CAR' %}selected{% endif %}>Car – ₱2,500/mo</option>
+            </select>
+            <p class="text-[10px] text-slate-500 mt-2 font-bold uppercase tracking-tight">Added to monthly billing automatically.</p>
           </div>
         </div>
 

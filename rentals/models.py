@@ -108,6 +108,17 @@ class TenantProfile(models.Model):
         return self.first_name if self.first_name else "User"
 
 class Lease(models.Model):
+    PARKING_CHOICES = [
+        ('NONE', 'No Parking'),
+        ('MOTORCYCLE', 'Motorcycle – ₱350/mo'),
+        ('CAR', 'Car – ₱2,500/mo'),
+    ]
+    PARKING_FEES = {
+        'NONE': 0,
+        'MOTORCYCLE': 350,
+        'CAR': 2500,
+    }
+
     tenant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, limit_choices_to={"role": "TENANT"})
     unit = models.ForeignKey(Unit, on_delete=models.PROTECT)  # one active tenant per unit
     monthly_rent = models.DecimalField(max_digits=10, decimal_places=2)
@@ -117,9 +128,16 @@ class Lease(models.Model):
     security_deposit = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Security deposit amount")
     advance_months = models.PositiveSmallIntegerField(default=2, help_text="Number of months for advance payment")
     is_active = models.BooleanField(default=True)
+    parking_type = models.CharField(max_length=12, choices=PARKING_CHOICES, default='NONE', help_text="Parking slot type")
 
     def __str__(self):
         return f"{self.tenant.email} -> {self.unit.number}"
+
+    @property
+    def parking_fee(self):
+        """Monthly parking fee based on parking_type"""
+        from decimal import Decimal
+        return Decimal(self.PARKING_FEES.get(self.parking_type, 0))
 
     @property
     def advance_payment_amount(self):

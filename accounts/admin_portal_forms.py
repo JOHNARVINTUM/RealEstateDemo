@@ -491,7 +491,7 @@ class LeaseForm(forms.ModelForm):
     
     class Meta:
         model = Lease
-        fields = ["tenant", "unit", "monthly_rent", "due_day", "start_date", "end_date", "security_deposit", "advance_months", "is_active"]
+        fields = ["tenant", "unit", "monthly_rent", "due_day", "start_date", "end_date", "security_deposit", "advance_months", "is_active", "parking_type"]
         widgets = {
             "start_date": forms.DateInput(attrs={"type": "text", "class": "flatpickr", "autocomplete": "off"}),
             "end_date": forms.DateInput(attrs={"type": "text", "class": "flatpickr", "autocomplete": "off"}),

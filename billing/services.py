@@ -104,8 +104,9 @@ def get_or_update_monthly_bill(lease, billing_month: date, today: date | None = 
         # Get water from legacy system or 0
         water_amount = Decimal(get_water_amount_for_month(lease.unit, billing_month))
 
+    parking_fee = Decimal(getattr(lease, 'parking_fee', 0)).quantize(Decimal("0.01"))
     interest, is_late, weeks_late = compute_weekly_interest(base_rent, due_date, today)
-    total_due = (base_rent + water_amount + interest).quantize(Decimal("0.01"))
+    total_due = (base_rent + water_amount + parking_fee + interest).quantize(Decimal("0.01"))
 
     bill, _ = MonthlyBill.objects.get_or_create(
         lease=lease,
@@ -114,6 +115,7 @@ def get_or_update_monthly_bill(lease, billing_month: date, today: date | None = 
             "due_date": due_date,
             "base_rent": base_rent,
             "water_amount": water_amount,
+            "parking_fee": parking_fee,
             "interest": interest,
             "total_due": total_due,
             "status": "UNPAID",
@@ -148,8 +150,12 @@ def get_or_update_monthly_bill(lease, billing_month: date, today: date | None = 
         bill.interest = interest
         changed = True
     
+    if bill.parking_fee != parking_fee:
+        bill.parking_fee = parking_fee
+        changed = True
+
     # Recalculate total_due based on current values (respecting system-computed water)
-    new_total = (bill.base_rent + bill.water_amount + bill.interest).quantize(Decimal("0.01"))
+    new_total = (bill.base_rent + bill.water_amount + bill.parking_fee + bill.interest).quantize(Decimal("0.01"))
     if bill.total_due != new_total:
         bill.total_due = new_total
         changed = True

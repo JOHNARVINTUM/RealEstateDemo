@@ -29,9 +29,12 @@ class MonthlyBill(models.Model):
     paid_at = models.DateTimeField(null=True, blank=True)
     payment_reference = models.CharField(max_length=80, blank=True, default="")
     
+    parking_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Monthly parking fee (0 if no parking)")
+
     # NEW: Partial payment tracking for rent/water separation
     rent_paid = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     water_paid = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    parking_paid = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     rent_paid_at = models.DateTimeField(null=True, blank=True)
     water_paid_at = models.DateTimeField(null=True, blank=True)
     
@@ -57,6 +60,11 @@ class MonthlyBill(models.Model):
         return f"{self.lease} - {self.billing_month} ({self.status})"
 
     @property
+    def parking_balance(self):
+        """Remaining parking fee to pay"""
+        return max(self.parking_fee - self.parking_paid, 0)
+
+    @property
     def rent_balance(self):
         """Remaining rent amount to pay"""
         return max(self.base_rent - self.rent_paid, 0)
@@ -68,12 +76,12 @@ class MonthlyBill(models.Model):
     
     @property
     def total_balance(self):
-        """Total remaining balance including interest"""
+        """Total remaining balance including interest and parking"""
         if self.status == "PAID":
             return 0
         if self.base_rent == 0 and self.water_amount == 0 and self.total_due > 0:
-            return max(self.total_due - (self.rent_paid + self.water_paid), 0)
-        return self.rent_balance + self.water_balance + self.interest
+            return max(self.total_due - (self.rent_paid + self.water_paid + self.parking_paid), 0)
+        return self.rent_balance + self.water_balance + self.parking_balance + self.interest
     
     @property
     def is_rent_paid(self):

@@ -105,7 +105,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const gcashPreviewFooter = document.getElementById('preview-gcash-footer');
     
     if (form && previewContainer) {
-        const fields = ['id_monthly_rent', 'id_advance_months', 'id_security_deposit', 'id_start_date', 'id_due_day'];
+        const fields = ['id_monthly_rent', 'id_advance_months', 'id_security_deposit', 'id_start_date', 'id_due_day', 'id_parking_type'];        
+        const PARKING_FEES = { 'NONE': 0, 'MOTORCYCLE': 350, 'CAR': 2500 };
         
         function formatCurrency(amount) {
             return '₱' + amount.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -129,6 +130,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const securityDeposit = parseFloat(document.getElementById('id_security_deposit')?.value || monthlyRent);
             const startDateInput = document.getElementById('id_start_date')?.value;
             const dueDay = parseInt(document.getElementById('id_due_day')?.value || 5);
+            const parkingType = document.getElementById('id_parking_type')?.value || 'NONE';
+            const parkingFee = PARKING_FEES[parkingType] || 0;
             
             // Toggle GCash footer in preview
             const paymentMethod = document.querySelector('input[name="move_in_payment_method"]:checked')?.value;
@@ -139,10 +142,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (monthlyRent > 0 && startDateInput) {
                 previewContainer.style.display = 'block';
                 const startDate = new Date(startDateInput);
-                const advancePaymentAmount = monthlyRent * advanceMonths;
+                const monthlyTotal = monthlyRent + parkingFee;
+                const advancePaymentAmount = monthlyTotal * advanceMonths;
                 const totalMoveInCost = securityDeposit + advancePaymentAmount;
                 
-                document.querySelector('[data-preview="monthly_rent"]').textContent = formatCurrency(monthlyRent);
+                document.querySelector('[data-preview="monthly_rent"]').textContent = formatCurrency(monthlyRent) + (parkingFee > 0 ? ` + ₱${parkingFee.toLocaleString('en-PH')} parking` : '');
                 document.querySelector('[data-preview="advance_months"]').textContent = advanceMonths;
                 document.querySelector('[data-preview="advance_months_plural"]').textContent = advanceMonths === 1 ? '' : 's';
                 document.querySelector('[data-preview="advance_payment_amount"]').textContent = formatCurrency(advancePaymentAmount);
@@ -151,7 +155,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 document.getElementById('milestone-security').textContent = formatCurrency(totalMoveInCost);
                 document.getElementById('milestone-movein-date').textContent = formatDate(startDate);
-                document.getElementById('milestone-first-rent').textContent = formatCurrency(monthlyRent);
+                document.getElementById('milestone-first-rent').textContent = formatCurrency(monthlyTotal);
                 
                 const firstRentDueDate = calculateDueDate(startDate, advanceMonths, dueDay);
                 document.getElementById('milestone-first-rent-date').textContent = formatDate(firstRentDueDate);
@@ -174,7 +178,10 @@ document.addEventListener('DOMContentLoaded', function() {
                             amountDisplay = '<span class="text-emerald-700 font-extrabold tracking-wider text-[10px]">PREPAID</span>';
                         }
                     } else {
-                        amountDisplay = formatCurrency(amount);
+                        amount = monthlyTotal;
+                        amountDisplay = parkingFee > 0
+                            ? `${formatCurrency(monthlyRent)} <span class="text-slate-500 text-[10px] font-bold">+₱${parkingFee.toLocaleString('en-PH')} parking</span>`
+                            : formatCurrency(amount);
                         total12Months += amount;
                     }
                     
@@ -206,6 +213,10 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('input[name="move_in_payment_method"]').forEach(radio => {
             radio.addEventListener('change', updatePreview);
         });
+
+        // Watch parking type
+        const parkingSelect = document.getElementById('id_parking_type');
+        if (parkingSelect) parkingSelect.addEventListener('change', updatePreview);
         
         updatePreview();
     }

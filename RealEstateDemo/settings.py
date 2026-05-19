@@ -167,12 +167,7 @@ GCASH_NUMBER = "09219429053"
 GCASH_NAME = "John Arvin Tumbagahon"
 GCASH_QR_URL = "/static/img/qr.jpg"
 
-# Email via Brevo SMTP (works on Railway)
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp-relay.brevo.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_USE_SSL = False
-EMAIL_HOST_USER = os.environ.get('BREVO_SMTP_USER', 'abc97b001@smtp-brevo.com')
-EMAIL_HOST_PASSWORD = os.environ.get('BREVO_SMTP_KEY', '')
-DEFAULT_FROM_EMAIL = 'REALESTATE360+ <202310149@fit.edu.ph>'
+# Email via Resend HTTP API (Railway blocks all SMTP ports)
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
+DEFAULT_FROM_EMAIL = 'REALESTATE360+ <onboarding@resend.dev>'
+EMAIL_BACKEND = 'django.core.mail.backends.dummy.EmailBackend'

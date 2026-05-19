@@ -169,6 +169,6 @@ GCASH_QR_URL = "/static/img/qr.jpg"
 
 # Email configuration via SendGrid (HTTP API — no SMTP port blocking)
 EMAIL_BACKEND = 'sendgrid_backend.SendgridBackend'
-SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY', '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')
+SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY', '')
 SENDGRID_SANDBOX_MODE_IN_DEBUG = False
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'REALESTATE360+ <johnarvint999@gmail.com>')

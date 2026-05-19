@@ -167,8 +167,12 @@ GCASH_NUMBER = "09219429053"
 GCASH_NAME = "John Arvin Tumbagahon"
 GCASH_QR_URL = "/static/img/qr.jpg"
 
-# Email configuration via SendGrid (HTTP API — no SMTP port blocking)
-EMAIL_BACKEND = 'sendgrid_backend.SendgridBackend'
-SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY', '')
-SENDGRID_SANDBOX_MODE_IN_DEBUG = False
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'REALESTATE360+ <johnarvint999@gmail.com>')
+# Email configuration via Resend (HTTP API — no SMTP port blocking)
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.resend.com'
+EMAIL_PORT = 465
+EMAIL_USE_SSL = True
+EMAIL_USE_TLS = False
+EMAIL_HOST_USER = 'resend'
+EMAIL_HOST_PASSWORD = os.environ.get('RESEND_API_KEY', '')
+DEFAULT_FROM_EMAIL = 'REALESTATE360+ <onboarding@resend.dev>'

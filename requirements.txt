@@ -7,9 +7,8 @@ python-dotenv>=1.0.0
 gunicorn>=21.0.0
 whitenoise>=6.6.0
 
-# Email via SendGrid (HTTP API, no SMTP port issues)
-sendgrid>=6.9.0
-django-sendgrid-v5>=1.2.0
+# Email via Resend SMTP (works on Railway)
+resend>=0.7.0
 
 # Database
 psycopg2-binary>=2.9.0

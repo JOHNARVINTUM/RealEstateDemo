@@ -672,20 +672,8 @@ Welcome aboard! We're excited to have you as part of our community!"""
                     logger.exception(f'Failed to create move-in payment record: {e}')
                     messages.warning(request, 'Lease created but failed to record move-in payment.')
                 
-                # Success message with payment summary
-                success_message = f'''Lease created successfully! 
-
-Payment Summary:
-• Unit {lease.unit.number} is now occupied
-• Monthly Rent: ₱{lease.monthly_rent:,.2f}
-• Security Deposit: ₱{lease.security_deposit:,.2f}
-• Advance Payment: ₱{lease.advance_payment_amount:,.2f}
-• Total Move-in Cost: ₱{lease.total_move_in_cost:,.2f}
-• Calendar events generated: {lease.calendar_events.count()} events
-
-Welcome notification sent to tenant with complete payment schedule.'''
-                
-                messages.success(request, success_message)
+                tenant_name = lease.tenant.tenantprofile.full_name if hasattr(lease.tenant, 'tenantprofile') else lease.tenant.email
+                messages.success(request, f"Lease created successfully for {tenant_name} – Unit {lease.unit.number}. A confirmation email with their payment schedule has been sent.")
                 return redirect("admin_tenants")
                 
             except Exception as e:

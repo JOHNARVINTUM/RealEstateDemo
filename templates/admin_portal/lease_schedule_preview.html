@@ -123,14 +123,20 @@ document.addEventListener('DOMContentLoaded', function() {
             return date;
         }
         
+        function getVal(id, fallback) {
+            const el = document.getElementById(id);
+            return el ? el.value : String(fallback);
+        }
+
         function updatePreview() {
-            const monthlyRent = parseFloat(document.getElementById('id_monthly_rent')?.value || 0);
-            const depositMultiplier = parseInt(document.getElementById('id_deposit_multiplier')?.value || 2);
-            const securityDeposit = parseFloat(document.getElementById('id_security_deposit')?.value || 0) || (monthlyRent * depositMultiplier);
-            const startDateInput = document.getElementById('id_start_date')?.value;
-            const dueDay = parseInt(document.getElementById('id_due_day')?.value || 5);
-            const motorcycleSlots = parseInt(document.getElementById('id_motorcycle_slots')?.value || 0);
-            const carSlots = parseInt(document.getElementById('id_car_slots')?.value || 0);
+            const monthlyRent = parseFloat(getVal('id_monthly_rent', 0)) || 0;
+            const depositMultiplier = parseInt(getVal('id_deposit_multiplier', 2)) || 2;
+            const rawSec = parseFloat(getVal('id_security_deposit', 0));
+            const securityDeposit = (!isNaN(rawSec) && rawSec > 0) ? rawSec : (monthlyRent * depositMultiplier);
+            const startDateInput = getVal('id_start_date', '');
+            const dueDay = parseInt(getVal('id_due_day', 5)) || 5;
+            const motorcycleSlots = parseInt(getVal('id_motorcycle_slots', 0)) || 0;
+            const carSlots = parseInt(getVal('id_car_slots', 0)) || 0;
             const parkingFee = (motorcycleSlots * 350) + (carSlots * 2500);
             
             // Toggle GCash footer in preview
@@ -150,19 +156,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (motorcycleSlots > 0 && carSlots > 0) parkingLabel = ` + \u20b1${parkingFee.toLocaleString('en-PH')} parking (${motorcycleSlots} moto + ${carSlots} car)`;
                 else if (motorcycleSlots > 0) parkingLabel = ` + \u20b1${parkingFee.toLocaleString('en-PH')} parking (${motorcycleSlots} motorcycle${motorcycleSlots > 1 ? 's' : ''})`;
                 else if (carSlots > 0) parkingLabel = ` + \u20b1${parkingFee.toLocaleString('en-PH')} parking (${carSlots} car${carSlots > 1 ? 's' : ''})`;
-                document.querySelector('[data-preview="monthly_rent"]').innerHTML = formatCurrency(monthlyRent) + parkingLabel;
-                const advMonthsEl = document.querySelector('[data-preview="advance_months"]');
-                if (advMonthsEl) advMonthsEl.textContent = depositMultiplier;
-                document.querySelector('[data-preview="advance_payment_amount"]').textContent = formatCurrency(contractDeposit);
-                document.querySelector('[data-preview="security_deposit"]').textContent = formatCurrency(securityDeposit);
-                document.querySelector('[data-preview="total_move_in_cost"]').textContent = formatCurrency(totalMoveInCost);
+                function setPreview(key, val, useHtml) {
+                    const el = document.querySelector(`[data-preview="${key}"]`);
+                    if (!el) return;
+                    if (useHtml) el.innerHTML = val; else el.textContent = val;
+                }
+                setPreview('monthly_rent', formatCurrency(monthlyRent) + parkingLabel, true);
+                setPreview('advance_months', depositMultiplier, false);
+                setPreview('advance_payment_amount', formatCurrency(contractDeposit), false);
+                setPreview('security_deposit', formatCurrency(securityDeposit), false);
+                setPreview('total_move_in_cost', formatCurrency(totalMoveInCost), false);
                 
-                document.getElementById('milestone-security').textContent = formatCurrency(totalMoveInCost);
-                document.getElementById('milestone-movein-date').textContent = formatDate(startDate);
-                document.getElementById('milestone-first-rent').textContent = formatCurrency(monthlyTotal);
-                
+                function setEl(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+                setEl('milestone-security', formatCurrency(totalMoveInCost));
+                setEl('milestone-movein-date', formatDate(startDate));
+                setEl('milestone-first-rent', formatCurrency(monthlyTotal));
                 const firstRentDueDate = calculateDueDate(startDate, 0, dueDay);
-                document.getElementById('milestone-first-rent-date').textContent = formatDate(firstRentDueDate);
+                setEl('milestone-first-rent-date', formatDate(firstRentDueDate));
                 
                 let scheduleHTML = '';
                 let total12Months = 0;
@@ -194,8 +204,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     `;
                 }
                 
-                monthlyScheduleBody.innerHTML = scheduleHTML;
-                document.getElementById('total-12-months').textContent = formatCurrency(total12Months);
+                if (monthlyScheduleBody) monthlyScheduleBody.innerHTML = scheduleHTML;
+                setEl('total-12-months', formatCurrency(total12Months));
             } else {
                 previewContainer.style.display = 'none';
             }

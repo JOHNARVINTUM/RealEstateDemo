@@ -167,14 +167,8 @@ GCASH_NUMBER = "09219429053"
 GCASH_NAME = "John Arvin Tumbagahon"
 GCASH_QR_URL = "/static/img/qr.jpg"
 
-# Email configuration for tenant credentials
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 465
-EMAIL_USE_TLS = False
-EMAIL_USE_SSL = True
-# Note: For Gmail, you need to generate an App Password from Google Account settings
-# Go to: https://myaccount.google.com/apppasswords
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'johnarvint999@gmail.com')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'oecg oeyx agdc bsqi')
+# Email configuration via SendGrid (HTTP API — no SMTP port blocking)
+EMAIL_BACKEND = 'sendgrid_backend.SendgridBackend'
+SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY', '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')
+SENDGRID_SANDBOX_MODE_IN_DEBUG = False
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'REALESTATE360+ <johnarvint999@gmail.com>')

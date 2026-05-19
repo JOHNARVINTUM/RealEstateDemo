@@ -10,6 +10,29 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
+def send_email_via_resend(to_email, subject, message):
+    """
+    Reusable helper to send email via Resend HTTP API.
+    Returns True on success, False on failure (never raises).
+    """
+    try:
+        import resend
+        import os
+        resend.api_key = os.environ.get('RESEND_API_KEY', '')
+        resend.Emails.send({
+            'from': 'REALESTATE360+ <noreply@realestate360.site>',
+            'to': [to_email],
+            'subject': subject,
+            'text': message,
+        })
+        logger.info(f"Email sent to {to_email}: {subject}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send email to {to_email}: {str(e)}")
+        return False
+
+
 class TenantRiskService:
     """Service for calculating and managing tenant risk classifications"""
     

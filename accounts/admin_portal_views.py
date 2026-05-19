@@ -616,7 +616,33 @@ Welcome aboard! We're excited to have you as part of our community!"""
                     logger.info(f"Reset welcome popup flag for tenant {lease.tenant.email}")
                 except Exception as e:
                     logger.exception(f"Failed to reset welcome popup flag for tenant {lease.tenant.email}: {e}")
-                    # Don't block lease creation if flag reset fails
+
+                # Send lease assignment email to tenant
+                try:
+                    from rentals.services import send_email_via_resend
+                    tenant_name = lease.tenant.tenantprofile.full_name if hasattr(lease.tenant, 'tenantprofile') else lease.tenant.email
+                    send_email_via_resend(
+                        to_email=lease.tenant.email,
+                        subject=f"[REALESTATE360+] Unit {lease.unit.number} Assigned to You",
+                        message=(
+                            f"Dear {tenant_name},\n\n"
+                            f"Your unit has been successfully assigned. Here are your lease details:\n\n"
+                            f"  Unit Number:       {lease.unit.number}\n"
+                            f"  Unit Type:         {lease.unit.get_unit_type_display()}\n"
+                            f"  Monthly Rent:      PHP {lease.monthly_rent:,.2f}\n"
+                            f"  Security Deposit:  PHP {lease.security_deposit:,.2f}\n"
+                            f"  Advance Payment:   PHP {lease.advance_payment_amount:,.2f} ({lease.advance_months} months)\n"
+                            f"  Total Move-in:     PHP {lease.total_move_in_cost:,.2f}\n"
+                            f"  Lease Start:       {lease.start_date.strftime('%B %d, %Y')}\n"
+                            f"  First Rent Due:    {lease.first_rent_due_date.strftime('%B %d, %Y')}\n"
+                            f"  Rent Due Day:      {lease.due_day} of each month\n\n"
+                            f"You can log in to your tenant portal to view your bills and payment schedule.\n\n"
+                            f"Welcome to your new home!\n\n"
+                            f"REALESTATE360+ Administration"
+                        )
+                    )
+                except Exception as e:
+                    logger.exception(f"Failed to send lease assignment email: {e}")
                 
                 # create initial monthly bill rows from move-in until today
                 try:
@@ -867,6 +893,32 @@ def admin_approve_payment(request, payment_id: int):
         try:
             approve_manual_payment(p)
             messages.success(request, f"Payment {p.reference_code} approved successfully.")
+
+            try:
+                from rentals.services import send_email_via_resend
+                tenant_name = p.user.email
+                if hasattr(p.user, 'tenantprofile'):
+                    tenant_name = p.user.tenantprofile.full_name
+                payment_type_label = {'full': 'Full Payment', 'rent_only': 'Rent Only', 'water_only': 'Water Only'}.get(p.payment_type, 'Payment')
+                send_email_via_resend(
+                    to_email=p.user.email,
+                    subject="[REALESTATE360+] Payment Approved – Receipt Confirmation",
+                    message=(
+                        f"Dear {tenant_name},\n\n"
+                        f"Your payment has been approved and recorded.\n\n"
+                        f"  Reference No.: {p.reference_code}\n"
+                        f"  Payment Type:  {payment_type_label}\n"
+                        f"  Amount:        PHP {p.amount:,.2f}\n"
+                        f"  Method:        {p.get_payment_method_display() if hasattr(p, 'get_payment_method_display') else p.payment_method}\n"
+                        f"  Status:        APPROVED\n\n"
+                        f"Your billing statement has been updated. You can view your payment history in your tenant portal.\n\n"
+                        f"Thank you for your payment!\n\n"
+                        f"REALESTATE360+ Administration"
+                    )
+                )
+            except Exception as e:
+                logger.exception(f"Failed to send payment confirmation email: {e}")
+
         except Exception as e:
             messages.error(request, f"Error approving payment: {e}")
         return redirect("admin_payments")
@@ -939,12 +991,42 @@ def admin_update_maintenance(request, req_id: int):
         form = AdminMaintenanceUpdateForm(request.POST, instance=req)
         if form.is_valid():
             updated = form.save(commit=False)
-            # set resolved_at when marked resolved
+            old_status = req.status
             if updated.status == "RESOLVED" and not req.resolved_at:
                 updated.resolved_at = dj_timezone.now()
             if updated.status != "RESOLVED":
                 updated.resolved_at = None
             updated.save()
+
+            if updated.status != old_status:
+                try:
+                    from rentals.services import send_email_via_resend
+                    status_label = dict(req.STATUS_CHOICES).get(updated.status, updated.status)
+                    tenant_name = req.tenant.email
+                    if hasattr(req.tenant, 'tenantprofile'):
+                        tenant_name = req.tenant.tenantprofile.full_name
+                    unit_number = req.lease.unit.number if req.lease else 'N/A'
+                    fixed_by_line = f"  Fixed By:    {updated.fixed_by}\n" if updated.fixed_by else ""
+                    send_email_via_resend(
+                        to_email=req.tenant.email,
+                        subject=f"[REALESTATE360+] Maintenance Request Update – {req.title}",
+                        message=(
+                            f"Dear {tenant_name},\n\n"
+                            f"Your maintenance request has been updated.\n\n"
+                            f"  Request:     {req.title}\n"
+                            f"  Category:    {req.get_category_display()}\n"
+                            f"  Unit:        {unit_number}\n"
+                            f"  New Status:  {status_label}\n"
+                            f"{fixed_by_line}"
+                            f"\n"
+                            f"{'Your issue has been resolved. Thank you for your patience!' if updated.status == 'RESOLVED' else 'Our team is working on your request.'}\n\n"
+                            f"You can view the status in your tenant portal.\n\n"
+                            f"REALESTATE360+ Administration"
+                        )
+                    )
+                except Exception as e:
+                    logger.exception(f"Failed to send maintenance update email: {e}")
+
             return redirect("admin_maintenance")
     else:
         form = AdminMaintenanceUpdateForm(instance=req)

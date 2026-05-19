@@ -169,9 +169,10 @@ GCASH_QR_URL = "/static/img/qr.jpg"
 
 # Email configuration for tenant credentials
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'  # Using Gmail SMTP (can be configured based on requirements)
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 465
+EMAIL_USE_TLS = False
+EMAIL_USE_SSL = True
 # Note: For Gmail, you need to generate an App Password from Google Account settings
 # Go to: https://myaccount.google.com/apppasswords
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'johnarvint999@gmail.com')

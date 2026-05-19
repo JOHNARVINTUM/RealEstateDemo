@@ -105,16 +105,15 @@ def admin_dashboard(request):
     vacant_units = Unit.objects.filter(is_active=True).count() - occupied_units
 
     today = timezone.now().date()
-    # Monthly revenue includes rent, water, and interest for PAID bills in the current billing month.
+    # Billed This Month = total amount on all bills generated this month (PAID + UNPAID)
     total_revenue = (
         MonthlyBill.objects.filter(
             billing_month__year=today.year,
             billing_month__month=today.month,
-            status="PAID"
         )
         .aggregate(
             total=Sum(
-                ExpressionWrapper(F("base_rent") + F("water_amount") + F("interest"),
+                ExpressionWrapper(F("base_rent") + F("water_amount") + F("parking_fee") + F("interest"),
                 output_field=DecimalField()
                 )
             )
@@ -155,7 +154,7 @@ def admin_dashboard(request):
             
             month_date = datetime(month_year, month_month, 1).date()
         
-        # Get monthly revenue (rent + water + interest) for PAID bills in this billing month
+        # Get monthly revenue (rent + water + parking + interest) for PAID bills in this billing month
         actual_revenue = (
             MonthlyBill.objects.filter(
                 billing_month__year=month_date.year,
@@ -163,7 +162,7 @@ def admin_dashboard(request):
                 status="PAID"
             ).aggregate(
                 total=Sum(
-                    ExpressionWrapper(F("base_rent") + F("water_amount") + F("interest"),
+                    ExpressionWrapper(F("base_rent") + F("water_amount") + F("parking_fee") + F("interest"),
                     output_field=DecimalField()
                     )
                 )

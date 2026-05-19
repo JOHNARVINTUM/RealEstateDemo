@@ -23,15 +23,15 @@
                 </div>
                 <div class="space-y-2 pt-2 border-t border-slate-200/60 text-xs">
                     <div class="flex justify-between text-slate-600">
-                        <span>Base Rental Charge</span>
+                        <span>1st Month Rent</span>
                         <strong class="text-slate-900" data-preview="monthly_rent">₱0.00</strong>
                     </div>
                     <div class="flex justify-between text-slate-600">
-                        <span>Pre-Applied Advance (<span data-preview="advance_months">2</span> mo<span data-preview="advance_months_plural">s</span>)</span>
+                        <span>Contract Deposit (<span data-preview="advance_months">2</span>× rent)</span>
                         <strong class="text-slate-900" data-preview="advance_payment_amount">₱0.00</strong>
                     </div>
                     <div class="flex justify-between text-slate-600">
-                        <span>Held Security Deposit</span>
+                        <span>Security Deposit</span>
                         <strong class="text-slate-900" data-preview="security_deposit">₱0.00</strong>
                     </div>
                 </div>
@@ -105,7 +105,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const gcashPreviewFooter = document.getElementById('preview-gcash-footer');
     
     if (form && previewContainer) {
-        const fields = ['id_monthly_rent', 'id_advance_months', 'id_security_deposit', 'id_start_date', 'id_due_day', 'id_motorcycle_slots', 'id_car_slots'];
+        const fields = ['id_monthly_rent', 'id_deposit_multiplier', 'id_security_deposit', 'id_start_date', 'id_due_day', 'id_motorcycle_slots', 'id_car_slots'];
         
         function formatCurrency(amount) {
             return '₱' + amount.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -125,8 +125,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         function updatePreview() {
             const monthlyRent = parseFloat(document.getElementById('id_monthly_rent')?.value || 0);
-            const advanceMonths = parseInt(document.getElementById('id_advance_months')?.value || 2);
-            const securityDeposit = parseFloat(document.getElementById('id_security_deposit')?.value || monthlyRent);
+            const depositMultiplier = parseInt(document.getElementById('id_deposit_multiplier')?.value || 2);
+            const securityDeposit = parseFloat(document.getElementById('id_security_deposit')?.value || 0) || (monthlyRent * depositMultiplier);
             const startDateInput = document.getElementById('id_start_date')?.value;
             const dueDay = parseInt(document.getElementById('id_due_day')?.value || 5);
             const motorcycleSlots = parseInt(document.getElementById('id_motorcycle_slots')?.value || 0);
@@ -143,17 +143,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 previewContainer.style.display = 'block';
                 const startDate = new Date(startDateInput);
                 const monthlyTotal = monthlyRent + parkingFee;
-                const advancePaymentAmount = monthlyTotal * advanceMonths;
-                const totalMoveInCost = securityDeposit + advancePaymentAmount;
+                const contractDeposit = monthlyRent * depositMultiplier;
+                const totalMoveInCost = monthlyRent + securityDeposit + parkingFee;
                 
                 let parkingLabel = '';
                 if (motorcycleSlots > 0 && carSlots > 0) parkingLabel = ` + \u20b1${parkingFee.toLocaleString('en-PH')} parking (${motorcycleSlots} moto + ${carSlots} car)`;
                 else if (motorcycleSlots > 0) parkingLabel = ` + \u20b1${parkingFee.toLocaleString('en-PH')} parking (${motorcycleSlots} motorcycle${motorcycleSlots > 1 ? 's' : ''})`;
                 else if (carSlots > 0) parkingLabel = ` + \u20b1${parkingFee.toLocaleString('en-PH')} parking (${carSlots} car${carSlots > 1 ? 's' : ''})`;
                 document.querySelector('[data-preview="monthly_rent"]').textContent = formatCurrency(monthlyRent) + parkingLabel;
-                document.querySelector('[data-preview="advance_months"]').textContent = advanceMonths;
-                document.querySelector('[data-preview="advance_months_plural"]').textContent = advanceMonths === 1 ? '' : 's';
-                document.querySelector('[data-preview="advance_payment_amount"]').textContent = formatCurrency(advancePaymentAmount);
+                document.querySelector('[data-preview="advance_months"]').textContent = depositMultiplier;
+                document.querySelector('[data-preview="advance_months_plural"]').textContent = depositMultiplier === 1 ? '' : 's';
+                document.querySelector('[data-preview="advance_payment_amount"]').textContent = formatCurrency(contractDeposit);
                 document.querySelector('[data-preview="security_deposit"]').textContent = formatCurrency(securityDeposit);
                 document.querySelector('[data-preview="total_move_in_cost"]').textContent = formatCurrency(totalMoveInCost);
                 
@@ -161,7 +161,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('milestone-movein-date').textContent = formatDate(startDate);
                 document.getElementById('milestone-first-rent').textContent = formatCurrency(monthlyTotal);
                 
-                const firstRentDueDate = calculateDueDate(startDate, advanceMonths, dueDay);
+                const firstRentDueDate = calculateDueDate(startDate, 0, dueDay);
                 document.getElementById('milestone-first-rent-date').textContent = formatDate(firstRentDueDate);
                 
                 let scheduleHTML = '';
@@ -173,14 +173,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     let amount = monthlyRent;
                     let amountDisplay = '';
                     
-                    if (i < advanceMonths) {
-                        if (i === 0) {
-                            amount = totalMoveInCost;
-                            amountDisplay = `<span class="text-amber-700 font-extrabold">${formatCurrency(amount)}</span>`;
-                        } else {
-                            amount = 0;
-                            amountDisplay = '<span class="text-emerald-700 font-extrabold tracking-wider text-[10px]">PREPAID</span>';
-                        }
+                    if (i === 0) {
+                        amount = totalMoveInCost;
+                        amountDisplay = `<span class="text-amber-700 font-extrabold">${formatCurrency(amount)}</span>`;
+                        total12Months += amount;
                     } else {
                         amount = monthlyTotal;
                         amountDisplay = parkingFee > 0
@@ -199,7 +195,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 monthlyScheduleBody.innerHTML = scheduleHTML;
-                document.getElementById('total-12-months').textContent = formatCurrency(total12Months + totalMoveInCost);
+                document.getElementById('total-12-months').textContent = formatCurrency(total12Months);
             } else {
                 previewContainer.style.display = 'none';
             }

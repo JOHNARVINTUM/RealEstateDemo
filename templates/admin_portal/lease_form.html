@@ -32,6 +32,12 @@ function handleUnitSelection(selectElement) {
     }
 }
 
+function updateDepositPreview() {
+    const event = new Event('input', { bubbles: true });
+    const rentInput = document.getElementById('id_monthly_rent');
+    if (rentInput) rentInput.dispatchEvent(event);
+}
+
 function updateParkingFee() {
     const event = new Event('input', { bubbles: true });
     const rentInput = document.getElementById('id_monthly_rent');
@@ -144,10 +150,11 @@ function toggleMoveInPaymentMethod() {
             </div>
 
             <div>
-              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider" for="id_advance_months">Advance Payment (Months)</label>
-              <input type="number" name="advance_months" id="id_advance_months" value="{{ form.advance_months.value|default:2 }}" min="0" max="12" 
+              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider" for="id_deposit_multiplier">Contract Deposit Multiplier</label>
+              <input type="number" name="deposit_multiplier" id="id_deposit_multiplier" value="{{ form.deposit_multiplier.value|default:2 }}" min="1" max="12"
+                     oninput="updateDepositPreview()"
                      class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none">
-              <p class="text-[10px] text-slate-500 mt-2 font-bold uppercase tracking-tight">Number of months paid in advance.</p>
+              <p class="text-[10px] text-slate-500 mt-2 font-bold uppercase tracking-tight">Contract deposit = monthly rent × this value (default: 2).</p>
             </div>
           </div>
 

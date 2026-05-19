@@ -118,7 +118,7 @@ class Lease(models.Model):
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True, help_text="Lease end date (optional)")
     security_deposit = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Security deposit amount")
-    advance_months = models.PositiveSmallIntegerField(default=2, help_text="Number of months for advance payment")
+    deposit_multiplier = models.PositiveSmallIntegerField(default=2, help_text="Contract deposit multiplier (security deposit = monthly_rent × this value)")
     is_active = models.BooleanField(default=True)
     motorcycle_slots = models.PositiveSmallIntegerField(default=0, help_text="Number of motorcycle parking slots (₱350 each/mo)")
     car_slots = models.PositiveSmallIntegerField(default=0, help_text="Number of car parking slots (₱2,500 each/mo)")
@@ -133,35 +133,27 @@ class Lease(models.Model):
         return Decimal(self.motorcycle_slots * self.MOTORCYCLE_FEE + self.car_slots * self.CAR_FEE)
 
     @property
+    def contract_deposit(self):
+        """Contract deposit = monthly_rent × deposit_multiplier"""
+        return self.monthly_rent * self.deposit_multiplier
+
+    @property
     def advance_payment_amount(self):
-        """Calculate advance payment amount"""
-        return self.monthly_rent * self.advance_months
-    
+        """Alias for backward compatibility"""
+        return self.contract_deposit
+
     @property
     def total_move_in_cost(self):
-        """Calculate total move-in cost"""
-        return self.security_deposit + self.advance_payment_amount
-    
+        """Total move-in = 1st month rent + security deposit + parking fee"""
+        return self.monthly_rent + self.security_deposit + self.parking_fee
+
     @property
     def first_rent_due_date(self):
-        """Calculate first rent due date after advance payment period"""
-        from datetime import date, timedelta
+        """First rent due on the due_day of the start month"""
         import calendar
-        
-        # Calculate first rent month (start_date + advance_months)
-        first_rent_month = self.start_date
-        for _ in range(self.advance_months):
-            # Move to next month
-            if first_rent_month.month == 12:
-                first_rent_month = date(first_rent_month.year + 1, 1, 1)
-            else:
-                first_rent_month = date(first_rent_month.year, first_rent_month.month + 1, 1)
-        
-        # Adjust due_day to be valid for the month
-        last_day_of_month = calendar.monthrange(first_rent_month.year, first_rent_month.month)[1]
-        adjusted_due_day = min(self.due_day, last_day_of_month)
-        
-        return date(first_rent_month.year, first_rent_month.month, adjusted_due_day)
+        from datetime import date
+        last_day = calendar.monthrange(self.start_date.year, self.start_date.month)[1]
+        return date(self.start_date.year, self.start_date.month, min(self.due_day, last_day))
     
     def save(self, *args, **kwargs):
         """Override save to handle smart status setting"""
@@ -173,9 +165,9 @@ class Lease(models.Model):
         else:
             self.is_active = False
         
-        # Auto-populate security deposit if not set
+        # Auto-populate security deposit = monthly_rent × deposit_multiplier if not set
         if self.security_deposit == 0 and self.monthly_rent:
-            self.security_deposit = self.monthly_rent
+            self.security_deposit = self.monthly_rent * self.deposit_multiplier
         
         super().save(*args, **kwargs)
 

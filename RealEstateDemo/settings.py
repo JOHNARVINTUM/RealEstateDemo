@@ -173,6 +173,6 @@ EMAIL_HOST = 'smtp-relay.brevo.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
-EMAIL_HOST_USER = os.environ.get('BREVO_SMTP_USER', '202310149@fit.edu.ph')
+EMAIL_HOST_USER = os.environ.get('BREVO_SMTP_USER', 'abc97b001@smtp-brevo.com')
 EMAIL_HOST_PASSWORD = os.environ.get('BREVO_SMTP_KEY', '')
 DEFAULT_FROM_EMAIL = 'REALESTATE360+ <202310149@fit.edu.ph>'

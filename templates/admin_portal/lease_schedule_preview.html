@@ -150,9 +150,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (motorcycleSlots > 0 && carSlots > 0) parkingLabel = ` + \u20b1${parkingFee.toLocaleString('en-PH')} parking (${motorcycleSlots} moto + ${carSlots} car)`;
                 else if (motorcycleSlots > 0) parkingLabel = ` + \u20b1${parkingFee.toLocaleString('en-PH')} parking (${motorcycleSlots} motorcycle${motorcycleSlots > 1 ? 's' : ''})`;
                 else if (carSlots > 0) parkingLabel = ` + \u20b1${parkingFee.toLocaleString('en-PH')} parking (${carSlots} car${carSlots > 1 ? 's' : ''})`;
-                document.querySelector('[data-preview="monthly_rent"]').textContent = formatCurrency(monthlyRent) + parkingLabel;
-                document.querySelector('[data-preview="advance_months"]').textContent = depositMultiplier;
-                document.querySelector('[data-preview="advance_months_plural"]').textContent = depositMultiplier === 1 ? '' : 's';
+                document.querySelector('[data-preview="monthly_rent"]').innerHTML = formatCurrency(monthlyRent) + parkingLabel;
+                const advMonthsEl = document.querySelector('[data-preview="advance_months"]');
+                if (advMonthsEl) advMonthsEl.textContent = depositMultiplier;
                 document.querySelector('[data-preview="advance_payment_amount"]').textContent = formatCurrency(contractDeposit);
                 document.querySelector('[data-preview="security_deposit"]').textContent = formatCurrency(securityDeposit);
                 document.querySelector('[data-preview="total_move_in_cost"]').textContent = formatCurrency(totalMoveInCost);

@@ -1,5 +1,6 @@
 from datetime import date, datetime, timedelta, timezone
 import logging
+import os
 
 from django.conf import settings
 from django.db.models import Sum, Q, F, ExpressionWrapper, DecimalField, Exists, OuterRef
@@ -1255,7 +1256,6 @@ def admin_delete_bill(request, bill_id: int):
 
 @admin_required
 def admin_send_bill_warning(request, bill_id: int):
-    from django.core.mail import send_mail
     from django.conf import settings as django_settings
 
     bill = get_object_or_404(
@@ -1275,7 +1275,7 @@ def admin_send_bill_warning(request, bill_id: int):
     balance = float(bill.total_balance) if bill.total_balance else float(bill.total_due)
     due_date = bill.due_date.strftime("%B %d, %Y") if bill.due_date else "N/A"
 
-    subject = f"[REALESTATE360+] Billing Reminder – {billing_month}"
+    subject = f"[REALESTATE360+] Billing Reminder - {billing_month}"
     message = (
         f"Dear {name},\n\n"
         f"This is a friendly reminder that your bill for {billing_month} is still outstanding.\n\n"
@@ -1290,13 +1290,14 @@ def admin_send_bill_warning(request, bill_id: int):
     )
 
     try:
-        send_mail(
-            subject=subject,
-            message=message,
-            from_email=django_settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[tenant.email],
-            fail_silently=True,
-        )
+        import resend
+        resend.api_key = os.environ.get('RESEND_API_KEY', '')
+        resend.Emails.send({
+            'from': 'REALESTATE360+ <onboarding@resend.dev>',
+            'to': [tenant.email],
+            'subject': subject,
+            'text': message,
+        })
         from django.contrib import messages
         messages.success(request, f"Warning email sent to {tenant.email} for {billing_month}.")
     except Exception as e:

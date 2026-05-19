@@ -424,23 +424,20 @@ REALESTATE360+ Team
 """
     
     try:
-        import socket
-        socket.setdefaulttimeout(10)
-        send_mail(
-            subject=subject,
-            message=message,
-            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'REALESTATE360+ <noreply@realestate360.com>'),
-            recipient_list=[tenant_email],
-            fail_silently=True,
-        )
+        import resend
+        import os
+        resend.api_key = os.environ.get('RESEND_API_KEY', '')
+        resend.Emails.send({
+            'from': 'REALESTATE360+ <onboarding@resend.dev>',
+            'to': [tenant_email],
+            'subject': subject,
+            'text': message,
+        })
         logger.info(f"Credentials email sent successfully to {tenant_email}")
         return True
     except Exception as e:
         logger.error(f"Failed to send credentials email to {tenant_email}: {str(e)}")
         return False
-    finally:
-        import socket
-        socket.setdefaulttimeout(None)
 
 
 class LeaseSchedulingService:

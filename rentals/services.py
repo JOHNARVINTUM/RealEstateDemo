@@ -427,7 +427,7 @@ REALESTATE360+ Team
         import resend
         resend.api_key = settings.RESEND_API_KEY
         resend.Emails.send({
-            'from': 'REALESTATE360+ <onboarding@resend.dev>',
+            'from': 'REALESTATE360+ <noreply@realestate360.site>',
             'to': [tenant_email],
             'subject': subject,
             'text': message,

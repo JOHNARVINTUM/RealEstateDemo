@@ -1293,7 +1293,7 @@ def admin_send_bill_warning(request, bill_id: int):
         import resend
         resend.api_key = settings.RESEND_API_KEY
         resend.Emails.send({
-            'from': 'REALESTATE360+ <onboarding@resend.dev>',
+            'from': 'REALESTATE360+ <noreply@realestate360.site>',
             'to': [tenant.email],
             'subject': subject,
             'text': message,

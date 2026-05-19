@@ -37,11 +37,14 @@ _allowed = os.environ.get('ALLOWED_HOSTS', '')
 ALLOWED_HOSTS = _allowed.split() if _allowed else [
     'localhost', '127.0.0.1',
     '.railway.app', '.up.railway.app', 'healthcheck.railway.app',
+    'realestate360.site', 'www.realestate360.site',
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     'https://*.railway.app',
     'https://*.up.railway.app',
+    'https://realestate360.site',
+    'https://www.realestate360.site',
     'http://localhost:8000',
 ]
 
@@ -169,5 +172,5 @@ GCASH_QR_URL = "/static/img/qr.jpg"
 
 # Email via Resend HTTP API (Railway blocks all SMTP ports)
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
-DEFAULT_FROM_EMAIL = 'REALESTATE360+ <onboarding@resend.dev>'
+DEFAULT_FROM_EMAIL = 'REALESTATE360+ <noreply@realestate360.site>'
 EMAIL_BACKEND = 'django.core.mail.backends.dummy.EmailBackend'

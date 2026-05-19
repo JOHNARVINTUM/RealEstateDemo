@@ -1295,7 +1295,7 @@ def admin_send_bill_warning(request, bill_id: int):
             message=message,
             from_email=django_settings.DEFAULT_FROM_EMAIL,
             recipient_list=[tenant.email],
-            fail_silently=False,
+            fail_silently=True,
         )
         from django.contrib import messages
         messages.success(request, f"Warning email sent to {tenant.email} for {billing_month}.")

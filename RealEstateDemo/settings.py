@@ -167,12 +167,13 @@ GCASH_NUMBER = "09219429053"
 GCASH_NAME = "John Arvin Tumbagahon"
 GCASH_QR_URL = "/static/img/qr.jpg"
 
-# Email configuration via Resend (HTTP API — no SMTP port blocking)
+# Email via Resend SMTP (port 465, works on Railway)
+_resend_key = os.environ.get('RESEND_API_KEY', '')
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.resend.com'
 EMAIL_PORT = 465
 EMAIL_USE_SSL = True
 EMAIL_USE_TLS = False
 EMAIL_HOST_USER = 'resend'
-EMAIL_HOST_PASSWORD = os.environ.get('RESEND_API_KEY', '')
+EMAIL_HOST_PASSWORD = _resend_key
 DEFAULT_FROM_EMAIL = 'REALESTATE360+ <onboarding@resend.dev>'

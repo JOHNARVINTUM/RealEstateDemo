@@ -105,11 +105,12 @@ def admin_dashboard(request):
     vacant_units = Unit.objects.filter(is_active=True).count() - occupied_units
 
     today = timezone.now().date()
-    # Billed This Month = total amount on all bills generated this month (PAID + UNPAID)
+    # Billed This Month = total collected from PAID bills this month
     total_revenue = (
         MonthlyBill.objects.filter(
             billing_month__year=today.year,
             billing_month__month=today.month,
+            status="PAID",
         )
         .aggregate(
             total=Sum(
@@ -657,20 +658,43 @@ Welcome aboard! We're excited to have you as part of our community!"""
                     logger.exception("ensure_bills_since_move_in failed for lease id %s", getattr(lease, 'id', None))
                     messages.warning(request, "Failed to generate initial bills; you can regenerate later.")
                 
-                # Create move-in payment record
+                # Create move-in payment record and mark first month bill as PAID
                 try:
                     from payments.models import ManualPayment
+                    from billing.services import set_bill_status
+                    from django.utils import timezone as dj_tz
                     move_in_method = form.cleaned_data.get('move_in_payment_method', 'GCASH')
                     move_in_ref = form.cleaned_data.get('move_in_reference_code', '').strip()
                     if move_in_method == 'CASH' and not move_in_ref:
                         move_in_ref = f'REF-CASH-MOVEIN-{lease.id}'
+
+                    # Get the first month's bill (billing_month = start month)
+                    from billing.services import month_start
+                    first_bill_month = month_start(lease.start_date)
+                    first_bill = MonthlyBill.objects.filter(
+                        lease=lease,
+                        billing_month=first_bill_month,
+                    ).first()
+
+                    # Mark it PAID with the move-in reference
+                    if first_bill:
+                        set_bill_status(
+                            first_bill,
+                            status="PAID",
+                            payment_reference=move_in_ref,
+                            paid_at=dj_tz.now(),
+                        )
+                        bill_ids_str = str(first_bill.id)
+                    else:
+                        bill_ids_str = ''
+
                     ManualPayment.objects.create(
                         user=lease.tenant,
                         payment_type='move_in',
                         payment_method=move_in_method,
                         amount=lease.total_move_in_cost,
                         reference_code=move_in_ref,
-                        bill_ids='',
+                        bill_ids=bill_ids_str,
                         status='APPROVED',
                     )
                 except Exception as e:
@@ -2079,5 +2103,56 @@ def admin_forecasting(request):
         "revenue_sarima_metrics": revenue_sarima_metrics,
         "water_sarima_metrics": water_sarima_metrics,
         "sarima_available": rev_sarima_fc is not None,
+        "unread_count": Notification.objects.filter(is_read=False).count(),
+    })
+
+
+@admin_required
+def admin_billed_this_month(request):
+    """Breakdown of all bills generated this month — shows how Billed This Month is calculated."""
+    today = timezone.now().date()
+
+    # Allow ?month=YYYY-MM to view other months too
+    month_str = request.GET.get("month", "").strip()
+    if month_str:
+        try:
+            target = datetime.strptime(month_str, "%Y-%m").date()
+        except ValueError:
+            target = today
+    else:
+        target = today
+
+    # All bills this month (for context counts)
+    all_bills = (
+        MonthlyBill.objects
+        .filter(billing_month__year=target.year, billing_month__month=target.month)
+        .select_related("lease", "lease__unit", "lease__tenant", "lease__tenant__tenantprofile")
+        .order_by("lease__unit__number")
+    )
+
+    # Only PAID bills are shown in the breakdown
+    bills = [b for b in all_bills if b.status == "PAID"]
+    unpaid_count = sum(1 for b in all_bills if b.status == "UNPAID")
+    partial_count = sum(1 for b in all_bills if b.status == "PARTIALLY_PAID")
+
+    # Totals from PAID bills only
+    total_rent = sum(b.base_rent for b in bills)
+    total_water = sum(b.water_amount for b in bills)
+    total_parking = sum(b.parking_fee for b in bills)
+    total_interest = sum(b.interest for b in bills)
+    grand_total = total_rent + total_water + total_parking + total_interest
+
+    return render(request, "admin_portal/billed_this_month.html", {
+        "bills": bills,
+        "total_bills": len(all_bills),
+        "unpaid_count": unpaid_count,
+        "partial_count": partial_count,
+        "total_rent": total_rent,
+        "total_water": total_water,
+        "total_parking": total_parking,
+        "total_interest": total_interest,
+        "grand_total": grand_total,
+        "target_month": target,
+        "current_month_str": today.strftime("%Y-%m"),
         "unread_count": Notification.objects.filter(is_read=False).count(),
     })

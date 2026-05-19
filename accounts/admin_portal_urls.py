@@ -46,6 +46,7 @@ from .admin_portal_views import (
     admin_view_attachment,
     admin_delete_attachment,
     admin_forecasting,
+    admin_billed_this_month,
 )
 from .admin_portal_views_water import (
     admin_water,
@@ -118,4 +119,7 @@ urlpatterns = [
 
     # Forecasting
     path("forecasting/", admin_forecasting, name="admin_forecasting"),
+
+    # Billed This Month Breakdown
+    path("billing/billed-this-month/", admin_billed_this_month, name="admin_billed_this_month"),
 ]

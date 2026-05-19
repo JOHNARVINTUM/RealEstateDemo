@@ -1,0 +1,164 @@
+{% extends "admin_portal/base.html" %}
+{% load humanize %}
+{% block title %}Billed This Month | RealEstate360+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12">
+
+  <!-- Header -->
+  <header class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div class="flex items-center gap-4">
+      <a href="{% url 'admin_dashboard' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-lg transition-colors">
+        ← Back to Dashboard
+      </a>
+      <div>
+        <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Monthly Billing Breakdown</p>
+        <h1 class="text-2xl font-black text-slate-900 tracking-tight">Paid This Month</h1>
+        <p class="text-sm text-slate-500 font-medium mt-0.5">{{ target_month|date:"F Y" }} — all fully paid bills this month</p>
+      </div>
+    </div>
+
+    <!-- Month Switcher -->
+    <form method="get" class="flex items-center gap-2">
+      <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">View Month:</label>
+      <input type="month" name="month" value="{{ target_month|date:'Y-m' }}"
+             class="px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-800 focus:ring-2 focus:ring-slate-400 outline-none"
+             onchange="this.form.submit()">
+    </form>
+  </header>
+
+  <!-- Summary Totals -->
+  <section class="grid grid-cols-2 md:grid-cols-5 gap-4">
+    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs border-l-4 border-l-emerald-600">
+      <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Total Collected</p>
+      <p class="text-2xl font-black text-slate-900">₱{{ grand_total|floatformat:2|intcomma }}</p>
+      <p class="text-xs text-slate-400 mt-1">{{ bills|length }} paid bill{{ bills|length|pluralize }} / {{ total_bills }} total</p>
+    </div>
+    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs border-l-4 border-l-blue-500">
+      <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Base Rent</p>
+      <p class="text-xl font-black text-slate-900">₱{{ total_rent|floatformat:2|intcomma }}</p>
+    </div>
+    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs border-l-4 border-l-cyan-500">
+      <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Water</p>
+      <p class="text-xl font-black text-slate-900">₱{{ total_water|floatformat:2|intcomma }}</p>
+    </div>
+    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs border-l-4 border-l-amber-500">
+      <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Parking</p>
+      <p class="text-xl font-black text-slate-900">₱{{ total_parking|floatformat:2|intcomma }}</p>
+    </div>
+    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs border-l-4 border-l-rose-500">
+      <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Interest</p>
+      <p class="text-xl font-black text-slate-900">₱{{ total_interest|floatformat:2|intcomma }}</p>
+    </div>
+  </section>
+
+  <!-- Status Badges -->
+  <div class="flex flex-wrap gap-3">
+    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-lg">
+      ✓ Fully Paid: {{ bills|length }}
+    </span>
+    {% if partial_count %}
+    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold rounded-lg">
+      ◐ Partial (not shown): {{ partial_count }}
+    </span>
+    {% endif %}
+    {% if unpaid_count %}
+    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold rounded-lg">
+      ✗ Still Unpaid: {{ unpaid_count }}
+    </span>
+    {% endif %}
+  </div>
+
+  <!-- Bills Table -->
+  <div class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+      <h2 class="text-sm font-extrabold text-slate-700 uppercase tracking-wider">Paid Bills Breakdown</h2>
+      <span class="text-xs text-slate-400 font-medium">Total Collected = Rent + Water + Parking + Interest</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-left">
+        <thead class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-600 uppercase tracking-wider">
+          <tr>
+            <th class="px-4 py-3">Unit</th>
+            <th class="px-4 py-3">Tenant</th>
+            <th class="px-4 py-3 text-right">Rent</th>
+            <th class="px-4 py-3 text-right">Water</th>
+            <th class="px-4 py-3 text-right">Parking</th>
+            <th class="px-4 py-3 text-right">Interest</th>
+            <th class="px-4 py-3 text-right font-black text-slate-800">Total</th>
+            <th class="px-4 py-3 text-center">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for bill in bills %}
+          {% with tenant=bill.lease.tenant %}
+          <tr class="hover:bg-slate-50 transition-colors">
+            <td class="px-4 py-3 font-bold text-slate-800">{{ bill.lease.unit.number }}</td>
+            <td class="px-4 py-3 text-slate-600">
+              {% if tenant.tenantprofile %}{{ tenant.tenantprofile.full_name }}{% else %}{{ tenant.email }}{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right font-medium text-slate-800">₱{{ bill.base_rent|floatformat:2|intcomma }}</td>
+            <td class="px-4 py-3 text-right text-slate-600">
+              {% if bill.water_amount %}₱{{ bill.water_amount|floatformat:2|intcomma }}{% else %}<span class="text-slate-300">—</span>{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right text-amber-700 font-medium">
+              {% if bill.parking_fee %}₱{{ bill.parking_fee|floatformat:2|intcomma }}{% else %}<span class="text-slate-300">—</span>{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right text-rose-600 font-medium">
+              {% if bill.interest %}₱{{ bill.interest|floatformat:2|intcomma }}{% else %}<span class="text-slate-300">—</span>{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right font-black text-slate-900">
+              ₱{{ bill.total_due|floatformat:2|intcomma }}
+            </td>
+            <td class="px-4 py-3 text-center">
+              {% if bill.status == "PAID" %}
+                <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full uppercase tracking-wide">Paid</span>
+              {% elif bill.status == "PARTIALLY_PAID" %}
+                <span class="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-full uppercase tracking-wide">Partial</span>
+              {% else %}
+                <span class="px-2 py-0.5 bg-rose-100 text-rose-800 text-[10px] font-bold rounded-full uppercase tracking-wide">Unpaid</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endwith %}
+          {% empty %}
+          <tr>
+            <td colspan="8" class="px-6 py-12 text-center text-slate-400 font-medium">
+              No paid bills for {{ target_month|date:"F Y" }} yet.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <!-- Footer totals row -->
+        {% if bills %}
+        <tfoot class="bg-slate-100 border-t-2 border-slate-300 text-sm font-extrabold text-slate-900">
+          <tr>
+            <td colspan="2" class="px-4 py-3 uppercase tracking-wider text-xs text-slate-600">Total ({{ bills|length }} bills)</td>
+            <td class="px-4 py-3 text-right">₱{{ total_rent|floatformat:2|intcomma }}</td>
+            <td class="px-4 py-3 text-right">₱{{ total_water|floatformat:2|intcomma }}</td>
+            <td class="px-4 py-3 text-right text-amber-700">₱{{ total_parking|floatformat:2|intcomma }}</td>
+            <td class="px-4 py-3 text-right text-rose-600">₱{{ total_interest|floatformat:2|intcomma }}</td>
+            <td class="px-4 py-3 text-right text-slate-900 text-base">₱{{ grand_total|floatformat:2|intcomma }}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+        {% endif %}
+      </table>
+    </div>
+  </div>
+
+  <!-- Formula Explainer -->
+  <div class="bg-slate-50 border border-slate-200 rounded-xl p-5">
+    <p class="text-xs font-extrabold text-slate-500 uppercase tracking-wider mb-2">How "Billed This Month" is Calculated</p>
+    <p class="text-sm text-slate-600 font-medium">
+      <span class="font-bold text-slate-800">Total Collected</span> =
+      <span class="text-blue-700 font-bold">Base Rent</span> +
+      <span class="text-cyan-700 font-bold">Water</span> +
+      <span class="text-amber-700 font-bold">Parking</span> +
+      <span class="text-rose-700 font-bold">Late Interest</span>
+      &nbsp;— summed across <strong>fully paid</strong> bills for {{ target_month|date:"F Y" }} only.
+    </p>
+  </div>
+
+</div>
+{% endblock %}

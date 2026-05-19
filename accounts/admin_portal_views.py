@@ -228,6 +228,7 @@ def admin_dashboard(request):
         "water_usage_data": water_usage_data,
         "maintenance_trend_data": maintenance_trend_data,
         "months_labels": months_labels,
+        "current_month_str": today.strftime("%Y-%m"),
     })
 
 

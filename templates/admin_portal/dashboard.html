@@ -66,7 +66,7 @@
     </div>
 
     <!-- Monthly Billed Revenue -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-slate-700 flex flex-col justify-between">
+    <a href="{% url 'admin_billing' %}?month={{ current_month_str }}" class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-slate-700 flex flex-col justify-between hover:shadow-md hover:border-slate-400 transition-all group">
       <div>
         <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Billed This Month</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight truncate" title="₱{{ total_revenue|floatformat:0|intcomma }}">
@@ -75,11 +75,12 @@
       </div>
       <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5 truncate">
         <span>Rent, water & extras</span>
+        <span class="ml-auto text-[10px] font-bold text-slate-400 group-hover:text-slate-600 uppercase tracking-wide">View Bills →</span>
       </div>
-    </div>
+    </a>
 
     <!-- Monthly Collected Cash -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-indigo-600 flex flex-col justify-between">
+    <a href="{% url 'admin_payments' %}?status=APPROVED" class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-indigo-600 flex flex-col justify-between hover:shadow-md hover:border-indigo-400 transition-all group">
       <div>
         <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Paid This Month</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight truncate" title="₱{{ monthly_collected|floatformat:0|intcomma }}">
@@ -88,8 +89,9 @@
       </div>
       <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5 truncate">
         <span>Verified remits</span>
+        <span class="ml-auto text-[10px] font-bold text-slate-400 group-hover:text-indigo-600 uppercase tracking-wide">View Payments →</span>
       </div>
-    </div>
+    </a>
 
   </section>
 

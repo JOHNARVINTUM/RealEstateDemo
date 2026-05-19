@@ -264,7 +264,7 @@ def set_bill_status(bill: MonthlyBill, *, status: str, payment_reference: str = 
         bill.rent_paid_at = paid_time
         bill.water_paid_at = paid_time
         bill.interest = Decimal("0.00")
-        bill.total_due = (bill.base_rent + bill.water_amount).quantize(Decimal("0.01"))
+        bill.total_due = (bill.base_rent + bill.water_amount + bill.parking_fee).quantize(Decimal("0.01"))
         bill.status = "PAID"
         bill.paid_at = paid_time
         bill.payment_reference = payment_reference
@@ -378,7 +378,7 @@ def approve_manual_payment(payment):
             bill.payment_reference = payment.reference_code
             # Zero out interest - it is included in the full payment amount
             bill.interest = Decimal("0.00")
-            bill.total_due = (bill.base_rent + bill.water_amount).quantize(Decimal("0.01"))
+            bill.total_due = (bill.base_rent + bill.water_amount + bill.parking_fee).quantize(Decimal("0.01"))
 
         # Determine status using total_balance as source of truth
         if bill.total_balance == 0:

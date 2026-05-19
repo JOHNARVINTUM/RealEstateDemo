@@ -424,15 +424,13 @@ REALESTATE360+ Team
 """
     
     try:
-        import resend
-        import os
-        resend.api_key = os.environ.get('RESEND_API_KEY', '')
-        resend.Emails.send({
-            'from': 'REALESTATE360+ <onboarding@resend.dev>',
-            'to': [tenant_email],
-            'subject': subject,
-            'text': message,
-        })
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[tenant_email],
+            fail_silently=False,
+        )
         logger.info(f"Credentials email sent successfully to {tenant_email}")
         return True
     except Exception as e:

@@ -1290,18 +1290,16 @@ def admin_send_bill_warning(request, bill_id: int):
     )
 
     try:
-        import resend
-        resend.api_key = os.environ.get('RESEND_API_KEY', '')
-        resend.Emails.send({
-            'from': 'REALESTATE360+ <onboarding@resend.dev>',
-            'to': [tenant.email],
-            'subject': subject,
-            'text': message,
-        })
-        from django.contrib import messages
+        from django.core.mail import send_mail
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[tenant.email],
+            fail_silently=False,
+        )
         messages.success(request, f"Warning email sent to {tenant.email} for {billing_month}.")
     except Exception as e:
-        from django.contrib import messages
         messages.error(request, f"Failed to send email: {e}")
 
     return redirect(f"{reverse('admin_billing')}?tab=active")

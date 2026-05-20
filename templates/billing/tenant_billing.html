@@ -135,6 +135,13 @@
             </span>
           </div>
 
+          <div class="flex justify-between py-4 text-lg border-b-2 border-slate-200/50">
+            <span class="text-slate-500 font-black">Parking Fee</span>
+            <span class="font-black text-slate-900">
+              {% if current_bill and current_bill.parking_fee and current_bill.parking_fee != 0 %}₱{{ current_bill.parking_fee|floatformat:2|intcomma }}{% else %}-{% endif %}
+            </span>
+          </div>
+
           <div class="mt-8 pt-8 border-t-[3px] border-slate-900 flex justify-between items-center">
             <span class="text-lg font-black text-slate-900 uppercase tracking-widest">Total to Pay</span>
             <span class="text-4xl font-black text-slate-900">

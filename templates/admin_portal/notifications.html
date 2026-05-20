@@ -139,6 +139,22 @@ function handleDeletedNotifications() {
   });
 }
 
+function sortNotificationsFrontend() {
+  const container = document.querySelector('.space-y-4');
+  if (!container) return;
+  const items = Array.from(container.querySelectorAll('.notification-item'));
+  if (items.length === 0) return;
+  
+  // Sort: unread first, read last
+  items.sort((a, b) => {
+    const aUnread = a.classList.contains('bg-slate-50/70') ? 1 : 0;
+    const bUnread = b.classList.contains('bg-slate-50/70') ? 1 : 0;
+    return bUnread - aUnread;
+  });
+  
+  items.forEach(item => container.appendChild(item));
+}
+
 function refreshNotifications() {
   fetch('{% url "admin_notifications" %}', {
     headers: {
@@ -156,6 +172,7 @@ function refreshNotifications() {
       const currentNotifications = document.querySelector('.space-y-4');
       if (currentNotifications) {
         currentNotifications.innerHTML = newNotifications.innerHTML; 
+        sortNotificationsFrontend();
         applyPagination();
         updateUnreadCount();
         handleDeletedNotifications();
@@ -183,9 +200,53 @@ function updateUnreadCount() {
 }
 
 document.addEventListener('DOMContentLoaded', function() { 
+  sortNotificationsFrontend();
   applyPagination();
   setTimeout(refreshNotifications, 1000);
   setInterval(refreshNotifications, 10000);
+});
+
+// Intercept Mark Read forms to move them dynamically without reload
+document.addEventListener('submit', function(e) {
+  if (e.target.action && e.target.action.includes('mark_notification_read')) {
+    e.preventDefault();
+    const form = e.target;
+    const notificationItem = form.closest('.notification-item');
+    
+    fetch(form.action, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value
+      }
+    })
+    .then(response => {
+      if(response.ok) {
+        // Remove Mark Read button
+        form.remove();
+        
+        // Update badge
+        const badge = notificationItem.querySelector('.status-badge');
+        if (badge) {
+          badge.className = 'status-badge px-2 py-0.5 bg-slate-200 text-slate-600 rounded text-[10px] font-extrabold uppercase tracking-wide select-none';
+          badge.textContent = 'Read';
+        }
+        
+        // Remove unread background
+        notificationItem.classList.remove('bg-slate-50/70');
+        
+        // Move to the end of the container
+        const container = document.querySelector('.space-y-4');
+        if (container) {
+          container.appendChild(notificationItem);
+        }
+        
+        applyPagination();
+        updateUnreadCount();
+      }
+    })
+    .catch(err => console.error(err));
+  }
 });
 </script>
 {% endblock %}
@@ -196,7 +257,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <!-- Studio Top Header Strip -->
   <header class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
     <div>
-      <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">System Operational Stream</h1>
+      <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">Notifications</h1>
       <p class="text-xs text-slate-600 mt-1 leading-relaxed">
         {% if unread_count > 0 %}
           Real-time event stream monitoring <strong class="text-slate-900 font-bold">{{ unread_count }} unread</strong> notice{{ unread_count|pluralize }} requiring primary review.
@@ -211,14 +272,17 @@ document.addEventListener('DOMContentLoaded', function() {
         <form method="post" action="{% url 'admin_mark_all_notifications_read' %}" class="w-full sm:w-auto">
           {% csrf_token %}
           <button type="submit" class="w-full sm:w-auto px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-extrabold text-xs transition-colors text-center shadow-xs">
-            Mark Complete Queue Read
+            Mark All as Read
           </button>
         </form>
       {% endif %}
       
-      <a href="{% url 'admin_dashboard' %}" class="w-full sm:w-auto px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg font-bold text-xs text-center transition-colors">
-        Dashboard View
-      </a>
+      <button onclick="window.history.back()" type="button" class="w-full sm:w-auto px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-colors shadow-xs">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+        </svg>
+        Back
+      </button>
     </div>
   </header>
 
@@ -243,8 +307,12 @@ document.addEventListener('DOMContentLoaded', function() {
             </strong>
             
             {% if not notification.is_read %}
-              <span class="px-2 py-0.5 bg-slate-900 text-white rounded text-[10px] font-extrabold uppercase tracking-wide select-none">
+              <span class="status-badge px-2 py-0.5 bg-slate-900 text-white rounded text-[10px] font-extrabold uppercase tracking-wide select-none">
                 New
+              </span>
+            {% else %}
+              <span class="status-badge px-2 py-0.5 bg-slate-200 text-slate-600 rounded text-[10px] font-extrabold uppercase tracking-wide select-none">
+                Read
               </span>
             {% endif %}
           </div>

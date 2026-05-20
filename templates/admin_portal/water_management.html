@@ -192,7 +192,7 @@
                   <th class="px-5 py-3 text-xs font-bold text-slate-700 text-center">Status</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-slate-200 text-sm">
+              <tbody class="divide-y divide-slate-200 text-sm" id="water-table-body">
                 {% for row in readings_data %}
                 <tr class="reading-row transition-colors {% if row.has_reading %}bg-emerald-50/40{% else %}bg-white{% endif %}" data-lease="{{ row.lease_id }}">
                   <input type="hidden" name="lease_ids" value="{{ row.lease_id }}">
@@ -270,6 +270,18 @@
             </table>
           </div>
 
+          <!-- Pagination Controls -->
+          <div id="pagination-controls" class="p-4 flex flex-col sm:flex-row items-center justify-between border-t border-slate-200 bg-white gap-3 hidden">
+             <div class="text-xs text-slate-600 font-medium">
+               Showing <span id="page-start" class="font-bold">0</span> to <span id="page-end" class="font-bold">0</span> of <span id="total-rows" class="font-bold">0</span> entries
+             </div>
+             <div class="flex gap-1.5">
+               <button type="button" id="prev-page" class="px-3 py-1.5 border border-slate-300 rounded text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">Prev</button>
+               <div id="page-numbers" class="flex gap-1.5 hidden sm:flex"></div>
+               <button type="button" id="next-page" class="px-3 py-1.5 border border-slate-300 rounded text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">Next</button>
+             </div>
+          </div>
+
           <!-- Bottom Execution Action Trigger Strip -->
           <div class="p-5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
             <span class="text-xs text-slate-600 font-medium text-center sm:text-left leading-relaxed">
@@ -327,5 +339,97 @@
       row.classList.add('bg-white');
     }
   }
+
+  // Frontend Pagination Logic
+  document.addEventListener("DOMContentLoaded", function() {
+    const rowsPerPage = 10;
+    let currentPage = 1;
+    const tableBody = document.getElementById('water-table-body');
+    if (!tableBody) return;
+    
+    const rows = Array.from(tableBody.querySelectorAll('tr.reading-row'));
+    const totalRows = rows.length;
+
+    if (totalRows > 0) {
+      document.getElementById('pagination-controls').classList.remove('hidden');
+      renderTable();
+    }
+
+    function renderTable() {
+        const start = (currentPage - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+        
+        rows.forEach((row, index) => {
+            if (index >= start && index < end) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        
+        document.getElementById('page-start').textContent = start + 1;
+        document.getElementById('page-end').textContent = Math.min(end, totalRows);
+        document.getElementById('total-rows').textContent = totalRows;
+        
+        renderPagination();
+    }
+
+    function renderPagination() {
+        const totalPages = Math.ceil(totalRows / rowsPerPage);
+        const pageNumbers = document.getElementById('page-numbers');
+        pageNumbers.innerHTML = '';
+        
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, currentPage + 2);
+        
+        for (let i = startPage; i <= endPage; i++) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = i;
+            btn.className = `px-3 py-1.5 border rounded text-xs font-bold transition-colors ${i === currentPage ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'}`;
+            btn.onclick = () => {
+                currentPage = i;
+                renderTable();
+            };
+            pageNumbers.appendChild(btn);
+        }
+        
+        document.getElementById('prev-page').disabled = currentPage === 1;
+        document.getElementById('next-page').disabled = currentPage === totalPages;
+    }
+
+    document.getElementById('prev-page')?.addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            renderTable();
+        }
+    });
+
+    document.getElementById('next-page')?.addEventListener('click', () => {
+        const totalPages = Math.ceil(totalRows / rowsPerPage);
+        if (currentPage < totalPages) {
+            currentPage++;
+            renderTable();
+        }
+    });
+
+    // Prevent full bill generation if no water bill reading is provided
+    const processForm = document.querySelector(`form[action="{% url 'admin_water_process' %}"]`);
+    if (processForm) {
+      processForm.addEventListener('submit', function() {
+        const rows = document.querySelectorAll('tr.reading-row');
+        rows.forEach(row => {
+          const readingInput = row.querySelector('.reading-input');
+          const leaseInput = row.querySelector('input[name="lease_ids"]');
+          // Disable the lease ID field if there is no water reading, so backend ignores it
+          if (readingInput && (readingInput.value === '' || readingInput.value === null)) {
+            if (leaseInput) {
+              leaseInput.disabled = true;
+            }
+          }
+        });
+      });
+    }
+  });
 </script>
 {% endblock %}

@@ -82,7 +82,7 @@
         <span class="text-base font-black text-violet-600 uppercase tracking-widest">Predictive Analytics</span>
       </div>
       <h1 class="text-3xl md:text-5xl font-black text-slate-900 mt-1">Forecasting</h1>
-      <p class="text-slate-600 mt-3 text-xl font-medium leading-relaxed">3-month moving average forecast based on the last 24 months of historical data.</p>
+      <p class="text-slate-600 mt-3 text-xl font-medium leading-relaxed">3-month moving average forecast based on the last 2 years of historical data.</p>
     </div>
     <div class="flex items-center gap-2 px-5 py-3 bg-violet-50 border border-violet-200 rounded-xl">
       <svg class="w-5 h-5 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -235,6 +235,20 @@
   </div>
   {% endif %}
 
+  <!-- Charts Header & Filter -->
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mt-8 mb-6">
+    <h2 class="text-2xl font-black text-slate-900">Forecast Visualizations</h2>
+    <div class="flex items-center gap-3">
+      <label for="forecastTimeFilter" class="text-sm font-bold text-slate-600 uppercase tracking-widest">Timeframe:</label>
+      <select id="forecastTimeFilter" class="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 shadow-sm cursor-pointer">
+        <option value="24" selected>Last 24 Months</option>
+        <option value="12">Last 12 Months</option>
+        <option value="6">Last 6 Months</option>
+        <option value="3">Last 3 Months</option>
+      </select>
+    </div>
+  </div>
+
   <!-- Charts -->
   <div class="space-y-8">
 
@@ -242,7 +256,7 @@
     <div class="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
       <div class="mb-4 pb-3 border-b border-slate-100">
         <h2 class="text-2xl font-black text-slate-900 tracking-tight">Revenue Forecast</h2>
-        <p class="text-base text-slate-500 mt-1 font-medium">Last 12 months + 3-month forecast (dashed)</p>
+        <p class="chart-subtitle text-base text-slate-500 mt-1 font-medium">Last 24 months + 3-month forecast (dashed)</p>
       </div>
       <div class="h-[400px] w-full">
         <canvas id="revenueForecastChart"></canvas>
@@ -325,7 +339,7 @@
       <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
         <div>
           <h2 class="text-2xl font-black text-slate-900 tracking-tight">Water Usage Forecast</h2>
-          <p class="text-base text-slate-500 mt-1 font-medium">Last 12 months + 3-month forecast (dashed)</p>
+          <p class="chart-subtitle text-base text-slate-500 mt-1 font-medium">Last 24 months + 3-month forecast (dashed)</p>
         </div>
         <span class="text-sm font-black text-slate-700 bg-slate-100 px-3 py-1 rounded">m³</span>
       </div>
@@ -410,7 +424,7 @@
       <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
         <div>
           <h2 class="text-2xl font-black text-slate-900 tracking-tight">Maintenance Requests Forecast</h2>
-          <p class="text-base text-slate-500 mt-1 font-medium">Last 12 months + 3-month forecast (dashed)</p>
+          <p class="chart-subtitle text-base text-slate-500 mt-1 font-medium">Last 24 months + 3-month forecast (dashed)</p>
         </div>
         <span class="text-sm font-black text-slate-700 bg-slate-100 px-3 py-1 rounded">requests</span>
       </div>
@@ -514,10 +528,10 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  const histLabels     = JSON.parse(document.getElementById('hist_labels').textContent);
-  const histRevenue    = JSON.parse(document.getElementById('hist_revenue').textContent);
-  const histWater      = JSON.parse(document.getElementById('hist_water').textContent);
-  const histMaint      = JSON.parse(document.getElementById('hist_maintenance').textContent);
+  const rawHistLabels     = JSON.parse(document.getElementById('hist_labels').textContent);
+  const rawHistRevenue    = JSON.parse(document.getElementById('hist_revenue').textContent);
+  const rawHistWater      = JSON.parse(document.getElementById('hist_water').textContent);
+  const rawHistMaint      = JSON.parse(document.getElementById('hist_maintenance').textContent);
   const fcLabels       = JSON.parse(document.getElementById('forecast_labels').textContent);
   const fcRevenue      = JSON.parse(document.getElementById('revenue_forecast').textContent);
   const fcWater        = JSON.parse(document.getElementById('water_forecast').textContent);
@@ -530,7 +544,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const sarLowWat  = JSON.parse(document.getElementById('water_sarima_lower').textContent);
   const sarUpWat   = JSON.parse(document.getElementById('water_sarima_upper').textContent);
 
-  const allLabels = [...histLabels, ...fcLabels];
+  let activeCharts = {};
 
   function nullPad(arr, totalLen) {
     const pad = totalLen - arr.length;
@@ -586,10 +600,15 @@ document.addEventListener('DOMContentLoaded', function () {
     };
   }
 
-  function buildChart(canvasId, histData, maData, sarimaData, sarimaLow, sarimaUp, histColor, maColor, sarimaColor, histLabel, maLabel, yFormatter) {
+  function buildChart(canvasId, histData, maData, sarimaData, sarimaLow, sarimaUp, histColor, maColor, sarimaColor, histLabel, maLabel, yFormatter, currentAllLabels) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return;
-    const totalLen = allLabels.length;
+    
+    if (activeCharts[canvasId]) {
+      activeCharts[canvasId].destroy();
+    }
+
+    const totalLen = currentAllLabels.length;
     const histPadded   = [...histData, ...Array(maData.length).fill(null)];
     const maPadded     = nullPad(maData, totalLen);
     const datasets = [
@@ -675,32 +694,67 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const opts = baseOpts(yFormatter);
     opts.plugins.legend.labels.filter = (item) => !item.text.includes('CI');
-    new Chart(ctx, { type: 'line', data: { labels: allLabels, datasets }, options: opts });
+    activeCharts[canvasId] = new Chart(ctx, { type: 'line', data: { labels: currentAllLabels, datasets }, options: opts });
   }
 
-  buildChart(
-    'revenueForecastChart',
-    histRevenue, fcRevenue, sarFcRev, sarLowRev, sarUpRev,
-    '#1e293b', '#6366f1', '#f59e0b',
-    'Actual Revenue', 'Mov Avg Forecast',
-    v => v >= 1000 ? '₱' + (v/1000).toFixed(0) + 'k' : '₱' + v
-  );
+  function renderCharts(months) {
+    let filterIdx = 0;
+    let subtitleText = "Last 24 months + 3-month forecast (dashed)";
+    if (months && months !== 'all') {
+      filterIdx = Math.max(0, rawHistLabels.length - parseInt(months, 10));
+      subtitleText = `Last ${months} months + 3-month forecast (dashed)`;
+    }
 
-  buildChart(
-    'waterForecastChart',
-    histWater, fcWater, sarFcWater, sarLowWat, sarUpWat,
-    '#0f766e', '#14b8a6', '#f59e0b',
-    'Actual Consumption', 'Mov Avg Forecast',
-    v => v + ' m³'
-  );
+    // Update all subtitles to reflect the current filter
+    document.querySelectorAll('.chart-subtitle').forEach(el => {
+      el.textContent = subtitleText;
+    });
+    
+    const histLabels = rawHistLabels.slice(filterIdx);
+    const histRevenue = rawHistRevenue.slice(filterIdx);
+    const histWater = rawHistWater.slice(filterIdx);
+    const histMaint = rawHistMaint.slice(filterIdx);
+    
+    const currentAllLabels = [...histLabels, ...fcLabels];
 
-  buildChart(
-    'maintenanceForecastChart',
-    histMaint, fcMaint, null, null, null,
-    '#7c3aed', '#a78bfa', null,
-    'Actual Requests', 'Mov Avg Forecast',
-    v => v
-  );
+    buildChart(
+      'revenueForecastChart',
+      histRevenue, fcRevenue, sarFcRev, sarLowRev, sarUpRev,
+      '#1e293b', '#6366f1', '#f59e0b',
+      'Actual Revenue', 'Mov Avg Forecast',
+      v => v >= 1000 ? '₱' + (v/1000).toFixed(0) + 'k' : '₱' + v,
+      currentAllLabels
+    );
+
+    buildChart(
+      'waterForecastChart',
+      histWater, fcWater, sarFcWater, sarLowWat, sarUpWat,
+      '#0f766e', '#14b8a6', '#f59e0b',
+      'Actual Consumption', 'Mov Avg Forecast',
+      v => v + ' m³',
+      currentAllLabels
+    );
+
+    buildChart(
+      'maintenanceForecastChart',
+      histMaint, fcMaint, null, null, null,
+      '#7c3aed', '#a78bfa', null,
+      'Actual Requests', 'Mov Avg Forecast',
+      v => v,
+      currentAllLabels
+    );
+  }
+
+  // Initial render
+  renderCharts(24);
+
+  // Filter event listener
+  const timeFilter = document.getElementById('forecastTimeFilter');
+  if (timeFilter) {
+    timeFilter.addEventListener('change', function(e) {
+      renderCharts(e.target.value);
+    });
+  }
 });
 </script>
 

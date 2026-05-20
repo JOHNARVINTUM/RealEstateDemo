@@ -132,8 +132,9 @@
       <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
         <div class="mb-4 pb-3 border-b border-slate-100">
           <h3 class="text-lg font-bold text-slate-900">Income Over Time</h3>
-          <p class="text-sm text-slate-700 mt-0.5">Total amount billed compared to expected rent.</p>
+          <p class="text-sm text-slate-700 mt-0.5">This shows how much money was collected compared to what was expected. The table below lists the exact numbers.</p>
         </div>
+        <div id="rentTableContainer" class="mb-6 overflow-x-auto max-h-[250px] overflow-y-auto"></div>
         <div class="h-[300px] w-full">
           <canvas id="rentChart"></canvas>
         </div>
@@ -144,10 +145,11 @@
         <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
           <div>
             <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Water Usage</h2>
-            <p class="text-sm text-slate-700 mt-0.5">Total water used every month across all units.</p>
+            <p class="text-sm text-slate-700 mt-0.5">This tracks the total water used across all units. Use the table to see the exact cubic meters used.</p>
           </div>
           <span class="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded">m³</span>
         </div>
+        <div id="waterTableContainer" class="mb-6 overflow-x-auto max-h-[250px] overflow-y-auto"></div>
         <div class="h-[300px] w-full">
           <canvas id="waterChart"></canvas>
         </div>
@@ -158,10 +160,11 @@
         <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
           <div>
             <h3 class="font-bold text-slate-900">Repair History</h3>
-            <p class="text-sm text-slate-500 mt-1">Total repair requests over time.</p>
+            <p class="text-sm text-slate-500 mt-1">This shows the number of repair requests made by tenants each month.</p>
           </div>
           <span class="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded">repairs</span>
         </div>
+        <div id="maintenanceTableContainer" class="mb-6 overflow-x-auto max-h-[250px] overflow-y-auto"></div>
         <div class="h-[300px] w-full">
           <canvas id="maintenanceChart"></canvas>
         </div>
@@ -245,7 +248,7 @@
       <!-- Recent Notifications List -->
       <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col max-h-[460px]">
         <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100 shrink-0">
-          <h3 class="text-lg font-bold text-slate-900">Unit Status</h3>
+          <h3 class="text-lg font-bold text-slate-900">Notifications</h3>
           <a href="{% url 'admin_notifications' %}" class="text-sm font-bold text-slate-800 hover:text-slate-900 underline">View All</a>
         </div>
         
@@ -368,16 +371,64 @@
       };
     }
 
+    function generateTableHTML(labels, datasetLabels, datasets) {
+      let html = '<table class="w-full text-left text-sm text-slate-600 border-collapse border border-slate-200"><thead><tr class="bg-slate-50 border-b border-slate-200">';
+      html += '<th class="px-3 py-2 font-bold text-slate-700 border-r border-slate-200">Month</th>';
+      for (let label of datasetLabels) {
+        html += `<th class="px-3 py-2 font-bold text-slate-700 border-r border-slate-200">${label}</th>`;
+      }
+      html += '</tr></thead><tbody>';
+      
+      for (let i = 0; i < labels.length; i++) {
+        html += '<tr class="border-b border-slate-200">';
+        html += `<td class="px-3 py-1.5 border-r border-slate-200">${labels[i]}</td>`;
+        for (let dataset of datasets) {
+          let val = dataset.data[i];
+          if (dataset.isCurrency) {
+            val = '₱' + Number(val).toLocaleString();
+          } else if (dataset.isWater) {
+            val = val + ' m³';
+          }
+          html += `<td class="px-3 py-1.5 border-r border-slate-200">${val}</td>`;
+        }
+        html += '</tr>';
+      }
+      html += '</tbody></table>';
+      return html;
+    }
+
     function updateCharts(monthsToShow) {
       const filteredRevenueData = getFilteredSeries(fullMonthlyData, monthsToShow);
       const filteredWaterData = getFilteredSeries(fullWaterData, monthsToShow);
       const filteredMaintenanceData = getFilteredSeries(fullMaintenanceData, monthsToShow);
       const filteredLabels = getFilteredLabels(monthsToShow);
 
+      // Render Tables
+      document.getElementById('rentTableContainer').innerHTML = generateTableHTML(
+        filteredLabels, 
+        ['Actual Income', 'Expected Rent'], 
+        [
+          { data: filteredRevenueData.map(item => item.actual), isCurrency: true },
+          { data: filteredRevenueData.map(item => item.expected), isCurrency: true }
+        ]
+      );
+
+      document.getElementById('waterTableContainer').innerHTML = generateTableHTML(
+        filteredLabels, 
+        ['Water Used'], 
+        [{ data: filteredWaterData.map(item => item.consumption), isWater: true }]
+      );
+
+      document.getElementById('maintenanceTableContainer').innerHTML = generateTableHTML(
+        filteredLabels, 
+        ['Repairs'], 
+        [{ data: filteredMaintenanceData.map(item => item.count) }]
+      );
+
       const chartData = {
         labels: filteredLabels,
         datasets: [{
-          label: 'Billed Revenue',
+          label: 'Actual Income',
           data: filteredRevenueData.map(item => item.actual),
           borderColor: '#1e293b',
           backgroundColor: 'rgba(30, 41, 59, 0.05)',
@@ -390,7 +441,7 @@
           tension: 0.25,
           fill: true
         }, {
-          label: 'Expected Base Valuation',
+          label: 'Expected Rent',
           data: filteredRevenueData.map(item => item.expected),
           borderColor: '#64748b',
           backgroundColor: 'transparent',
@@ -422,7 +473,7 @@
         data: {
           labels: filteredLabels,
           datasets: [{
-            label: 'Water Consumption',
+            label: 'Water Used',
             data: filteredWaterData.map(item => item.consumption),
             borderColor: '#0f766e',
             backgroundColor: 'rgba(15, 118, 110, 0.08)',
@@ -449,7 +500,7 @@
         data: {
           labels: filteredLabels,
           datasets: [{
-            label: 'Maintenance Requests',
+            label: 'Repairs',
             data: filteredMaintenanceData.map(item => item.count),
             backgroundColor: 'rgba(124, 58, 237, 0.16)',
             borderColor: '#7c3aed',

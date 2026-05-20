@@ -150,9 +150,22 @@
             ₱0.00
           {% endif %}
         </h2>
-        {% if lease %}
+        {% if current_balance %}
+          <div class="flex flex-wrap gap-x-6 gap-y-2 mt-3 text-lg font-bold text-slate-500">
+            <span>Rent: <span class="text-slate-900 font-black">₱{{ current_balance.rent_balance|floatformat:2|intcomma }}</span></span>
+            {% if current_balance.water_balance > 0 %}
+              <span>Water: <span class="text-slate-900 font-black">₱{{ current_balance.water_balance|floatformat:2|intcomma }}</span></span>
+            {% endif %}
+            {% if current_balance.parking_balance > 0 %}
+              <span>Parking: <span class="text-slate-900 font-black">₱{{ current_balance.parking_balance|floatformat:2|intcomma }}</span></span>
+            {% endif %}
+            {% if current_balance.interest > 0 %}
+              <span>Late Fee: <span class="text-rose-700 font-black">₱{{ current_balance.interest|floatformat:2|intcomma }}</span></span>
+            {% endif %}
+          </div>
+        {% elif lease %}
           <p class="text-lg font-bold text-slate-500 mt-3">
-            Monthly Rent: <span class="text-slate-900 font-black">₱{{ lease.monthly_rent|floatformat:2|intcomma }}</span>
+            Rent: <span class="text-slate-900 font-black">₱{{ lease.monthly_rent|floatformat:2|intcomma }}</span>
           </p>
         {% endif %}
         

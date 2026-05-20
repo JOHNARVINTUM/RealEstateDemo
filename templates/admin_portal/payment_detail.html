@@ -1,0 +1,216 @@
+{% extends "admin_portal/base.html" %}
+{% load humanize %}
+{% block title %}Payment Details - {{ payment.reference_code }} | Real Estate Administration{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto font-sans text-slate-900 pb-12 px-4 py-6">
+  
+  <!-- Header -->
+  <div class="mb-8">
+    <a href="{% url 'admin_payments' %}" class="text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center gap-1 mb-4">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+      Back to Payments
+    </a>
+    <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900">Payment Details</h1>
+    <p class="text-sm text-slate-600 mt-1">Complete information about this payment submission.</p>
+  </div>
+
+  <!-- Payment Summary Card -->
+  <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mb-6">
+    <div class="bg-slate-50 border-b border-slate-200 px-6 py-4">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-800 font-bold text-sm border border-slate-200">
+            {{ payment.user.email|first|upper }}
+          </div>
+          <div>
+            <h2 class="font-bold text-slate-900">{{ payment.user.email }}</h2>
+            <span class="text-xs text-slate-500">Tenant</span>
+          </div>
+        </div>
+        <span class="inline-block px-3 py-1 rounded-full text-xs font-extrabold uppercase
+          {% if payment.status == 'APPROVED' %}bg-emerald-100 text-emerald-800 border border-emerald-200{% elif payment.status == 'REJECTED' %}bg-rose-100 text-rose-800 border border-rose-200{% else %}bg-amber-100 text-amber-800 border border-amber-200{% endif %}">
+          {{ payment.status }}
+        </span>
+      </div>
+    </div>
+    
+    <div class="p-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Reference -->
+        <div>
+          <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Reference Code</span>
+          <span class="font-mono font-bold text-slate-900">{{ payment.reference_code }}</span>
+        </div>
+        
+        <!-- Payment Method -->
+        <div>
+          <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Payment Method</span>
+          <span class="inline-flex items-center gap-1.5">
+            {% if payment.payment_method == "GCASH" %}
+              <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+              <span class="font-bold text-slate-900">GCash</span>
+            {% else %}
+              <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+              <span class="font-bold text-slate-900">Face-to-Face Cash</span>
+            {% endif %}
+          </span>
+        </div>
+        
+        <!-- Payment Type -->
+        <div>
+          <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Payment Type</span>
+          <span class="font-bold text-slate-900 capitalize">
+            {% if payment.payment_type == "rent_only" %}Rent Only
+            {% elif payment.payment_type == "water_only" %}Water Only
+            {% elif payment.payment_type == "full" %}Full Bill
+            {% else %}Full{% endif %}
+          </span>
+        </div>
+        
+        <!-- Submitted Date -->
+        <div>
+          <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Submitted</span>
+          <span class="font-bold text-slate-900">{{ payment.created_at|date:"M d, Y g:i A" }}</span>
+        </div>
+      </div>
+      
+      {% if payment.payment_method == "CASH" %}
+      <div class="mt-6 pt-6 border-t border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Preferred Date</span>
+          <span class="font-bold text-slate-900">{{ payment.preferred_date|date:"M d, Y"|default:"Not set" }}</span>
+        </div>
+        <div>
+          <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Preferred Time</span>
+          <span class="font-bold text-slate-900">{{ payment.preferred_time|time:"g:i A"|default:"Not set" }}</span>
+        </div>
+        <div>
+          <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Schedule Status</span>
+          <span class="font-bold {% if payment.schedule_confirmed %}text-emerald-600{% else %}text-amber-600{% endif %}">
+            {% if payment.schedule_confirmed %}Confirmed{% else %}Pending Confirmation{% endif %}
+          </span>
+        </div>
+      </div>
+      {% endif %}
+      
+      {% if payment.tenant_note %}
+      <div class="mt-6 pt-6 border-t border-slate-100">
+        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">Tenant Note</span>
+        <div class="bg-slate-50 border border-slate-200 rounded-lg p-4">
+          <p class="text-slate-700 italic">"{{ payment.tenant_note }}"</p>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Bills Breakdown -->
+  <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mb-6">
+    <div class="bg-slate-50 border-b border-slate-200 px-6 py-4">
+      <h3 class="font-bold text-slate-900">Bills Covered ({{ bill_count }})</h3>
+    </div>
+    
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-slate-50 border-b border-slate-200">
+            <th class="px-6 py-3 text-xs font-bold text-slate-600 uppercase tracking-wider">Month</th>
+            <th class="px-6 py-3 text-xs font-bold text-slate-600 uppercase tracking-wider">Unit</th>
+            <th class="px-6 py-3 text-xs font-bold text-slate-600 uppercase tracking-wider text-right">Rent</th>
+            <th class="px-6 py-3 text-xs font-bold text-slate-600 uppercase tracking-wider text-right">Water</th>
+            <th class="px-6 py-3 text-xs font-bold text-slate-600 uppercase tracking-wider text-right">Parking</th>
+            <th class="px-6 py-3 text-xs font-bold text-slate-600 uppercase tracking-wider text-right">Late Fee</th>
+            <th class="px-6 py-3 text-xs font-bold text-slate-600 uppercase tracking-wider text-right">Total</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+          {% for bill in bills %}
+          <tr class="hover:bg-slate-50/50">
+            <td class="px-6 py-4 font-medium text-slate-900">{{ bill.month }}</td>
+            <td class="px-6 py-4 text-slate-600">{{ bill.unit }}</td>
+            <td class="px-6 py-4 text-right font-medium text-slate-900">₱{{ bill.rent|floatformat:2|intcomma }}</td>
+            <td class="px-6 py-4 text-right font-medium text-slate-900">₱{{ bill.water|floatformat:2|intcomma }}</td>
+            <td class="px-6 py-4 text-right font-medium text-slate-900">₱{{ bill.parking|floatformat:2|intcomma }}</td>
+            <td class="px-6 py-4 text-right font-medium {% if bill.penalty > 0 %}text-rose-600{% else %}text-slate-900{% endif %}">₱{{ bill.penalty|floatformat:2|intcomma }}</td>
+            <td class="px-6 py-4 text-right font-bold text-slate-900">₱{{ bill.total|floatformat:2|intcomma }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="px-6 py-8 text-center text-slate-500">
+              No bill details available for this payment.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot class="bg-slate-50 border-t border-slate-200">
+          <tr>
+            <td colspan="2" class="px-6 py-4 font-bold text-slate-900">Total</td>
+            <td class="px-6 py-4 text-right font-bold text-slate-900">₱{{ total_rent|floatformat:2|intcomma }}</td>
+            <td class="px-6 py-4 text-right font-bold text-slate-900">₱{{ total_water|floatformat:2|intcomma }}</td>
+            <td class="px-6 py-4 text-right font-bold text-slate-900">₱{{ total_parking|floatformat:2|intcomma }}</td>
+            <td class="px-6 py-4 text-right font-bold {% if total_penalty > 0 %}text-rose-600{% else %}text-slate-900{% endif %}">₱{{ total_penalty|floatformat:2|intcomma }}</td>
+            <td class="px-6 py-4 text-right font-extrabold text-slate-900">₱{{ total_amount|floatformat:2|intcomma }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="flex flex-wrap items-center gap-3">
+    {% if payment.status == "PENDING" %}
+      {% if payment.payment_method == "GCASH" %}
+        <form method="post" action="{% url 'admin_approve_payment' payment.id %}" class="inline-block">
+          {% csrf_token %}
+          <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-sm transition-colors flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Approve Payment
+          </button>
+        </form>
+      {% else %}
+        {% if not payment.schedule_confirmed %}
+          <form method="post" action="{% url 'admin_confirm_schedule' payment.id %}" class="inline-block">
+            {% csrf_token %}
+            <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm transition-colors flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Confirm Schedule
+            </button>
+          </form>
+        {% else %}
+          <form method="post" action="{% url 'admin_approve_payment' payment.id %}" class="inline-block">
+            {% csrf_token %}
+            <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-sm transition-colors flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+              Mark as Paid
+            </button>
+          </form>
+        {% endif %}
+      {% endif %}
+      
+      <form method="post" action="{% url 'admin_reject_payment' payment.id %}" class="inline-block">
+        {% csrf_token %}
+        <button type="submit" class="px-4 py-2 bg-rose-100 hover:bg-rose-200 text-rose-700 border border-rose-200 rounded-lg font-bold text-sm transition-colors flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          Reject Payment
+        </button>
+      </form>
+    {% endif %}
+    
+    <a href="{% url 'admin_delete_payment' payment.id %}" class="px-4 py-2 text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-lg font-bold text-sm transition-colors ml-auto">
+      Delete Record
+    </a>
+  </div>
+
+</div>
+{% endblock %}

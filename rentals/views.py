@@ -22,7 +22,7 @@ from billing.services import (
 from payments.models import ManualPayment
 from payments.views import manual_gcash_payment
 
-from .models import Lease, TenantProfile, Unit
+from .models import Lease, Notification, TenantProfile, Unit
 
 # Temporary inline form to resolve import issue
 class UnitForm(forms.ModelForm):
@@ -325,6 +325,10 @@ def tenant_pay_advance(request):
 
     today = date.today()
     
+    # Ensure bills exist up to next months for advance payment capability
+    today_start = month_start(today)
+    ensure_bills_up_to(lease, add_months(today_start, months_to_pay + 1))
+    
     # For partial payments, include bills that have balance for that type
     # Get all bills ordered by month
     all_bills_qs = MonthlyBill.objects.filter(lease=lease).order_by("billing_month")
@@ -333,26 +337,53 @@ def tenant_pay_advance(request):
         # Filter to bills with unpaid rent, then slice
         bills_with_unpaid_rent = [b for b in all_bills_qs if b.rent_balance > 0]
         bills_to_process = bills_with_unpaid_rent[:months_to_pay]
+        # If no unpaid rent bills but user wants to pay in advance, get future bills
+        if not bills_to_process:
+            future_bills = [b for b in all_bills_qs if b.rent_balance > 0 or b.status == "UPCOMING"]
+            bills_to_process = future_bills[:months_to_pay]
     elif payment_type == "water_only":
         # Filter to bills with unpaid water, then slice
         bills_with_unpaid_water = [b for b in all_bills_qs if b.water_balance > 0]
         bills_to_process = bills_with_unpaid_water[:months_to_pay]
+        # If no unpaid water bills but user wants to pay in advance, get future bills
+        if not bills_to_process:
+            future_bills = [b for b in all_bills_qs if b.water_balance > 0 or b.status == "UPCOMING"]
+            bills_to_process = future_bills[:months_to_pay]
     else:
         # Full payment - include UNPAID and PARTIALLY_PAID bills (total_balance > 0)
         all_unpaid_qs = MonthlyBill.objects.filter(
             lease=lease, status__in=["UNPAID", "PARTIALLY_PAID"]
         ).order_by("billing_month")
         bills_to_process = list(all_unpaid_qs[:months_to_pay])
+        # If no unpaid bills but user wants to pay in advance, get future upcoming bills
+        if not bills_to_process:
+            # Get upcoming/future bills for advance payment
+            from django.db.models import Q
+            future_bills_qs = MonthlyBill.objects.filter(
+                lease=lease
+            ).filter(
+                Q(status="UNPAID") | Q(status="UPCOMING") | 
+                Q(billing_month__gt=today_start)
+            ).order_by("billing_month")
+            bills_to_process = list(future_bills_qs[:months_to_pay])
 
     # Count truly unpaid bills for warning
     unpaid_count = MonthlyBill.objects.filter(
         lease=lease, status="UNPAID", due_date__lte=today
     ).count()
     has_pending = unpaid_count > 0
+    
+    # Check if water bills are available (water_amount > 0 on any bill)
+    water_available = MonthlyBill.objects.filter(
+        lease=lease,
+        billing_month__gte=today_start,
+        water_amount__gt=0
+    ).exists()
 
     preview_rows = []
     total_rent = Decimal("0.00")
     total_water = Decimal("0.00")
+    total_parking = Decimal("0.00")
     total_penalty = Decimal("0.00")
     total_amount = Decimal("0.00")
 
@@ -361,44 +392,55 @@ def tenant_pay_advance(request):
         
         # Calculate what tenant will actually pay based on payment type
         if payment_type == "rent_only":
+            # Rent Only = Rent + Parking (both are monthly recurring fees)
             pay_rent = bill.rent_balance
             pay_water = Decimal("0.00")
+            pay_parking = bill.parking_balance  # Include parking in rent-only payments
             pay_penalty = Decimal("0.00")  # Penalty only on full payment
             display_rent = float(pay_rent)
             display_water = 0
+            display_parking = float(pay_parking)
         elif payment_type == "water_only":
             pay_rent = Decimal("0.00")
             pay_water = bill.water_balance
+            pay_parking = Decimal("0.00")
             pay_penalty = Decimal("0.00")
             display_rent = 0
             display_water = float(pay_water)
+            display_parking = 0
         else:
-            # Full payment - pay all remaining balances including interest
+            # Full payment - pay all remaining balances including interest and parking
             pay_rent = bill.rent_balance
             pay_water = bill.water_balance
+            pay_parking = bill.parking_balance
             pay_penalty = bill.interest  # Include late interest in full payment
             # For display, show full bill amounts
             display_rent = float(bill.base_rent)
             display_water = float(bill.water_amount or 0)
+            display_parking = float(bill.parking_fee or 0)
         
         row = {
             "bill_id": bill.id,
             "month_label": bill.billing_month.strftime("%B %Y"),
             "rent": float(bill.base_rent),
             "water": float(bill.water_amount or 0),
+            "parking": float(bill.parking_fee or 0),
             "penalty": float(bill.interest or 0),
             "pay_rent": float(pay_rent),
             "pay_water": float(pay_water),
+            "pay_parking": float(pay_parking),
             "pay_penalty": float(pay_penalty),
-            "pay_total": float(pay_rent + pay_water + pay_penalty),
+            "pay_total": float(pay_rent + pay_parking) if payment_type == "rent_only" else float(pay_water) if payment_type == "water_only" else float(pay_rent + pay_water + pay_parking + pay_penalty),
             "display_rent": display_rent,
             "display_water": display_water,
+            "display_parking": display_parking,
             "due_date": bill.due_date,
         }
         preview_rows.append(row)
 
     total_rent = sum(row["display_rent"] if payment_type == "full" else row["pay_rent"] for row in preview_rows)
     total_water = sum(row["display_water"] if payment_type == "full" else row["pay_water"] for row in preview_rows)
+    total_parking = sum(row["display_parking"] if payment_type == "full" else row["pay_parking"] for row in preview_rows)
     total_penalty = sum(row["pay_penalty"] for row in preview_rows)
     total_amount = sum(row["pay_total"] for row in preview_rows)
 
@@ -409,8 +451,10 @@ def tenant_pay_advance(request):
         "payment_type": payment_type,
         "has_pending": has_pending,
         "unpaid_count": unpaid_count,
+        "water_available": water_available,
         "total_rent": total_rent,
         "total_water": total_water,
+        "total_parking": total_parking,
         "total_penalty": total_penalty,
         "total_amount": total_amount,
         "preview_rows": preview_rows,
@@ -444,5 +488,52 @@ def mark_unit_welcome_seen(request):
     # Only accept POST requests
     from django.http import JsonResponse
     return JsonResponse({"success": False, "message": "Method not allowed"})
+
+
+@login_required
+def tenant_notifications(request):
+    """
+    Display all notifications for the current tenant.
+    Unread notifications are shown first, sorted by creation date.
+    """
+    # Get notifications for this tenant, ordered by unread first, then by date
+    notifications = Notification.objects.filter(
+        recipient_type='TENANT',
+        user=request.user
+    ).order_by('is_read', '-created_at')
+    
+    context = {
+        "notifications": notifications,
+        "unread_count": notifications.filter(is_read=False).count(),
+    }
+    return render(request, "rentals/tenant_notifications.html", context)
+
+
+@login_required
+def mark_notification_read(request, notification_id):
+    """
+    Mark a specific notification as read.
+    Supports both POST (AJAX) and regular form submit requests.
+    """
+    notification = get_object_or_404(
+        Notification,
+        id=notification_id,
+        recipient_type='TENANT',
+        user=request.user
+    )
+
+    notification.is_read = True
+    notification.save()
+
+    # Check if this is an AJAX request (fetch/XHR)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    if is_ajax:
+        from django.http import JsonResponse
+        return JsonResponse({"success": True, "message": "Notification marked as read"})
+    else:
+        # Regular form submit - redirect back to notifications page
+        messages.success(request, "Notification marked as read.")
+        return redirect('tenant_notifications')
 
 

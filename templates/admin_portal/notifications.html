@@ -258,8 +258,15 @@ document.addEventListener('DOMContentLoaded', function() {
           </div>
 
           <!-- Associated References Routing Links -->
-          {% if notification.related_unit or notification.related_tenant %}
+          {% if notification.related_unit or notification.related_tenant or notification.notification_type == 'PAYMENT' %}
             <div class="pt-2 flex flex-wrap items-center gap-2">
+              {% if notification.notification_type == 'PAYMENT' %}
+                <a href="{% url 'admin_payments' %}?status=PENDING" 
+                   class="inline-block px-3 py-1 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 text-emerald-800 rounded text-xs font-bold transition-colors select-none">
+                  Approve Payment →
+                </a>
+              {% endif %}
+              
               {% if notification.related_unit %}
                 <a href="{% url 'admin_unit_detail' notification.related_unit.id %}" 
                    class="inline-block px-3 py-1 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 rounded text-xs font-bold transition-colors select-none">

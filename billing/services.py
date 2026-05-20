@@ -261,6 +261,7 @@ def set_bill_status(bill: MonthlyBill, *, status: str, payment_reference: str = 
         paid_time = paid_at or timezone.now()
         bill.rent_paid = bill.base_rent
         bill.water_paid = bill.water_amount
+        bill.parking_paid = bill.parking_fee  # Set parking paid
         bill.rent_paid_at = paid_time
         bill.water_paid_at = paid_time
         bill.interest = Decimal("0.00")
@@ -271,6 +272,7 @@ def set_bill_status(bill: MonthlyBill, *, status: str, payment_reference: str = 
     else:
         bill.rent_paid = Decimal("0.00")
         bill.water_paid = Decimal("0.00")
+        bill.parking_paid = Decimal("0.00")  # Reset parking paid
         bill.rent_paid_at = None
         bill.water_paid_at = None
         bill.status = "UNPAID"
@@ -278,7 +280,7 @@ def set_bill_status(bill: MonthlyBill, *, status: str, payment_reference: str = 
         bill.payment_reference = ""
 
     bill.save(update_fields=[
-        "rent_paid", "water_paid", "rent_paid_at", "water_paid_at",
+        "rent_paid", "water_paid", "parking_paid", "rent_paid_at", "water_paid_at",
         "interest", "total_due", "status", "paid_at", "payment_reference"
     ])
     return bill
@@ -358,6 +360,7 @@ def approve_manual_payment(payment):
         # Use max() to preserve existing partial payments safely
         if payment_type == "rent_only":
             bill.rent_paid = max(bill.rent_paid, bill.base_rent)
+            bill.parking_paid = max(bill.parking_paid, bill.parking_fee)  # Parking included in rent
             bill.rent_paid_at = approved_at
             bill.payment_reference = payment.reference_code
 
@@ -373,6 +376,7 @@ def approve_manual_payment(payment):
                 continue
             bill.rent_paid = max(bill.rent_paid, bill.base_rent)
             bill.water_paid = max(bill.water_paid, bill.water_amount)
+            bill.parking_paid = max(bill.parking_paid, bill.parking_fee)  # Include parking
             bill.rent_paid_at = approved_at
             bill.water_paid_at = approved_at
             bill.payment_reference = payment.reference_code
@@ -392,7 +396,7 @@ def approve_manual_payment(payment):
             bill.paid_at = None
 
         update_fields = [
-            "rent_paid", "water_paid", "rent_paid_at", "water_paid_at",
+            "rent_paid", "water_paid", "parking_paid", "rent_paid_at", "water_paid_at",
             "status", "paid_at", "payment_reference"
         ]
         if payment_type == "full":

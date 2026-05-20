@@ -3,12 +3,12 @@ import logging
 import os
 
 from django.conf import settings
-from django.db.models import Sum, Q, F, ExpressionWrapper, DecimalField, Exists, OuterRef
+from django.db.models import Sum, Q, F, ExpressionWrapper, DecimalField, Exists, OuterRef, Subquery
+from django.db.models.functions import Coalesce
 from django.db import transaction
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.urls import reverse
-from django.db.models import Q
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods, require_GET
 from django.core.paginator import Paginator
@@ -105,26 +105,62 @@ def admin_dashboard(request):
     vacant_units = Unit.objects.filter(is_active=True).count() - occupied_units
 
     today = timezone.now().date()
-    # Billed This Month = total collected from PAID bills this month
-    total_revenue = (
-        MonthlyBill.objects.filter(
-            billing_month__year=today.year,
-            billing_month__month=today.month,
-            status="PAID",
-        )
-        .aggregate(
-            total=Sum(
-                ExpressionWrapper(F("base_rent") + F("water_amount") + F("parking_fee") + F("interest"),
-                output_field=DecimalField()
-                )
-            )
-        )["total"] or 0
+    current_year = today.year
+    current_month = today.month
+    
+    # Get expected monthly rent from active leases
+    expected_monthly_rent = (
+        Lease.objects.filter(is_active=True)
+        .aggregate(total=Sum("monthly_rent"))["total"] or 0
     )
-    # Monthly collected is ALL cash received this month.
-    monthly_collected = (
-        ManualPayment.objects.filter(status="APPROVED", created_at__year=today.year, created_at__month=today.month)
-        .aggregate(total=Sum("amount"))["total"] or 0
+    
+    # Get expected amounts from current month's bills (all active bills)
+    current_month_bills = MonthlyBill.objects.filter(
+        billing_month__year=current_year,
+        billing_month__month=current_month,
     )
+    
+    expected_parking = current_month_bills.aggregate(total=Sum("parking_fee"))["total"] or 0
+    expected_water_revenue = current_month_bills.aggregate(total=Sum("water_amount"))["total"] or 0
+    expected_penalties = current_month_bills.aggregate(total=Sum("interest"))["total"] or 0
+    
+    # ACTUAL COLLECTED from PAID bills this month
+    paid_bills = MonthlyBill.objects.filter(
+        billing_month__year=current_year,
+        billing_month__month=current_month,
+        status="PAID",
+    )
+    
+    # Rent collected (base rent only from paid bills)
+    rent_collected = paid_bills.aggregate(
+        total=Sum("rent_paid")
+    )["total"] or 0
+    
+    # Water collected (from paid bills)
+    water_collected = paid_bills.aggregate(
+        total=Sum("water_paid")
+    )["total"] or 0
+    
+    # Parking collected (from paid bills)
+    parking_collected = paid_bills.aggregate(
+        total=Sum("parking_paid")
+    )["total"] or 0
+    
+    # Penalties/Interest collected
+    interest_collected = paid_bills.aggregate(
+        total=Sum("interest")
+    )["total"] or 0
+    
+    # Total money received this month
+    total_collected = rent_collected + water_collected + parking_collected + interest_collected
+    
+    # Total expected (rent + parking since both are monthly recurring)
+    expected_total_rent = expected_monthly_rent + expected_parking
+    
+    # Collection rate percentage (based on rent + parking collected vs expected)
+    total_rent_collected = rent_collected + parking_collected
+    collection_rate = (total_rent_collected / expected_total_rent * 100) if expected_total_rent > 0 else 0
+    
     overdue_payments = MonthlyBill.objects.filter(status="UNPAID", due_date__lt=today).count()
 
     
@@ -208,19 +244,35 @@ def admin_dashboard(request):
     maintenance_trend_data.reverse()
     months_labels.reverse()
 
-    # Get notifications for admin (all notifications, not just user-specific)
-    all_notifications = Notification.objects.all().order_by('-created_at')
+    # Get notifications for admin only (exclude tenant notifications)
+    all_notifications = Notification.objects.filter(
+        recipient_type__in=['ADMIN', 'SPECIFIC_USER']
+    ).order_by('-created_at')
     notifications = all_notifications[:5]
     unread_notifications = all_notifications.filter(is_read=False)
     unread_count = unread_notifications.count()
 
+    # Calculate total units for capacity context
+    total_units = Unit.objects.filter(is_active=True).count()
+
     return render(request, "admin_portal/dashboard.html", {
         "total_tenants": total_tenants,
+        "total_units": total_units,
         "occupied_units": occupied_units,
         "vacant_units": max(vacant_units, 0),
         "available_units": max(vacant_units, 0),
-        "total_revenue": total_revenue,
-        "monthly_collected": monthly_collected,
+        # New clear metrics
+        "expected_monthly_rent": expected_total_rent,  # rent + parking
+        "rent_collected": total_rent_collected,  # rent + parking combined for collection rate
+        "base_rent_collected": rent_collected,  # just base rent for breakdown
+        "collection_rate": collection_rate,
+        "water_collected": water_collected,
+        "parking_collected": parking_collected,
+        "interest_collected": interest_collected,
+        "total_collected": total_collected,
+        # Keep old names for compatibility
+        "total_revenue": total_collected,
+        "monthly_collected": total_rent_collected,
         "overdue_payments": overdue_payments,
         "notifications": notifications,
         "unread_notifications": unread_notifications,
@@ -301,6 +353,13 @@ def admin_create_tenant_profile(request):
     """
     Admin portal: create a TenantProfile row with auto-generated password and email notification.
     """
+    # Check tenant limit: cannot have more tenants than total units
+    total_units = Unit.objects.filter(is_active=True).count()
+    total_tenants = TenantProfile.objects.count()
+    if total_tenants >= total_units:
+        messages.error(request, f"Cannot add more tenants. Maximum limit ({total_units} tenants for {total_units} units) reached.")
+        return redirect("admin_tenants")
+    
     form = TenantProfileForm(request.POST or None, request.FILES or None)
 
     if request.method == "POST" and form.is_valid():
@@ -344,11 +403,18 @@ def admin_units(request):
     status_filter = request.GET.get('status', 'all')
     search_query = request.GET.get('search', '')
     
-    units = Unit.objects.filter(is_active=True).select_related()
-    
-    # Filter by status
-    if status_filter != 'all':
-        units = units.filter(status=status_filter)
+    # Handle filter logic
+    if status_filter == 'MAINTENANCE':
+        # Show both MAINTENANCE status units AND inactive units (both count as "Being Fixed")
+        from django.db.models import Q
+        units = Unit.objects.filter(
+            Q(status='MAINTENANCE') | Q(is_active=False)
+        ).select_related()
+    else:
+        units = Unit.objects.filter(is_active=True).select_related()
+        # Filter by status
+        if status_filter != 'all':
+            units = units.filter(status=status_filter)
     
     # Search functionality
     if search_query:
@@ -360,12 +426,15 @@ def admin_units(request):
     
     from django.core.paginator import Paginator
     
-    # Get statistics (before pagination)
-    total_units_count = units.count()
-    available_units_count = units.filter(status='AVAILABLE').count()
-    occupied_units_count = units.filter(status='OCCUPIED').count()
-    maintenance_units_count = units.filter(status='MAINTENANCE').count()
-
+    # Get statistics from ALL active units (not the filtered queryset)
+    all_active_units = Unit.objects.filter(is_active=True)
+    all_inactive_units = Unit.objects.filter(is_active=False)
+    total_units_count = all_active_units.count()
+    available_units_count = all_active_units.filter(status='AVAILABLE').count()
+    occupied_units_count = all_active_units.filter(status='OCCUPIED').count()
+    # Being Fixed includes both MAINTENANCE status AND inactive units
+    maintenance_units_count = all_active_units.filter(status='MAINTENANCE').count() + all_inactive_units.count()
+    
     # Pagination (6 per page)
     paginator = Paginator(units, 6)
     page_number = request.GET.get('page')
@@ -1089,9 +1158,11 @@ def admin_delete_announcement(request, ann_id: int):
 
 @admin_required
 def admin_notifications(request):
-    """Admin portal: view all notifications"""
-    # Admins should see all notifications, not just user-specific ones
-    notifications = Notification.objects.all().order_by('-created_at')
+    """Admin portal: view admin notifications only"""
+    # Only show notifications meant for admins (not tenant notifications)
+    notifications = Notification.objects.filter(
+        recipient_type__in=['ADMIN', 'SPECIFIC_USER']
+    ).order_by('-created_at')
     unread_count = notifications.filter(is_read=False).count()
     
     # Return JSON for AJAX requests (for auto-refresh)
@@ -1482,6 +1553,98 @@ def admin_delete_payment(request, payment_id: int):
         "post_url": reverse("admin_delete_payment", args=[payment.id]),
         "back_url": reverse("admin_payments"),
     })
+
+
+@admin_required
+def admin_payment_detail(request, payment_id: int):
+    """
+    Display complete payment details including breakdown of bills and amounts.
+    """
+    from billing.services import parse_bill_ids
+    from billing.models import MonthlyBill
+    
+    payment = get_object_or_404(ManualPayment.objects.select_related("user"), pk=payment_id)
+    
+    # Parse bill IDs from the payment
+    bill_ids = parse_bill_ids(payment.bill_ids)
+    bills = []
+    
+    # Get detailed bill information with actual paid amounts
+    for bill_id in bill_ids:
+        try:
+            bill = MonthlyBill.objects.select_related("lease", "lease__unit").get(pk=bill_id)
+            
+            # Calculate what was actually paid based on payment_type
+            if payment.payment_type == "rent_only":
+                pay_rent = bill.rent_balance
+                pay_water = 0
+                pay_parking = bill.parking_balance  # Parking included in rent-only
+                pay_penalty = 0
+            elif payment.payment_type == "water_only":
+                pay_rent = 0
+                pay_water = bill.water_balance
+                pay_parking = 0
+                pay_penalty = 0
+            else:
+                # Full payment
+                pay_rent = bill.rent_balance
+                pay_water = bill.water_balance
+                pay_parking = bill.parking_balance
+                pay_penalty = bill.interest
+            
+            pay_total = pay_rent + pay_water + pay_parking + pay_penalty
+            
+            bills.append({
+                "id": bill.id,
+                "month": bill.billing_month.strftime("%B %Y"),
+                "unit": bill.lease.unit.number if bill.lease and bill.lease.unit else "Unknown",
+                # Full bill amounts (for reference)
+                "full_rent": bill.base_rent,
+                "full_water": bill.water_amount,
+                "full_parking": bill.parking_fee,
+                "full_penalty": bill.interest,
+                # Actually paid amounts
+                "rent": pay_rent,
+                "water": pay_water,
+                "parking": pay_parking,
+                "penalty": pay_penalty,
+                "total": pay_total,
+            })
+        except MonthlyBill.DoesNotExist:
+            bills.append({
+                "id": bill_id,
+                "month": "Unknown",
+                "unit": "Unknown",
+                "full_rent": 0,
+                "full_water": 0,
+                "full_parking": 0,
+                "full_penalty": 0,
+                "rent": 0,
+                "water": 0,
+                "parking": 0,
+                "penalty": 0,
+                "total": 0,
+            })
+    
+    # Calculate totals from actually paid amounts
+    total_rent = sum(b["rent"] for b in bills)
+    total_water = sum(b["water"] for b in bills)
+    total_parking = sum(b["parking"] for b in bills)
+    total_penalty = sum(b["penalty"] for b in bills)
+    calculated_total = total_rent + total_water + total_parking + total_penalty
+    
+    context = {
+        "payment": payment,
+        "bills": bills,
+        "bill_count": len(bills),
+        "total_rent": total_rent,
+        "total_water": total_water,
+        "total_parking": total_parking,
+        "total_penalty": total_penalty,
+        "total_amount": calculated_total,  # Use calculated total, not stored amount
+    }
+    
+    return render(request, "admin_portal/payment_detail.html", context)
 
 
 @admin_required

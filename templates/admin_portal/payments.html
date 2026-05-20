@@ -212,6 +212,11 @@
             <!-- Administrative Options Column -->
             <td class="px-5 py-4 text-right">
               <div class="flex justify-end items-center gap-1.5">
+                <!-- View Details Button -->
+                <a href="{% url 'admin_payment_detail' p.id %}" class="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded text-slate-700 text-xs font-bold transition-colors" title="View Complete Details">
+                  View
+                </a>
+                
                 {% if p.status == "PENDING" %}
                   
                   <!-- Conditional Route Appraisals -->

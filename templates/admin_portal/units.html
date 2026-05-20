@@ -96,7 +96,9 @@
         
         <!-- Badge Overlay -->
         <div class="absolute top-4 right-4">
-          {% if unit.status == 'AVAILABLE' %}
+          {% if not unit.is_active %}
+            <span class="px-3 py-1 bg-amber-500 text-white text-[11px] font-black uppercase tracking-wider rounded-lg shadow-lg">Being Fixed</span>
+          {% elif unit.status == 'AVAILABLE' %}
             <span class="px-3 py-1 bg-emerald-500 text-white text-[11px] font-black uppercase tracking-wider rounded-lg shadow-lg">Available</span>
           {% elif unit.status == 'MAINTENANCE' %}
             <span class="px-3 py-1 bg-amber-500 text-white text-[11px] font-black uppercase tracking-wider rounded-lg shadow-lg">Being Fixed</span>
@@ -125,7 +127,7 @@
         <div class="grid grid-cols-2 gap-4 mb-6">
           <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
             <span class="text-[10px] font-black text-slate-400 uppercase block mb-1">Status</span>
-            <strong class="text-sm font-black text-slate-800">{{ unit.get_status_display }}</strong>
+            <strong class="text-sm font-black text-slate-800">{% if not unit.is_active %}Under Maintenance{% else %}{{ unit.get_status_display }}{% endif %}</strong>
           </div>
           <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
             <span class="text-[10px] font-black text-slate-400 uppercase block mb-1">Size</span>
@@ -137,7 +139,11 @@
         <div class="mb-8">
           <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Who's inside</span>
           
-          {% if unit.status == 'OCCUPIED' %}
+          {% if not unit.is_active or unit.status == 'MAINTENANCE' %}
+            <div class="p-4 bg-amber-50 border border-amber-100 rounded-xl text-center">
+              <span class="text-xs text-amber-700 font-black uppercase">Room is being fixed</span>
+            </div>
+          {% elif unit.status == 'OCCUPIED' %}
             {% with tenant=unit.get_current_tenant %}
               {% if tenant %}
                 <div class="flex items-center gap-3 p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
@@ -157,10 +163,6 @@
                 </div>
               {% endif %}
             {% endwith %}
-          {% elif unit.status == 'MAINTENANCE' %}
-            <div class="p-4 bg-amber-50 border border-amber-100 rounded-xl text-center">
-              <span class="text-xs text-amber-700 font-black uppercase">Room is being fixed</span>
-            </div>
           {% else %}
             <div class="p-4 bg-emerald-50 border border-emerald-100 rounded-xl text-center">
               <span class="text-xs text-emerald-700 font-black uppercase tracking-tight">Empty and ready for a tenant</span>

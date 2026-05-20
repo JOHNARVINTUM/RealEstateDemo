@@ -75,16 +75,34 @@
                         {% if payment_type == 'rent_only' %}bg-white text-slate-900 border-white shadow-lg{% else %}bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500{% endif %}">
                 Rent Only
               </a>
-              <a href="?months_to_pay={{ months_to_pay }}&payment_type=water_only"
-                 class="px-6 py-4 rounded-2xl font-black text-lg text-center transition-all border-2
-                        {% if payment_type == 'water_only' %}bg-white text-slate-900 border-white shadow-lg{% else %}bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500{% endif %}">
-                Water Only
-              </a>
-              <a href="?months_to_pay={{ months_to_pay }}&payment_type=full"
-                 class="px-6 py-4 rounded-2xl font-black text-lg text-center transition-all border-2
-                        {% if payment_type == 'full' or not payment_type %}bg-white text-slate-900 border-white shadow-lg{% else %}bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500{% endif %}">
-                Full Bill
-              </a>
+              
+              {% if water_available %}
+                <a href="?months_to_pay={{ months_to_pay }}&payment_type=water_only"
+                   class="px-6 py-4 rounded-2xl font-black text-lg text-center transition-all border-2
+                          {% if payment_type == 'water_only' %}bg-white text-slate-900 border-white shadow-lg{% else %}bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500{% endif %}">
+                  Water Only
+                </a>
+                <a href="?months_to_pay={{ months_to_pay }}&payment_type=full"
+                   class="px-6 py-4 rounded-2xl font-black text-lg text-center transition-all border-2
+                          {% if payment_type == 'full' or not payment_type %}bg-white text-slate-900 border-white shadow-lg{% else %}bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500{% endif %}">
+                  Full Bill
+                </a>
+              {% else %}
+                <div class="px-6 py-4 rounded-2xl font-black text-lg text-center border-2 bg-slate-900/50 text-slate-600 border-slate-800 cursor-not-allowed relative group" title="Water bill not yet available. Please check back after meter reading.">
+                  Water Only
+                  <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                    Water bill not yet available
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                  </div>
+                </div>
+                <div class="px-6 py-4 rounded-2xl font-black text-lg text-center border-2 bg-slate-900/50 text-slate-600 border-slate-800 cursor-not-allowed relative group" title="Full bill unavailable - water bill not yet posted. Please pay Rent Only.">
+                  Full Bill
+                  <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                    Water bill not yet available - pay Rent Only
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                  </div>
+                </div>
+              {% endif %}
             </div>
           </div>
 
@@ -111,6 +129,12 @@
                 <span class="text-slate-400 font-bold">Rent Total</span>
                 <span class="text-white font-black text-xl">₱{{ total_rent|floatformat:2|intcomma }}</span>
               </div>
+              {% if total_parking > 0 %}
+                <div class="flex justify-between items-center">
+                  <span class="text-slate-400 font-bold">Parking</span>
+                  <span class="text-white font-black text-lg">₱{{ total_parking|floatformat:2|intcomma }}</span>
+                </div>
+              {% endif %}
             {% elif payment_type == 'water_only' %}
               <div class="flex justify-between items-center">
                 <span class="text-slate-400 font-bold">Water Total</span>
@@ -125,6 +149,12 @@
                 <span class="text-slate-400 font-bold">Water</span>
                 <span class="text-white font-black text-lg">₱{{ total_water|floatformat:2|intcomma }}</span>
               </div>
+              {% if total_parking > 0 %}
+                <div class="flex justify-between items-center">
+                  <span class="text-slate-400 font-bold">Parking</span>
+                  <span class="text-white font-black text-lg">₱{{ total_parking|floatformat:2|intcomma }}</span>
+                </div>
+              {% endif %}
               {% if total_penalty > 0 %}
                 <div class="flex justify-between items-center">
                   <span class="text-rose-400 font-bold">Late Fees</span>
@@ -181,6 +211,7 @@
             <th class="py-3 px-6">Month</th>
             <th class="py-3 px-6">Rent</th>
             <th class="py-3 px-6">Water</th>
+            <th class="py-3 px-6">Parking</th>
             <th class="py-3 px-6">Late Fee</th>
             <th class="py-3 px-6">Total</th>
             <th class="py-3 px-6">Pay By</th>
@@ -202,6 +233,12 @@
                   <span class="block text-xs font-black text-emerald-600 uppercase tracking-widest mt-1">[Apply ₱{{ r.pay_water|floatformat:2 }}]</span>
                 {% endif %}
               </td>
+              <td class="py-6 px-6 text-slate-600 font-bold">
+                <span class="{% if r.pay_parking == 0 %}text-slate-300{% endif %}">₱{{ r.parking|default:"0.00"|floatformat:2|intcomma }}</span>
+                {% if r.pay_parking > 0 and r.pay_parking < r.parking %}
+                  <span class="block text-xs font-black text-emerald-600 uppercase tracking-widest mt-1">[Apply ₱{{ r.pay_parking|floatformat:2 }}]</span>
+                {% endif %}
+              </td>
               <td class="py-6 px-6 text-rose-600 font-black">
                 {% if r.pay_penalty and r.pay_penalty != 0 %}₱{{ r.pay_penalty|floatformat:2|intcomma }}{% else %}-{% endif %}
               </td>
@@ -212,7 +249,7 @@
             </tr>
           {% empty %}
             <tr>
-              <td colspan="6" class="py-20 px-6 text-center text-slate-400 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-100">
+              <td colspan="7" class="py-20 px-6 text-center text-slate-400 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-100">
                 <p class="text-2xl font-black">Nothing selected yet.</p>
                 <p class="text-lg font-bold mt-2">Select how many months you want to pay above.</p>
               </td>

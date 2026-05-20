@@ -36,10 +36,10 @@
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-blue-600 flex flex-col justify-between">
       <div>
         <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Active Tenants</span>
-        <div class="text-3xl font-black text-slate-900 tracking-tight">{{ total_tenants|intcomma }}</div>
+        <div class="text-3xl font-black text-slate-900 tracking-tight">{{ total_tenants|intcomma }}<span class="text-xl text-slate-400 font-medium"> / {{ total_units }}</span></div>
       </div>
       <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
-        <span class="text-blue-600 font-bold">●</span> Registered accounts
+        <span class="text-blue-600 font-bold">●</span> {{ available_units|default:vacant_units }} slots available
       </div>
     </div>
 
@@ -65,33 +65,47 @@
       </div>
     </div>
 
-    <!-- Monthly Billed Revenue -->
+    <!-- Rent Collection Status -->
     <a href="{% url 'admin_billed_this_month' %}?month={{ current_month_str }}" class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-slate-700 flex flex-col justify-between hover:shadow-md hover:border-slate-400 transition-all group">
       <div>
-        <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Collected This Month</span>
-        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight truncate" title="₱{{ total_revenue|floatformat:0|intcomma }}">
-          ₱{{ total_revenue|floatformat:0|intcomma }}
+        <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Rent Collection</span>
+        <div class="flex items-baseline gap-2 mt-1">
+          <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight truncate" title="₱{{ rent_collected|floatformat:0|intcomma }}">
+            ₱{{ rent_collected|floatformat:0|intcomma }}
+          </div>
+          <span class="text-sm text-slate-500">/ ₱{{ expected_monthly_rent|floatformat:0|intcomma }}</span>
         </div>
       </div>
-      <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5 truncate">
-        <span>Rent, water & extras</span>
-        <span class="ml-auto text-[10px] font-bold text-slate-400 group-hover:text-slate-600 uppercase tracking-wide">View Bills →</span>
+      <div class="mt-3">
+        <div class="flex items-center justify-between text-xs mb-1">
+          <span class="text-slate-600 font-medium">Collection Rate</span>
+          <span class="font-bold {% if collection_rate >= 90 %}text-emerald-600{% elif collection_rate >= 70 %}text-amber-600{% else %}text-rose-600{% endif %}">{{ collection_rate|floatformat:0 }}%</span>
+        </div>
+        <div class="w-full bg-slate-200 rounded-full h-2">
+          <div class="{% if collection_rate >= 90 %}bg-emerald-500{% elif collection_rate >= 70 %}bg-amber-500{% else %}bg-rose-500{% endif %} h-2 rounded-full transition-all" style="width: {{ collection_rate|floatformat:0 }}%"></div>
+        </div>
       </div>
     </a>
 
-    <!-- Monthly Collected Cash -->
-    <a href="{% url 'admin_payments' %}?status=APPROVED" class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-indigo-600 flex flex-col justify-between hover:shadow-md hover:border-indigo-400 transition-all group">
+    <!-- Total Revenue Breakdown -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-indigo-600 flex flex-col justify-between">
       <div>
-        <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Paid This Month</span>
-        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight truncate" title="₱{{ monthly_collected|floatformat:0|intcomma }}">
-          ₱{{ monthly_collected|floatformat:0|intcomma }}
+        <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Total Collected</span>
+        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight truncate" title="₱{{ total_collected|floatformat:0|intcomma }}">
+          ₱{{ total_collected|floatformat:0|intcomma }}
         </div>
       </div>
-      <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5 truncate">
-        <span>Verified remits</span>
-        <span class="ml-auto text-[10px] font-bold text-slate-400 group-hover:text-indigo-600 uppercase tracking-wide">View Payments →</span>
+      <div class="mt-2 space-y-1 text-xs">
+        <div class="flex justify-between text-slate-600">
+          <span>Rent: ₱{{ base_rent_collected|floatformat:0|intcomma }}</span>
+          <span>Water: ₱{{ water_collected|floatformat:0|intcomma }}</span>
+        </div>
+        <div class="flex justify-between text-slate-600">
+          <span>Parking: ₱{{ parking_collected|floatformat:0|intcomma }}</span>
+          <span>Late Fees: ₱{{ interest_collected|floatformat:0|intcomma }}</span>
+        </div>
       </div>
-    </a>
+    </div>
 
   </section>
 

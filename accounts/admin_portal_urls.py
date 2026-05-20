@@ -29,6 +29,7 @@ from .admin_portal_views import (
     admin_reject_payment,
     admin_confirm_schedule,
     admin_delete_payment,
+    admin_payment_detail,
     admin_update_maintenance,
     admin_units,
     admin_unit_detail,
@@ -78,6 +79,7 @@ urlpatterns = [
     path("water/recompute/", admin_water_recompute, name="admin_water_recompute"),
     
     path("payments/", admin_payments, name="admin_payments"),
+    path("payments/<int:payment_id>/detail/", admin_payment_detail, name="admin_payment_detail"),
     path("payments/<int:payment_id>/approve/", admin_approve_payment, name="admin_approve_payment"),
     path("payments/<int:payment_id>/reject/", admin_reject_payment, name="admin_reject_payment"),
     path("payments/<int:payment_id>/confirm-schedule/", admin_confirm_schedule, name="admin_confirm_schedule"),

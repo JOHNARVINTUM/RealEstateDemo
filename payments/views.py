@@ -43,9 +43,13 @@ def manual_gcash_payment(request):
         
         # Create real-time notification for admin about new payment
         try:
+            # Build the approval URL for the notification
+            from django.urls import reverse
+            approval_url = reverse('admin_payments')
+            
             notification = Notification.create_notification(
-                title=f" New Payment Received",
-                message=f" {request.user.email} submitted a payment of {amount_to_pay} with reference code {reference_code}. Please review and approve this payment.",
+                title=f"New Payment Received",
+                message=f"{request.user.email} submitted a payment of ₱{amount_to_pay} with reference code {reference_code}. Please review and approve this payment.",
                 notification_type='PAYMENT',
                 related_tenant=request.user
             )

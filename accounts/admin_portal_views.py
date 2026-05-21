@@ -131,19 +131,19 @@ def admin_dashboard(request):
         status="PAID",
     )
     
-    # Rent collected (base rent only from paid bills)
+    # Rent collected (use base_rent from PAID bills - rent_paid may be 0 on older bills)
     rent_collected = paid_bills.aggregate(
-        total=Sum("rent_paid")
+        total=Sum("base_rent")
     )["total"] or 0
     
-    # Water collected (from paid bills)
+    # Water collected (use water_amount from PAID bills - water_paid may be 0 on older bills)
     water_collected = paid_bills.aggregate(
-        total=Sum("water_paid")
+        total=Sum("water_amount")
     )["total"] or 0
     
-    # Parking collected (from paid bills)
+    # Parking collected (from paid bills - use parking_fee since older bills may have parking_paid=0)
     parking_collected = paid_bills.aggregate(
-        total=Sum("parking_paid")
+        total=Sum("parking_fee")
     )["total"] or 0
     
     # Penalties/Interest collected
@@ -248,8 +248,8 @@ def admin_dashboard(request):
     all_notifications = Notification.objects.filter(
         recipient_type__in=['ADMIN', 'SPECIFIC_USER']
     ).order_by('-created_at')
-    notifications = all_notifications[:5]
     unread_notifications = all_notifications.filter(is_read=False)
+    notifications = unread_notifications[:5]  # Quick panel shows only unread
     unread_count = unread_notifications.count()
 
     # Calculate total units for capacity context
@@ -1130,7 +1130,9 @@ def admin_edit_announcement(request, ann_id: int):
     ann = get_object_or_404(Announcement, pk=ann_id)
     form = AnnouncementForm(request.POST or None, instance=ann)
     if request.method == "POST" and form.is_valid():
-        form.save(uploaded_by=request.user)
+        obj = form.save(commit=False)
+        obj.uploaded_by = request.user
+        obj.save()
         return redirect("admin_announcements")
     recent_items = Announcement.objects.all().order_by("-created_at")[:3]
     return render(request, "admin_portal/announcement_form.html", {
@@ -1165,8 +1167,12 @@ def admin_notifications(request):
     ).order_by('-created_at')
     unread_count = notifications.filter(is_read=False).count()
     
-    # Return JSON for AJAX requests (for auto-refresh)
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+    # Return JSON only for genuine AJAX requests (not browser back navigation)
+    is_ajax = (
+        request.headers.get('X-Requested-With') == 'XMLHttpRequest' and
+        'text/html' not in request.headers.get('Accept', '')
+    )
+    if is_ajax:
         from django.http import JsonResponse
         return JsonResponse({
             'unread_count': unread_count,
@@ -1212,7 +1218,9 @@ def admin_mark_notification_read(request, notification_id):
 @admin_required
 def admin_mark_all_notifications_read(request):
     """Admin portal: mark all notifications as read"""
-    Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+    Notification.objects.filter(
+        recipient_type__in=['ADMIN', 'SPECIFIC_USER'], is_read=False
+    ).update(is_read=True)
     
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({'success': True})
@@ -1223,7 +1231,7 @@ def admin_mark_all_notifications_read(request):
 @admin_required
 def admin_delete_notification(request, notification_id):
     """Admin portal: delete notification"""
-    notification = get_object_or_404(Notification, id=notification_id, user=request.user)
+    notification = get_object_or_404(Notification, id=notification_id)
     
     if request.method == "POST":
         notification_title = notification.title
@@ -2231,9 +2239,9 @@ def admin_forecasting(request):
     maintenance_metrics = _accuracy_metrics(maintenance_series)
 
     rev_sarima_fc, rev_sarima_lower, rev_sarima_upper = _sarima_forecast(
-        revenue_series, order=(0,1,1), seasonal_order=(1,1,1,12), steps=6)
+        revenue_series, order=(0,1,1), seasonal_order=(1,1,1,12), steps=3)
     water_sarima_fc, water_sarima_lower, water_sarima_upper = _sarima_forecast(
-        water_series, order=(0,1,1), seasonal_order=(1,1,1,12), steps=6)
+        water_series, order=(0,1,1), seasonal_order=(1,1,1,12), steps=3)
 
     revenue_sarima_metrics = _sarima_metrics(revenue_series, order=(0,1,1), seasonal_order=(1,1,1,12))
     water_sarima_metrics   = _sarima_metrics(water_series,   order=(0,1,1), seasonal_order=(1,1,1,12))

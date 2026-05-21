@@ -12,7 +12,7 @@
       <p class="text-lg text-slate-500 mt-2 font-medium">Check your bills and past payments here.</p>
     </div>
     <!-- Current Month Indicator -->
-    <div class="bg-white border-2 border-slate-100 px-6 py-4 rounded-2xl shadow-sm w-fit">
+    <div class="bg-white border-2 border-slate-100 px-6 py-4 rounded-2xl shadow-sm w-fit self-end text-right md:text-left md:self-auto">
       <span class="text-xs font-black text-slate-400 block uppercase tracking-widest mb-1">Current Month</span>
       <span class="text-xl font-black text-slate-800">{% now "F Y" %}</span>
     </div>
@@ -23,7 +23,7 @@
     <form method="get" class="flex flex-wrap gap-6 items-end">
       <div class="flex-1 min-w-[200px]">
         <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3">Month</label>
-        <select name="month" class="w-full px-6 py-4 border-2 border-slate-100 rounded-2xl focus:border-slate-900 transition-all text-lg font-black text-slate-900 bg-white">
+        <select name="month" class="w-full pl-6 pr-12 py-4 border-2 border-slate-100 rounded-2xl focus:border-slate-900 transition-all text-lg font-black text-slate-900 bg-white">
           <option value="">All Months</option>
           {% for month_num, month_name in month_choices %}
             <option value="{{ month_num }}" {% if month_filter == month_num|stringformat:"s" %}selected{% endif %}>{{ month_name }}</option>
@@ -33,7 +33,7 @@
       
       <div class="flex-1 min-w-[150px]">
         <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3">Year</label>
-        <select name="year" class="w-full px-6 py-4 border-2 border-slate-100 rounded-2xl focus:border-slate-900 transition-all text-lg font-black text-slate-900 bg-white">
+        <select name="year" class="w-full pl-6 pr-12 py-4 border-2 border-slate-100 rounded-2xl focus:border-slate-900 transition-all text-lg font-black text-slate-900 bg-white">
           <option value="">All Years</option>
           {% for year in year_choices %}
             <option value="{{ year }}" {% if year_filter == year|stringformat:"s" %}selected{% endif %}>{{ year }}</option>
@@ -41,7 +41,7 @@
         </select>
       </div>
       
-      <div class="flex gap-4">
+      <div class="flex gap-4 ml-auto w-full sm:w-auto justify-end">
         <button type="submit" class="px-8 py-4 bg-slate-900 hover:bg-slate-800 text-white font-black rounded-2xl transition-all text-lg shadow-lg active:scale-95">
           Search
         </button>
@@ -76,11 +76,11 @@
       </div>
     </div>
 
-    <div class="p-10">
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+    <div class="p-4 sm:p-10">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12">
 
         <!-- Billing Breakdown -->
-        <div class="bg-slate-50/50 p-8 rounded-3xl border-2 border-slate-100">
+        <div class="bg-slate-50/50 p-5 sm:p-8 rounded-3xl border-2 border-slate-100">
           <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">Bill Breakdown</p>
           
           <div class="flex justify-between py-4 text-lg border-b-2 border-slate-200/50">
@@ -142,16 +142,16 @@
             </span>
           </div>
 
-          <div class="mt-8 pt-8 border-t-[3px] border-slate-900 flex justify-between items-center">
-            <span class="text-lg font-black text-slate-900 uppercase tracking-widest">Total to Pay</span>
-            <span class="text-4xl font-black text-slate-900">
+          <div class="mt-8 pt-8 border-t-[3px] border-slate-900 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-4">
+            <span class="text-sm sm:text-lg font-black text-slate-900 uppercase tracking-widest shrink-0">Total to Pay</span>
+            <span class="text-3xl sm:text-4xl font-black text-slate-900 whitespace-nowrap shrink-0">
               ₱{% if current_bill %}{{ current_bill.total_due|default:"0.00"|floatformat:2|intcomma }}{% else %}0.00{% endif %}
             </span>
           </div>
         </div>
 
         <!-- Payment Settlement Verification -->
-        <div class="bg-white p-8 rounded-3xl border-2 border-slate-100 flex flex-col justify-between shadow-sm">
+        <div class="bg-white p-5 sm:p-8 rounded-3xl border-2 border-slate-100 flex flex-col justify-between shadow-sm">
           <div>
             <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">Payment Status</p>
             
@@ -226,7 +226,7 @@
     </div>
 
     <div class="overflow-x-auto p-4">
-      <table class="w-full text-left border-separate border-spacing-y-3">
+      <table class="w-full text-left border-separate border-spacing-y-3 min-w-[700px] whitespace-nowrap">
         <thead>
           <tr class="text-xs font-black text-slate-400 uppercase tracking-widest">
             <th class="py-3 px-6">Month</th>
@@ -299,7 +299,7 @@
     </div>
 
     <div class="overflow-x-auto p-4">
-      <table class="w-full text-left border-separate border-spacing-y-3">
+      <table class="w-full text-left border-separate border-spacing-y-3 min-w-[700px] whitespace-nowrap">
         <thead>
           <tr class="text-xs font-black text-slate-400 uppercase tracking-widest">
             <th class="py-3 px-6">Paid On</th>

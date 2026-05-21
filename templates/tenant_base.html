@@ -143,7 +143,6 @@
     letter-spacing: 0.05em;
   }
   
-  /* Sidebar - Dark & Sleek */
   .tenant-sidebar {
     background-color: #0f172a;
     position: fixed !important;
@@ -152,7 +151,7 @@
     height: 100vh !important;
     z-index: 1000 !important;
     overflow-y: auto !important;
-    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s ease !important;
   }
   
   .tenant-sidebar .nav-item {
@@ -171,46 +170,42 @@
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
   }
 
-  /* Tenant Sidebar Collapse Behavior */
-  body.tenant-collapsed .tenant-sidebar {
-    width: 100px !important;
-  }
+  /* Tenant Sidebar Collapse Behavior - Desktop Only */
+  @media (min-width: 768px) {
+    body.tenant-collapsed .tenant-sidebar {
+      width: 100px !important;
+    }
 
-  body.tenant-collapsed .tenant-sidebar .brand-text,
-  body.tenant-collapsed .tenant-sidebar .nav-text,
-  body.tenant-collapsed .tenant-sidebar .brand-name {
-    opacity: 0;
-    width: 0;
-    display: none !important;
-  }
+    body.tenant-collapsed .tenant-sidebar .brand-text,
+    body.tenant-collapsed .tenant-sidebar .nav-text,
+    body.tenant-collapsed .tenant-sidebar .brand-name {
+      opacity: 0;
+      width: 0;
+      display: none !important;
+    }
 
-  body.tenant-collapsed .tenant-sidebar .brand-header {
-    justify-content: center;
-  }
+    body.tenant-collapsed .tenant-sidebar .brand-header {
+      justify-content: center;
+    }
 
-  body.tenant-collapsed .tenant-sidebar .tenant-brand-logo {
-    width: 56px;
-    height: 56px;
-  }
+    body.tenant-collapsed .tenant-sidebar .tenant-brand-logo {
+      width: 56px;
+      height: 56px;
+    }
 
-  body.tenant-collapsed .tenant-sidebar .nav-item,
-  body.tenant-collapsed .tenant-sidebar button {
-    justify-content: center;
-    padding: 1rem 0;
-  }
+    body.tenant-collapsed .tenant-sidebar .nav-item,
+    body.tenant-collapsed .tenant-sidebar button {
+      justify-content: center;
+      padding: 1rem 0;
+    }
 
-  body.tenant-collapsed #tenantToggleIcon {
-    transform: rotate(180deg);
-  }
+    body.tenant-collapsed #tenantToggleIcon {
+      transform: rotate(180deg);
+    }
 
-  /* Main Workspace Offset */
-  main.flex-1 {
-    margin-left: 288px !important;
-    transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  }
-
-  body.tenant-collapsed main.flex-1 {
-    margin-left: 100px !important;
+    body.tenant-collapsed main.flex-1 {
+      margin-left: 100px !important;
+    }
   }
 
   /* Background Pattern */
@@ -233,11 +228,31 @@
 {% endblock %}
 
 {% block content %}
-<div class="min-h-screen flex tenant-workspace-bg">
+<div class="min-h-screen flex flex-col md:flex-row tenant-workspace-bg">
+
+  <!-- Mobile Header -->
+  <header class="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-slate-200 sticky top-0 z-50">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 bg-white rounded-lg flex justify-center items-center shadow-sm p-1">
+        <img src="{% static 'img/accounts/RealEstate360+ Logo2 jpg.jpg' %}" alt="Logo" class="w-full h-full object-contain">
+      </div>
+      <div class="text-lg font-semibold tracking-tight text-slate-900 font-display">
+        RealEstate360<span class="text-blue-500">+</span>
+      </div>
+    </div>
+    <button id="mobileMenuBtn" class="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"/>
+      </svg>
+    </button>
+  </header>
+
+  <!-- Mobile Sidebar Backdrop -->
+  <div id="mobileBackdrop" class="fixed inset-0 bg-slate-900/50 z-[990] hidden transition-opacity opacity-0 duration-300 md:hidden"></div>
 
   {% include "includes/tenant_sidebar.html" %}
 
-  <main class="flex-1 px-8 py-10 overflow-y-auto">
+  <main class="flex-1 md:ml-72 px-4 py-6 md:px-8 md:py-10 overflow-y-auto transition-all duration-300">
     <div class="max-w-7xl mx-auto animate-fade-in">
       <!-- Django Messages Display -->
       {% if messages %}
@@ -270,6 +285,11 @@
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     const toggleBtn = document.getElementById('tenantSidebarToggle');
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const sidebar = document.getElementById('tenantSidebar');
+    const backdrop = document.getElementById('mobileBackdrop');
+
+    // Desktop Collapse Logic
     if (toggleBtn) {
       if (localStorage.getItem('tenantSidebarCollapsed') === 'true') {
         document.body.classList.add('tenant-collapsed');
@@ -280,6 +300,27 @@
         const isCollapsed = document.body.classList.contains('tenant-collapsed');
         localStorage.setItem('tenantSidebarCollapsed', isCollapsed);
       });
+    }
+
+    // Mobile Sidebar Logic
+    function toggleMobileMenu() {
+      if (sidebar.classList.contains('-translate-x-full')) {
+        // Open
+        sidebar.classList.remove('-translate-x-full');
+        backdrop.classList.remove('hidden');
+        // Small delay to allow display:block to apply before animating opacity
+        setTimeout(() => backdrop.classList.add('opacity-100'), 10);
+      } else {
+        // Close
+        sidebar.classList.add('-translate-x-full');
+        backdrop.classList.remove('opacity-100');
+        setTimeout(() => backdrop.classList.add('hidden'), 300);
+      }
+    }
+
+    if (mobileMenuBtn && sidebar && backdrop) {
+      mobileMenuBtn.addEventListener('click', toggleMobileMenu);
+      backdrop.addEventListener('click', toggleMobileMenu);
     }
   });
 </script>

@@ -341,11 +341,30 @@ def admin_tenants(request):
 
 @admin_required
 def admin_tenant_detail(request, tenant_id: int):
+    from payments.models import ManualPayment
     tenant = get_object_or_404(TenantProfile.objects.select_related("user"), pk=tenant_id)
     leases = Lease.objects.select_related("unit", "tenant").filter(tenant=tenant.user).order_by("-start_date")
     attachments = TenantAttachment.objects.filter(tenant=tenant.user).select_related('uploaded_by').order_by('-uploaded_at')
     tenant.has_records = tenant_has_records(tenant)
-    return render(request, "admin_portal/tenant_detail.html", {"tenant": tenant, "leases": leases, "attachments": attachments})
+
+    # Payment history: all MonthlyBills across all leases
+    lease_ids = leases.values_list("id", flat=True)
+    bill_history = MonthlyBill.objects.filter(
+        lease_id__in=lease_ids
+    ).select_related("lease__unit").order_by("-billing_month")[:24]
+
+    # Manual payment submissions (GCash / Cash)
+    manual_payments = ManualPayment.objects.filter(
+        user=tenant.user
+    ).order_by("-created_at")[:20]
+
+    return render(request, "admin_portal/tenant_detail.html", {
+        "tenant": tenant,
+        "leases": leases,
+        "attachments": attachments,
+        "bill_history": bill_history,
+        "manual_payments": manual_payments,
+    })
 
 
 @admin_required

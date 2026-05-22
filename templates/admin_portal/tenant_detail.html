@@ -321,7 +321,7 @@
           <span class="text-xs font-bold text-slate-500">Last 24 Bills</span>
         </div>
         <div class="overflow-x-auto">
-          <table class="w-full text-sm">
+          <table class="w-full text-sm" id="paymentHistoryTable">
             <thead>
               <tr class="border-b border-slate-100 bg-slate-50/30">
                 <th class="text-left px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Month</th>
@@ -333,7 +333,7 @@
                 <th class="text-center px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody class="divide-y divide-slate-100" id="paymentHistoryBody">
               {% for bill in bill_history %}
               <tr class="hover:bg-slate-50/50 transition-colors">
                 <td class="px-5 py-3 font-bold text-slate-800 whitespace-nowrap">{{ bill.billing_month|date:"M Y" }}</td>
@@ -366,6 +366,7 @@
             </tbody>
           </table>
         </div>
+        <div id="paymentHistoryControls"></div>
       </section>
 
       <!-- Manual Payment Submissions -->
@@ -376,7 +377,7 @@
           <span class="text-xs font-bold text-slate-500">GCash / Cash</span>
         </div>
         <div class="overflow-x-auto">
-          <table class="w-full text-sm">
+          <table class="w-full text-sm" id="paymentSubmissionsTable">
             <thead>
               <tr class="border-b border-slate-100 bg-slate-50/30">
                 <th class="text-left px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
@@ -387,7 +388,7 @@
                 <th class="text-center px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody class="divide-y divide-slate-100" id="paymentSubmissionsBody">
               {% for mp in manual_payments %}
               <tr class="hover:bg-slate-50/50 transition-colors">
                 <td class="px-5 py-3 font-bold text-slate-800 whitespace-nowrap">{{ mp.created_at|date:"M d, Y" }}</td>
@@ -409,6 +410,7 @@
             </tbody>
           </table>
         </div>
+        <div id="paymentSubmissionsControls"></div>
       </section>
       {% endif %}
 
@@ -508,4 +510,89 @@
   </div>
 
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    function setupPagination(tbodyId, controlsId, itemsPerPage = 5) {
+        const tbody = document.getElementById(tbodyId);
+        if (!tbody) return;
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        
+        // If there are no rows or it's just a single "No records found" row spanning multiple columns, don't paginate
+        if (rows.length === 0 || (rows.length === 1 && rows[0].cells.length === 1)) return;
+
+        const totalPages = Math.ceil(rows.length / itemsPerPage);
+        if (totalPages <= 1) return;
+
+        const controlsContainer = document.getElementById(controlsId);
+        if (!controlsContainer) return;
+
+        let currentPage = 1;
+
+        function renderTable() {
+            const start = (currentPage - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            rows.forEach((row, index) => {
+                row.style.display = (index >= start && index < end) ? '' : 'none';
+            });
+        }
+
+        function renderControls() {
+            controlsContainer.innerHTML = '';
+            
+            const wrapper = document.createElement('div');
+            wrapper.className = 'flex items-center justify-between px-5 py-3 bg-white border-t border-slate-100';
+            
+            const info = document.createElement('div');
+            info.className = 'text-xs text-slate-500 font-medium';
+            info.textContent = `Showing ${(currentPage - 1) * itemsPerPage + 1} to ${Math.min(currentPage * itemsPerPage, rows.length)} of ${rows.length} entries`;
+            
+            const buttons = document.createElement('div');
+            buttons.className = 'flex items-center gap-1';
+            
+            const prevBtn = document.createElement('button');
+            prevBtn.className = `px-3 py-1 rounded text-xs font-bold border ${currentPage === 1 ? 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50 transition-colors'}`;
+            prevBtn.textContent = 'Prev';
+            prevBtn.disabled = currentPage === 1;
+            prevBtn.onclick = () => { if (currentPage > 1) { currentPage--; update(); } };
+            
+            const nextBtn = document.createElement('button');
+            nextBtn.className = `px-3 py-1 rounded text-xs font-bold border ${currentPage === totalPages ? 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50 transition-colors'}`;
+            nextBtn.textContent = 'Next';
+            nextBtn.disabled = currentPage === totalPages;
+            nextBtn.onclick = () => { if (currentPage < totalPages) { currentPage++; update(); } };
+            
+            buttons.appendChild(prevBtn);
+            
+            // Add page numbers
+            for (let i = 1; i <= totalPages; i++) {
+                // To prevent too many buttons, just show all for small lists or use a simple logic
+                const pageBtn = document.createElement('button');
+                pageBtn.className = `w-7 h-7 flex items-center justify-center rounded text-xs font-bold border transition-colors ${currentPage === i ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'}`;
+                pageBtn.textContent = i;
+                pageBtn.onclick = () => { currentPage = i; update(); };
+                buttons.appendChild(pageBtn);
+            }
+            
+            buttons.appendChild(nextBtn);
+            
+            wrapper.appendChild(info);
+            wrapper.appendChild(buttons);
+            controlsContainer.appendChild(wrapper);
+        }
+
+        function update() {
+            renderTable();
+            renderControls();
+        }
+
+        update();
+    }
+
+    setupPagination('paymentHistoryBody', 'paymentHistoryControls', 5);
+    setupPagination('paymentSubmissionsBody', 'paymentSubmissionsControls', 5);
+});
+</script>
 {% endblock %}

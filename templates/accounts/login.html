@@ -93,6 +93,94 @@
         }
       });
     }
+
+    // Validation logic
+    const emailInput = document.getElementById('id_username');
+    const passwordInput = document.getElementById('id_password');
+    const form = document.querySelector('form');
+    
+    // Create error message elements dynamically to not modify HTML
+    const emailError = document.createElement('div');
+    emailError.style.color = 'red';
+    emailError.style.fontSize = '12px';
+    emailError.style.marginTop = '4px';
+    emailInput.parentNode.appendChild(emailError);
+
+    const passwordError = document.createElement('div');
+    passwordError.style.color = 'red';
+    passwordError.style.fontSize = '12px';
+    passwordError.style.marginTop = '4px';
+    passwordInput.parentNode.appendChild(passwordError);
+
+    const weakPasswords = ['123456', 'password', 'qwerty', '12345678', '123456789', '1234567', '1234567890'];
+
+    function validateEmailOrUsername() {
+      const value = emailInput.value;
+      let error = '';
+
+      if (!value) {
+        error = 'This field is required.';
+      } else if (value.includes('@')) {
+        // Email validation
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (value.includes(' ')) {
+          error = 'Email cannot contain spaces.';
+        } else if (!emailPattern.test(value)) {
+          error = 'Must follow proper email format (name@domain.com).';
+        }
+      } else {
+        // Username validation
+        const usernamePattern = /^[a-zA-Z0-9_]+$/;
+        if (value.length < 4 || value.length > 20) {
+          error = 'Username must be 4-20 characters.';
+        } else if (!usernamePattern.test(value)) {
+          error = 'Username can only contain letters, numbers, and underscores.';
+        }
+      }
+
+      if (error) {
+        emailError.textContent = error;
+        emailInput.style.borderColor = 'red';
+        return false;
+      } else {
+        emailError.textContent = '';
+        emailInput.style.borderColor = 'green';
+        return true;
+      }
+    }
+
+    function validatePassword() {
+      const password = passwordInput.value;
+      let error = '';
+
+      if (!password) {
+        error = 'Password is required.';
+      } else if (weakPasswords.includes(password.toLowerCase())) {
+        error = 'Password is too common or weak.';
+      }
+
+      if (error) {
+        passwordError.textContent = error;
+        passwordInput.style.borderColor = 'red';
+        return false;
+      } else {
+        passwordError.textContent = '';
+        passwordInput.style.borderColor = 'green';
+        return true;
+      }
+    }
+
+    emailInput.addEventListener('input', validateEmailOrUsername);
+    passwordInput.addEventListener('input', validatePassword);
+
+    form.addEventListener('submit', function(e) {
+      const isEmailValid = validateEmailOrUsername();
+      const isPasswordValid = validatePassword();
+      
+      if (!isEmailValid || !isPasswordValid) {
+        e.preventDefault();
+      }
+    });
   });
 </script>
 {% endblock %}

@@ -160,6 +160,7 @@ def tenant_dashboard(request):
     # Get tenant's recent payments (pending and approved)
     recent_payments = []
     move_in_payment = None
+    has_pending_payment = False
     if request.user.is_authenticated:
         recent_payments = ManualPayment.objects.filter(
             user=request.user
@@ -167,6 +168,9 @@ def tenant_dashboard(request):
         move_in_payment = ManualPayment.objects.filter(
             user=request.user, payment_type="move_in"
         ).first()
+        has_pending_payment = ManualPayment.objects.filter(
+            user=request.user, status="PENDING"
+        ).exists()
     
     context = {
         "profile": profile,
@@ -178,6 +182,7 @@ def tenant_dashboard(request):
         "next_billing_month": next_billing_month,
         "recent_payments": recent_payments,
         "move_in_payment": move_in_payment,
+        "has_pending_payment": has_pending_payment,
     }
     return render(request, "rentals/tenant_dashboard.html", context)
 
@@ -288,6 +293,10 @@ def tenant_billing(request):
     ]
     year_choices = list(range(current_year - 3, current_year + 2))  # Last 3 years and next year
 
+    has_pending_payment = ManualPayment.objects.filter(
+        user=request.user, status="PENDING"
+    ).exists()
+
     return render(request, "billing/tenant_billing.html", {
         "lease": lease,
         "current_bill": current_bill,
@@ -298,6 +307,7 @@ def tenant_billing(request):
         "year_filter": year_filter,
         "month_choices": month_choices,
         "year_choices": year_choices,
+        "has_pending_payment": has_pending_payment,
     })
 
 

@@ -167,8 +167,7 @@
 
         <!-- Actions -->
         <div class="mt-12 space-y-4">
-          <form method="post" action="{% url 'manual_gcash_payment' %}">
-            {% csrf_token %}
+          <form method="get" action="{% url 'manual_gcash_payment' %}">
             <input type="hidden" name="bill_ids" value="{% for row in preview_rows %}{{ row.bill_id }}{% if not forloop.last %},{% endif %}{% endfor %}">
             <input type="hidden" name="payment_type" value="{{ payment_type|default:'full' }}">
             <input type="hidden" name="amount" value="{{ total_amount }}">
@@ -178,8 +177,7 @@
             </button>
           </form>
           
-          <form method="post" action="{% url 'f2f_cash_payment' %}">
-            {% csrf_token %}
+          <form method="get" action="{% url 'f2f_cash_payment' %}">
             <input type="hidden" name="bill_ids" value="{% for row in preview_rows %}{{ row.bill_id }}{% if not forloop.last %},{% endif %}{% endfor %}">
             <input type="hidden" name="payment_type" value="{{ payment_type|default:'full' }}">
             <input type="hidden" name="amount" value="{{ total_amount }}">

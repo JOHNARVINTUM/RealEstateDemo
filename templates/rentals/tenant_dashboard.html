@@ -25,107 +25,7 @@
     </div>
   </header>
 
-  <!-- No Unit Assigned Popup -->
-  {% if not lease %}
-  <div id="noUnitModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-3xl border border-slate-200 max-w-lg w-full shadow-2xl overflow-hidden">
-      <div class="p-10 text-center">
-        <div class="w-20 h-20 bg-blue-50 text-blue-700 rounded-2xl flex items-center justify-center text-4xl mb-6 mx-auto border-2 border-blue-100">
-          👋
-        </div>
-        <h3 class="text-3xl font-black text-slate-900 mb-4">Waiting for your room</h3>
-        <p class="text-xl text-slate-600 leading-relaxed mb-8">
-          Welcome! Your account is active, but we haven't assigned you a room yet. Once everything is ready, your rent details will appear here.
-        </p>
-        <div class="bg-slate-50 rounded-2xl p-6 border-2 border-slate-100 mb-8 text-left">
-          <p class="font-black text-slate-800 text-lg mb-3">Next Steps:</p>
-          <ul class="space-y-3 text-base text-slate-600 font-bold">
-            <li class="flex items-center gap-3">
-              <span class="w-2 h-2 rounded-full bg-blue-500"></span>
-              Watch your email for updates.
-            </li>
-            <li class="flex items-center gap-3">
-              <span class="w-2 h-2 rounded-full bg-blue-500"></span>
-              Check for news in the feed below.
-            </li>
-          </ul>
-        </div>
-        <button onclick="closeNoUnitModal()" class="w-full py-5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-xl transition-all shadow-lg active:scale-95">
-          Understood
-        </button>
-      </div>
-    </div>
-  </div>
 
-  <script>
-    function closeNoUnitModal() {
-      const modal = document.getElementById('noUnitModal');
-      if (modal) modal.style.display = 'none';
-    }
-    setTimeout(closeNoUnitModal, 15000);
-    document.getElementById('noUnitModal').addEventListener('click', function(e) {
-      if (e.target === this) closeNoUnitModal();
-    });
-  </script>
-  {% endif %}
-
-  <!-- Unit Welcome Popup -->
-  {% if lease and profile and not profile.has_seen_unit_welcome %}
-  <div id="unitWelcomeModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-3xl border border-slate-200 max-w-lg w-full shadow-2xl overflow-hidden">
-      <div class="p-10">
-        <div class="w-20 h-20 bg-emerald-50 text-emerald-700 rounded-2xl flex items-center justify-center text-4xl mb-6 border-2 border-emerald-100">
-          🎉
-        </div>
-        <h3 class="text-3xl font-black text-slate-900 mb-2">You have a room!</h3>
-        <p class="text-xl text-slate-600 mb-8 font-medium">You are now in Room <span class="font-black text-slate-900">{{ lease.unit.number }}</span>.</p>
-        
-        <div class="bg-slate-50 border-2 border-slate-100 rounded-2xl p-6 mb-8 space-y-4">
-          <div class="flex justify-between items-center py-2 border-b-2 border-slate-200/50">
-            <span class="text-slate-500 font-black uppercase text-xs tracking-widest">Unit Type</span>
-            <span class="text-lg font-black text-slate-900">{{ lease.unit.get_unit_type_display }}</span>
-          </div>
-          <div class="flex justify-between items-center py-2 border-b-2 border-slate-200/50">
-            <span class="text-slate-500 font-black uppercase text-xs tracking-widest">Floor / Size</span>
-            <span class="text-lg font-black text-slate-900">Floor {{ lease.unit.floor_level }} &bull; {{ lease.unit.size_sqm }} sqm</span>
-          </div>
-          <div class="flex justify-between items-center py-2 border-b-2 border-slate-200/50">
-            <span class="text-slate-500 font-black uppercase text-xs tracking-widest">Monthly Rate</span>
-            <span class="text-xl font-black text-emerald-700">₱{{ lease.monthly_rent|floatformat:2|intcomma }}</span>
-          </div>
-          <div class="flex justify-between items-center py-2">
-            <span class="text-slate-500 font-black uppercase text-xs tracking-widest">Pay By</span>
-            <span class="text-lg font-black text-slate-900">Day {{ lease.due_day }} of each month</span>
-          </div>
-        </div>
-
-        <button onclick="closeUnitWelcomeModal()" class="w-full py-5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-xl transition-all shadow-lg active:scale-95">
-          Close
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    function closeUnitWelcomeModal() {
-      const modal = document.getElementById('unitWelcomeModal');
-      if (modal) {
-        modal.style.display = 'none';
-        fetch('{% url "mark_unit_welcome_seen" %}', {
-          method: 'POST',
-          headers: {
-            'X-CSRFToken': '{{ csrf_token }}',
-            'Content-Type': 'application/json',
-          },
-        }).catch(error => console.log('Error marking welcome as seen:', error));
-      }
-    }
-    setTimeout(closeUnitWelcomeModal, 20000);
-    document.getElementById('unitWelcomeModal').addEventListener('click', function(e) {
-      if (e.target === this) closeUnitWelcomeModal();
-    });
-  </script>
-  {% endif %}
 
   <!-- Payment Status Card -->
   <section class="tenant-card border-l-[12px] {% if current_balance and current_balance.total_balance > 0 %}border-l-rose-600{% else %}border-l-emerald-600{% endif %} mb-10 p-8">
@@ -187,7 +87,11 @@
         <span class="text-2xl sm:text-3xl font-black text-slate-900 mb-6">
           {% if current_balance %}{{ current_balance.due_date|date:"F d, Y" }}{% else %}N/A{% endif %}
         </span>
-        {% if current_balance and current_balance.total_balance > 0 %}
+        {% if has_pending_payment %}
+          <div class="w-full lg:w-auto py-4 px-6 bg-emerald-100 border-2 border-emerald-200 text-emerald-800 font-black text-lg rounded-2xl text-center shadow-sm cursor-default">
+            Waiting for approval
+          </div>
+        {% elif current_balance and current_balance.total_balance > 0 %}
           <a href="{% url 'tenant_pay_advance' %}" class="w-full lg:w-48 py-4 bg-slate-900 hover:bg-slate-800 text-white font-black text-lg rounded-2xl text-center transition-all shadow-lg active:scale-95">
             Pay Now
           </a>
@@ -251,7 +155,11 @@
           <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight truncate">My Past Payments</h2>
           <p class="text-xs sm:text-base text-slate-500 font-bold mt-1 truncate">Your recent transactions</p>
         </div>
-        <a href="{% url 'tenant_pay_advance' %}" class="shrink-0 whitespace-nowrap px-4 py-2 sm:px-6 bg-blue-50 text-blue-700 text-xs sm:text-sm font-black rounded-xl hover:bg-blue-100 transition-all uppercase tracking-widest border border-blue-100">Pay Now</a>
+        {% if has_pending_payment %}
+          <span class="shrink-0 whitespace-nowrap px-4 py-2 sm:px-6 bg-emerald-50 text-emerald-700 text-xs sm:text-sm font-black rounded-xl uppercase tracking-widest border border-emerald-100 cursor-default">Waiting for approval</span>
+        {% else %}
+          <a href="{% url 'tenant_pay_advance' %}" class="shrink-0 whitespace-nowrap px-4 py-2 sm:px-6 bg-blue-50 text-blue-700 text-xs sm:text-sm font-black rounded-xl hover:bg-blue-100 transition-all uppercase tracking-widest border border-blue-100">Pay Now</a>
+        {% endif %}
       </div>
       
       <div class="space-y-6 flex-1 overflow-y-auto pr-2">
@@ -335,4 +243,108 @@
 
   </div>
 
+{% endblock %}
+
+{% block tenant_modals %}
+  <!-- No Unit Assigned Popup -->
+  {% if not lease %}
+  <div id="noUnitModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center z-[1050] p-4">
+    <div class="bg-white rounded-3xl border border-slate-200 max-w-lg w-full shadow-2xl overflow-hidden">
+      <div class="p-10 text-center">
+        <div class="w-20 h-20 bg-blue-50 text-blue-700 rounded-2xl flex items-center justify-center text-4xl mb-6 mx-auto border-2 border-blue-100">
+          👋
+        </div>
+        <h3 class="text-3xl font-black text-slate-900 mb-4">Waiting for your room</h3>
+        <p class="text-xl text-slate-600 leading-relaxed mb-8">
+          Welcome! Your account is active, but we haven't assigned you a room yet. Once everything is ready, your rent details will appear here.
+        </p>
+        <div class="bg-slate-50 rounded-2xl p-6 border-2 border-slate-100 mb-8 text-left">
+          <p class="font-black text-slate-800 text-lg mb-3">Next Steps:</p>
+          <ul class="space-y-3 text-base text-slate-600 font-bold">
+            <li class="flex items-center gap-3">
+              <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+              Watch your email for updates.
+            </li>
+            <li class="flex items-center gap-3">
+              <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+              Check for news in the feed below.
+            </li>
+          </ul>
+        </div>
+        <button onclick="closeNoUnitModal()" class="w-full py-5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-xl transition-all shadow-lg active:scale-95">
+          Understood
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function closeNoUnitModal() {
+      const modal = document.getElementById('noUnitModal');
+      if (modal) modal.style.display = 'none';
+    }
+    setTimeout(closeNoUnitModal, 15000);
+    document.getElementById('noUnitModal').addEventListener('click', function(e) {
+      if (e.target === this) closeNoUnitModal();
+    });
+  </script>
+  {% endif %}
+
+  <!-- Unit Welcome Popup -->
+  {% if lease and profile and not profile.has_seen_unit_welcome %}
+  <div id="unitWelcomeModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center z-[1050] p-4">
+    <div class="bg-white rounded-3xl border border-slate-200 max-w-lg w-full shadow-2xl overflow-hidden">
+      <div class="p-10">
+        <div class="w-20 h-20 bg-emerald-50 text-emerald-700 rounded-2xl flex items-center justify-center text-4xl mb-6 border-2 border-emerald-100">
+          🎉
+        </div>
+        <h3 class="text-3xl font-black text-slate-900 mb-2">You have a room!</h3>
+        <p class="text-xl text-slate-600 mb-8 font-medium">You are now in Room <span class="font-black text-slate-900">{{ lease.unit.number }}</span>.</p>
+        
+        <div class="bg-slate-50 border-2 border-slate-100 rounded-2xl p-6 mb-8 space-y-4">
+          <div class="flex justify-between items-center py-2 border-b-2 border-slate-200/50">
+            <span class="text-slate-500 font-black uppercase text-xs tracking-widest">Unit Type</span>
+            <span class="text-lg font-black text-slate-900">{{ lease.unit.get_unit_type_display }}</span>
+          </div>
+          <div class="flex justify-between items-center py-2 border-b-2 border-slate-200/50">
+            <span class="text-slate-500 font-black uppercase text-xs tracking-widest">Floor / Size</span>
+            <span class="text-lg font-black text-slate-900">Floor {{ lease.unit.floor_level }} &bull; {{ lease.unit.size_sqm }} sqm</span>
+          </div>
+          <div class="flex justify-between items-center py-2 border-b-2 border-slate-200/50">
+            <span class="text-slate-500 font-black uppercase text-xs tracking-widest">Monthly Rate</span>
+            <span class="text-xl font-black text-emerald-700">₱{{ lease.monthly_rent|floatformat:2|intcomma }}</span>
+          </div>
+          <div class="flex justify-between items-center py-2">
+            <span class="text-slate-500 font-black uppercase text-xs tracking-widest">Pay By</span>
+            <span class="text-lg font-black text-slate-900">Day {{ lease.due_day }} of each month</span>
+          </div>
+        </div>
+
+        <button onclick="closeUnitWelcomeModal()" class="w-full py-5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-xl transition-all shadow-lg active:scale-95">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function closeUnitWelcomeModal() {
+      const modal = document.getElementById('unitWelcomeModal');
+      if (modal) {
+        modal.style.display = 'none';
+        fetch('{% url "mark_unit_welcome_seen" %}', {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+          },
+        }).catch(error => console.log('Error marking welcome as seen:', error));
+      }
+    }
+    setTimeout(closeUnitWelcomeModal, 20000);
+    document.getElementById('unitWelcomeModal').addEventListener('click', function(e) {
+      if (e.target === this) closeUnitWelcomeModal();
+    });
+  </script>
+  {% endif %}
 {% endblock %}

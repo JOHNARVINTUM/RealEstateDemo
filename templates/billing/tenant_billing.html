@@ -205,9 +205,15 @@
           </div>
 
           <div class="mt-8 pt-8 border-t-2 border-slate-50">
-            <a href="{% url 'tenant_pay_advance' %}" class="w-full py-5 bg-slate-900 hover:bg-slate-800 text-white font-black text-xl rounded-2xl text-center block transition-all shadow-lg active:scale-95">
-              Pay Now
-            </a>
+            {% if has_pending_payment %}
+              <div class="w-full py-5 bg-emerald-100 border-2 border-emerald-200 text-emerald-800 font-black text-xl rounded-2xl text-center block shadow-sm cursor-default">
+                Waiting for approval
+              </div>
+            {% else %}
+              <a href="{% url 'tenant_pay_advance' %}" class="w-full py-5 bg-slate-900 hover:bg-slate-800 text-white font-black text-xl rounded-2xl text-center block transition-all shadow-lg active:scale-95">
+                Pay Now
+              </a>
+            {% endif %}
           </div>
         </div>
 

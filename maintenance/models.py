@@ -32,6 +32,7 @@ class MaintenanceRequest(models.Model):
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
     title = models.CharField(max_length=120)
     description = models.TextField()
+    photo = models.ImageField(upload_to="maintenance_photos/", null=True, blank=True)
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="OPEN")
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default="MEDIUM")

@@ -42,10 +42,26 @@ def admin_notifications(request):
     notifications = Notification.objects.filter(
         recipient_type='ADMIN',
         user=user
-    ).order_by('-created_at')
+    )
+    
+    # Handle filtering
+    status_filter = request.GET.get('status', 'all')
+    if status_filter == 'unread':
+        notifications = notifications.filter(is_read=False)
+    elif status_filter == 'read':
+        notifications = notifications.filter(is_read=True)
+        
+    notifications = notifications.order_by('is_read', '-created_at')
+    
+    # Calculate unread count (unfiltered)
+    unread_count = Notification.objects.filter(
+        recipient_type='ADMIN', user=user, is_read=False
+    ).count()
     
     return render(request, 'admin_portal/notifications.html', {
         'notifications': notifications,
+        'unread_count': unread_count,
+        'status_filter': status_filter,
         'user_type': 'admin'
     })
 

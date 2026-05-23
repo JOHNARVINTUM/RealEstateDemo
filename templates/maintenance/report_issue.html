@@ -27,7 +27,7 @@
           <p class="text-lg text-slate-500 font-bold mt-1">Please fill out the form below.</p>
         </div>
 
-        <form method="post" class="space-y-8 tenant-form">
+        <form method="post" enctype="multipart/form-data" class="space-y-8 tenant-form">
           {% csrf_token %}
           
           <!-- Type -->
@@ -47,6 +47,13 @@
             <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3">Description</label>
             {{ form.description }}
             <p class="text-sm text-slate-400 mt-3 font-bold italic">* Tell us exactly what and where the problem is (e.g. kitchen sink, bedroom light).</p>
+          </div>
+
+          <!-- Photo Upload -->
+          <div>
+            <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3">Attach a Photo (Optional)</label>
+            {{ form.photo }}
+            <p class="text-sm text-slate-400 mt-3 font-bold italic">* A clear picture helps our maintenance team resolve the issue faster.</p>
           </div>
 
           <!-- Submit -->

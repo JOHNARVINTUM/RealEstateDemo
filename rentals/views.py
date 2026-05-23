@@ -506,15 +506,30 @@ def tenant_notifications(request):
     Display all notifications for the current tenant.
     Unread notifications are shown first, sorted by creation date.
     """
-    # Get notifications for this tenant, ordered by unread first, then by date
+    # Get notifications for this tenant
     notifications = Notification.objects.filter(
         recipient_type='TENANT',
         user=request.user
-    ).order_by('is_read', '-created_at')
+    )
+    
+    # Handle filtering
+    status_filter = request.GET.get('status', 'all')
+    if status_filter == 'unread':
+        notifications = notifications.filter(is_read=False)
+    elif status_filter == 'read':
+        notifications = notifications.filter(is_read=True)
+        
+    notifications = notifications.order_by('is_read', '-created_at')
+    
+    # Calculate unread count (unfiltered)
+    unread_count = Notification.objects.filter(
+        recipient_type='TENANT', user=request.user, is_read=False
+    ).count()
     
     context = {
         "notifications": notifications,
-        "unread_count": notifications.filter(is_read=False).count(),
+        "unread_count": unread_count,
+        "status_filter": status_filter,
     }
     return render(request, "rentals/tenant_notifications.html", context)
 

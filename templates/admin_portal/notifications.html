@@ -156,7 +156,7 @@ function sortNotificationsFrontend() {
 }
 
 function refreshNotifications() {
-  fetch('{% url "admin_notifications" %}', {
+  fetch(window.location.href, {
     headers: {
       'X-Requested-With': 'XMLHttpRequest',
       'Cache-Control': 'no-cache'
@@ -285,6 +285,19 @@ document.addEventListener('submit', function(e) {
       </button>
     </div>
   </header>
+
+  <!-- Filter Bar -->
+  <div class="flex items-center gap-2">
+    <a href="?status=all" class="px-4 py-2 rounded-lg text-xs font-bold transition-colors shadow-xs {% if status_filter == 'all' or not status_filter %}bg-slate-800 text-white{% else %}bg-white border border-slate-300 text-slate-700 hover:bg-slate-50{% endif %}">
+      All
+    </a>
+    <a href="?status=unread" class="px-4 py-2 rounded-lg text-xs font-bold transition-colors shadow-xs {% if status_filter == 'unread' %}bg-slate-800 text-white{% else %}bg-white border border-slate-300 text-slate-700 hover:bg-slate-50{% endif %}">
+      Unread
+    </a>
+    <a href="?status=read" class="px-4 py-2 rounded-lg text-xs font-bold transition-colors shadow-xs {% if status_filter == 'read' %}bg-slate-800 text-white{% else %}bg-white border border-slate-300 text-slate-700 hover:bg-slate-50{% endif %}">
+      Read
+    </a>
+  </div>
 
   <!-- Feed Output Array Container -->
   <div class="space-y-4">

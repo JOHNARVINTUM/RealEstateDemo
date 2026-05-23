@@ -11,7 +11,7 @@ def report_issue(request):
     lease = Lease.objects.filter(tenant=user, is_active=True).select_related("unit").first()
 
     if request.method == "POST":
-        form = MaintenanceRequestForm(request.POST)
+        form = MaintenanceRequestForm(request.POST, request.FILES)
         if form.is_valid():
             obj: MaintenanceRequest = form.save(commit=False)
             obj.tenant = user

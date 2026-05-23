@@ -1183,8 +1183,21 @@ def admin_notifications(request):
     # Only show notifications meant for admins (not tenant notifications)
     notifications = Notification.objects.filter(
         recipient_type__in=['ADMIN', 'SPECIFIC_USER']
-    ).order_by('-created_at')
-    unread_count = notifications.filter(is_read=False).count()
+    )
+    
+    # Handle filtering
+    status_filter = request.GET.get('status', 'all')
+    if status_filter == 'unread':
+        notifications = notifications.filter(is_read=False)
+    elif status_filter == 'read':
+        notifications = notifications.filter(is_read=True)
+        
+    notifications = notifications.order_by('-created_at')
+    
+    # Unread count (unfiltered)
+    unread_count = Notification.objects.filter(
+        recipient_type__in=['ADMIN', 'SPECIFIC_USER'], is_read=False
+    ).count()
     
     # Return JSON only for genuine AJAX requests (not browser back navigation)
     is_ajax = (
@@ -1218,6 +1231,7 @@ def admin_notifications(request):
     return render(request, "admin_portal/notifications.html", {
         'notifications': notifications,
         'unread_count': unread_count,
+        'status_filter': status_filter,
     })
 
 

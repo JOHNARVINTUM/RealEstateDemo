@@ -1,0 +1,96 @@
+{% extends "tenant_base.html" %}
+{% load humanize %}
+{% block title %}Payment Successful | RealEstate360+{% endblock %}
+{% block meta_description %}Your online payment has been processed.{% endblock %}
+
+{% block tenant_content %}
+
+  <!-- Page Header -->
+  <div class="mb-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 border-b-2 border-slate-100 pb-8">
+    <div>
+      <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">Payment Successful</h1>
+      <p class="text-lg text-slate-500 font-bold mt-2">Your online payment has been processed and your bills are updated.</p>
+    </div>
+    <div class="bg-white border-2 border-emerald-100 px-6 py-4 rounded-2xl shadow-sm w-fit">
+      <span class="text-xs font-black text-emerald-400 block uppercase tracking-widest mb-1">Status</span>
+      <span class="text-lg font-black text-emerald-600 flex items-center gap-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+        Approved
+      </span>
+    </div>
+  </div>
+
+  <!-- Success Card -->
+  <div class="max-w-2xl mx-auto">
+    <div class="tenant-card p-10 text-center mb-10">
+      <!-- Success Icon -->
+      <div class="w-24 h-24 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-8">
+        <svg class="w-12 h-12 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+        </svg>
+      </div>
+
+      <h2 class="text-3xl font-black text-slate-900 mb-4">Thank You!</h2>
+      <p class="text-lg text-slate-500 font-bold mb-8">Your payment has been automatically verified and applied to your account.</p>
+
+      {% if payment %}
+        <!-- Payment Details -->
+        <div class="bg-slate-50 border-2 border-slate-100 rounded-[2rem] p-8 text-left space-y-4 mb-8">
+          <div class="flex justify-between items-center">
+            <span class="text-sm font-black text-slate-400 uppercase tracking-widest">Reference</span>
+            <span class="text-lg font-black text-slate-900">{{ payment.reference_code }}</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm font-black text-slate-400 uppercase tracking-widest">Amount</span>
+            <span class="text-2xl font-black text-emerald-600">₱{{ payment.amount|floatformat:2|intcomma }}</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm font-black text-slate-400 uppercase tracking-widest">Method</span>
+            <span class="text-lg font-bold text-slate-700">
+              {% if payment.paid_via %}{{ payment.paid_via|title }}{% else %}PayMongo{% endif %}
+            </span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm font-black text-slate-400 uppercase tracking-widest">Status</span>
+            <span class="px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest
+              {% if payment.status == 'APPROVED' %}bg-emerald-100 text-emerald-700{% else %}bg-amber-100 text-amber-700{% endif %}">
+              {{ payment.status }}
+            </span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm font-black text-slate-400 uppercase tracking-widest">Date</span>
+            <span class="text-lg font-bold text-slate-700">{{ payment.created_at|date:"M d, Y h:i A" }}</span>
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- Actions -->
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a href="{% url 'tenant_billing' %}"
+           class="px-8 py-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black text-lg shadow-xl transition-all active:scale-95">
+          View My Bills
+        </a>
+        <a href="{% url 'tenant_dashboard' %}"
+           class="px-8 py-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-black text-lg border-2 border-slate-200 transition-all active:scale-95">
+          Back to Dashboard
+        </a>
+      </div>
+    </div>
+
+    <!-- Info Note -->
+    <div class="p-8 rounded-[2rem] bg-emerald-50 border-2 border-emerald-100 text-lg text-emerald-700 leading-relaxed">
+      <div class="flex items-start gap-4">
+        <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div>
+          <span class="font-black block mb-1">Instant Verification</span>
+          <span class="font-bold">Online payments via PayMongo are automatically verified. No need to wait for admin approval — your billing statement is already updated.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+{% endblock %}

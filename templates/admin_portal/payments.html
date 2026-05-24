@@ -87,6 +87,7 @@
           <option value="">All Pay Methods</option>
           <option value="GCASH" {% if method == "GCASH" %}selected{% endif %}>GCash QR</option>
           <option value="CASH" {% if method == "CASH" %}selected{% endif %}>F2F Cash</option>
+          <option value="PAYMONGO" {% if method == "PAYMONGO" %}selected{% endif %}>PayMongo</option>
         </select>
         
         <select name="status" onchange="this.form.submit()" class="bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-slate-500 transition-all outline-none cursor-pointer min-w-[130px]">
@@ -146,6 +147,10 @@
                 <span class="inline-block px-2.5 py-1 rounded bg-blue-50 border border-blue-200 text-blue-800 text-[10px] font-extrabold uppercase select-none">
                   GCash
                 </span>
+              {% elif p.payment_method == "PAYMONGO" %}
+                <span class="inline-block px-2.5 py-1 rounded bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-extrabold uppercase select-none">
+                  PayMongo{% if p.paid_via %} · {{ p.paid_via|title }}{% endif %}
+                </span>
               {% else %}
                 <span class="inline-block px-2.5 py-1 rounded bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-extrabold uppercase select-none">
                   Cash
@@ -166,6 +171,12 @@
               {% if p.payment_method == "GCASH" %}
                 <strong class="text-xs font-mono font-bold text-slate-800 block">{{ p.reference_code }}</strong>
                 <span class="text-[10px] text-slate-500 block">GCash Reference</span>
+              {% elif p.payment_method == "PAYMONGO" %}
+                <strong class="text-xs font-mono font-bold text-slate-800 block">{{ p.reference_code }}</strong>
+                <span class="text-[10px] text-slate-500 block">PayMongo Checkout</span>
+                {% if p.paymongo_payment_id %}
+                  <span class="text-[10px] text-slate-400 block">{{ p.paymongo_payment_id }}</span>
+                {% endif %}
               {% else %}
                 <div class="space-y-0.5">
                   <strong class="text-xs font-bold text-slate-800 block">
@@ -220,7 +231,9 @@
                 {% if p.status == "PENDING" %}
                   
                   <!-- Conditional Route Appraisals -->
-                  {% if p.payment_method == "GCASH" %}
+                  {% if p.payment_method == "PAYMONGO" %}
+                    <span class="px-2.5 py-1.5 bg-emerald-50 border border-emerald-200 rounded text-emerald-800 text-[10px] font-bold">Auto-Approved</span>
+                  {% elif p.payment_method == "GCASH" %}
                     <form method="post" action="{% url 'admin_approve_payment' p.id %}" class="confirm-action inline-block" data-confirm="Approve ₱{{ p.amount|floatformat:2|intcomma }} GCash payment from {{ p.user.email }}?&#10;&#10;Reference: {{ p.reference_code }}&#10;Type: {{ p.payment_type }}&#10;Bills: {{ p.bill_ids }}">
                       {% csrf_token %}
                       <button type="submit" class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-600 hover:text-white border border-emerald-200 rounded text-emerald-800 text-xs font-bold transition-colors" title="Authorize Transfer">

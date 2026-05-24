@@ -12,6 +12,14 @@ User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
+def _ordinal(n):
+    """Return ordinal string for an integer: 1->'1st', 2->'2nd', 3->'3rd', etc."""
+    n = int(n)
+    if 11 <= (n % 100) <= 13:
+        return f"{n}th"
+    return f"{n}{['th','st','nd','rd','th'][min(n % 10, 4)]}"
+
+
 class TenantProfileForm(forms.ModelForm):
     # Create a new tenant user with profile
     email = forms.EmailField(required=True, label="Email address")
@@ -217,7 +225,7 @@ You can now access your tenant portal to:
 - Request maintenance services
 - Access announcements and updates
 
-Monthly Rent Reminder: Your rent is due on the {lease.due_day if lease else '5th'} of each month.
+Monthly Rent Reminder: Your rent is due on the {_ordinal(lease.due_day) if lease else '5th'} of each month.
 
 Please keep your login credentials secure and do not share them with others."""
                         

@@ -159,8 +159,8 @@ class Lease(models.Model):
         """Override save to handle smart status setting"""
         from django.utils import timezone
         
-        # Set smart status based on start date
-        if self.start_date <= timezone.now().date():
+        # Set smart status based on start date (use localdate to respect TIME_ZONE)
+        if self.start_date <= timezone.localdate():
             self.is_active = True
         else:
             self.is_active = False
@@ -178,6 +178,8 @@ class Notification(models.Model):
         ('BILLING', 'Billing'),
         ('MAINTENANCE', 'Maintenance'),
         ('UNIT', 'Unit Related'),
+        ('PAYMENT', 'Payment'),
+        ('LEASE', 'Lease'),
     ]
     
     RECIPIENT_TYPES = [

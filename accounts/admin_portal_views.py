@@ -21,6 +21,7 @@ from billing.services import ensure_bills_since_move_in, set_bill_status, approv
 from payments.models import ManualPayment
 from maintenance.models import MaintenanceRequest
 from water.models import WaterReading
+from accounts.admin_portal_forms import _ordinal
 
 
 def debug_lease_form(request):
@@ -668,7 +669,7 @@ Your unit features: {lease.unit.description or 'Modern living space with premium
 Amenities included: {lease.unit.amenities or 'Contact admin for full amenities list.'}
 
 Payment Due Dates:
-• Rent is due on the {lease.due_day} of each month
+• Rent is due on the {_ordinal(lease.due_day)} of each month
 • Your advance payment covers the first {lease.advance_months} months
 • Regular rent payments start {lease.first_rent_due_date.strftime('%B %d, %Y')}
 
@@ -756,13 +757,17 @@ Welcome aboard! We're excited to have you as part of our community!"""
                     if move_in_method == 'CASH' and not move_in_ref:
                         move_in_ref = f'REF-CASH-MOVEIN-{lease.id}'
 
-                    # Get the first month's bill (billing_month = start month)
-                    from billing.services import month_start
+                    # Get or create the first month's bill (billing_month = start month)
+                    from billing.services import month_start, get_or_update_monthly_bill
                     first_bill_month = month_start(lease.start_date)
                     first_bill = MonthlyBill.objects.filter(
                         lease=lease,
                         billing_month=first_bill_month,
                     ).first()
+
+                    # If ensure_bills_since_move_in didn't create it (e.g. timezone edge case), force-create it
+                    if not first_bill:
+                        first_bill = get_or_update_monthly_bill(lease, first_bill_month)
 
                     # Mark it PAID with the move-in reference
                     if first_bill:
@@ -1528,7 +1533,9 @@ def admin_payments(request):
     if method == "GCASH":
         payments = payments.filter(payment_method="GCASH")
     elif method == "CASH":
-        payments = payments.filter(~Q(payment_method="GCASH"))
+        payments = payments.filter(payment_method="CASH")
+    elif method == "PAYMONGO":
+        payments = payments.filter(payment_method="PAYMONGO")
 
     if q:
         payments = payments.filter(

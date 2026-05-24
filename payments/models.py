@@ -28,6 +28,7 @@ class ManualPayment(models.Model):
     PAYMENT_METHOD_CHOICES = [
         ("GCASH", "GCash QR"),
         ("CASH", "Face-to-Face Cash"),
+        ("PAYMONGO", "PayMongo Checkout"),
     ]
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
@@ -51,6 +52,12 @@ class ManualPayment(models.Model):
 
     # Schedule confirmation for F2F payments
     schedule_confirmed = models.BooleanField(default=False, help_text="Admin has confirmed the F2F appointment time")
+
+    # PayMongo Checkout fields
+    checkout_session_id = models.CharField(max_length=100, blank=True, default="")
+    checkout_url = models.URLField(max_length=500, blank=True, default="")
+    paymongo_payment_id = models.CharField(max_length=100, blank=True, default="")
+    paid_via = models.CharField(max_length=30, blank=True, default="", help_text="Actual method used in PayMongo (gcash, card, grab_pay, etc.)")
 
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="PENDING")
     created_at = models.DateTimeField(auto_now_add=True)

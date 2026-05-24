@@ -145,7 +145,7 @@ LOGOUT_REDIRECT_URL = "login"
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Manila'
 
 USE_I18N = True
 
@@ -170,6 +170,10 @@ MEDIA_ROOT = BASE_DIR / "media"
 GCASH_NUMBER = "09219429053"
 GCASH_NAME = "John Arvin Tumbagahon"
 GCASH_QR_URL = "/static/img/qr.jpg"
+
+# PayMongo Checkout API
+PAYMONGO_SECRET_KEY = os.environ.get("PAYMONGO_SECRET_KEY", "")
+PAYMONGO_PUBLIC_KEY = os.environ.get("PAYMONGO_PUBLIC_KEY", "")
 
 # Email via Resend HTTP API (Railway blocks all SMTP ports)
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')

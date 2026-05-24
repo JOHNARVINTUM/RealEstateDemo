@@ -132,3 +132,124 @@ class BillingWorkflowTests(TestCase):
         payment.refresh_from_db()
 
         self.assertEqual(payment.bill_ids, "9999")
+
+
+class LeaseActivationTimezoneTests(TestCase):
+    """
+    Ensure Lease.save() uses timezone.localdate() (Asia/Manila)
+    so leases starting "today" in PH time are always marked active,
+    even when UTC date is still yesterday.
+    """
+
+    def setUp(self):
+        self.tenant = User.objects.create_user(
+            email="tz_tenant@example.com",
+            username="tz_tenant",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        self.unit = Unit.objects.create(number="TZ-001")
+
+    def test_lease_active_when_start_date_is_today_local(self):
+        from django.utils import timezone
+        today_local = timezone.localdate()
+        lease = Lease.objects.create(
+            tenant=self.tenant, unit=self.unit,
+            monthly_rent=Decimal("10000.00"), due_day=5, start_date=today_local,
+        )
+        self.assertTrue(lease.is_active)
+
+    def test_lease_active_when_start_date_is_in_past(self):
+        lease = Lease.objects.create(
+            tenant=self.tenant, unit=self.unit,
+            monthly_rent=Decimal("10000.00"), due_day=5, start_date=date(2025, 1, 1),
+        )
+        self.assertTrue(lease.is_active)
+
+    def test_lease_inactive_when_start_date_is_future(self):
+        from django.utils import timezone
+        from datetime import timedelta
+        tomorrow = timezone.localdate() + timedelta(days=1)
+        lease = Lease.objects.create(
+            tenant=self.tenant, unit=self.unit,
+            monthly_rent=Decimal("10000.00"), due_day=5, start_date=tomorrow,
+        )
+        self.assertFalse(lease.is_active)
+
+    def test_lease_uses_localdate_not_utc(self):
+        """Simulate 1 AM Manila (May 25) = 5 PM UTC (May 24). Lease starting May 25 must be active."""
+        from unittest.mock import patch
+        from django.utils import timezone
+        from datetime import datetime
+        import zoneinfo
+
+        fake_now = datetime(2026, 5, 24, 17, 0, 0, tzinfo=zoneinfo.ZoneInfo("UTC"))
+        with patch("django.utils.timezone.now", return_value=fake_now):
+            local_date = timezone.localdate()
+            lease = Lease.objects.create(
+                tenant=self.tenant, unit=self.unit,
+                monthly_rent=Decimal("10000.00"), due_day=5, start_date=date(2026, 5, 25),
+            )
+            self.assertEqual(local_date, date(2026, 5, 25))
+            self.assertTrue(lease.is_active)
+
+
+class MoveInFirstMonthPaidTests(TestCase):
+    """
+    Ensure the move-in flow marks the first month bill as PAID.
+    """
+
+    def setUp(self):
+        self.tenant = User.objects.create_user(
+            email="movein_tenant@example.com",
+            username="movein_tenant",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        self.unit = Unit.objects.create(number="MI-001")
+
+    def test_first_month_bill_marked_paid_after_move_in(self):
+        from billing.services import month_start, get_or_update_monthly_bill, set_bill_status, ensure_bills_since_move_in
+        from django.utils import timezone
+
+        today_local = timezone.localdate()
+        lease = Lease.objects.create(
+            tenant=self.tenant, unit=self.unit,
+            monthly_rent=Decimal("11666.00"), due_day=5, start_date=today_local,
+        )
+        ensure_bills_since_move_in(lease)
+
+        first_bill_month = month_start(lease.start_date)
+        first_bill = MonthlyBill.objects.filter(lease=lease, billing_month=first_bill_month).first()
+        if not first_bill:
+            first_bill = get_or_update_monthly_bill(lease, first_bill_month)
+
+        self.assertIsNotNone(first_bill)
+
+        set_bill_status(first_bill, status="PAID", payment_reference="REF-MOVEIN-TEST", paid_at=timezone.now())
+        move_in_payment = ManualPayment.objects.create(
+            user=self.tenant, payment_type="move_in", payment_method="GCASH",
+            amount=lease.total_move_in_cost, reference_code="REF-MOVEIN-TEST",
+            bill_ids=str(first_bill.id), status="APPROVED",
+        )
+
+        first_bill.refresh_from_db()
+        self.assertEqual(first_bill.status, "PAID")
+        self.assertEqual(first_bill.rent_paid, lease.monthly_rent)
+        self.assertEqual(first_bill.total_balance, 0)
+        self.assertEqual(move_in_payment.bill_ids, str(first_bill.id))
+
+    def test_fallback_creates_first_bill_when_ensure_bills_skipped(self):
+        from billing.services import month_start, get_or_update_monthly_bill
+
+        lease = Lease.objects.create(
+            tenant=self.tenant, unit=self.unit,
+            monthly_rent=Decimal("10000.00"), due_day=5, start_date=date(2026, 5, 25),
+        )
+        first_bill_month = month_start(lease.start_date)
+        self.assertEqual(MonthlyBill.objects.filter(lease=lease, billing_month=first_bill_month).count(), 0)
+
+        first_bill = get_or_update_monthly_bill(lease, first_bill_month)
+        self.assertIsNotNone(first_bill)
+        self.assertEqual(first_bill.base_rent, Decimal("10000.00"))
+        self.assertEqual(first_bill.status, "UNPAID")

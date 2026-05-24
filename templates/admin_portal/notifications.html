@@ -183,7 +183,7 @@ function refreshNotifications() {
 }
 
 function updateUnreadCount() {
-  fetch('{% url "admin_notifications" %}', {
+  fetch('{% url "admin_notifications" %}?format=json', {
     headers: { 'X-Requested-With': 'XMLHttpRequest' }
   })
   .then(response => response.json())

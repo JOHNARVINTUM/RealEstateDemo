@@ -84,11 +84,21 @@
       <h1 class="text-3xl md:text-5xl font-black text-slate-900 mt-1">Forecasting</h1>
       <p class="text-slate-600 mt-3 text-xl font-medium leading-relaxed">SARIMA-based forecast using the last 2 years of historical data.</p>
     </div>
-    <div class="flex items-center gap-2 px-5 py-3 bg-violet-50 border border-violet-200 rounded-xl">
-      <svg class="w-5 h-5 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-      </svg>
-      <span class="text-base font-black text-violet-800 uppercase tracking-tight">Method: SARIMA(0,1,1)(0,1,1,12)</span>
+    <div class="flex items-center gap-4 flex-wrap">
+      <div class="flex items-center gap-2 px-5 py-3 bg-violet-50 border border-violet-200 rounded-xl">
+        <svg class="w-5 h-5 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <span class="text-base font-black text-violet-800 uppercase tracking-tight">SARIMA</span>
+      </div>
+      <form method="get" class="flex items-center gap-2">
+        <label for="yearSelect" class="text-sm font-bold text-slate-600 uppercase tracking-widest whitespace-nowrap">Year:</label>
+        <select name="year" id="yearSelect" onchange="this.form.submit()" class="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 shadow-sm cursor-pointer">
+          {% for yr in year_choices %}
+            <option value="{{ yr }}" {% if yr == selected_year %}selected{% endif %}>{{ yr }}</option>
+          {% endfor %}
+        </select>
+      </form>
     </div>
   </header>
 
@@ -125,6 +135,31 @@
       <div class="text-sm font-bold text-slate-400 uppercase mt-2 block">Forecast</div>
     </div>
 
+  </section>
+
+  <!-- Plain-English Insights -->
+  <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5">
+      <div class="flex items-center gap-2 mb-2">
+        <svg class="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+        <span class="text-sm font-black text-slate-700 uppercase tracking-wider">Revenue Insight</span>
+      </div>
+      <p class="text-sm font-medium text-slate-600 leading-relaxed">{{ revenue_insight }}</p>
+    </div>
+    <div class="bg-teal-50 border border-teal-200 rounded-2xl p-5">
+      <div class="flex items-center gap-2 mb-2">
+        <svg class="w-5 h-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+        <span class="text-sm font-black text-teal-700 uppercase tracking-wider">Water Insight</span>
+      </div>
+      <p class="text-sm font-medium text-teal-700 leading-relaxed">{{ water_insight }}</p>
+    </div>
+    <div class="bg-violet-50 border border-violet-200 rounded-2xl p-5">
+      <div class="flex items-center gap-2 mb-2">
+        <svg class="w-5 h-5 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17l-5.384-3.27A1.998 1.998 0 014 10.192V6.75a2 2 0 012-2h12a2 2 0 012 2v3.442c0 .68-.346 1.314-.92 1.683l-5.39 3.27a2 2 0 01-2.27.025z"/></svg>
+        <span class="text-sm font-black text-violet-700 uppercase tracking-wider">Maintenance Insight</span>
+      </div>
+      <p class="text-sm font-medium text-violet-700 leading-relaxed">{{ maintenance_insight }}</p>
+    </div>
   </section>
 
   <!-- Model Comparison Table -->

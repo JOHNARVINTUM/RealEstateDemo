@@ -125,29 +125,29 @@ def admin_dashboard(request):
     expected_water_revenue = current_month_bills.aggregate(total=Sum("water_amount"))["total"] or 0
     expected_penalties = current_month_bills.aggregate(total=Sum("interest"))["total"] or 0
     
-    # ACTUAL COLLECTED from PAID bills this month
-    paid_bills = MonthlyBill.objects.filter(
+    # ACTUAL COLLECTED this month — use _paid fields to capture partial payments too
+    all_month_bills = MonthlyBill.objects.filter(
         billing_month__year=current_year,
         billing_month__month=current_month,
-        status="PAID",
     )
     
-    # Rent collected (use base_rent from PAID bills - rent_paid may be 0 on older bills)
-    rent_collected = paid_bills.aggregate(
-        total=Sum("base_rent")
+    # Rent collected (actual amount received, not just from fully-paid bills)
+    rent_collected = all_month_bills.aggregate(
+        total=Sum("rent_paid")
     )["total"] or 0
     
-    # Water collected (use water_amount from PAID bills - water_paid may be 0 on older bills)
-    water_collected = paid_bills.aggregate(
-        total=Sum("water_amount")
+    # Water collected (actual amount received)
+    water_collected = all_month_bills.aggregate(
+        total=Sum("water_paid")
     )["total"] or 0
     
-    # Parking collected (from paid bills - use parking_fee since older bills may have parking_paid=0)
-    parking_collected = paid_bills.aggregate(
-        total=Sum("parking_fee")
+    # Parking collected (actual amount received)
+    parking_collected = all_month_bills.aggregate(
+        total=Sum("parking_paid")
     )["total"] or 0
     
-    # Penalties/Interest collected
+    # Late fees collected (from PAID bills only — interest is zeroed out on payment)
+    paid_bills = all_month_bills.filter(status="PAID")
     interest_collected = paid_bills.aggregate(
         total=Sum("interest")
     )["total"] or 0
@@ -291,9 +291,15 @@ def admin_tenants(request):
     q = request.GET.get("q", "").strip()
     lease_filter = request.GET.get("lease", "").strip()
 
+    today = timezone.localdate()
     tenants_list = TenantProfile.objects.select_related("user").annotate(
         has_active_lease=Exists(
-            Lease.objects.filter(tenant=OuterRef("user"), is_active=True)
+            Lease.objects.filter(
+                tenant=OuterRef("user"),
+                start_date__lte=today,
+            ).filter(
+                Q(end_date__isnull=True) | Q(end_date__gte=today)
+            )
         )
     )
     if q:
@@ -942,6 +948,7 @@ def admin_edit_lease(request, lease_id: int):
     return render(request, "admin_portal/lease_form.html", {
         "title": "Edit Lease",
         "form": form,
+        "lease": lease,
         "back_url": reverse("admin_tenants"),
         "schedule_preview": None,
         "gcash_name": getattr(settings, 'GCASH_NAME', ''),
@@ -1197,17 +1204,17 @@ def admin_notifications(request):
     elif status_filter == 'read':
         notifications = notifications.filter(is_read=True)
         
-    notifications = notifications.order_by('-created_at')
+    notifications = notifications.order_by('is_read', '-created_at')
     
     # Unread count (unfiltered)
     unread_count = Notification.objects.filter(
         recipient_type__in=['ADMIN', 'SPECIFIC_USER'], is_read=False
     ).count()
     
-    # Return JSON only for genuine AJAX requests (not browser back navigation)
+    # Return JSON only when explicitly requested via ?format=json AND AJAX header
     is_ajax = (
-        request.headers.get('X-Requested-With') == 'XMLHttpRequest' and
-        'text/html' not in request.headers.get('Accept', '')
+        request.GET.get('format') == 'json' and
+        request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     )
     if is_ajax:
         from django.http import JsonResponse
@@ -1576,7 +1583,34 @@ def admin_payments(request):
     paginator = Paginator(payments, 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
-    
+
+    # Annotate each payment on the current page with unit number and bill type breakdown
+    for p in page_obj:
+        # Get tenant unit from active lease
+        tenant_lease = Lease.objects.filter(tenant=p.user).select_related('unit').order_by('-start_date').first()
+        p.unit_number = tenant_lease.unit.number if tenant_lease and tenant_lease.unit else None
+        # Parse bill_ids and get bill type summary
+        p.bill_type_label = p.get_payment_type_display() if hasattr(p, 'get_payment_type_display') else p.payment_type
+        try:
+            bid_list = [int(x.strip()) for x in p.bill_ids.split(',') if x.strip().isdigit()]
+            if bid_list:
+                bills = MonthlyBill.objects.filter(pk__in=bid_list)
+                parts = []
+                has_rent = any(b.base_rent > 0 for b in bills)
+                has_water = any(b.water_amount > 0 for b in bills)
+                has_parking = any(b.parking_fee > 0 for b in bills)
+                if has_rent:
+                    parts.append('Rent')
+                if has_water:
+                    parts.append('Water')
+                if has_parking:
+                    parts.append('Parking')
+                p.bill_components = ', '.join(parts) if parts else 'Rent'
+            else:
+                p.bill_components = '—'
+        except Exception:
+            p.bill_components = '—'
+
     return render(request, "admin_portal/payments.html", {
         "page_obj": page_obj, 
         "q": q, 
@@ -2117,7 +2151,24 @@ def admin_delete_attachment(request, attachment_id: int):
 @admin_required
 def admin_forecasting(request):
     today = timezone.now().date()
-    current_month_start = today.replace(day=1)
+
+    # Year selector: allow admin to pick a year to forecast from (defaults to current year)
+    selected_year = request.GET.get('year', '')
+    try:
+        selected_year = int(selected_year)
+    except (ValueError, TypeError):
+        selected_year = today.year
+    # Clamp to reasonable range
+    min_year = today.year - 5
+    max_year = today.year
+    selected_year = max(min_year, min(max_year, selected_year))
+    year_choices = list(range(min_year, max_year + 1))
+
+    # If viewing a past year, set anchor to Dec of that year; otherwise use today
+    if selected_year < today.year:
+        current_month_start = datetime(selected_year, 12, 1).date()
+    else:
+        current_month_start = today.replace(day=1)
 
     def _month_date(i):
         y, m = current_month_start.year, current_month_start.month - i
@@ -2291,8 +2342,53 @@ def admin_forecasting(request):
     hist_maintenance_last12 = maintenance_series[-36:]
     hist_labels_last12 = hist_labels[-36:]
 
-   
-    
+    # Generate plain-English insights for each forecast
+    def _trend_direction(series, window=3):
+        """Determine if recent data is trending up, down, or stable."""
+        if len(series) < window * 2:
+            return "stable"
+        recent_avg = sum(series[-window:]) / window
+        prev_avg = sum(series[-window*2:-window]) / window
+        if prev_avg == 0:
+            return "stable"
+        pct_change = ((recent_avg - prev_avg) / prev_avg) * 100
+        if pct_change > 5:
+            return "up"
+        elif pct_change < -5:
+            return "down"
+        return "stable"
+
+    # Revenue insight
+    rev_next = rev_sarima_fc[0] if rev_sarima_fc else revenue_forecast[0]
+    rev_last = revenue_series[-1] if revenue_series else 0
+    rev_trend = _trend_direction(revenue_series)
+    if rev_trend == "up":
+        revenue_insight = f"Revenue is trending upward. Next month's forecast is ₱{rev_next:,.0f}, which is higher than recent months. Collection efforts are paying off."
+    elif rev_trend == "down":
+        revenue_insight = f"Revenue has been declining. Next month's estimate is ₱{rev_next:,.0f}. Consider following up on overdue payments."
+    else:
+        revenue_insight = f"Revenue is holding steady. Expect approximately ₱{rev_next:,.0f} next month based on historical patterns."
+
+    # Water insight
+    water_next = water_sarima_fc[0] if water_sarima_fc else water_forecast[0]
+    water_trend = _trend_direction(water_series)
+    if water_trend == "up":
+        water_insight = f"Water consumption is rising. Next month's estimate is {water_next:,.1f} m³. This may indicate more tenants or seasonal usage increase."
+    elif water_trend == "down":
+        water_insight = f"Water usage is decreasing. Next month's forecast is {water_next:,.1f} m³, likely due to fewer occupants or conservation."
+    else:
+        water_insight = f"Water usage is stable. Expect about {water_next:,.1f} m³ next month — consistent with recent months."
+
+    # Maintenance insight
+    maint_next = maintenance_forecast[0]
+    maint_trend = _trend_direction(maintenance_series)
+    if maint_trend == "up":
+        maintenance_insight = f"Maintenance requests are increasing. Expect around {maint_next:.0f} requests next month. Consider scheduling preventive maintenance."
+    elif maint_trend == "down":
+        maintenance_insight = f"Maintenance requests are declining — good sign. Forecast: about {maint_next:.0f} requests next month."
+    else:
+        maintenance_insight = f"Maintenance volume is steady at around {maint_next:.0f} requests expected next month."
+
     return render(request, "admin_portal/forecasting.html", {
         "hist_labels": hist_labels_last12,
         "hist_revenue": hist_revenue_last12,
@@ -2314,6 +2410,11 @@ def admin_forecasting(request):
         "revenue_sarima_metrics": revenue_sarima_metrics,
         "water_sarima_metrics": water_sarima_metrics,
         "sarima_available": rev_sarima_fc is not None,
+        "selected_year": selected_year,
+        "year_choices": year_choices,
+        "revenue_insight": revenue_insight,
+        "water_insight": water_insight,
+        "maintenance_insight": maintenance_insight,
         "unread_count": Notification.objects.filter(is_read=False).count(),
     })
 
@@ -2334,28 +2435,33 @@ def admin_billed_this_month(request):
         target = today
 
     # All bills this month (for context counts)
-    all_bills = (
+    all_bills = list(
         MonthlyBill.objects
         .filter(billing_month__year=target.year, billing_month__month=target.month)
         .select_related("lease", "lease__unit", "lease__tenant", "lease__tenant__tenantprofile")
         .order_by("lease__unit__number")
     )
 
-    # Only PAID bills are shown in the breakdown
-    bills = [b for b in all_bills if b.status == "PAID"]
+    # Bills with any payment (fully paid OR partially paid)
+    bills_with_payment = [b for b in all_bills if b.rent_paid > 0 or b.water_paid > 0 or b.parking_paid > 0]
+    # Annotate each bill with total_collected for template display
+    for b in bills_with_payment:
+        b.total_collected_amount = b.rent_paid + b.water_paid + b.parking_paid
+    fully_paid_count = sum(1 for b in all_bills if b.status == "PAID")
     unpaid_count = sum(1 for b in all_bills if b.status == "UNPAID")
     partial_count = sum(1 for b in all_bills if b.status == "PARTIALLY_PAID")
 
-    # Totals from PAID bills only
-    total_rent = sum(b.base_rent for b in bills)
-    total_water = sum(b.water_amount for b in bills)
-    total_parking = sum(b.parking_fee for b in bills)
-    total_interest = sum(b.interest for b in bills)
+    # Totals: actual amounts collected (from _paid fields)
+    total_rent = sum(b.rent_paid for b in all_bills)
+    total_water = sum(b.water_paid for b in all_bills)
+    total_parking = sum(b.parking_paid for b in all_bills)
+    total_interest = sum(b.interest for b in all_bills if b.status == "PAID")
     grand_total = total_rent + total_water + total_parking + total_interest
 
     return render(request, "admin_portal/billed_this_month.html", {
-        "bills": bills,
+        "bills": bills_with_payment,
         "total_bills": len(all_bills),
+        "fully_paid_count": fully_paid_count,
         "unpaid_count": unpaid_count,
         "partial_count": partial_count,
         "total_rent": total_rent,

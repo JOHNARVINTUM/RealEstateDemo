@@ -356,7 +356,10 @@ class TenantAttachment(models.Model):
     def get_file_size_display(self):
         """Return human-readable file size"""
         if self.file:
-            size = self.file.size
+            try:
+                size = self.file.size
+            except (FileNotFoundError, OSError):
+                return "File missing"
             for unit in ['B', 'KB', 'MB', 'GB']:
                 if size < 1024.0:
                     return f"{size:.1f} {unit}"

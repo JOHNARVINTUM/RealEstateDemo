@@ -5,9 +5,10 @@ from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import models
-from django.db.models import F
+from django.db.models import F, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 
 from announcements.models import Announcement
 from billing.models import MonthlyBill
@@ -112,7 +113,25 @@ def tenant_dashboard(request):
     """
     user = request.user
     profile = TenantProfile.objects.filter(user=user).first()
-    lease = Lease.objects.filter(tenant=user, is_active=True).select_related("unit").first()
+    today = timezone.localdate()
+
+    # Get all leases for unit switcher (including future start dates, excluding ended ones)
+    all_active_leases = Lease.objects.filter(
+        tenant=user,
+    ).filter(
+        Q(end_date__isnull=True) | Q(end_date__gte=today)
+    ).select_related("unit").order_by('-start_date')
+
+    # Allow switching via ?lease_id=XX
+    selected_lease_id = request.GET.get('lease_id')
+    if selected_lease_id:
+        lease = all_active_leases.filter(pk=selected_lease_id).first()
+    else:
+        # Default to the most recent lease that has already started
+        lease = all_active_leases.filter(start_date__lte=today).first()
+        if not lease:
+            lease = all_active_leases.first()
+
     announcements = Announcement.objects.filter(is_active=True).order_by("-created_at")[:5]
 
     current_balance = None
@@ -175,6 +194,7 @@ def tenant_dashboard(request):
     context = {
         "profile": profile,
         "lease": lease,
+        "all_active_leases": all_active_leases,
         "announcements": announcements,
         "current_balance": current_balance,
         "total_balance_due": total_balance_due if lease else None,
@@ -193,7 +213,13 @@ def tenant_billing(request):
     Detailed billing statement showing breakdown of rent, water utility, and penalties.
     """
     user = request.user
-    lease = Lease.objects.filter(tenant=user, is_active=True).select_related("unit").first()
+    today = timezone.localdate()
+    lease = Lease.objects.filter(
+        tenant=user,
+        start_date__lte=today,
+    ).filter(
+        Q(end_date__isnull=True) | Q(end_date__gte=today)
+    ).select_related("unit").order_by('-start_date').first()
 
     if not lease:
         messages.warning(request, "An active lease is required to view billing.")
@@ -284,7 +310,6 @@ def tenant_billing(request):
         })
 
     # Generate month and year choices
-    from django.utils import timezone
     current_year = timezone.now().year
     month_choices = [
         (1, 'January'), (2, 'February'), (3, 'March'), (4, 'April'),
@@ -317,7 +342,13 @@ def tenant_pay_advance(request):
     View to handle the Make Payment page.
     Supports partial payments: rent only, water only, or full payment.
     """
-    lease = Lease.objects.filter(tenant=request.user, is_active=True).first()
+    today = timezone.localdate()
+    lease = Lease.objects.filter(
+        tenant=request.user,
+        start_date__lte=today,
+    ).filter(
+        Q(end_date__isnull=True) | Q(end_date__gte=today)
+    ).order_by('-start_date').first()
 
     if not lease:
         messages.warning(request, "An active lease is required to make a payment.")
@@ -368,7 +399,6 @@ def tenant_pay_advance(request):
         # If no unpaid bills but user wants to pay in advance, get future upcoming bills
         if not bills_to_process:
             # Get upcoming/future bills for advance payment
-            from django.db.models import Q
             future_bills_qs = MonthlyBill.objects.filter(
                 lease=lease
             ).filter(

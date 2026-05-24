@@ -518,12 +518,27 @@ class LeaseForm(forms.ModelForm):
         deposit_multiplier = cleaned.get("deposit_multiplier")
         
         # Validate unit availability
+        tenant = cleaned.get("tenant")
         if unit:
-            qs = Lease.objects.filter(unit=unit, is_active=True)
+            from django.utils import timezone as tz
+            from django.db.models import Q
+            _today = tz.localdate()
+            qs = Lease.objects.filter(
+                unit=unit, start_date__lte=_today
+            ).filter(Q(end_date__isnull=True) | Q(end_date__gte=_today))
             if self.instance and self.instance.pk:
                 qs = qs.exclude(pk=self.instance.pk)
             if qs.exists():
                 raise ValidationError({"unit": "Selected unit already has an active lease."})
+            # Prevent duplicate lease for same tenant + same unit
+            if tenant:
+                dup_qs = Lease.objects.filter(
+                    tenant=tenant, unit=unit
+                ).filter(Q(end_date__isnull=True) | Q(end_date__gte=_today))
+                if self.instance and self.instance.pk:
+                    dup_qs = dup_qs.exclude(pk=self.instance.pk)
+                if dup_qs.exists():
+                    raise ValidationError({"unit": f"This tenant already has an active or upcoming lease for Unit {unit.number}."})
         
         # Validate date logic
         if start_date and end_date:

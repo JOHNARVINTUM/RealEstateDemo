@@ -172,16 +172,41 @@ def get_or_update_monthly_bill(lease, billing_month: date, today: date | None = 
 def ensure_bills_since_move_in(lease, today: date | None = None):
     if lease is None:
         return
-    if not getattr(lease, "is_active", True):
-        return
     if today is None:
         today = date.today()
+    # Use date-based check: lease is active if start_date <= today and not ended
+    if lease.start_date > today:
+        return
+    if lease.end_date and lease.end_date < today:
+        return
 
     start = month_start(lease.start_date)
     end = month_start(today)
 
     for m in months_between(start, end):
         get_or_update_monthly_bill(lease, m, today=today)
+
+    # Mark first month's bill as PAID if move-in payment was approved
+    # (Move-in payment covers first month rent + parking; security deposit is held separately)
+    first_bill = MonthlyBill.objects.filter(lease=lease, billing_month=start).first()
+    if first_bill and first_bill.status != "PAID":
+        from payments.models import ManualPayment
+        has_approved_movein = ManualPayment.objects.filter(
+            user=lease.tenant,
+            payment_type="move_in",
+            status="APPROVED",
+        ).exists()
+        if has_approved_movein:
+            from django.utils import timezone as tz
+            first_bill.rent_paid = first_bill.base_rent
+            first_bill.parking_paid = first_bill.parking_fee
+            first_bill.rent_paid_at = tz.now()
+            first_bill.interest = Decimal("0.00")
+            first_bill.total_due = (first_bill.base_rent + first_bill.water_amount + first_bill.parking_fee).quantize(Decimal("0.01"))
+            first_bill.status = "PAID" if first_bill.water_balance == 0 else "PARTIALLY_PAID"
+            first_bill.paid_at = tz.now() if first_bill.status == "PAID" else None
+            first_bill.payment_reference = "MOVE-IN-PAYMENT"
+            first_bill.save()
 
 
 def ensure_bills_up_to(lease, end_month: date, today: date | None = None):
@@ -191,10 +216,13 @@ def ensure_bills_up_to(lease, end_month: date, today: date | None = None):
     """
     if lease is None:
         return
-    if not getattr(lease, "is_active", True):
-        return
     if today is None:
         today = date.today()
+    # Use date-based check: lease must have started
+    if lease.start_date > today:
+        return
+    if lease.end_date and lease.end_date < today:
+        return
 
     start = month_start(lease.start_date)
     end = month_start(end_month)

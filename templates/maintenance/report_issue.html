@@ -56,12 +56,16 @@
             <p class="text-sm text-slate-400 mt-3 font-bold italic">* A clear picture helps our maintenance team resolve the issue faster.</p>
           </div>
 
-          <!-- Submit -->
-          <div class="pt-4">
+          <!-- Submit & Back -->
+          <div class="pt-4 flex flex-col gap-3">
             <button type="submit"
                     class="w-full bg-slate-900 hover:bg-slate-800 text-white font-black py-5 rounded-2xl text-xl shadow-lg active:scale-95 transition-all">
               Submit Report
             </button>
+            <a href="{% url 'maintenance_list' %}"
+               class="w-full text-center bg-white hover:bg-slate-50 text-slate-700 font-black py-4 rounded-2xl text-lg border-2 border-slate-200 transition-all">
+              Back
+            </a>
           </div>
         </form>
       </div>

@@ -13,8 +13,8 @@
       </a>
       <div>
         <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Monthly Billing Breakdown</p>
-        <h1 class="text-2xl font-black text-slate-900 tracking-tight">Paid This Month</h1>
-        <p class="text-sm text-slate-500 font-medium mt-0.5">{{ target_month|date:"F Y" }} — all fully paid bills this month</p>
+        <h1 class="text-2xl font-black text-slate-900 tracking-tight">Collected This Month</h1>
+        <p class="text-sm text-slate-500 font-medium mt-0.5">{{ target_month|date:"F Y" }} — all payments received (rent, water, parking)</p>
       </div>
     </div>
 
@@ -55,11 +55,11 @@
   <!-- Status Badges -->
   <div class="flex flex-wrap gap-3">
     <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-lg">
-      ✓ Fully Paid: {{ bills|length }}
+      ✓ Fully Paid: {{ fully_paid_count }}
     </span>
     {% if partial_count %}
     <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold rounded-lg">
-      ◐ Partial (not shown): {{ partial_count }}
+      ◐ Rent Only / Water Only: {{ partial_count }}
     </span>
     {% endif %}
     {% if unpaid_count %}
@@ -97,18 +97,20 @@
             <td class="px-4 py-3 text-slate-600">
               {% if tenant.tenantprofile %}{{ tenant.tenantprofile.full_name }}{% else %}{{ tenant.email }}{% endif %}
             </td>
-            <td class="px-4 py-3 text-right font-medium text-slate-800">₱{{ bill.base_rent|floatformat:2|intcomma }}</td>
+            <td class="px-4 py-3 text-right font-medium text-slate-800">
+              {% if bill.rent_paid > 0 %}₱{{ bill.rent_paid|floatformat:2|intcomma }}{% else %}<span class="text-slate-300">—</span>{% endif %}
+            </td>
             <td class="px-4 py-3 text-right text-slate-600">
-              {% if bill.water_amount %}₱{{ bill.water_amount|floatformat:2|intcomma }}{% else %}<span class="text-slate-300">—</span>{% endif %}
+              {% if bill.water_paid > 0 %}₱{{ bill.water_paid|floatformat:2|intcomma }}{% else %}<span class="text-slate-300">—</span>{% endif %}
             </td>
             <td class="px-4 py-3 text-right text-amber-700 font-medium">
-              {% if bill.parking_fee %}₱{{ bill.parking_fee|floatformat:2|intcomma }}{% else %}<span class="text-slate-300">—</span>{% endif %}
+              {% if bill.parking_paid > 0 %}₱{{ bill.parking_paid|floatformat:2|intcomma }}{% else %}<span class="text-slate-300">—</span>{% endif %}
             </td>
             <td class="px-4 py-3 text-right text-rose-600 font-medium">
-              {% if bill.interest %}₱{{ bill.interest|floatformat:2|intcomma }}{% else %}<span class="text-slate-300">—</span>{% endif %}
+              {% if bill.interest and bill.status == "PAID" %}₱{{ bill.interest|floatformat:2|intcomma }}{% else %}<span class="text-slate-300">—</span>{% endif %}
             </td>
             <td class="px-4 py-3 text-right font-black text-slate-900">
-              ₱{{ bill.total_due|floatformat:2|intcomma }}
+              ₱{{ bill.total_collected_amount|floatformat:2|intcomma }}
             </td>
             <td class="px-4 py-3 text-center">
               {% if bill.status == "PAID" %}
@@ -152,11 +154,11 @@
     <p class="text-xs font-extrabold text-slate-500 uppercase tracking-wider mb-2">How "Billed This Month" is Calculated</p>
     <p class="text-sm text-slate-600 font-medium">
       <span class="font-bold text-slate-800">Total Collected</span> =
-      <span class="text-blue-700 font-bold">Base Rent</span> +
-      <span class="text-cyan-700 font-bold">Water</span> +
-      <span class="text-amber-700 font-bold">Parking</span> +
+      <span class="text-blue-700 font-bold">Rent Paid</span> +
+      <span class="text-cyan-700 font-bold">Water Paid</span> +
+      <span class="text-amber-700 font-bold">Parking Paid</span> +
       <span class="text-rose-700 font-bold">Late Interest</span>
-      &nbsp;— summed across <strong>fully paid</strong> bills for {{ target_month|date:"F Y" }} only.
+      &nbsp;— summed from actual payments received for {{ target_month|date:"F Y" }}. Includes partial payments (e.g. rent-only or water-only).
     </p>
   </div>
 

@@ -580,7 +580,7 @@ def paymongo_webhook(request):
 def _auto_approve_paymongo_payment(payment):
     """
     Auto-approve a PayMongo payment: mark bills as PAID and notify admin.
-    
+
     If this is a move-in payment with a lease_id, activate the pending lease.
     """
     from billing.services import approve_manual_payment
@@ -592,19 +592,32 @@ def _auto_approve_paymongo_payment(payment):
     # Check if this is a move-in payment with a pending lease to activate
     lease_activated = False
     try:
-        metadata = payment.bill_ids  # We store metadata here for move-in payments
-        if metadata and metadata.startswith("lease_id:"):
-            lease_id = int(metadata.split(":")[1])
-            
+        # Read lease_id from metadata field
+        lease_id = None
+        if payment.metadata and isinstance(payment.metadata, dict):
+            lease_id = payment.metadata.get("lease_id")
+
+        # Fallback: if no metadata but this is a move-in payment, try to find pending lease
+        if not lease_id and payment.payment_type == "move_in":
+            from rentals.models import Lease
+            pending_lease = Lease.objects.filter(
+                tenant=payment.user,
+                status=Lease.STATUS_PENDING_PAYMENT
+            ).order_by('-created_at').first()
+            if pending_lease:
+                lease_id = pending_lease.id
+                logger.info(f"Found pending lease {lease_id} for move-in payment {payment.id} via fallback")
+
+        if lease_id and payment.payment_type == "move_in":
             # Use centralized activation service
             from rentals.services import LeaseActivationService
             success, message = LeaseActivationService.activate_lease_after_payment(
-                lease_id=lease_id,
+                lease_id=int(lease_id),
                 payment_method="PAYMONGO",
                 payment_reference=payment.reference_code,
                 amount=payment.amount,
             )
-            
+
             if success:
                 lease_activated = True
                 logger.info(f"Lease {lease_id} activated via PayMongo webhook")
@@ -614,16 +627,21 @@ def _auto_approve_paymongo_payment(payment):
         logger.exception(f"Error checking lease activation for payment {payment.id}: {e}")
         # Continue with normal approval even if lease activation fails
 
-    # Only run normal approval if lease wasn't activated (activated already handles bills)
-    if not lease_activated:
+    # Only run normal approval if lease wasn't activated and this is not a move-in payment
+    # Move-in payments don't have bills to approve - lease activation handles everything
+    if not lease_activated and payment.payment_type != "move_in":
         try:
             approve_manual_payment(payment)
             logger.info(f"PayMongo payment {payment.id} auto-approved successfully")
         except Exception as e:
             logger.exception(f"Failed to auto-approve PayMongo payment {payment.id}: {e}")
             # Even if bill approval fails, mark payment as approved so we don't retry incorrectly
-            payment.status = "APPROVED"
-            payment.save(update_fields=["status"])
+
+    # For move-in payments that were activated, mark as approved
+    if lease_activated:
+        payment.status = "APPROVED"
+        payment.save(update_fields=["status"])
+        logger.info(f"Move-in payment {payment.id} marked as APPROVED after lease activation")
 
     # Notify admin about the auto-approved payment
     try:

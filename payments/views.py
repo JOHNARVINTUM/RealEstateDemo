@@ -415,6 +415,7 @@ def admin_paymongo_checkout_generate(request):
     """
     amount_str = request.GET.get("amount", "0")
     tenant_id = request.GET.get("tenant_id", "")
+    lease_id = request.GET.get("lease_id", "")
     
     try:
         amount = Decimal(amount_str)
@@ -429,12 +430,18 @@ def admin_paymongo_checkout_generate(request):
     
     base_url = request.build_absolute_uri("/")[:-1]
     
+    # Set cancel URL to admin lease payment page if lease_id provided, else admin dashboard
+    if lease_id:
+        cancel_url = base_url + reverse("admin_lease_payment", args=[lease_id])
+    else:
+        cancel_url = base_url + reverse("admin_portal")
+    
     result = create_checkout_session(
         amount_cents=amount_cents,
         description="REALESTATE360+ Move-in Payment",
-        metadata={"payment_type": "move_in", "generated_by_admin": str(request.user.id), "tenant_id": tenant_id or ""},
+        metadata={"payment_type": "move_in", "generated_by_admin": str(request.user.id), "tenant_id": tenant_id or "", "lease_id": lease_id or ""},
         success_url=base_url + reverse("paymongo_success"),
-        cancel_url=base_url + reverse("tenant_dashboard"),
+        cancel_url=cancel_url,
     )
     
     if not result or result.get("error"):

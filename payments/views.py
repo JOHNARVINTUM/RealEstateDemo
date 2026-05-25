@@ -333,7 +333,7 @@ def paymongo_success(request):
     if not payment:
         if is_admin:
             messages.info(request, "Payment received. The lease will be activated shortly.")
-            return redirect("admin_portal")
+            return redirect("admin_dashboard")
         else:
             messages.info(request, "Payment received. Your bills will be updated shortly.")
             return redirect("tenant_dashboard")
@@ -455,20 +455,20 @@ def admin_paymongo_checkout_generate(request):
         amount_cents = int(amount * 100)
     except Exception:
         messages.error(request, "Invalid amount")
-        return redirect("admin_portal")
-    
+        return redirect("admin_dashboard")
+
     if amount <= 0:
         messages.error(request, "Amount must be greater than zero")
-        return redirect("admin_portal")
-    
+        return redirect("admin_dashboard")
+
     base_url = request.build_absolute_uri("/")[:-1]
-    
+
     # Set cancel URL to admin lease payment page if lease_id provided, else admin dashboard
     if lease_id:
         cancel_url = base_url + reverse("admin_lease_payment", args=[lease_id])
     else:
-        cancel_url = base_url + reverse("admin_portal")
-    
+        cancel_url = base_url + reverse("admin_dashboard")
+
     result = create_checkout_session(
         amount_cents=amount_cents,
         description="REALESTATE360+ Move-in Payment",
@@ -476,10 +476,10 @@ def admin_paymongo_checkout_generate(request):
         success_url=base_url + reverse("paymongo_success"),
         cancel_url=cancel_url,
     )
-    
+
     if not result or result.get("error"):
         messages.error(request, result.get("error", "PayMongo checkout failed"))
-        return redirect("admin_portal")
+        return redirect("admin_dashboard")
     
     # Just redirect to PayMongo - webhook will handle payment record when tenant pays
     return redirect(result["checkout_url"])

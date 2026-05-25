@@ -483,23 +483,10 @@ class LeaseForm(forms.ModelForm):
         help_text="Lease end date (optional)"
     )
     
-    # Move-in payment fields (not saved to Lease model)
-    move_in_payment_method = forms.ChoiceField(
-        choices=[("GCASH", "GCash QR"), ("CASH", "Cash")],
-        initial="GCASH",
-        widget=forms.RadioSelect,
-        label="Move-in Payment Method",
-    )
-    move_in_reference_code = forms.CharField(
-        max_length=80,
-        required=False,
-        label="Reference / Receipt No.",
-        widget=forms.TextInput(attrs={"placeholder": "e.g. REF-1023456789012"}),
-    )
-    
     class Meta:
         model = Lease
-        fields = ["tenant", "unit", "monthly_rent", "due_day", "start_date", "end_date", "security_deposit", "is_active", "motorcycle_slots", "car_slots"]
+        fields = ["tenant", "unit", "monthly_rent", "due_day", "start_date", "end_date", "security_deposit", "motorcycle_slots", "car_slots"]
+        # Note: is_active removed - status field now controls activation
         # Note: deposit_multiplier removed - security deposit is now fixed at 2x monthly rent
         widgets = {
             "start_date": forms.DateInput(attrs={"type": "text", "class": "flatpickr", "autocomplete": "off"}),
@@ -552,12 +539,7 @@ class LeaseForm(forms.ModelForm):
             raise ValidationError({"security_deposit": "Security deposit cannot be negative."})
         
         # Note: deposit_multiplier validation removed - using fixed 2x multiplier
-        
-        # Validate move-in payment
-        payment_method = cleaned.get("move_in_payment_method")
-        reference_code = cleaned.get("move_in_reference_code", "").strip()
-        if payment_method == "GCASH" and not reference_code:
-            raise ValidationError({"move_in_reference_code": "GCash reference number is required."})
+        # Note: move-in payment validation removed - payment now happens on separate page
         
         return cleaned
 
@@ -576,12 +558,9 @@ class LeaseForm(forms.ModelForm):
         # Ensure deposit_multiplier is always 2 for consistency
         instance.deposit_multiplier = 2
         
-        # Set smart status based on start date
-        from django.utils import timezone
-        if instance.start_date <= timezone.now().date():
-            instance.is_active = True
-        else:
-            instance.is_active = False
+        # Set lease to PENDING_PAYMENT status - will be activated after payment
+        instance.status = Lease.STATUS_PENDING_PAYMENT
+        instance.is_active = False
         
         if commit:
             instance.save()

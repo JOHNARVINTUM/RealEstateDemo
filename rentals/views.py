@@ -140,12 +140,13 @@ def tenant_dashboard(request):
     current_balance = None
     next_due_date = None
     next_billing_month = None
+    total_balance_due = None
 
     # Calculate total monthly rent including parking
     total_monthly_rent = None
     if lease:
         total_monthly_rent = lease.monthly_rent + lease.parking_fee
-    
+
     # Only generate bills for ACTIVE leases, not pending ones
     if lease and lease.status == Lease.STATUS_ACTIVE:
         ensure_bills_since_move_in(lease)

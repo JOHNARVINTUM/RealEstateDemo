@@ -58,6 +58,7 @@ class ManualPayment(models.Model):
     checkout_url = models.URLField(max_length=500, blank=True, default="")
     paymongo_payment_id = models.CharField(max_length=100, blank=True, default="")
     paid_via = models.CharField(max_length=30, blank=True, default="", help_text="Actual method used in PayMongo (gcash, card, grab_pay, etc.)")
+    metadata = models.JSONField(default=dict, blank=True, help_text="Store PayMongo metadata including lease_id, payment_type, etc.")
 
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="PENDING")
     created_at = models.DateTimeField(auto_now_add=True)

@@ -444,12 +444,12 @@ def paymongo_success(request):
 def admin_paymongo_checkout_generate(request):
     """
     Simple admin endpoint to generate PayMongo checkout for move-in.
-    Just creates checkout and redirects - payment record handled by webhook.
+    Creates payment record and checkout session, then redirects to PayMongo.
     """
     amount_str = request.GET.get("amount", "0")
     tenant_id = request.GET.get("tenant_id", "")
     lease_id = request.GET.get("lease_id", "")
-    
+
     try:
         amount = Decimal(amount_str)
         amount_cents = int(amount * 100)
@@ -469,10 +469,12 @@ def admin_paymongo_checkout_generate(request):
     else:
         cancel_url = base_url + reverse("admin_dashboard")
 
+    metadata = {"payment_type": "move_in", "generated_by_admin": str(request.user.id), "tenant_id": tenant_id or "", "lease_id": lease_id or ""}
+
     result = create_checkout_session(
         amount_cents=amount_cents,
         description="REALESTATE360+ Move-in Payment",
-        metadata={"payment_type": "move_in", "generated_by_admin": str(request.user.id), "tenant_id": tenant_id or "", "lease_id": lease_id or ""},
+        metadata=metadata,
         success_url=base_url + reverse("paymongo_success"),
         cancel_url=cancel_url,
     )
@@ -480,8 +482,24 @@ def admin_paymongo_checkout_generate(request):
     if not result or result.get("error"):
         messages.error(request, result.get("error", "PayMongo checkout failed"))
         return redirect("admin_dashboard")
-    
-    # Just redirect to PayMongo - webhook will handle payment record when tenant pays
+
+    # Create payment record with PENDING status
+    payment = ManualPayment.objects.create(
+        user=request.user,
+        payment_type="move_in",
+        payment_method="PAYMONGO",
+        amount=amount,
+        reference_code=f"REF-PM-{result['checkout_session_id'][-8:].upper()}",
+        checkout_session_id=result["checkout_session_id"],
+        checkout_url=result["checkout_url"],
+        status="PENDING",
+        notes=f"Admin-generated checkout for move-in payment",
+        metadata=metadata,
+    )
+
+    logger.info(f"Admin {request.user.id} generated PayMongo checkout {payment.id} for amount {amount}")
+
+    # Redirect to PayMongo for payment
     return redirect(result["checkout_url"])
 
 

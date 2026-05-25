@@ -309,7 +309,11 @@ def paymongo_success(request):
     Landing page after successful PayMongo checkout.
     Finds the most recent PENDING PayMongo payment for this user,
     polls the session to confirm, and auto-approves.
+    Redirects admin users to admin success page, tenants to tenant success page.
     """
+    # Check if admin user
+    is_admin = getattr(request.user, "role", "") == "ADMIN" or request.user.is_superuser
+    
     # Try session_id from query param first, fall back to latest PENDING
     session_id = request.GET.get("session_id", "").strip()
 
@@ -327,8 +331,12 @@ def paymongo_success(request):
         ).order_by("-created_at").first()
 
     if not payment:
-        messages.info(request, "Payment received. Your bills will be updated shortly.")
-        return redirect("tenant_dashboard")
+        if is_admin:
+            messages.info(request, "Payment received. The lease will be activated shortly.")
+            return redirect("admin_portal")
+        else:
+            messages.info(request, "Payment received. Your bills will be updated shortly.")
+            return redirect("tenant_dashboard")
 
     session_id = payment.checkout_session_id
 
@@ -381,6 +389,31 @@ def paymongo_success(request):
         # Refresh from DB to get updated status
         payment.refresh_from_db()
     
+    # For admin users, render admin success page with tenant welcome
+    if is_admin:
+        # Get lease info if this is a move-in payment
+        lease = None
+        tenant_name = ""
+        if payment.payment_type == "move_in":
+            from rentals.models import Lease
+            # Try to find lease from metadata or recent pending lease
+            lease_id = payment.metadata.get("lease_id") if hasattr(payment, 'metadata') else None
+            if lease_id:
+                try:
+                    lease = Lease.objects.get(id=lease_id)
+                    tenant_name = lease.tenant.tenantprofile.full_name if hasattr(lease.tenant, 'tenantprofile') else lease.tenant.email
+                except Lease.DoesNotExist:
+                    pass
+        
+        return render(request, "admin_portal/paymongo_success.html", {
+            "payment": payment,
+            "payment_approved": payment.status == "APPROVED",
+            "auto_refresh": payment.status != "APPROVED",
+            "lease": lease,
+            "tenant_name": tenant_name,
+        })
+    
+    # For tenant users, render tenant success page
     # Set appropriate message based on payment status
     if payment.status == "APPROVED":
         messages.success(

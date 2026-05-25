@@ -317,7 +317,8 @@ def set_bill_status(bill: MonthlyBill, *, status: str, payment_reference: str = 
 @transaction.atomic
 def approve_manual_payment(payment):
     from payments.models import ManualPayment
-    from rentals.models import Notification
+    from rentals.models import Notification, Lease
+    from rentals.services import LeaseActivationService
     import logging
     logger = logging.getLogger(__name__)
 
@@ -325,6 +326,40 @@ def approve_manual_payment(payment):
     if payment.status == "APPROVED":
         logger.info(f"Payment {payment.id} already approved")
         return payment
+
+    # Check if this is a move-in payment with a pending lease
+    # If so, use centralized activation service instead of normal approval
+    if payment.payment_type == "move_in":
+        try:
+            # Find pending lease for this tenant
+            pending_lease = Lease.objects.filter(
+                tenant=payment.user,
+                status=Lease.STATUS_PENDING_PAYMENT
+            ).select_related('unit').first()
+            
+            if pending_lease:
+                logger.info(f"Found pending lease {pending_lease.id} for move-in payment {payment.id}")
+                
+                # Use centralized activation service
+                success, message = LeaseActivationService.activate_lease_after_payment(
+                    lease_id=pending_lease.id,
+                    payment_method=payment.payment_method,
+                    payment_reference=payment.reference_code,
+                    amount=payment.amount,
+                )
+                
+                if success:
+                    # Update payment status to approved
+                    payment.status = "APPROVED"
+                    payment.save(update_fields=["status"])
+                    logger.info(f"Lease {pending_lease.id} activated via manual payment approval")
+                    return payment
+                else:
+                    logger.error(f"Lease activation failed: {message}")
+                    # Continue with normal approval as fallback
+        except Exception as e:
+            logger.exception(f"Error checking lease activation for payment {payment.id}: {e}")
+            # Continue with normal approval
 
     bill_ids = parse_bill_ids(payment.bill_ids)
     logger.info(f"Approving payment {payment.id} for bills: {bill_ids}, user: {payment.user.id}")

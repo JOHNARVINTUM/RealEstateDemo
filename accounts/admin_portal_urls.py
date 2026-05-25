@@ -15,6 +15,7 @@ from .admin_portal_views import (
     admin_create_tenant_profile,
     admin_create_announcement,
     admin_create_lease,
+    admin_lease_payment,
     admin_create_unit,
     admin_edit_tenant,
         admin_delete_tenant,
@@ -112,6 +113,7 @@ urlpatterns = [
     # Create pages
     path("tenants/add/", admin_create_tenant_profile, name="admin_create_tenant_profile"),
     path("leases/add/", admin_create_lease, name="admin_create_lease"),
+    path("leases/<int:lease_id>/payment/", admin_lease_payment, name="admin_lease_payment"),
     path("units/add/", admin_create_unit, name="admin_create_unit"),
     path("leases/<int:lease_id>/edit/", admin_edit_lease, name="admin_edit_lease"),
     path("leases/<int:lease_id>/delete/", admin_delete_lease, name="admin_delete_lease"),

@@ -111,6 +111,19 @@ class Lease(models.Model):
     MOTORCYCLE_FEE = 350
     CAR_FEE = 2500
 
+    # Lease status choices
+    STATUS_PENDING_PAYMENT = "PENDING_PAYMENT"
+    STATUS_ACTIVE = "ACTIVE"
+    STATUS_TERMINATED = "TERMINATED"
+    STATUS_EXPIRED = "EXPIRED"
+    
+    STATUS_CHOICES = [
+        (STATUS_PENDING_PAYMENT, "Pending Payment"),
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_TERMINATED, "Terminated"),
+        (STATUS_EXPIRED, "Expired"),
+    ]
+
     tenant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, limit_choices_to={"role": "TENANT"})
     unit = models.ForeignKey(Unit, on_delete=models.PROTECT)  # one active tenant per unit
     monthly_rent = models.DecimalField(max_digits=10, decimal_places=2)
@@ -119,7 +132,12 @@ class Lease(models.Model):
     end_date = models.DateField(null=True, blank=True, help_text="Lease end date (optional)")
     security_deposit = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Security deposit amount")
     deposit_multiplier = models.PositiveSmallIntegerField(default=2, help_text="Contract deposit multiplier (security deposit = monthly_rent × this value)")
-    is_active = models.BooleanField(default=True)
+    
+    # Status and activation tracking
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING_PAYMENT, help_text="Lease lifecycle status")
+    is_active = models.BooleanField(default=False, help_text="Whether lease is currently active (backward compatibility)")
+    activated_at = models.DateTimeField(null=True, blank=True, help_text="When lease was activated after payment")
+    
     motorcycle_slots = models.PositiveSmallIntegerField(default=0, help_text="Number of motorcycle parking slots (₱350 each/mo)")
     car_slots = models.PositiveSmallIntegerField(default=0, help_text="Number of car parking slots (₱2,500 each/mo)")
 
@@ -159,17 +177,60 @@ class Lease(models.Model):
         """Override save to handle smart status setting"""
         from django.utils import timezone
         
-        # Set smart status based on start date (use localdate to respect TIME_ZONE)
-        if self.start_date <= timezone.localdate():
-            self.is_active = True
-        else:
-            self.is_active = False
-        
         # Auto-populate security deposit = monthly_rent × deposit_multiplier if not set
         if self.security_deposit == 0 and self.monthly_rent:
             self.security_deposit = self.monthly_rent * self.deposit_multiplier
         
+        # Sync is_active with status for backward compatibility
+        # But respect manual status changes
+        if self.status == self.STATUS_ACTIVE and not self.is_active:
+            self.is_active = True
+        elif self.status != self.STATUS_ACTIVE and self.is_active:
+            self.is_active = False
+        
         super().save(*args, **kwargs)
+    
+    def activate(self, activated_at=None):
+        """
+        Centralized lease activation.
+        Call this ONLY after successful payment verification.
+        """
+        from django.utils import timezone
+        
+        if self.status == self.STATUS_ACTIVE:
+            return False  # Already active, prevent duplicate activation
+        
+        self.status = self.STATUS_ACTIVE
+        self.is_active = True
+        self.activated_at = activated_at or timezone.now()
+        self.save(update_fields=['status', 'is_active', 'activated_at'])
+        return True
+    
+    def deactivate(self, end_date=None):
+        """Deactivate lease (for termination or expiration)"""
+        from django.utils import timezone
+        
+        self.status = self.STATUS_TERMINATED
+        self.is_active = False
+        if end_date:
+            self.end_date = end_date
+        self.save(update_fields=['status', 'is_active', 'end_date'])
+    
+    @property
+    def is_pending_payment(self):
+        """Check if lease is waiting for move-in payment"""
+        return self.status == self.STATUS_PENDING_PAYMENT
+    
+    @property
+    def display_status(self):
+        """Human-readable status for UI"""
+        status_map = {
+            self.STATUS_PENDING_PAYMENT: "Pending Payment",
+            self.STATUS_ACTIVE: "Active",
+            self.STATUS_TERMINATED: "Terminated",
+            self.STATUS_EXPIRED: "Expired",
+        }
+        return status_map.get(self.status, self.status)
 
 class Notification(models.Model):
     NOTIFICATION_TYPES = [

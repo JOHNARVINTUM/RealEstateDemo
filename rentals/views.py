@@ -116,10 +116,13 @@ def tenant_dashboard(request):
     today = timezone.localdate()
 
     # Get all leases for unit switcher (including future start dates, excluding ended ones)
+    # Include both ACTIVE and PENDING_PAYMENT leases
     all_active_leases = Lease.objects.filter(
         tenant=user,
     ).filter(
         Q(end_date__isnull=True) | Q(end_date__gte=today)
+    ).filter(
+        Q(status=Lease.STATUS_ACTIVE) | Q(status=Lease.STATUS_PENDING_PAYMENT)
     ).select_related("unit").order_by('-start_date')
 
     # Allow switching via ?lease_id=XX
@@ -138,7 +141,13 @@ def tenant_dashboard(request):
     next_due_date = None
     next_billing_month = None
 
+    # Calculate total monthly rent including parking
+    total_monthly_rent = None
     if lease:
+        total_monthly_rent = lease.monthly_rent + lease.parking_fee
+    
+    # Only generate bills for ACTIVE leases, not pending ones
+    if lease and lease.status == Lease.STATUS_ACTIVE:
         ensure_bills_since_move_in(lease)
 
         # Get all bills with unpaid balances (including partial payments)
@@ -167,14 +176,35 @@ def tenant_dashboard(request):
                     billing_month=next_month_date
                 ).first()
 
-        today_start = month_start(date.today())
-        next_month = add_months(today_start, 1)
-        ensure_bills_up_to(lease, next_month)
-
-        next_bill = MonthlyBill.objects.filter(lease=lease, billing_month=next_month).first()
-        if next_bill:
-            next_billing_month = next_bill.billing_month
-            next_due_date = next_bill.due_date
+        # Find the actual "next" bill after the current balance
+        # This ensures if you're paying September, it shows October (not July based on today's date)
+        if current_balance:
+            # Get the bill immediately after current_balance
+            next_bill = MonthlyBill.objects.filter(
+                lease=lease, 
+                billing_month__gt=current_balance.billing_month
+            ).order_by('billing_month').first()
+            
+            if next_bill:
+                next_billing_month = next_bill.billing_month
+                next_due_date = next_bill.due_date
+            else:
+                # No next bill exists yet, generate it
+                next_month_date = add_months(current_balance.billing_month, 1)
+                next_bill = get_or_update_monthly_bill(lease, next_month_date)
+                if next_bill:
+                    next_billing_month = next_bill.billing_month
+                    next_due_date = next_bill.due_date
+        else:
+            # No current balance, show next month after today
+            today_start = month_start(date.today())
+            next_month = add_months(today_start, 1)
+            ensure_bills_up_to(lease, next_month)
+            
+            next_bill = MonthlyBill.objects.filter(lease=lease, billing_month=next_month).first()
+            if next_bill:
+                next_billing_month = next_bill.billing_month
+                next_due_date = next_bill.due_date
 
     # Get tenant's recent payments (pending and approved)
     recent_payments = []
@@ -194,6 +224,7 @@ def tenant_dashboard(request):
     context = {
         "profile": profile,
         "lease": lease,
+        "total_monthly_rent": total_monthly_rent,
         "all_active_leases": all_active_leases,
         "announcements": announcements,
         "current_balance": current_balance,

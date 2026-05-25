@@ -745,64 +745,44 @@ Welcome aboard! We're excited to have you as part of our community!"""
                 except Exception as e:
                     logger.exception(f"Failed to send lease assignment email: {e}")
                 
-                # create initial monthly bill rows from move-in until today
-                try:
-                    ensure_bills_since_move_in(lease)
-                except Exception:
-                    # don't block creation if billing generation fails; admin can regenerate later
-                    logger.exception("ensure_bills_since_move_in failed for lease id %s", getattr(lease, 'id', None))
-                    messages.warning(request, "Failed to generate initial bills; you can regenerate later.")
+                # Lease is created with status=PENDING_PAYMENT (see LeaseForm.save)
+                # DO NOT generate bills yet - will happen after payment
+                # DO NOT mark unit occupied yet - will happen after payment
                 
-                # Create move-in payment record and mark first month bill as PAID
+                # Send lease creation email (tenant can see pending lease)
                 try:
-                    from payments.models import ManualPayment
-                    from billing.services import set_bill_status
-                    from django.utils import timezone as dj_tz
-                    move_in_method = form.cleaned_data.get('move_in_payment_method', 'GCASH')
-                    move_in_ref = form.cleaned_data.get('move_in_reference_code', '').strip()
-                    if move_in_method == 'CASH' and not move_in_ref:
-                        move_in_ref = f'REF-CASH-MOVEIN-{lease.id}'
-
-                    # Get or create the first month's bill (billing_month = start month)
-                    from billing.services import month_start, get_or_update_monthly_bill
-                    first_bill_month = month_start(lease.start_date)
-                    first_bill = MonthlyBill.objects.filter(
-                        lease=lease,
-                        billing_month=first_bill_month,
-                    ).first()
-
-                    # If ensure_bills_since_move_in didn't create it (e.g. timezone edge case), force-create it
-                    if not first_bill:
-                        first_bill = get_or_update_monthly_bill(lease, first_bill_month)
-
-                    # Mark it PAID with the move-in reference
-                    if first_bill:
-                        set_bill_status(
-                            first_bill,
-                            status="PAID",
-                            payment_reference=move_in_ref,
-                            paid_at=dj_tz.now(),
-                        )
-                        bill_ids_str = str(first_bill.id)
-                    else:
-                        bill_ids_str = ''
-
-                    ManualPayment.objects.create(
-                        user=lease.tenant,
-                        payment_type='move_in',
-                        payment_method=move_in_method,
-                        amount=lease.total_move_in_cost,
-                        reference_code=move_in_ref,
-                        bill_ids=bill_ids_str,
-                        status='APPROVED',
+                    tenant_name = lease.tenant.tenantprofile.full_name if hasattr(lease.tenant, 'tenantprofile') else lease.tenant.email
+                    from django.core.mail import send_mail
+                    from django.conf import settings
+                    send_mail(
+                        subject="Your Lease is Pending Activation - REALESTATE360+",
+                        message=(
+                            f"Hi {tenant_name},\n\n"
+                            f"Your lease for Unit {lease.unit.number} has been created and is pending activation.\n"
+                            f"Please complete the move-in payment to activate your lease and access your tenant portal.\n\n"
+                            f"Lease Details:\n"
+                            f"- Unit: {lease.unit.number}\n"
+                            f"- Monthly Rent: ₱{lease.monthly_rent:,.2f}\n"
+                            f"- Start Date: {lease.start_date}\n"
+                            f"- Move-in Cost: ₱{lease.total_move_in_cost:,.2f}\n\n"
+                            f"Once payment is confirmed, you'll receive access to your tenant portal.\n\n"
+                            f"REALESTATE360+ Administration"
+                        ),
+                        from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@realestate360.com'),
+                        recipient_list=[lease.tenant.email],
+                        fail_silently=True,
                     )
                 except Exception as e:
-                    logger.exception(f'Failed to create move-in payment record: {e}')
-                    messages.warning(request, 'Lease created but failed to record move-in payment.')
+                    logger.exception(f"Failed to send pending lease email: {e}")
                 
-                tenant_name = lease.tenant.tenantprofile.full_name if hasattr(lease.tenant, 'tenantprofile') else lease.tenant.email
-                messages.success(request, f"Lease created successfully for {tenant_name} – Unit {lease.unit.number}. A confirmation email with their payment schedule has been sent.")
-                return redirect("admin_tenants")
+                messages.success(
+                    request, 
+                    f"Lease created for {lease.tenant.email} – Unit {lease.unit.number}. "
+                    f"Status: PENDING PAYMENT. Please complete payment to activate."
+                )
+                
+                # Redirect to payment page for this lease
+                return redirect("admin_lease_payment", lease_id=lease.id)
                 
             except Exception as e:
                 logger.exception(f"Error creating lease: {e}")
@@ -836,6 +816,60 @@ Welcome aboard! We're excited to have you as part of our community!"""
         "schedule_preview": schedule_preview,
         "gcash_name": getattr(settings, 'GCASH_NAME', ''),
         "gcash_number": getattr(settings, 'GCASH_NUMBER', ''),
+    })
+
+
+@admin_required
+def admin_lease_payment(request, lease_id: int):
+    """
+    Admin portal: Move-in payment page for pending lease.
+    Shows payment options after lease is created but not yet activated.
+    """
+    from rentals.models import Lease
+    
+    lease = get_object_or_404(
+        Lease.objects.select_related('tenant', 'unit'),
+        id=lease_id,
+        status=Lease.STATUS_PENDING_PAYMENT
+    )
+    
+    if request.method == "POST":
+        payment_method = request.POST.get("payment_method", "")
+        
+        if payment_method == "CASH":
+            # For cash, mark payment received and activate immediately
+            from rentals.services import LeaseActivationService
+            success, message = LeaseActivationService.activate_lease_after_payment(
+                lease_id=lease.id,
+                payment_method="CASH",
+                payment_reference=f"REF-CASH-MOVEIN-{lease.id}",
+                amount=lease.total_move_in_cost
+            )
+            if success:
+                messages.success(request, f"Lease activated successfully! {message}")
+                return redirect("admin_tenant_detail", tenant_id=lease.tenant.id)
+            else:
+                messages.error(request, f"Activation failed: {message}")
+        
+        elif payment_method == "GCASH":
+            # Redirect to manual GCash payment page
+            from django.http import HttpResponseRedirect
+            return HttpResponseRedirect(
+                f"/payments/manual-gcash/?amount={lease.total_move_in_cost}&lease_id={lease.id}&payment_type=move_in"
+            )
+        
+        elif payment_method == "PAYMONGO":
+            # Redirect to PayMongo checkout with lease_id
+            from django.http import HttpResponseRedirect
+            return HttpResponseRedirect(
+                f"/payments/paymongo/admin-checkout/?amount={lease.total_move_in_cost}&lease_id={lease.id}&payment_type=move_in"
+            )
+    
+    return render(request, "admin_portal/lease_payment.html", {
+        "title": "Lease Payment",
+        "lease": lease,
+        "total_move_in_cost": lease.total_move_in_cost,
+        "back_url": reverse("admin_create_lease"),
     })
 
 

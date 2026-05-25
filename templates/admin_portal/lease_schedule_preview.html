@@ -27,11 +27,7 @@
                         <strong class="text-slate-900" data-preview="monthly_rent">₱0.00</strong>
                     </div>
                     <div class="flex justify-between text-slate-600">
-                        <span>Contract Deposit (<span data-preview="advance_months">2</span>× rent)</span>
-                        <strong class="text-slate-900" data-preview="advance_payment_amount">₱0.00</strong>
-                    </div>
-                    <div class="flex justify-between text-slate-600">
-                        <span>Security Deposit</span>
+                        <span>Security Deposit (2× rent)</span>
                         <strong class="text-slate-900" data-preview="security_deposit">₱0.00</strong>
                     </div>
                 </div>
@@ -105,7 +101,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const gcashPreviewFooter = document.getElementById('preview-gcash-footer');
     
     if (form && previewContainer) {
-        const fields = ['id_monthly_rent', 'id_deposit_multiplier', 'id_security_deposit', 'id_start_date', 'id_due_day', 'id_motorcycle_slots', 'id_car_slots'];
+        const fields = ['id_monthly_rent', 'id_security_deposit', 'id_start_date', 'id_due_day', 'id_motorcycle_slots', 'id_car_slots'];
+        // Note: id_deposit_multiplier removed - using fixed 2x multiplier
         
         function formatCurrency(amount) {
             return '₱' + amount.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -130,14 +127,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
         function updatePreview() {
             const monthlyRent = parseFloat(getVal('id_monthly_rent', 0)) || 0;
-            const depositMultiplier = parseInt(getVal('id_deposit_multiplier', 2)) || 2;
-            const rawSec = parseFloat(getVal('id_security_deposit', 0));
-            const securityDeposit = (!isNaN(rawSec) && rawSec > 0) ? rawSec : (monthlyRent * depositMultiplier);
+            const depositMultiplier = 2; // Fixed 2x multiplier
             const startDateInput = getVal('id_start_date', '');
             const dueDay = parseInt(getVal('id_due_day', 5)) || 5;
             const motorcycleSlots = parseInt(getVal('id_motorcycle_slots', 0)) || 0;
             const carSlots = parseInt(getVal('id_car_slots', 0)) || 0;
             const parkingFee = (motorcycleSlots * 350) + (carSlots * 2500);
+            
+            // Calculate security deposit: (rent + parking) × 2 when there's parking
+            const baseForSecurityDeposit = monthlyRent + parkingFee;
+            const calculatedSecurityDeposit = baseForSecurityDeposit * depositMultiplier;
+            
+            // Use user-entered value if provided, otherwise auto-calculate
+            const rawSec = parseFloat(getVal('id_security_deposit', 0));
+            const securityDeposit = (!isNaN(rawSec) && rawSec > 0) ? rawSec : calculatedSecurityDeposit;
             
             // Toggle GCash footer in preview
             const paymentMethod = document.querySelector('input[name="move_in_payment_method"]:checked')?.value;
@@ -149,7 +152,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 previewContainer.style.display = 'block';
                 const startDate = new Date(startDateInput);
                 const monthlyTotal = monthlyRent + parkingFee;
-                const contractDeposit = monthlyRent * depositMultiplier;
+                // Total move-in cost = 1st month rent + security deposit + parking
+                // Security deposit = (rent + parking) × 2
                 const totalMoveInCost = monthlyRent + securityDeposit + parkingFee;
                 
                 let parkingLabel = '';
@@ -162,8 +166,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (useHtml) el.innerHTML = val; else el.textContent = val;
                 }
                 setPreview('monthly_rent', formatCurrency(monthlyRent) + parkingLabel, true);
-                setPreview('advance_months', depositMultiplier, false);
-                setPreview('advance_payment_amount', formatCurrency(contractDeposit), false);
                 setPreview('security_deposit', formatCurrency(securityDeposit), false);
                 setPreview('total_move_in_cost', formatCurrency(totalMoveInCost), false);
                 

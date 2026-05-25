@@ -150,7 +150,10 @@
     </div>
     <div class="tenant-card p-6 flex flex-col justify-between group hover:border-emerald-400 transition-colors">
       <span class="text-xs font-black text-slate-400 uppercase tracking-widest block mb-3">Monthly Rent</span>
-      <span class="text-2xl font-black text-emerald-700">{% if lease %}₱{{ lease.monthly_rent|floatformat:2|intcomma }}{% else %}-{% endif %}</span>
+      <span class="text-2xl font-black text-emerald-700">{% if total_monthly_rent %}₱{{ total_monthly_rent|floatformat:2|intcomma }}{% else %}-{% endif %}</span>
+      {% if lease and lease.parking_fee > 0 %}
+        <span class="text-xs text-slate-500 mt-1">Includes ₱{{ lease.parking_fee|floatformat:2|intcomma }} parking</span>
+      {% endif %}
     </div>
     <div class="tenant-card p-6 flex flex-col justify-between group hover:border-indigo-400 transition-colors">
       <span class="text-xs font-black text-slate-400 uppercase tracking-widest block mb-3">Next Bill</span>

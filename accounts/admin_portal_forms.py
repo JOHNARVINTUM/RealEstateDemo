@@ -499,13 +499,13 @@ class LeaseForm(forms.ModelForm):
     
     class Meta:
         model = Lease
-        fields = ["tenant", "unit", "monthly_rent", "due_day", "start_date", "end_date", "security_deposit", "deposit_multiplier", "is_active", "motorcycle_slots", "car_slots"]
+        fields = ["tenant", "unit", "monthly_rent", "due_day", "start_date", "end_date", "security_deposit", "is_active", "motorcycle_slots", "car_slots"]
+        # Note: deposit_multiplier removed - security deposit is now fixed at 2x monthly rent
         widgets = {
             "start_date": forms.DateInput(attrs={"type": "text", "class": "flatpickr", "autocomplete": "off"}),
             "end_date": forms.DateInput(attrs={"type": "text", "class": "flatpickr", "autocomplete": "off"}),
             "monthly_rent": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
             "security_deposit": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
-            "deposit_multiplier": forms.NumberInput(attrs={"min": "1", "max": "12"}),
         }
 
     def clean(self):
@@ -515,7 +515,6 @@ class LeaseForm(forms.ModelForm):
         end_date = cleaned.get("end_date")
         monthly_rent = cleaned.get("monthly_rent")
         security_deposit = cleaned.get("security_deposit")
-        deposit_multiplier = cleaned.get("deposit_multiplier")
         
         # Validate unit availability
         tenant = cleaned.get("tenant")
@@ -552,8 +551,7 @@ class LeaseForm(forms.ModelForm):
         if security_deposit and security_deposit < 0:
             raise ValidationError({"security_deposit": "Security deposit cannot be negative."})
         
-        if deposit_multiplier is not None and (deposit_multiplier < 1 or deposit_multiplier > 12):
-            raise ValidationError({"deposit_multiplier": "Contract deposit multiplier must be between 1 and 12."})
+        # Note: deposit_multiplier validation removed - using fixed 2x multiplier
         
         # Validate move-in payment
         payment_method = cleaned.get("move_in_payment_method")
@@ -571,9 +569,12 @@ class LeaseForm(forms.ModelForm):
         if instance.unit and not instance.monthly_rent:
             instance.monthly_rent = instance.unit.monthly_rent
         
-        # Auto-populate security deposit if not provided
+        # Auto-populate security deposit = monthly_rent × 2 (fixed multiplier)
         if not instance.security_deposit and instance.monthly_rent:
-            instance.security_deposit = instance.monthly_rent * instance.deposit_multiplier
+            instance.security_deposit = instance.monthly_rent * 2
+        
+        # Ensure deposit_multiplier is always 2 for consistency
+        instance.deposit_multiplier = 2
         
         # Set smart status based on start date
         from django.utils import timezone

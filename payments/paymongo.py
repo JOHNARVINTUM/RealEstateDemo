@@ -184,13 +184,16 @@ def create_checkout_session(
         # Provide more specific error messages
         if e.response and e.response.status_code == 401:
             logger.error("PayMongo authentication failed! Check that PAYMONGO_SECRET_KEY is correct.")
-        return None
+            return {"error": "PayMongo authentication failed. Check API keys.", "checkout_session_id": None, "checkout_url": None}
+        elif e.response and e.response.status_code == 400:
+            return {"error": f"PayMongo Bad Request: {error_detail}", "checkout_session_id": None, "checkout_url": None}
+        return {"error": f"PayMongo HTTP {status_code} error", "checkout_session_id": None, "checkout_url": None}
     except ValueError as e:
         logger.error(f"PayMongo configuration error: {e}")
-        return None
+        return {"error": f"Configuration error: {str(e)}", "checkout_session_id": None, "checkout_url": None}
     except requests.exceptions.RequestException as e:
         logger.exception(f"PayMongo create_checkout_session failed: {e}")
-        return None
+        return {"error": f"Network error: {str(e)}", "checkout_session_id": None, "checkout_url": None}
 
 
 def retrieve_checkout_session(session_id: str):

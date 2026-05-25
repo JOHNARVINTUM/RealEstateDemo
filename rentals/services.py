@@ -1,5 +1,6 @@
 from django.utils import timezone
 from datetime import timedelta, date
+from decimal import Decimal
 from django.db.models import Count, Q, Avg, Max, F
 from django.core.mail import send_mail
 from django.conf import settings
@@ -740,3 +741,119 @@ def create_tenant_with_credentials(first_name, last_name, email, contact_no=None
     except Exception as e:
         logger.error(f"Failed to create tenant with credentials: {str(e)}")
         raise
+
+
+class LeaseActivationService:
+    """
+    CENTRALIZED service for lease activation after payment verification.
+    
+    ALL payment methods (PayMongo webhook, GCash approval, Cash approval)
+    must call this service to activate a lease.
+    
+    This ensures:
+    - Consistent activation logic
+    - No duplicate activation
+    - Proper billing generation
+    - Unit occupancy update
+    - Audit trail
+    """
+    
+    @staticmethod
+    def activate_lease_after_payment(
+        lease_id: int,
+        payment_method: str,
+        payment_reference: str,
+        amount: Decimal,
+        activated_at=None,
+        skip_billing_generation: bool = False
+    ) -> tuple[bool, str]:
+        """
+        Centralized lease activation after payment verification.
+        
+        Args:
+            lease_id: The lease ID to activate
+            payment_method: 'PAYMONGO', 'GCASH', or 'CASH'
+            payment_reference: Reference code or transaction ID
+            amount: Payment amount
+            activated_at: Optional timestamp (defaults to now)
+            skip_billing_generation: If True, don't generate bills (for edge cases)
+        
+        Returns:
+            tuple: (success: bool, message: str)
+        """
+        from django.db import transaction
+        from billing.services import ensure_bills_since_move_in, set_bill_status
+        from datetime import datetime
+        
+        try:
+            with transaction.atomic():
+                # Fetch lease with lock to prevent race conditions
+                try:
+                    lease = Lease.objects.select_for_update().get(
+                        id=lease_id,
+                        status=Lease.STATUS_PENDING_PAYMENT
+                    )
+                except Lease.DoesNotExist:
+                    # Check if already active (idempotent)
+                    try:
+                        lease = Lease.objects.get(id=lease_id, status=Lease.STATUS_ACTIVE)
+                        logger.info(f"Lease {lease_id} already active, skipping activation")
+                        return True, "Lease already active"
+                    except Lease.DoesNotExist:
+                        logger.error(f"Lease {lease_id} not found or not in PENDING_PAYMENT status")
+                        return False, "Lease not found or invalid status"
+                
+                # ACTIVATE LEASE
+                activated = lease.activate(activated_at=activated_at)
+                if not activated:
+                    logger.warning(f"Lease {lease_id} activation returned False (already active?)")
+                    return True, "Lease already active"
+                
+                # UPDATE UNIT OCCUPANCY
+                unit = lease.unit
+                unit.status = "OCCUPIED"
+                unit.save(update_fields=['status'])
+                
+                # GENERATE BILLING (if not skipped)
+                if not skip_billing_generation:
+                    ensure_bills_since_move_in(lease)
+                    
+                    # MARK FIRST BILL AS PAID (from move-in payment)
+                    from billing.services import month_start
+                    first_bill_month = month_start(lease.start_date)
+                    first_bill = MonthlyBill.objects.filter(
+                        lease=lease,
+                        billing_month=first_bill_month
+                    ).first()
+                    
+                    if first_bill:
+                        set_bill_status(
+                            first_bill,
+                            status="PAID",
+                            payment_reference=payment_reference,
+                            paid_at=activated_at or timezone.now()
+                        )
+                
+                # CREATE PAYMENT RECORD
+                payment = ManualPayment.objects.create(
+                    user=lease.tenant,
+                    payment_type="move_in",
+                    payment_method=payment_method,
+                    amount=amount,
+                    reference_code=payment_reference,
+                    status="APPROVED",
+                    bill_ids=str(first_bill.id) if first_bill else "",
+                    tenant_note=f"Move-in payment via {payment_method}",
+                )
+                
+                logger.info(
+                    f"Lease {lease_id} activated successfully. "
+                    f"Payment: {payment_method} {payment_reference}, "
+                    f"Amount: {amount}"
+                )
+                
+                return True, f"Lease activated successfully. Payment recorded."
+                
+        except Exception as e:
+            logger.exception(f"Failed to activate lease {lease_id}: {e}")
+            return False, f"Activation failed: {str(e)}"

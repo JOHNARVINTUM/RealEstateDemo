@@ -407,87 +407,42 @@ def paymongo_success(request):
 
 
 @login_required
-@require_http_methods(["GET", "POST"])
+@require_http_methods(["GET"])
 def admin_paymongo_checkout_generate(request):
     """
-    Admin endpoint to generate a PayMongo checkout for a tenant.
-    Returns JSON with checkout URL for admin to share with tenant.
-    Used in lease creation move-in payment flow.
+    Simple admin endpoint to generate PayMongo checkout for move-in.
+    Just creates checkout and redirects - payment record handled by webhook.
     """
-    # Only allow admin users
-    if not (getattr(request.user, "role", "") == "ADMIN" or request.user.is_superuser):
-        return JsonResponse({"error": "Admin access required"}, status=403)
-    
     amount_str = request.GET.get("amount", "0")
     tenant_id = request.GET.get("tenant_id", "")
-    payment_type = request.GET.get("payment_type", "move_in")
     
     try:
         amount = Decimal(amount_str)
+        amount_cents = int(amount * 100)
     except Exception:
-        return JsonResponse({"error": "Invalid amount"}, status=400)
+        messages.error(request, "Invalid amount")
+        return redirect("admin_portal")
     
     if amount <= 0:
-        return JsonResponse({"error": "Amount must be greater than zero"}, status=400)
+        messages.error(request, "Amount must be greater than zero")
+        return redirect("admin_portal")
     
-    # Convert to centavos (PayMongo expects integer centavos)
-    amount_cents = int(amount * 100)
-    
-    # Build description
-    description = f"REALESTATE360+ Move-in Payment"
-    
-    # Build URLs - success will be tenant dashboard
     base_url = request.build_absolute_uri("/")[:-1]
-    success_url = base_url + reverse("paymongo_success")
-    cancel_url = base_url + reverse("tenant_dashboard")
-    
-    # Metadata for tracking
-    metadata = {
-        "payment_type": payment_type,
-        "amount": str(amount),
-        "generated_by_admin": str(request.user.id),
-    }
-    if tenant_id:
-        metadata["tenant_id"] = tenant_id
     
     result = create_checkout_session(
         amount_cents=amount_cents,
-        description=description,
-        metadata=metadata,
-        success_url=success_url,
-        cancel_url=cancel_url,
+        description="REALESTATE360+ Move-in Payment",
+        metadata={"payment_type": "move_in", "generated_by_admin": str(request.user.id), "tenant_id": tenant_id or ""},
+        success_url=base_url + reverse("paymongo_success"),
+        cancel_url=base_url + reverse("tenant_dashboard"),
     )
     
-    if not result:
-        return JsonResponse({"error": "Failed to create checkout session"}, status=500)
+    if not result or result.get("error"):
+        messages.error(request, result.get("error", "PayMongo checkout failed"))
+        return redirect("admin_portal")
     
-    # Check for configuration error
-    if isinstance(result, dict) and result.get("error"):
-        error_msg = result.get("error")
-        if "not configured" in error_msg.lower():
-            return JsonResponse({"error": "PayMongo not configured. Check PAYMONGO_SECRET_KEY in .env"}, status=503)
-        return JsonResponse({"error": error_msg}, status=500)
-    
-    # Create a PENDING ManualPayment record (will be linked to tenant later when they pay)
-    payment = ManualPayment.objects.create(
-        user=request.user,  # Temporarily assigned to admin, will update on payment
-        payment_type=payment_type,
-        payment_method="PAYMONGO",
-        amount=amount,
-        reference_code=f"REF-PM-{result['checkout_session_id'][-8:].upper()}",
-        checkout_session_id=result["checkout_session_id"],
-        checkout_url=result["checkout_url"],
-        status="PENDING",
-        notes=f"Admin-generated checkout for move-in payment",
-    )
-    
-    logger.info(f"Admin {request.user.id} generated PayMongo checkout {payment.id} for amount {amount}")
-    
-    return JsonResponse({
-        "checkout_url": result["checkout_url"],
-        "checkout_session_id": result["checkout_session_id"],
-        "payment_id": payment.id,
-    })
+    # Just redirect to PayMongo - webhook will handle payment record when tenant pays
+    return redirect(result["checkout_url"])
 
 
 @csrf_exempt
@@ -567,20 +522,50 @@ def paymongo_webhook(request):
 def _auto_approve_paymongo_payment(payment):
     """
     Auto-approve a PayMongo payment: mark bills as PAID and notify admin.
+    
+    If this is a move-in payment with a lease_id, activate the pending lease.
     """
     from billing.services import approve_manual_payment
+    from decimal import Decimal
 
     if payment.status == "APPROVED":
         return
 
+    # Check if this is a move-in payment with a pending lease to activate
+    lease_activated = False
     try:
-        approve_manual_payment(payment)
-        logger.info(f"PayMongo payment {payment.id} auto-approved successfully")
+        metadata = payment.bill_ids  # We store metadata here for move-in payments
+        if metadata and metadata.startswith("lease_id:"):
+            lease_id = int(metadata.split(":")[1])
+            
+            # Use centralized activation service
+            from rentals.services import LeaseActivationService
+            success, message = LeaseActivationService.activate_lease_after_payment(
+                lease_id=lease_id,
+                payment_method="PAYMONGO",
+                payment_reference=payment.reference_code,
+                amount=payment.amount,
+            )
+            
+            if success:
+                lease_activated = True
+                logger.info(f"Lease {lease_id} activated via PayMongo webhook")
+            else:
+                logger.warning(f"Lease activation failed for {lease_id}: {message}")
     except Exception as e:
-        logger.exception(f"Failed to auto-approve PayMongo payment {payment.id}: {e}")
-        # Even if bill approval fails, mark payment as approved so we don't retry incorrectly
-        payment.status = "APPROVED"
-        payment.save(update_fields=["status"])
+        logger.exception(f"Error checking lease activation for payment {payment.id}: {e}")
+        # Continue with normal approval even if lease activation fails
+
+    # Only run normal approval if lease wasn't activated (activated already handles bills)
+    if not lease_activated:
+        try:
+            approve_manual_payment(payment)
+            logger.info(f"PayMongo payment {payment.id} auto-approved successfully")
+        except Exception as e:
+            logger.exception(f"Failed to auto-approve PayMongo payment {payment.id}: {e}")
+            # Even if bill approval fails, mark payment as approved so we don't retry incorrectly
+            payment.status = "APPROVED"
+            payment.save(update_fields=["status"])
 
     # Notify admin about the auto-approved payment
     try:
@@ -589,12 +574,23 @@ def _auto_approve_paymongo_payment(payment):
             tenant_name = payment.user.tenantprofile.full_name
         paid_via_display = (payment.paid_via or "online").replace("_", " ").title()
 
-        Notification.create_notification(
-            title="Online Payment Received & Auto-Approved",
-            message=(
+        if lease_activated:
+            title = "Move-in Payment Received - Lease Activated"
+            message = (
+                f"{tenant_name} paid ₱{payment.amount:,.2f} via PayMongo ({paid_via_display}). "
+                f"Reference: {payment.reference_code}. "
+                f"Lease has been automatically ACTIVATED and first month's bill marked as PAID."
+            )
+        else:
+            title = "Online Payment Received & Auto-Approved"
+            message = (
                 f"{tenant_name} paid ₱{payment.amount:,.2f} via PayMongo ({paid_via_display}). "
                 f"Reference: {payment.reference_code}. Bills have been automatically marked as PAID."
-            ),
+            )
+
+        Notification.create_notification(
+            title=title,
+            message=message,
             notification_type='PAYMENT',
             recipient_type='ADMIN',
             related_tenant=payment.user,

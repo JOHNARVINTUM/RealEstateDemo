@@ -14,6 +14,8 @@ function handleUnitSelection(selectElement) {
     const selectedOption = selectElement.options[selectElement.selectedIndex];
     const monthlyRentInput = document.getElementById('id_monthly_rent');
     const securityDepositInput = document.getElementById('id_security_deposit');
+    const motorcycleSlotsInput = document.getElementById('id_motorcycle_slots');
+    const carSlotsInput = document.getElementById('id_car_slots');
     
     if (selectedOption && selectedOption.value && monthlyRentInput) {
         const optionText = selectedOption.textContent;
@@ -22,9 +24,15 @@ function handleUnitSelection(selectElement) {
         if (rentMatch) {
             const rent = rentMatch[1].replace(/,/g, '');
             monthlyRentInput.value = rent;
-            if (securityDepositInput && !securityDepositInput.value) {
-                securityDepositInput.value = rent;
+            
+            // Always update security deposit when room changes: (rent + parking) × 2
+            if (securityDepositInput) {
+                const motorcycleSlots = parseInt(motorcycleSlotsInput?.value || 0);
+                const carSlots = parseInt(carSlotsInput?.value || 0);
+                const parkingFee = (motorcycleSlots * 350) + (carSlots * 2500);
+                securityDepositInput.value = ((parseFloat(rent) + parkingFee) * 2).toFixed(2);
             }
+            
             // Trigger the preview update in the companion template
             const event = new Event('input', { bubbles: true });
             monthlyRentInput.dispatchEvent(event);
@@ -153,15 +161,8 @@ function toggleMoveInPaymentMethod() {
               </div>
               <p class="text-[10px] text-slate-500 mt-2 font-bold uppercase tracking-tight">Usually equal to 1 month rent.</p>
             </div>
-
-            <div>
-              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider" for="id_deposit_multiplier">Contract Deposit Multiplier</label>
-              <input type="number" name="deposit_multiplier" id="id_deposit_multiplier" value="{{ form.deposit_multiplier.value|default:2 }}" min="1" max="12"
-                     oninput="updateDepositPreview()"
-                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none">
-              <p class="text-[10px] text-slate-500 mt-2 font-bold uppercase tracking-tight">Contract deposit = monthly rent × this value (default: 2).</p>
-            </div>
           </div>
+          <!-- Note: Contract Deposit Multiplier removed - using fixed 2x multiplier -->
 
           <div class="mt-4">
             <label class="block text-sm font-bold text-slate-800 mb-3 uppercase tracking-wider">Parking Slots</label>
@@ -263,9 +264,9 @@ function toggleMoveInPaymentMethod() {
                   <rect x="2" y="5" width="20" height="14" rx="2"></rect>
                   <line x1="2" y1="10" x2="22" y2="10"></line>
                 </svg>
-                Generate PayMongo Checkout
+                Pay with PayMongo
               </button>
-              <p class="text-xs text-slate-500 mt-2 text-center">Click to create a secure payment link for the tenant</p>
+              <p class="text-xs text-slate-500 mt-2 text-center">Opens PayMongo checkout in a new tab</p>
             </div>
             
             <!-- Checkout Link Display (hidden initially) -->
@@ -393,6 +394,45 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Auto-update security deposit when monthly rent or parking changes (2x multiplier)
+    const monthlyRentInput = document.getElementById('id_monthly_rent');
+    const securityDepositInput = document.getElementById('id_security_deposit');
+    const motorcycleSlotsInput = document.getElementById('id_motorcycle_slots');
+    const carSlotsInput = document.getElementById('id_car_slots');
+    
+    if (monthlyRentInput && securityDepositInput) {
+        function updateSecurityDeposit() {
+            const rent = parseFloat(monthlyRentInput.value) || 0;
+            const motorcycleSlots = parseInt(motorcycleSlotsInput?.value || 0);
+            const carSlots = parseInt(carSlotsInput?.value || 0);
+            const parkingFee = (motorcycleSlots * 350) + (carSlots * 2500);
+            
+            // Security deposit = (rent + parking) × 2
+            if (rent > 0) {
+                securityDepositInput.value = ((rent + parkingFee) * 2).toFixed(2);
+            }
+        }
+        
+        // Update on rent change
+        monthlyRentInput.addEventListener('input', updateSecurityDeposit);
+        monthlyRentInput.addEventListener('change', updateSecurityDeposit);
+        
+        // Also update when parking changes
+        if (motorcycleSlotsInput) {
+            motorcycleSlotsInput.addEventListener('input', updateSecurityDeposit);
+            motorcycleSlotsInput.addEventListener('change', updateSecurityDeposit);
+        }
+        if (carSlotsInput) {
+            carSlotsInput.addEventListener('input', updateSecurityDeposit);
+            carSlotsInput.addEventListener('change', updateSecurityDeposit);
+        }
+        
+        // Initial update if rent is already filled
+        if (monthlyRentInput.value) {
+            updateSecurityDeposit();
+        }
+    }
+
     // PayMongo Checkout Generation
     const btnGeneratePaymongo = document.getElementById('btn-generate-paymongo');
     const btnRegeneratePaymongo = document.getElementById('btn-regenerate-paymongo');
@@ -405,8 +445,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function generatePaymongoCheckout() {
         // Get move-in cost from the preview panel
-        const totalMoveInElement = document.getElementById('preview-total-movein');
-        const amount = totalMoveInElement ? parseFloat(totalMoveInElement.textContent.replace(/[^0-9.]/g, '')) : 0;
+        // Try data-preview attribute first, then fallback to ID
+        const totalMoveInElement = document.querySelector('[data-preview="total_move_in_cost"]') || document.getElementById('preview-total-movein');
+        let amount = 0;
+        if (totalMoveInElement) {
+            const text = totalMoveInElement.textContent || totalMoveInElement.innerText || '0';
+            amount = parseFloat(text.replace(/[^0-9.]/g, '')) || 0;
+        }
         
         if (amount <= 0) {
             alert('Please complete lease details first. Move-in cost must be greater than zero.');
@@ -425,46 +470,24 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
         }
 
-        // Call admin API to generate checkout
-        fetch(`/payments/paymongo/admin-checkout/?amount=${amount}&payment_type=move_in`, {
-            method: 'GET',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Failed to generate checkout');
-            }
-            return response.json();
-        })
-        .then(data => {
-            const checkoutUrl = data.checkout_url || data.checkoutUrl;
-            if (checkoutUrl) {
-                // Store the checkout URL
-                paymongoCheckoutUrlInput.value = checkoutUrl;
-                paymongoCheckoutLinkDisplay.value = checkoutUrl;
-                paymongoRefInput.value = data.checkout_session_id || 'REF-PAYMONGO-MOVEIN';
-                
-                // Show link section, hide generate button
-                paymongoGenerateSection.classList.add('hidden');
-                paymongoLinkSection.classList.remove('hidden');
-            } else {
-                throw new Error('No checkout URL received');
-            }
-        })
-        .catch(error => {
-            console.error('Error generating checkout:', error);
-            let errorMsg = 'Failed to generate PayMongo checkout. Please try again or use another payment method.';
-            
-            if (error.message && error.message.includes('not configured')) {
-                errorMsg = 'PayMongo payment gateway is not configured. Please contact the administrator to set up PAYMONGO_SECRET_KEY in the .env file.';
-            }
-            
-            alert(errorMsg);
-        })
-        .finally(() => {
-            // Reset button state
+        // Simply open the checkout URL in a new tab
+        // The server will handle creating the checkout and redirect to PayMongo
+        const checkoutUrl = `/payments/paymongo/admin-checkout/?amount=${amount}&payment_type=move_in`;
+        
+        // Mark as pending in hidden field
+        if (paymongoCheckoutUrlInput) {
+            paymongoCheckoutUrlInput.value = 'PENDING';
+        }
+        
+        // Show the link section
+        paymongoGenerateSection.classList.add('hidden');
+        paymongoLinkSection.classList.remove('hidden');
+        
+        // Open PayMongo in new tab (server will redirect there)
+        window.open(checkoutUrl, '_blank');
+        
+        // Reset button after short delay
+        setTimeout(() => {
             if (btnGeneratePaymongo) {
                 btnGeneratePaymongo.disabled = false;
                 btnGeneratePaymongo.innerHTML = `
@@ -472,10 +495,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         <rect x="2" y="5" width="20" height="14" rx="2"></rect>
                         <line x1="2" y1="10" x2="22" y2="10"></line>
                     </svg>
-                    Generate PayMongo Checkout
+                    Pay with PayMongo
                 `;
             }
-        });
+        }, 2000);
     }
 
     if (btnGeneratePaymongo) {

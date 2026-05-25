@@ -396,8 +396,8 @@ def paymongo_success(request):
         tenant_name = ""
         if payment.payment_type == "move_in":
             from rentals.models import Lease
-            # Try to find lease from metadata or recent pending lease
-            lease_id = payment.metadata.get("lease_id") if hasattr(payment, 'metadata') else None
+            # Try to find lease from metadata
+            lease_id = payment.metadata.get("lease_id") if payment.metadata else None
             if lease_id:
                 try:
                     lease = Lease.objects.get(id=lease_id)

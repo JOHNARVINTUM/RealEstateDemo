@@ -5,6 +5,7 @@ from .views import (
     paymongo_checkout,
     paymongo_success,
     paymongo_webhook,
+    admin_paymongo_checkout_generate,
 )
 
 urlpatterns = [
@@ -13,4 +14,5 @@ urlpatterns = [
     path("paymongo/checkout/", paymongo_checkout, name="paymongo_checkout"),
     path("paymongo/success/", paymongo_success, name="paymongo_success"),
     path("paymongo/webhook/", paymongo_webhook, name="paymongo_webhook"),
+    path("paymongo/admin-checkout/", admin_paymongo_checkout_generate, name="admin_paymongo_checkout"),
 ]

@@ -15,7 +15,7 @@ from django.views.decorators.http import require_http_methods, require_POST
 from django.contrib import messages
 
 from .models import ManualPayment
-from .paymongo import create_checkout_session, retrieve_checkout_session
+from .paymongo import create_checkout_session, retrieve_checkout_session, verify_webhook_signature
 from rentals.models import Notification
 
 logger = logging.getLogger(__name__)
@@ -252,6 +252,16 @@ def paymongo_checkout(request):
     if not result:
         messages.error(request, "Failed to create checkout session. Please try another payment method.")
         return redirect("tenant_pay_advance")
+    
+    # Check for configuration error
+    if isinstance(result, dict) and result.get("error"):
+        error_msg = result.get("error")
+        if "not configured" in error_msg.lower():
+            messages.error(request, "PayMongo payment gateway is not configured. Please contact the administrator.")
+            logger.error("PayMongo attempted but API keys not configured in settings/.env")
+        else:
+            messages.error(request, f"Payment gateway error: {error_msg}. Please try another payment method.")
+        return redirect("tenant_pay_advance")
 
     # Create a PENDING ManualPayment record to track this
     payment = ManualPayment.objects.create(
@@ -327,6 +337,90 @@ def paymongo_success(request):
     })
 
 
+@login_required
+@require_http_methods(["GET", "POST"])
+def admin_paymongo_checkout_generate(request):
+    """
+    Admin endpoint to generate a PayMongo checkout for a tenant.
+    Returns JSON with checkout URL for admin to share with tenant.
+    Used in lease creation move-in payment flow.
+    """
+    # Only allow admin users
+    if not (getattr(request.user, "role", "") == "ADMIN" or request.user.is_superuser):
+        return JsonResponse({"error": "Admin access required"}, status=403)
+    
+    amount_str = request.GET.get("amount", "0")
+    tenant_id = request.GET.get("tenant_id", "")
+    payment_type = request.GET.get("payment_type", "move_in")
+    
+    try:
+        amount = Decimal(amount_str)
+    except Exception:
+        return JsonResponse({"error": "Invalid amount"}, status=400)
+    
+    if amount <= 0:
+        return JsonResponse({"error": "Amount must be greater than zero"}, status=400)
+    
+    # Convert to centavos (PayMongo expects integer centavos)
+    amount_cents = int(amount * 100)
+    
+    # Build description
+    description = f"REALESTATE360+ Move-in Payment"
+    
+    # Build URLs - success will be tenant dashboard
+    base_url = request.build_absolute_uri("/")[:-1]
+    success_url = base_url + reverse("paymongo_success")
+    cancel_url = base_url + reverse("tenant_dashboard")
+    
+    # Metadata for tracking
+    metadata = {
+        "payment_type": payment_type,
+        "amount": str(amount),
+        "generated_by_admin": str(request.user.id),
+    }
+    if tenant_id:
+        metadata["tenant_id"] = tenant_id
+    
+    result = create_checkout_session(
+        amount_cents=amount_cents,
+        description=description,
+        metadata=metadata,
+        success_url=success_url,
+        cancel_url=cancel_url,
+    )
+    
+    if not result:
+        return JsonResponse({"error": "Failed to create checkout session"}, status=500)
+    
+    # Check for configuration error
+    if isinstance(result, dict) and result.get("error"):
+        error_msg = result.get("error")
+        if "not configured" in error_msg.lower():
+            return JsonResponse({"error": "PayMongo not configured. Check PAYMONGO_SECRET_KEY in .env"}, status=503)
+        return JsonResponse({"error": error_msg}, status=500)
+    
+    # Create a PENDING ManualPayment record (will be linked to tenant later when they pay)
+    payment = ManualPayment.objects.create(
+        user=request.user,  # Temporarily assigned to admin, will update on payment
+        payment_type=payment_type,
+        payment_method="PAYMONGO",
+        amount=amount,
+        reference_code=f"REF-PM-{result['checkout_session_id'][-8:].upper()}",
+        checkout_session_id=result["checkout_session_id"],
+        checkout_url=result["checkout_url"],
+        status="PENDING",
+        notes=f"Admin-generated checkout for move-in payment",
+    )
+    
+    logger.info(f"Admin {request.user.id} generated PayMongo checkout {payment.id} for amount {amount}")
+    
+    return JsonResponse({
+        "checkout_url": result["checkout_url"],
+        "checkout_session_id": result["checkout_session_id"],
+        "payment_id": payment.id,
+    })
+
+
 @csrf_exempt
 @require_POST
 def paymongo_webhook(request):
@@ -334,9 +428,28 @@ def paymongo_webhook(request):
     Webhook endpoint for PayMongo events.
     Handles checkout_session.payment.paid event.
     Auto-approves the payment and notifies admin.
+    
+    Security: Verifies PayMongo signature before processing.
     """
+    # Get raw body for signature verification (must be done before reading body)
+    payload_body = request.body
+    
+    # Verify webhook signature
+    signature_header = request.headers.get('Paymongo-Signature', '')
+    webhook_secret = getattr(settings, 'PAYMONGO_WEBHOOK_SECRET', '')
+    
+    if not webhook_secret:
+        logger.error("PAYMONGO_WEBHOOK_SECRET not configured - webhook verification disabled")
+        # In production, reject webhooks if secret not configured
+        if settings.IS_PRODUCTION:
+            return HttpResponse("Webhook secret not configured", status=500)
+    elif not verify_webhook_signature(payload_body, signature_header, webhook_secret):
+        logger.warning(f"Invalid webhook signature from {request.META.get('REMOTE_ADDR')}")
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("Invalid signature")
+    
     try:
-        payload = json.loads(request.body)
+        payload = json.loads(payload_body)
     except json.JSONDecodeError:
         return HttpResponseBadRequest("Invalid JSON")
 

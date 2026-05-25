@@ -469,4 +469,92 @@ class CalendarEvent(models.Model):
         self.save()
 
 
-# Create your models here.
+class ArchivedTenant(models.Model):
+    """
+    Archive table for deleted/deactivated tenants.
+    Stores complete tenant data for audit trail and potential recovery.
+    """
+    ARCHIVE_TYPE_CHOICES = [
+        ('DEACTIVATED', 'Deactivated - Records Preserved'),
+        ('DELETED_SOFT', 'Soft Deleted - Archived Only'),
+        ('DELETED_HARD', 'Hard Deleted - With Records'),
+    ]
+    
+    # Original identifiers
+    original_user_id = models.IntegerField(help_text="Original User ID")
+    original_tenant_id = models.IntegerField(help_text="Original TenantProfile ID")
+    email = models.EmailField(help_text="Original email address")
+    
+    # Tenant data snapshot (JSON for flexibility)
+    tenant_data = models.JSONField(
+        help_text="Complete snapshot of tenant data including profile, leases, payments, etc.",
+        encoder=None,
+        decoder=None,
+    )
+    
+    # Deletion metadata
+    archive_type = models.CharField(
+        max_length=20,
+        choices=ARCHIVE_TYPE_CHOICES,
+        default='DEACTIVATED',
+        help_text="Type of deletion/archive action performed"
+    )
+    deleted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='archived_tenants',
+        help_text="Admin who performed the deletion"
+    )
+    deleted_at = models.DateTimeField(auto_now_add=True)
+    deletion_reason = models.TextField(blank=True, help_text="Optional reason for deletion")
+    
+    # Recovery info
+    can_be_restored = models.BooleanField(default=True, help_text="Whether this tenant can be restored")
+    restored_at = models.DateTimeField(null=True, blank=True, help_text="When restored if applicable")
+    restored_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='restored_tenants',
+        help_text="Admin who restored the tenant"
+    )
+    
+    class Meta:
+        ordering = ['-deleted_at']
+        verbose_name = 'Archived Tenant'
+        verbose_name_plural = 'Archived Tenants'
+        indexes = [
+            models.Index(fields=['email']),
+            models.Index(fields=['deleted_at']),
+            models.Index(fields=['archive_type']),
+        ]
+    
+    def __str__(self):
+        name = self.tenant_data.get('full_name', 'Unknown') if self.tenant_data else 'Unknown'
+        return f"{name} ({self.archive_type}) - {self.deleted_at.strftime('%Y-%m-%d')}"
+    
+    @property
+    def full_name(self):
+        """Get full name from archived data"""
+        if self.tenant_data:
+            return self.tenant_data.get('full_name', 'Unknown Tenant')
+        return 'Unknown Tenant'
+    
+    @property
+    def is_restorable(self):
+        """Check if tenant can be restored"""
+        return self.can_be_restored and not self.restored_at
+    
+    def get_summary(self):
+        """Get brief summary of archived tenant"""
+        return {
+            'id': self.id,
+            'full_name': self.full_name,
+            'email': self.email,
+            'archive_type': self.archive_type,
+            'deleted_at': self.deleted_at,
+            'deleted_by': self.deleted_by.get_full_name() if self.deleted_by else 'System',
+            'is_restorable': self.is_restorable,
+        }

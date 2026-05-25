@@ -888,46 +888,156 @@ def admin_edit_tenant(request, tenant_id: int):
 
 @admin_required
 def admin_delete_tenant(request, tenant_id: int):
-    tenant = get_object_or_404(TenantProfile, pk=tenant_id)
+    """
+    Delete tenant with password confirmation and archive options.
+    Phase 1: Password verification
+    Phase 2: Choose archive or permanent delete
+    """
+    from rentals.models import ArchivedTenant
+    from django.utils import timezone
+    import json
+    
+    tenant = get_object_or_404(TenantProfile.objects.select_related('user'), pk=tenant_id)
+    user = tenant.user
     has_records = tenant_has_records(tenant)
-
-    if request.method == "POST":
+    
+    # PHASE 2: Process deletion after password verified
+    if request.method == "POST" and request.POST.get("phase") == "2":
+        # Re-verify password
+        admin_password = request.POST.get("admin_password", "").strip()
+        if not request.user.check_password(admin_password):
+            messages.error(request, "Password verification failed. Action cancelled.")
+            return redirect("admin_tenant_detail", tenant_id=tenant.id)
+        
+        deletion_type = request.POST.get("deletion_type", "")
+        deletion_reason = request.POST.get("deletion_reason", "").strip()
+        
+        # Collect all tenant data for archiving
+        tenant_data = {
+            'full_name': tenant.full_name,
+            'first_name': tenant.first_name,
+            'last_name': tenant.last_name,
+            'email': user.email,
+            'contact_no': tenant.contact_no,
+            'created_at': tenant.created_at.isoformat() if tenant.created_at else None,
+            'has_records': has_records,
+        }
+        
+        # Collect related records summary
         if has_records:
-            # Deactivate: preserve all history
+            leases = list(Lease.objects.filter(tenant=user).values(
+                'id', 'unit__number', 'monthly_rent', 'start_date', 'end_date', 'is_active'
+            ))
+            payments = list(ManualPayment.objects.filter(user=user).values(
+                'id', 'amount', 'payment_method', 'status', 'created_at'
+            )[:10])  # Last 10 payments
+            maintenance = list(MaintenanceRequest.objects.filter(tenant=user).values(
+                'id', 'title', 'status', 'created_at'
+            )[:10])  # Last 10 requests
+            
+            tenant_data['records_summary'] = {
+                'leases': leases,
+                'payments_count': ManualPayment.objects.filter(user=user).count(),
+                'payments_sample': payments,
+                'maintenance_count': MaintenanceRequest.objects.filter(tenant=user).count(),
+                'maintenance_sample': maintenance,
+            }
+        
+        if deletion_type == "ARCHIVE":
+            # Archive tenant data and deactivate
+            ArchivedTenant.objects.create(
+                original_user_id=user.id,
+                original_tenant_id=tenant.id,
+                email=user.email,
+                tenant_data=tenant_data,
+                archive_type='DEACTIVATED',
+                deleted_by=request.user,
+                deletion_reason=deletion_reason,
+                can_be_restored=True,
+            )
+            
+            # Deactivate (preserve records, disable login)
             deactivate_tenant(tenant)
-            messages.success(request, f"Tenant {tenant.full_name} has been deactivated. Their history is preserved and the unit is now available.")
-        else:
-            # Hard delete: no records to preserve
-            user = tenant.user
+            messages.success(
+                request, 
+                f"✓ Tenant {tenant.full_name} archived and deactivated. "
+                f"All records preserved. Unit is now available."
+            )
+            
+        elif deletion_type == "DELETE":
+            # Archive then hard delete
+            ArchivedTenant.objects.create(
+                original_user_id=user.id,
+                original_tenant_id=tenant.id,
+                email=user.email,
+                tenant_data=tenant_data,
+                archive_type='DELETED_HARD' if has_records else 'DELETED_SOFT',
+                deleted_by=request.user,
+                deletion_reason=deletion_reason,
+                can_be_restored=not has_records,  # Can only restore if no records
+            )
+            
+            full_name = tenant.full_name
+            
+            if has_records:
+                # Delete all related records
+                Lease.objects.filter(tenant=user).delete()
+                ManualPayment.objects.filter(user=user).delete()
+                MaintenanceRequest.objects.filter(tenant=user).delete()
+                TenantAttachment.objects.filter(tenant=user).delete()
+            
+            # Delete tenant profile and user
             tenant.delete()
             user.delete()
-            messages.success(request, f"Tenant {tenant.full_name} has been permanently deleted.")
+            
+            messages.success(
+                request,
+                f"✓ Tenant {full_name} and all records permanently deleted. "
+                f"Archive created for audit trail."
+            )
+        else:
+            messages.error(request, "Invalid deletion type selected.")
+            return redirect("admin_tenant_detail", tenant_id=tenant.id)
+        
         return redirect("admin_tenants")
-
-    # Determine action based on records
-    if has_records:
-        title = "Deactivate Tenant"
-        message = (
-            f"Deactivate tenant {tenant.full_name}?\n\n"
-            f"This tenant has existing records (leases, payments, or maintenance requests) "
-            f"and cannot be permanently deleted.\n\n"
-            f"Deactivation will:\n"
-            f"• Disable login access for this tenant\n"
-            f"• Close any active leases\n"
-            f"• Make the occupied unit available\n"
-            f"• Preserve all historical records (payments, bills, maintenance)"
-        )
-    else:
-        title = "Delete Tenant"
-        message = (
-            f"Delete tenant {tenant.full_name}?\n\n"
-            f"This tenant has no records. This action will permanently remove the tenant account.\n\n"
-            f"This cannot be undone."
-        )
-
-    return render(request, "admin_portal/confirm.html", {
-        "title": title,
-        "message": message,
+    
+    # PHASE 1: Password verification
+    if request.method == "POST":
+        admin_password = request.POST.get("admin_password", "").strip()
+        
+        # Verify password
+        if not request.user.check_password(admin_password):
+            return render(request, "admin_portal/confirm_delete_tenant.html", {
+                "title": "⚠️ Security Verification Failed",
+                "error": "Incorrect password. Please try again.",
+                "tenant": tenant,
+                "has_records": has_records,
+                "phase": 1,
+                "post_url": reverse("admin_delete_tenant", args=[tenant.id]),
+                "back_url": reverse("admin_tenant_detail", args=[tenant.id]),
+            })
+        
+        # Password verified, show deletion options (Phase 2)
+        return render(request, "admin_portal/confirm_delete_tenant.html", {
+            "title": "Select Deletion Option",
+            "tenant": tenant,
+            "has_records": has_records,
+            "phase": 2,
+            "post_url": reverse("admin_delete_tenant", args=[tenant.id]),
+            "back_url": reverse("admin_tenant_detail", args=[tenant.id]),
+        })
+    
+    # GET: Show password verification form (Phase 1)
+    return render(request, "admin_portal/confirm_delete_tenant.html", {
+        "title": "⚠️ Security Verification Required",
+        "message": (
+            f"You are attempting to delete tenant: {tenant.full_name}\n\n"
+            f"For security, please enter your admin password to continue. "
+            f"You will then be able to choose between archiving or permanent deletion."
+        ),
+        "tenant": tenant,
+        "has_records": has_records,
+        "phase": 1,
         "post_url": reverse("admin_delete_tenant", args=[tenant.id]),
         "back_url": reverse("admin_tenant_detail", args=[tenant.id]),
     })
@@ -1912,10 +2022,12 @@ def admin_create_announcement(request):
     })
 
 
+@admin_required
 @require_http_methods(["GET"])
 def api_get_unit_data(request, unit_number):
     """
-    API endpoint to get unit data for automatic price population
+    API endpoint to get unit data for automatic price population.
+    Requires admin authentication.
     """
     try:
         unit = Unit.objects.get(number=unit_number.upper(), is_active=True)
@@ -1945,10 +2057,12 @@ def api_get_unit_data(request, unit_number):
         }, status=500)
 
 
+@admin_required
 @require_http_methods(["GET"])
 def api_get_unit_data_by_id(request, unit_id):
     """
-    API endpoint to get unit data by ID for lease forms
+    API endpoint to get unit data by ID for lease forms.
+    Requires admin authentication.
     """
     try:
         unit = Unit.objects.get(id=unit_id, is_active=True)

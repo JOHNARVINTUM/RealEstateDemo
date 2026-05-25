@@ -13,15 +13,20 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
-
-ENVIRONMENT = os.environ.get('ENVIRONMENT', 'development')
-IS_PRODUCTION = ENVIRONMENT == 'production'
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from .env file in project root
+env_path = BASE_DIR / '.env'
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path)
+else:
+    load_dotenv()  # Fallback to default behavior
+
+ENVIRONMENT = os.environ.get('ENVIRONMENT', 'development')
+IS_PRODUCTION = ENVIRONMENT == 'production'
 
 
 # Quick-start development settings - unsuitable for production
@@ -104,16 +109,28 @@ WSGI_APPLICATION = 'RealEstateDemo.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+# Production database configuration - PostgreSQL (Supabase)
+# For Railway deployment, set DB_PASSWORD and other vars in environment
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "postgres",
-        "USER": "postgres.ezrxfodgrztlajiiilfz",
-        "PASSWORD": "Ripdemo999-",
-        "HOST": "aws-1-ap-northeast-1.pooler.supabase.com",
-        "PORT": "6543",
+        "NAME": os.environ.get("DB_NAME", "postgres"),
+        "USER": os.environ.get("DB_USER", "postgres.ezrxfodgrztlajiiilfz"),
+        "PASSWORD": os.environ.get("DB_PASSWORD", "Ripdemo999-"),
+        "HOST": os.environ.get("DB_HOST", "aws-1-ap-northeast-1.pooler.supabase.com"),
+        "PORT": os.environ.get("DB_PORT", "6543"),
     }
 }
+
+# Validate database configuration in production
+if IS_PRODUCTION:
+    required_db_vars = ["DB_PASSWORD", "DB_HOST"]
+    missing_db_vars = [var for var in required_db_vars if not os.environ.get(var)]
+    if missing_db_vars:
+        raise ImproperlyConfigured(
+            f"Production database configuration incomplete. "
+            f"Missing environment variables: {', '.join(missing_db_vars)}"
+        )
 
 
 # Password validation
@@ -174,6 +191,7 @@ GCASH_QR_URL = "/static/img/qr.jpg"
 # PayMongo Checkout API
 PAYMONGO_SECRET_KEY = os.environ.get("PAYMONGO_SECRET_KEY", "")
 PAYMONGO_PUBLIC_KEY = os.environ.get("PAYMONGO_PUBLIC_KEY", "")
+PAYMONGO_WEBHOOK_SECRET = os.environ.get("PAYMONGO_WEBHOOK_SECRET", "")
 
 # Email via Resend HTTP API (Railway blocks all SMTP ports)
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')

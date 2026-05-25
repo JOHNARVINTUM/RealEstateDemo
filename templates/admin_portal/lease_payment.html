@@ -1,4 +1,5 @@
 {% extends "admin_portal/base.html" %}
+{% load humanize %}
 
 {% block title %}{{ title }} - REALESTATE360+{% endblock %}
 
@@ -68,14 +69,7 @@
                     <p class="font-medium text-slate-900">1st Month Rent</p>
                     <p class="text-xs text-slate-500">Base rent for {{ lease.start_date|date:"F Y" }}</p>
                 </div>
-                <p class="font-semibold text-slate-900">₱{{ lease.monthly_rent|floatformat:2 }}</p>
-            </div>
-            <div class="flex justify-between items-center py-2 border-b border-slate-100">
-                <div>
-                    <p class="font-medium text-slate-900">Security Deposit</p>
-                    <p class="text-xs text-slate-500">2× (rent + parking)</p>
-                </div>
-                <p class="font-semibold text-slate-900">₱{{ lease.security_deposit|floatformat:2 }}</p>
+                <p class="font-semibold text-slate-900">₱{{ lease.monthly_rent|floatformat:2|intcomma }}</p>
             </div>
             {% if lease.parking_fee > 0 %}
             <div class="flex justify-between items-center py-2 border-b border-slate-100">
@@ -86,12 +80,19 @@
                         {% if lease.car_slots > 0 %}{% if lease.motorcycle_slots > 0 %} + {% endif %}{{ lease.car_slots }} car slot{{ lease.car_slots|pluralize }}{% endif %}
                     </p>
                 </div>
-                <p class="font-semibold text-slate-900">₱{{ lease.parking_fee|floatformat:2 }}</p>
+                <p class="font-semibold text-slate-900">₱{{ lease.parking_fee|floatformat:2|intcomma }}</p>
             </div>
             {% endif %}
+            <div class="flex justify-between items-center py-2 border-b border-slate-100">
+                <div>
+                    <p class="font-medium text-slate-900">Security Deposit</p>
+                    <p class="text-xs text-slate-500">2× (rent + parking)</p>
+                </div>
+                <p class="font-semibold text-slate-900">₱{{ lease.security_deposit|floatformat:2|intcomma }}</p>
+            </div>
             <div class="flex justify-between items-center py-3 bg-slate-50 rounded-lg px-4 mt-4">
                 <p class="font-bold text-slate-900">Total Move-in Cost</p>
-                <p class="text-2xl font-bold text-slate-900">₱{{ total_move_in_cost|floatformat:2 }}</p>
+                <p class="text-2xl font-bold text-slate-900">₱{{ total_move_in_cost|floatformat:2|intcomma }}</p>
             </div>
         </div>
     </div>

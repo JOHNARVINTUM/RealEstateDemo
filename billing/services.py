@@ -370,8 +370,15 @@ def approve_manual_payment(payment):
     payment.status = "APPROVED"
     payment.save(update_fields=["status"])
     
+    # Determine correct payment method display
+    if payment.payment_method == "GCASH":
+        method_display = "GCash"
+    elif payment.payment_method == "PAYMONGO":
+        method_display = "PayMongo"
+    else:
+        method_display = "Face-to-Face Cash"
+    
     try:
-        method_display = "GCash" if payment.payment_method == "GCASH" else "Face-to-Face Cash"
         Notification.create_tenant_notification(
             title="Payment Approved",
             message=f"Your {method_display} payment of ₱{payment.amount:,.2f} has been approved and your bills have been updated.",
@@ -431,6 +438,29 @@ def approve_manual_payment(payment):
             update_fields += ["interest", "total_due"]
         bill.save(update_fields=update_fields)
         logger.info(f"Bill {bill.id} updated successfully: status={bill.status}, balance={bill.total_balance}")
+    
+    # Generate next month's bill if current bill is fully paid
+    # This ensures tenant always has a bill to pay for the upcoming month
+    if bills and all(b.status == "PAID" for b in bills):
+        try:
+            # Get the latest paid bill to determine next month
+            latest_paid_bill = max(bills, key=lambda b: b.billing_month)
+            next_month = add_months(latest_paid_bill.billing_month, 1)
+            
+            # Create next month's bill if it doesn't exist
+            next_bill_exists = MonthlyBill.objects.filter(
+                lease=latest_paid_bill.lease,
+                billing_month=next_month
+            ).exists()
+            
+            if not next_bill_exists:
+                from rentals.models import Lease
+                lease = latest_paid_bill.lease
+                get_or_update_monthly_bill(lease, next_month, today=approved_at.date())
+                logger.info(f"Generated next month bill for {next_month} after payment approval")
+        except Exception as e:
+            logger.error(f"Failed to generate next month bill: {e}")
+            # Don't fail the payment approval if bill generation fails
 
     return payment
 

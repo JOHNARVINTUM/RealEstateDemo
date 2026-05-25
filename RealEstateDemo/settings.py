@@ -80,6 +80,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'accounts.middleware.FirstLoginEnforcementMiddleware',  # First-login password change enforcement
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -155,6 +156,24 @@ AUTH_USER_MODEL = "accounts.User"
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "tenant_dashboard"
 LOGOUT_REDIRECT_URL = "login"
+
+# =============================================================================
+# SESSION SECURITY SETTINGS
+# =============================================================================
+# These settings harden session cookies against common attacks:
+# - HttpOnly: Prevents JavaScript access (XSS protection)
+# - Secure: HTTPS only in production (prevents session hijacking)
+# - SameSite: CSRF protection
+# - save_every_request: Extends session on activity (convenience)
+
+SESSION_COOKIE_HTTPONLY = True  # Prevent XSS attacks via JavaScript
+SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection (allows top-level navigation)
+SESSION_SAVE_EVERY_REQUEST = True  # Extend session on each request
+
+# HTTPS-only cookies in production (prevents session theft over HTTP)
+if IS_PRODUCTION:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 
 # Internationalization

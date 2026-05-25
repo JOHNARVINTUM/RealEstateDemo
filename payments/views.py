@@ -227,7 +227,8 @@ def paymongo_checkout(request):
 
     # Build cancel URL (success URL needs session ID, built after creation)
     base_url = request.build_absolute_uri("/")[:-1]  # e.g. http://localhost:8000
-    cancel_url = base_url + reverse("tenant_pay_advance")
+    # Add cancelled flag so we can detect when user returns without paying
+    cancel_url = base_url + reverse("tenant_pay_advance") + "?cancelled=1"
 
     metadata = {
         "user_id": str(request.user.id),
@@ -263,18 +264,40 @@ def paymongo_checkout(request):
             messages.error(request, f"Payment gateway error: {error_msg}. Please try another payment method.")
         return redirect("tenant_pay_advance")
 
-    # Create a PENDING ManualPayment record to track this
-    payment = ManualPayment.objects.create(
+    # Check for existing pending payment for these bills and update it instead of creating duplicate
+    existing_payment = ManualPayment.objects.filter(
         user=request.user,
         bill_ids=bill_ids,
-        payment_type=payment_type,
-        payment_method="PAYMONGO",
-        amount=amount,
-        reference_code=f"REF-PM-{result['checkout_session_id'][-8:].upper()}",
-        checkout_session_id=result["checkout_session_id"],
-        checkout_url=result["checkout_url"],
         status="PENDING",
-    )
+        payment_method__in=["PAYMONGO", "GCASH"]  # Check for any pending online payment
+    ).first()
+    
+    if existing_payment:
+        # Update existing payment record with new PayMongo session
+        logger.info(f"Updating existing payment {existing_payment.id} with new PayMongo session")
+        existing_payment.checkout_session_id = result["checkout_session_id"]
+        existing_payment.checkout_url = result["checkout_url"]
+        existing_payment.reference_code = f"REF-PM-{result['checkout_session_id'][-8:].upper()}"
+        existing_payment.payment_method = "PAYMONGO"  # Ensure it's set to PAYMONGO
+        existing_payment.amount = amount
+        existing_payment.save(update_fields=[
+            "checkout_session_id", "checkout_url", "reference_code", 
+            "payment_method", "amount"
+        ])
+        payment = existing_payment
+    else:
+        # Create a new PENDING ManualPayment record
+        payment = ManualPayment.objects.create(
+            user=request.user,
+            bill_ids=bill_ids,
+            payment_type=payment_type,
+            payment_method="PAYMONGO",
+            amount=amount,
+            reference_code=f"REF-PM-{result['checkout_session_id'][-8:].upper()}",
+            checkout_session_id=result["checkout_session_id"],
+            checkout_url=result["checkout_url"],
+            status="PENDING",
+        )
 
     # Redirect tenant to PayMongo's hosted checkout page
     return redirect(result["checkout_url"])
@@ -311,9 +334,21 @@ def paymongo_success(request):
 
     # Retrieve session from PayMongo to confirm payment
     session_data = retrieve_checkout_session(session_id)
+    payment_approved = False
+    
     if session_data:
         attrs = session_data.get("attributes", {})
         payments_list = attrs.get("payments", [])
+        
+        # Check if payment is actually paid in PayMongo
+        payment_status = attrs.get("payment_intent", {}).get("status", "")
+        session_status = attrs.get("status", "")
+        
+        logger.info(
+            f"PayMongo session status for payment {payment.id}: "
+            f"session_status={session_status}, payments_count={len(payments_list)}, "
+            f"current_db_status={payment.status}"
+        )
 
         if payments_list and payment.status != "APPROVED":
             # Extract payment info
@@ -327,13 +362,47 @@ def paymongo_success(request):
             payment.save(update_fields=["paymongo_payment_id", "paid_via"])
 
             # Auto-approve the payment
-            _auto_approve_paymongo_payment(payment)
+            try:
+                _auto_approve_paymongo_payment(payment)
+                payment_approved = True
+                logger.info(f"Payment {payment.id} auto-approved via success page")
+            except Exception as e:
+                logger.error(f"Failed to auto-approve payment {payment.id}: {e}")
 
-            # Refresh from DB
-            payment.refresh_from_db()
+        # Also approve if session shows paid but we haven't detected it yet
+        elif session_status == "paid" and payment.status != "APPROVED":
+            try:
+                _auto_approve_paymongo_payment(payment)
+                payment_approved = True
+                logger.info(f"Payment {payment.id} auto-approved via session status")
+            except Exception as e:
+                logger.error(f"Failed to auto-approve payment {payment.id} from session: {e}")
+
+        # Refresh from DB to get updated status
+        payment.refresh_from_db()
+    
+    # Set appropriate message based on payment status
+    if payment.status == "APPROVED":
+        messages.success(
+            request, 
+            "Payment successful! Your bills have been updated. Thank you for your payment."
+        )
+    elif payment_approved:
+        messages.success(
+            request,
+            "Payment received and is being processed. Your account will be updated shortly."
+        )
+    else:
+        messages.info(
+            request,
+            "Payment confirmation received. Please allow a moment for your account to be updated. "
+            "You will receive a notification once the payment is confirmed."
+        )
 
     return render(request, "payments/paymongo_success.html", {
         "payment": payment,
+        "payment_approved": payment.status == "APPROVED",
+        "auto_refresh": payment.status != "APPROVED",  # Flag for template to auto-refresh
     })
 
 

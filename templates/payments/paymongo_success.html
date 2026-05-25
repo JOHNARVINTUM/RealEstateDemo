@@ -1,6 +1,6 @@
 {% extends "tenant_base.html" %}
 {% load humanize %}
-{% block title %}Payment Successful | RealEstate360+{% endblock %}
+{% block title %}{% if payment.status == 'APPROVED' %}Payment Successful{% else %}Payment Processing{% endif %} | RealEstate360+{% endblock %}
 {% block meta_description %}Your online payment has been processed.{% endblock %}
 
 {% block tenant_content %}
@@ -8,14 +8,29 @@
   <!-- Page Header -->
   <div class="mb-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 border-b-2 border-slate-100 pb-8">
     <div>
-      <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">Payment Successful</h1>
-      <p class="text-lg text-slate-500 font-bold mt-2">Your online payment has been processed and your bills are updated.</p>
+      <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
+        {% if payment.status == 'APPROVED' %}Payment Successful{% else %}Payment Processing{% endif %}
+      </h1>
+      <p class="text-lg text-slate-500 font-bold mt-2">
+        {% if payment.status == 'APPROVED' %}
+          Your online payment has been processed and your bills are updated.
+        {% else %}
+          Your payment has been received and is being processed. Please wait a moment.
+        {% endif %}
+      </p>
     </div>
-    <div class="bg-white border-2 border-emerald-100 px-6 py-4 rounded-2xl shadow-sm w-fit">
-      <span class="text-xs font-black text-emerald-400 block uppercase tracking-widest mb-1">Status</span>
-      <span class="text-lg font-black text-emerald-600 flex items-center gap-2">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-        Approved
+    <div class="bg-white border-2 {% if payment.status == 'APPROVED' %}border-emerald-100{% else %}border-amber-100{% endif %} px-6 py-4 rounded-2xl shadow-sm w-fit">
+      <span class="text-xs font-black {% if payment.status == 'APPROVED' %}text-emerald-400{% else %}text-amber-400{% endif %} block uppercase tracking-widest mb-1">Status</span>
+      <span class="text-lg font-black {% if payment.status == 'APPROVED' %}text-emerald-600{% else %}text-amber-600{% endif %} flex items-center gap-2">
+        {% if payment.status == 'APPROVED' %}
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+          Approved
+        {% else %}
+          <svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          Processing...
+        {% endif %}
       </span>
     </div>
   </div>
@@ -24,14 +39,56 @@
   <div class="max-w-2xl mx-auto">
     <div class="tenant-card p-10 text-center mb-10">
       <!-- Success Icon -->
-      <div class="w-24 h-24 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-8">
-        <svg class="w-12 h-12 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
-        </svg>
+      <div class="w-24 h-24 rounded-full {% if payment.status == 'APPROVED' %}bg-emerald-100{% else %}bg-amber-100{% endif %} flex items-center justify-center mx-auto mb-8">
+        {% if payment.status == 'APPROVED' %}
+          <svg class="w-12 h-12 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+          </svg>
+        {% else %}
+          <svg class="w-12 h-12 text-amber-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        {% endif %}
       </div>
 
-      <h2 class="text-3xl font-black text-slate-900 mb-4">Thank You!</h2>
-      <p class="text-lg text-slate-500 font-bold mb-8">Your payment has been automatically verified and applied to your account.</p>
+      <h2 class="text-3xl font-black text-slate-900 mb-4">
+        {% if payment.status == 'APPROVED' %}Thank You!{% else %}Processing Your Payment{% endif %}
+      </h2>
+      <p class="text-lg text-slate-500 font-bold mb-8">
+        {% if payment.status == 'APPROVED' %}
+          Your payment has been automatically verified and applied to your account.
+        {% else %}
+          We're confirming your payment with PayMongo. This usually takes just a few seconds...
+        {% endif %}
+      </p>
+
+      {% if payment.status != 'APPROVED' %}
+        <!-- Auto-refresh notice for pending payments -->
+        <div class="bg-amber-50 border-2 border-amber-100 rounded-xl p-4 mb-6">
+          <p class="text-sm text-amber-800">
+            <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            This page will automatically refresh in <span id="countdown">10</span> seconds to check status.
+            <br><small>Or <a href="{% url 'tenant_dashboard' %}" class="underline">go to dashboard</a> - your payment will appear there once confirmed.</small>
+          </p>
+        </div>
+
+        <!-- Auto-refresh script -->
+        <script>
+          let seconds = 10;
+          const countdownElement = document.getElementById('countdown');
+          const timer = setInterval(function() {
+            seconds--;
+            if (seconds <= 0) {
+              clearInterval(timer);
+              window.location.reload();
+            } else {
+              countdownElement.textContent = seconds;
+            }
+          }, 1000);
+        </script>
+      {% endif %}
 
       {% if payment %}
         <!-- Payment Details -->

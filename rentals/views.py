@@ -342,6 +342,14 @@ def tenant_pay_advance(request):
     View to handle the Make Payment page.
     Supports partial payments: rent only, water only, or full payment.
     """
+    # Check if user just returned from a cancelled PayMongo payment
+    # PayMongo redirects back to cancel_url when user clicks back arrow or closes checkout
+    referrer = request.META.get('HTTP_REFERER', '')
+    cancelled_param = request.GET.get('cancelled')
+    
+    if 'paymongo' in referrer.lower() or cancelled_param == '1':
+        messages.info(request, "Payment cancelled. You can try again or choose a different payment method.")
+    
     today = timezone.localdate()
     lease = Lease.objects.filter(
         tenant=request.user,

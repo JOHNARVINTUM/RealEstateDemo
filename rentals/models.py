@@ -90,7 +90,7 @@ class TenantProfile(models.Model):
     contact_no = models.CharField(max_length=30, blank=True)
     has_seen_unit_welcome = models.BooleanField(default=False, help_text="Track if tenant has seen the unit welcome popup")
     send_credentials = models.BooleanField(default=True, help_text="Whether to send login credentials via email")
-    password_change_required = models.BooleanField(default=False, help_text="Whether tenant should change password on first login")
+    password_change_required = models.BooleanField(default=True, help_text="Whether tenant should change password on first login")
     created_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, related_name='created_tenants', help_text="Admin who created this tenant profile")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

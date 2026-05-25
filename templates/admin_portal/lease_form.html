@@ -147,19 +147,20 @@ function toggleMoveInPaymentMethod() {
               <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider" for="id_monthly_rent">Monthly Rent <span class="text-rose-600">*</span></label>
               <div class="relative">
                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-base">₱</span>
-                <input type="number" name="monthly_rent" id="id_monthly_rent" value="{{ form.monthly_rent.value|default:'' }}" 
-                       class="w-full pl-9 pr-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none" placeholder="0.00" required>
+                <input type="number" name="monthly_rent" id="id_monthly_rent" value="{{ form.monthly_rent.value|default:'' }}"
+                       class="w-full pl-9 pr-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none" placeholder="17,000.00" required>
               </div>
+              <p class="text-[10px] text-slate-500 mt-2 font-bold uppercase tracking-tight">Base rent only. Parking added separately below.</p>
             </div>
 
             <div>
               <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider" for="id_security_deposit">Security Deposit</label>
               <div class="relative">
                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-base">₱</span>
-                <input type="number" name="security_deposit" id="id_security_deposit" value="{{ form.security_deposit.value|default:'' }}" 
-                       class="w-full pl-9 pr-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none" placeholder="0.00">
+                <input type="number" name="security_deposit" id="id_security_deposit" value="{{ form.security_deposit.value|default:'' }}"
+                       class="w-full pl-9 pr-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none" placeholder="34,000.00">
               </div>
-              <p class="text-[10px] text-slate-500 mt-2 font-bold uppercase tracking-tight">Usually equal to 1 month rent.</p>
+              <p class="text-[10px] text-slate-500 mt-2 font-bold uppercase tracking-tight">Fixed at 2× (rent + parking).</p>
             </div>
           </div>
           <!-- Note: Contract Deposit Multiplier removed - using fixed 2x multiplier -->

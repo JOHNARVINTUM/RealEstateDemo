@@ -76,12 +76,9 @@ def deactivate_tenant(tenant):
     user.save()
 
     # Close active leases and free units
-    active_leases = Lease.objects.filter(tenant=user, is_active=True)
+    active_leases = Lease.objects.filter(tenant=user, status=Lease.STATUS_ACTIVE)
     for lease in active_leases:
-        lease.is_active = False
-        if not lease.end_date:
-            lease.end_date = today
-        lease.save()
+        lease.deactivate(end_date=today)
 
         unit = lease.unit
         unit.status = "AVAILABLE"
@@ -101,8 +98,9 @@ logger = logging.getLogger(__name__)
 
 @admin_required
 def admin_dashboard(request):
-    total_tenants = Lease.objects.filter(is_active=True).values("tenant").distinct().count()
-    occupied_units = Lease.objects.filter(is_active=True).count()
+    # Use status='ACTIVE' instead of is_active for proper lease lifecycle tracking
+    total_tenants = Lease.objects.filter(status=Lease.STATUS_ACTIVE).values("tenant").distinct().count()
+    occupied_units = Lease.objects.filter(status=Lease.STATUS_ACTIVE).count()
     vacant_units = Unit.objects.filter(is_active=True).count() - occupied_units
 
     today = timezone.now().date()
@@ -111,7 +109,7 @@ def admin_dashboard(request):
     
     # Get expected monthly rent from active leases
     expected_monthly_rent = (
-        Lease.objects.filter(is_active=True)
+        Lease.objects.filter(status=Lease.STATUS_ACTIVE)
         .aggregate(total=Sum("monthly_rent"))["total"] or 0
     )
     
@@ -209,7 +207,7 @@ def admin_dashboard(request):
         
         # Get expected revenue from active leases
         expected_revenue = (
-            Lease.objects.filter(is_active=True)
+            Lease.objects.filter(status=Lease.STATUS_ACTIVE)
             .aggregate(total=Sum("monthly_rent"))["total"] or 0
         )
         
@@ -328,7 +326,7 @@ def admin_tenants(request):
 
     # Calculate stats for the header
     total_tenants_count = TenantProfile.objects.count()
-    active_tenants_count = Lease.objects.filter(is_active=True).values("tenant").distinct().count()
+    active_tenants_count = Lease.objects.filter(status=Lease.STATUS_ACTIVE).values("tenant").distinct().count()
     
     today = timezone.now()
     new_tenants_count = TenantProfile.objects.filter(

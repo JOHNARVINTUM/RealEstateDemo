@@ -751,7 +751,6 @@ Welcome aboard! We're excited to have you as part of our community!"""
                 try:
                     tenant_name = lease.tenant.tenantprofile.full_name if hasattr(lease.tenant, 'tenantprofile') else lease.tenant.email
                     from django.core.mail import send_mail
-                    from django.conf import settings
                     send_mail(
                         subject="Your Lease is Pending Activation - REALESTATE360+",
                         message=(

@@ -130,6 +130,86 @@
     box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.04);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
   }
+
+  .tenant-page-content-hidden {
+    opacity: 0;
+  }
+
+  .tenant-skeleton {
+    border: 2px solid #f1f5f9;
+    border-radius: 2rem;
+    background: #ffffff;
+    overflow: hidden;
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.04);
+  }
+
+  .tenant-skeleton-bar {
+    position: relative;
+    overflow: hidden;
+    background: #e2e8f0;
+    border-radius: 9999px;
+  }
+
+  .tenant-skeleton-bar::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.7), transparent);
+    animation: tenantSkeletonShimmer 1.5s infinite;
+  }
+
+  @keyframes tenantSkeletonShimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  .tenant-page-transition {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(248, 250, 252, 0.78);
+    backdrop-filter: blur(10px);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    z-index: 1100;
+  }
+
+  .tenant-page-transition.is-visible {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .tenant-page-transition-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border-radius: 1.5rem;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    box-shadow: 0 20px 50px -20px rgba(15, 23, 42, 0.3);
+  }
+
+  .tenant-page-spinner {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 9999px;
+    border: 3px solid #cbd5e1;
+    border-top-color: #0f172a;
+    animation: tenantPageSpin 0.75s linear infinite;
+  }
+
+  @keyframes tenantPageSpin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
   
   /* Readable Status Badges */
   .status-badge {
@@ -280,6 +360,16 @@
     </div>
   </main>
 
+  <div id="tenantPageTransition" class="tenant-page-transition" aria-hidden="true">
+    <div class="tenant-page-transition-card" role="status" aria-live="polite">
+      <span class="tenant-page-spinner" aria-hidden="true"></span>
+      <div>
+        <p class="text-sm font-black text-slate-900 uppercase tracking-widest">Loading</p>
+        <p class="text-sm font-bold text-slate-500">Opening your next page...</p>
+      </div>
+    </div>
+  </div>
+
   {% block tenant_modals %}{% endblock %}
 </div>
 
@@ -289,6 +379,19 @@
     const mobileMenuBtn = document.getElementById('mobileMenuBtn');
     const sidebar = document.getElementById('tenantSidebar');
     const backdrop = document.getElementById('mobileBackdrop');
+    const transitionOverlay = document.getElementById('tenantPageTransition');
+
+    function showPageTransition() {
+      if (!transitionOverlay) return;
+      transitionOverlay.classList.add('is-visible');
+      transitionOverlay.setAttribute('aria-hidden', 'false');
+    }
+
+    function hidePageTransition() {
+      if (!transitionOverlay) return;
+      transitionOverlay.classList.remove('is-visible');
+      transitionOverlay.setAttribute('aria-hidden', 'true');
+    }
 
     // Desktop Collapse Logic
     if (toggleBtn) {
@@ -323,6 +426,41 @@
       mobileMenuBtn.addEventListener('click', toggleMobileMenu);
       backdrop.addEventListener('click', toggleMobileMenu);
     }
+
+    document.querySelectorAll('a[href]').forEach(function (link) {
+      link.addEventListener('click', function (event) {
+        const href = link.getAttribute('href');
+        const target = link.getAttribute('target');
+        const isModifiedClick = event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0;
+
+        if (!href || href.startsWith('#') || href.startsWith('javascript:') || target === '_blank' || isModifiedClick) {
+          return;
+        }
+
+        try {
+          const linkUrl = new URL(link.href, window.location.origin);
+          const currentUrl = new URL(window.location.href);
+          const isSamePage = linkUrl.pathname === currentUrl.pathname && linkUrl.search === currentUrl.search && linkUrl.hash !== "";
+
+          if (linkUrl.origin !== currentUrl.origin || isSamePage) {
+            return;
+          }
+        } catch (error) {
+          return;
+        }
+
+        showPageTransition();
+      });
+    });
+
+    document.querySelectorAll('form[data-loading-form]').forEach(function (form) {
+      form.addEventListener('submit', function () {
+        showPageTransition();
+      });
+    });
+
+    window.addEventListener('pageshow', hidePageTransition);
+    window.addEventListener('load', hidePageTransition, { once: true });
   });
 </script>
 {% endblock %}

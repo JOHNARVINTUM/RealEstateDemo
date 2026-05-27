@@ -163,46 +163,46 @@
   <div class="flex flex-wrap items-center gap-3">
     {% if payment.status == "PENDING" %}
       {% if payment.payment_method == "GCASH" %}
-        <form method="post" action="{% url 'admin_approve_payment' payment.id %}" class="inline-block">
+        <form method="post" action="{% url 'admin_approve_payment' payment.id %}" class="inline-block" data-loading-form>
           {% csrf_token %}
-          <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-sm transition-colors flex items-center gap-2">
+          <button type="submit" data-loading-button data-loading-text="Approving..." class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-sm transition-colors flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
             </svg>
-            Approve Payment
+            <span class="button-label">Approve Payment</span>
           </button>
         </form>
       {% else %}
         {% if not payment.schedule_confirmed %}
-          <form method="post" action="{% url 'admin_confirm_schedule' payment.id %}" class="inline-block">
+          <form method="post" action="{% url 'admin_confirm_schedule' payment.id %}" class="inline-block" data-loading-form>
             {% csrf_token %}
-            <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm transition-colors flex items-center gap-2">
+            <button type="submit" data-loading-button data-loading-text="Confirming..." class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm transition-colors flex items-center gap-2">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              Confirm Schedule
+              <span class="button-label">Confirm Schedule</span>
             </button>
           </form>
         {% else %}
-          <form method="post" action="{% url 'admin_approve_payment' payment.id %}" class="inline-block">
+          <form method="post" action="{% url 'admin_approve_payment' payment.id %}" class="inline-block" data-loading-form>
             {% csrf_token %}
-            <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-sm transition-colors flex items-center gap-2">
+            <button type="submit" data-loading-button data-loading-text="Updating..." class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-sm transition-colors flex items-center gap-2">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
-              Mark as Paid
+              <span class="button-label">Mark as Paid</span>
             </button>
           </form>
         {% endif %}
       {% endif %}
       
-      <form method="post" action="{% url 'admin_reject_payment' payment.id %}" class="inline-block">
+      <form method="post" action="{% url 'admin_reject_payment' payment.id %}" class="inline-block" data-loading-form>
         {% csrf_token %}
-        <button type="submit" class="px-4 py-2 bg-rose-100 hover:bg-rose-200 text-rose-700 border border-rose-200 rounded-lg font-bold text-sm transition-colors flex items-center gap-2">
+        <button type="submit" data-loading-button data-loading-text="Rejecting..." class="px-4 py-2 bg-rose-100 hover:bg-rose-200 text-rose-700 border border-rose-200 rounded-lg font-bold text-sm transition-colors flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
-          Reject Payment
+          <span class="button-label">Reject Payment</span>
         </button>
       </form>
     {% endif %}
@@ -213,4 +213,29 @@
   </div>
 
 </div>
+{% endblock %}
+
+{% block scripts %}
+  {{ block.super }}
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      document.querySelectorAll('form[data-loading-form]').forEach(function (form) {
+        form.addEventListener('submit', function () {
+          const button = form.querySelector('[data-loading-button]');
+          if (!button || button.dataset.loading === 'true') return;
+
+          button.dataset.loading = 'true';
+          button.disabled = true;
+          button.classList.add('opacity-70', 'cursor-not-allowed');
+
+          const label = button.querySelector('.button-label');
+          if (label) {
+            label.textContent = button.dataset.loadingText || 'Loading...';
+          } else {
+            button.textContent = button.dataset.loadingText || 'Loading...';
+          }
+        });
+      });
+    });
+  </script>
 {% endblock %}

@@ -248,23 +248,23 @@
                   {% elif p.payment_method == "GCASH" %}
                     <form method="post" action="{% url 'admin_approve_payment' p.id %}" class="confirm-action inline-block" data-confirm="Approve ₱{{ p.amount|floatformat:2|intcomma }} GCash payment from {{ p.user.email }}?&#10;&#10;Reference: {{ p.reference_code }}&#10;Type: {{ p.payment_type }}&#10;Bills: {{ p.bill_ids }}">
                       {% csrf_token %}
-                      <button type="submit" class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-600 hover:text-white border border-emerald-200 rounded text-emerald-800 text-xs font-bold transition-colors" title="Authorize Transfer">
-                        Approve
+                      <button type="submit" data-loading-button data-loading-text="Approving..." class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-600 hover:text-white border border-emerald-200 rounded text-emerald-800 text-xs font-bold transition-colors" title="Authorize Transfer">
+                        <span class="button-label">Approve</span>
                       </button>
                     </form>
                   {% else %}
                     {% if not p.schedule_confirmed %}
                       <form method="post" action="{% url 'admin_confirm_schedule' p.id %}" class="confirm-action inline-block" data-confirm="Confirm F2F schedule for {{ p.user.email }}?&#10;&#10;Date: {{ p.preferred_date|date:'M d, Y' }}&#10;Time: {{ p.preferred_time|time:'g:i A' }}&#10;Tenant will be notified.">
                         {% csrf_token %}
-                        <button type="submit" class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-600 hover:text-white border border-blue-200 rounded text-blue-800 text-xs font-bold transition-colors" title="Lock Appointment Schedule">
-                          Confirm
+                        <button type="submit" data-loading-button data-loading-text="Confirming..." class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-600 hover:text-white border border-blue-200 rounded text-blue-800 text-xs font-bold transition-colors" title="Lock Appointment Schedule">
+                          <span class="button-label">Confirm</span>
                         </button>
                       </form>
                     {% else %}
                       <form method="post" action="{% url 'admin_approve_payment' p.id %}" class="confirm-action inline-block" data-confirm="Confirm cash payment RECEIVED from {{ p.user.email }}?&#10;&#10;Amount: ₱{{ p.amount|floatformat:2|intcomma }}&#10;Scheduled: {{ p.preferred_date|date:'M d, Y' }} {{ p.preferred_time|time:'g:i A' }}&#10;Bills: {{ p.bill_ids }}">
                         {% csrf_token %}
-                        <button type="submit" class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-600 hover:text-white border border-emerald-200 rounded text-emerald-800 text-xs font-bold transition-colors" title="Verify Cash Delivered">
-                          Mark Paid
+                        <button type="submit" data-loading-button data-loading-text="Updating..." class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-600 hover:text-white border border-emerald-200 rounded text-emerald-800 text-xs font-bold transition-colors" title="Verify Cash Delivered">
+                          <span class="button-label">Mark Paid</span>
                         </button>
                       </form>
                     {% endif %}
@@ -273,8 +273,8 @@
                   <!-- Universal Pending Decliine Action -->
                   <form method="post" action="{% url 'admin_reject_payment' p.id %}" class="confirm-action inline-block" data-confirm="Reject ₱{{ p.amount|floatformat:2|intcomma }} payment from {{ p.user.email }}?">
                     {% csrf_token %}
-                    <button type="submit" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded text-rose-800 text-xs font-bold transition-colors" title="Reject Payment File">
-                      Reject
+                    <button type="submit" data-loading-button data-loading-text="Rejecting..." class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded text-rose-800 text-xs font-bold transition-colors" title="Reject Payment File">
+                      <span class="button-label">Reject</span>
                     </button>
                   </form>
 
@@ -348,4 +348,29 @@
   </div>
 
 </div>
+{% endblock %}
+
+{% block scripts %}
+  {{ block.super }}
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      document.querySelectorAll('form.confirm-action').forEach(function (form) {
+        form.addEventListener('submit', function () {
+          const button = form.querySelector('[data-loading-button]');
+          if (!button || button.dataset.loading === 'true') return;
+
+          button.dataset.loading = 'true';
+          button.disabled = true;
+          button.classList.add('opacity-70', 'cursor-not-allowed');
+
+          const label = button.querySelector('.button-label');
+          if (label) {
+            label.textContent = button.dataset.loadingText || 'Loading...';
+          } else {
+            button.textContent = button.dataset.loadingText || 'Loading...';
+          }
+        });
+      });
+    });
+  </script>
 {% endblock %}

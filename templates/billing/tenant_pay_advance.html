@@ -184,23 +184,27 @@
 
         <!-- Actions -->
         <div class="mt-12 space-y-4">
-          <form method="get" action="{% url 'manual_gcash_payment' %}">
+          <form method="get" action="{% url 'manual_gcash_payment' %}" data-loading-form>
             <input type="hidden" name="bill_ids" value="{% for row in preview_rows %}{{ row.bill_id }}{% if not forloop.last %},{% endif %}{% endfor %}">
             <input type="hidden" name="payment_type" value="{{ payment_type|default:'full' }}">
             <input type="hidden" name="amount" value="{{ total_amount }}">
             <button type="submit"
+                    data-loading-button
+                    data-loading-text="Redirecting..."
                     class="w-full flex items-center justify-center gap-3 px-8 py-5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xl shadow-xl transition-all active:scale-95">
-              Pay via GCash
+              <span class="button-label">Pay via GCash</span>
             </button>
           </form>
           
-          <form method="get" action="{% url 'paymongo_checkout' %}">
+          <form method="get" action="{% url 'paymongo_checkout' %}" data-loading-form>
             <input type="hidden" name="bill_ids" value="{% for row in preview_rows %}{{ row.bill_id }}{% if not forloop.last %},{% endif %}{% endfor %}">
             <input type="hidden" name="payment_type" value="{{ payment_type|default:'full' }}">
             <input type="hidden" name="amount" value="{{ total_amount }}">
             <button type="submit"
+                    data-loading-button
+                    data-loading-text="Redirecting..."
                     class="w-full flex flex-col items-center justify-center gap-1 px-8 py-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xl shadow-xl transition-all active:scale-95">
-              <span class="flex items-center gap-2">
+              <span class="button-label flex items-center gap-2">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
                 Pay Online
               </span>
@@ -208,13 +212,15 @@
             </button>
           </form>
 
-          <form method="get" action="{% url 'f2f_cash_payment' %}">
+          <form method="get" action="{% url 'f2f_cash_payment' %}" data-loading-form>
             <input type="hidden" name="bill_ids" value="{% for row in preview_rows %}{{ row.bill_id }}{% if not forloop.last %},{% endif %}{% endfor %}">
             <input type="hidden" name="payment_type" value="{{ payment_type|default:'full' }}">
             <input type="hidden" name="amount" value="{{ total_amount }}">
             <button type="submit"
+                    data-loading-button
+                    data-loading-text="Redirecting..."
                     class="w-full flex flex-col items-center justify-center gap-1 px-8 py-5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white border-2 border-slate-700 font-black shadow-xl transition-all active:scale-95">
-              <span class="text-base">Pay in Cash</span>
+              <span class="button-label text-base">Pay in Cash</span>
               <span class="text-xs text-slate-400 font-bold">(Face-to-Face)</span>
             </button>
           </form>
@@ -290,4 +296,35 @@
     </div>
   </div>
 
+{% endblock %}
+
+{% block tenant_modals %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('form[data-loading-form]').forEach(function (form) {
+      form.addEventListener('submit', function () {
+        const button = form.querySelector('[data-loading-button]');
+        if (!button || button.dataset.loading === 'true') return;
+
+        button.dataset.loading = 'true';
+        button.disabled = true;
+        button.classList.add('opacity-70', 'cursor-not-allowed');
+
+        const loadingText = button.dataset.loadingText || 'Loading...';
+        const label = button.querySelector('.button-label');
+        if (label) {
+          label.textContent = loadingText;
+          label.classList.add('justify-center');
+        } else {
+          button.textContent = loadingText;
+        }
+
+        const spans = button.querySelectorAll('span');
+        if (spans.length > 1) {
+          spans[1].classList.add('hidden');
+        }
+      });
+    });
+  });
+</script>
 {% endblock %}

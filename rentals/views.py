@@ -1,10 +1,10 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db import models
+from django.db import connection, models
 from django.db.models import F, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -14,6 +14,7 @@ from announcements.models import Announcement
 from billing.models import MonthlyBill
 from billing.services import (
     add_months,
+    reconcile_approved_payments_for_tenant,
     ensure_bills_since_move_in,
     ensure_bills_up_to,
     get_or_update_monthly_bill,
@@ -138,8 +139,11 @@ def tenant_dashboard(request):
     announcements = Announcement.objects.filter(is_active=True).order_by("-created_at")[:5]
 
     current_balance = None
+    show_paid_hero = False
+    paid_hero_month = None
     next_due_date = None
     next_billing_month = None
+    next_bill_preview = None
     total_balance_due = None
 
     # Calculate total monthly rent including parking
@@ -149,8 +153,8 @@ def tenant_dashboard(request):
 
     # Only generate bills for ACTIVE leases, not pending ones
     if lease and lease.status == Lease.STATUS_ACTIVE:
+        reconcile_approved_payments_for_tenant(user)
         ensure_bills_since_move_in(lease)
-
         # Get all bills with unpaid balances (including partial payments)
         all_bills = MonthlyBill.objects.filter(lease=lease).order_by("billing_month")
         
@@ -160,27 +164,30 @@ def tenant_dashboard(request):
         total_balance_due = total_unpaid_rent + total_unpaid_water
         
         # Get first bill with remaining balance - total_balance is the source of truth
-        current_balance = None
+        actual_balance = None
         for bill in all_bills:
             if bill.total_balance > 0:
-                current_balance = get_or_update_monthly_bill(lease, bill.billing_month)
+                actual_balance = get_or_update_monthly_bill(lease, bill.billing_month)
                 break
-        
-        # If no unpaid bills, show the next month's bill (for preview)
-        if current_balance is None:
-            # Get the last bill to find the next month
-            last_bill = all_bills.last()
-            if last_bill:
-                next_month_date = add_months(last_bill.billing_month, 1)
-                current_balance = MonthlyBill.objects.filter(
-                    lease=lease, 
-                    billing_month=next_month_date
-                ).first()
 
-        # Find the actual "next" bill after the current balance
-        # This ensures if you're paying September, it shows October (not July based on today's date)
+        today_start = month_start(today)
+        # Surface the red billing card only for current/past due balances or
+        # within the 7-day reminder window before the due date.
+        if actual_balance:
+            days_until_due = (actual_balance.due_date - today).days
+            should_show_due_card = (
+                actual_balance.billing_month <= today_start or days_until_due <= 7
+            )
+
+            if should_show_due_card:
+                current_balance = actual_balance
+            else:
+                show_paid_hero = True
+                paid_hero_month = today_start
+
+        # Find the actual "next" bill after the displayed balance, or use the
+        # next unpaid future bill as preview when the current cycle is already paid.
         if current_balance:
-            # Get the bill immediately after current_balance
             next_bill = MonthlyBill.objects.filter(
                 lease=lease, 
                 billing_month__gt=current_balance.billing_month
@@ -196,9 +203,17 @@ def tenant_dashboard(request):
                 if next_bill:
                     next_billing_month = next_bill.billing_month
                     next_due_date = next_bill.due_date
+            next_bill_preview = next_bill
+        elif actual_balance:
+            show_paid_hero = True
+            paid_hero_month = today_start
+            next_bill_preview = actual_balance
+            next_billing_month = actual_balance.billing_month
+            next_due_date = actual_balance.due_date
         else:
-            # No current balance, show next month after today
-            today_start = month_start(date.today())
+            # No unpaid balances at all, show a paid hero and preview the next bill.
+            show_paid_hero = True
+            paid_hero_month = today_start
             next_month = add_months(today_start, 1)
             ensure_bills_up_to(lease, next_month)
             
@@ -206,6 +221,7 @@ def tenant_dashboard(request):
             if next_bill:
                 next_billing_month = next_bill.billing_month
                 next_due_date = next_bill.due_date
+                next_bill_preview = next_bill
 
     # Get tenant's recent payments (pending and approved)
     recent_payments = []
@@ -229,9 +245,12 @@ def tenant_dashboard(request):
         "all_active_leases": all_active_leases,
         "announcements": announcements,
         "current_balance": current_balance,
+        "show_paid_hero": show_paid_hero,
+        "paid_hero_month": paid_hero_month,
         "total_balance_due": total_balance_due if lease else None,
         "next_due_date": next_due_date,
         "next_billing_month": next_billing_month,
+        "next_bill_preview": next_bill_preview,
         "recent_payments": recent_payments,
         "move_in_payment": move_in_payment,
         "has_pending_payment": has_pending_payment,
@@ -257,6 +276,7 @@ def tenant_billing(request):
         messages.warning(request, "An active lease is required to view billing.")
         return redirect("tenant_dashboard")
 
+    reconcile_approved_payments_for_tenant(user)
     ensure_bills_since_move_in(lease)
 
     # Get filter parameters
@@ -399,10 +419,28 @@ def tenant_pay_advance(request):
     except ValueError:
         months_to_pay = 1
 
-    # Get payment type from request (rent_only, water_only, full)
-    payment_type = request.GET.get("payment_type", "full")
-
+    reconcile_approved_payments_for_tenant(request.user)
     ensure_bills_since_move_in(lease)
+
+    oldest_outstanding_bill = MonthlyBill.objects.filter(
+        lease=lease,
+    ).order_by("billing_month").first()
+    for candidate_bill in MonthlyBill.objects.filter(lease=lease).order_by("billing_month"):
+        if candidate_bill.total_balance > 0:
+            oldest_outstanding_bill = candidate_bill
+            break
+
+    water_only_locked = bool(
+        oldest_outstanding_bill
+        and oldest_outstanding_bill.total_balance > 0
+        and oldest_outstanding_bill.water_balance > 0
+        and oldest_outstanding_bill.rent_balance == 0
+        and oldest_outstanding_bill.parking_balance == 0
+    )
+
+    # Get payment type from request (rent_only, water_only, full)
+    requested_payment_type = request.GET.get("payment_type", "full")
+    payment_type = "water_only" if water_only_locked else requested_payment_type
 
     today = date.today()
     
@@ -529,6 +567,7 @@ def tenant_pay_advance(request):
         "months_options": [1, 2, 3, 4, 5, 6, 12],
         "months_to_pay": months_to_pay,
         "payment_type": payment_type,
+        "water_only_locked": water_only_locked,
         "has_pending": has_pending,
         "unpaid_count": unpaid_count,
         "water_available": water_available,
@@ -576,6 +615,8 @@ def tenant_notifications(request):
     Display all notifications for the current tenant.
     Unread notifications are shown first, sorted by creation date.
     """
+    purge_read_notifications_for_tenant(request.user)
+
     # Get notifications for this tenant
     notifications = Notification.objects.filter(
         recipient_type='TENANT',
@@ -604,6 +645,13 @@ def tenant_notifications(request):
     return render(request, "rentals/tenant_notifications.html", context)
 
 
+def notification_has_read_at_column() -> bool:
+    """Return True when the notifications table already has the read_at column."""
+    with connection.cursor() as cursor:
+        columns = connection.introspection.get_table_description(cursor, Notification._meta.db_table)
+    return any(column.name == "read_at" for column in columns)
+
+
 @login_required
 def mark_notification_read(request, notification_id):
     """
@@ -618,7 +666,11 @@ def mark_notification_read(request, notification_id):
     )
 
     notification.is_read = True
-    notification.save()
+    if notification_has_read_at_column():
+        notification.read_at = timezone.now()
+        notification.save(update_fields=["is_read", "read_at"])
+    else:
+        notification.save(update_fields=["is_read"])
 
     # Check if this is an AJAX request (fetch/XHR)
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
@@ -630,5 +682,43 @@ def mark_notification_read(request, notification_id):
         # Regular form submit - redirect back to notifications page
         messages.success(request, "Notification marked as read.")
         return redirect('tenant_notifications')
+
+
+@login_required
+def mark_all_notifications_read(request):
+    """Mark all tenant notifications as read for the current user."""
+    if request.method != "POST":
+        return redirect("tenant_notifications")
+
+    read_time = timezone.now()
+    unread_notifications = Notification.objects.filter(
+        recipient_type='TENANT',
+        user=request.user,
+        is_read=False,
+    )
+    if notification_has_read_at_column():
+        updated_count = unread_notifications.update(is_read=True, read_at=read_time)
+    else:
+        updated_count = unread_notifications.update(is_read=True)
+
+    messages.success(
+        request,
+        f"Marked {updated_count} notification{'' if updated_count == 1 else 's'} as read."
+    )
+    return redirect("tenant_notifications")
+
+
+def purge_read_notifications_for_tenant(user):
+    """Delete tenant notifications that have been read for over 24 hours."""
+    if not notification_has_read_at_column():
+        return
+
+    cutoff = timezone.now() - timedelta(days=1)
+    Notification.objects.filter(
+        recipient_type='TENANT',
+        user=user,
+        is_read=True,
+        read_at__lte=cutoff,
+    ).delete()
 
 

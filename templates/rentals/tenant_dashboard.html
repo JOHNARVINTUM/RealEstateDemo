@@ -44,8 +44,36 @@
 
 
 
+  {% if show_paid_hero %}
+  <section class="tenant-card border-l-[12px] border-l-emerald-600 mb-10 p-10 sm:p-12">
+    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
+      <div class="flex-1">
+        <div class="flex items-center gap-3 mb-4">
+          <span class="text-sm font-black text-emerald-700 uppercase tracking-widest">Billing Status</span>
+          <span class="px-4 py-1 bg-emerald-100 text-emerald-700 text-xs font-black rounded-full uppercase tracking-widest">Paid</span>
+        </div>
+        <h2 class="text-4xl sm:text-6xl font-black text-slate-900 tracking-tight">
+          {{ paid_hero_month|date:"F Y" }} Paid
+        </h2>
+        <p class="mt-4 text-xl sm:text-2xl font-bold text-emerald-700">
+          Already paid, sit back and relax.
+        </p>
+      </div>
+
+      <div class="w-full lg:w-auto bg-emerald-50 border-2 border-emerald-100 rounded-3xl p-8 flex flex-col items-center lg:items-end justify-center shrink-0">
+        <span class="text-xs font-black text-emerald-600 uppercase tracking-widest mb-2">Status</span>
+        <span class="text-2xl sm:text-3xl font-black text-emerald-700 mb-2">Cleared</span>
+        <span class="text-sm font-bold text-slate-500 text-center lg:text-right">
+          Your current billing cycle has been fully settled.
+        </span>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
   <!-- Payment Status Card -->
-  <section class="tenant-card border-l-[12px] {% if current_balance and current_balance.total_balance > 0 %}border-l-rose-600{% else %}border-l-emerald-600{% endif %} mb-10 p-8">
+  {% if current_balance %}
+  <section class="tenant-card border-l-[12px] border-l-rose-600 mb-10 p-8">
     <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
       <div class="flex-1">
         <div class="flex items-center gap-3 mb-3">
@@ -61,10 +89,8 @@
         <h2 class="text-5xl sm:text-6xl font-black text-slate-900 tracking-tighter">
           {% if current_balance and current_balance.total_balance > 0 %}
             ₱{{ current_balance.total_balance|floatformat:2|intcomma }}
-          {% elif current_balance %}
-            <span class="text-3xl font-black text-slate-700 uppercase tracking-tight">{{ current_balance.billing_month|date:"F Y" }} Cleared</span>
           {% else %}
-            ₱0.00
+            <span class="text-3xl font-black text-emerald-700 uppercase tracking-tight">Paid</span>
           {% endif %}
         </h2>
         {% if current_balance %}
@@ -80,12 +106,8 @@
               <span>Late Fee: <span class="text-rose-700 font-black">₱{{ current_balance.interest|floatformat:2|intcomma }}</span></span>
             {% endif %}
           </div>
-        {% elif lease %}
-          <p class="text-lg font-bold text-slate-500 mt-3">
-            Rent: <span class="text-slate-900 font-black">₱{{ lease.monthly_rent|floatformat:2|intcomma }}</span>
-          </p>
         {% endif %}
-        
+
         {% if current_balance and current_balance.status == "PARTIALLY_PAID" %}
           <div class="mt-6 p-4 bg-amber-50 rounded-2xl border-2 border-amber-100 text-base font-bold text-amber-900 flex items-center gap-3">
             <span>💡</span>
@@ -112,11 +134,51 @@
           <a href="{% url 'tenant_pay_advance' %}" class="w-full lg:w-48 py-4 bg-slate-900 hover:bg-slate-800 text-white font-black text-lg rounded-2xl text-center transition-all shadow-lg active:scale-95">
             Pay Now
           </a>
+        {% else %}
+          <div class="w-full lg:w-auto py-4 px-6 bg-emerald-100 border-2 border-emerald-200 text-emerald-800 font-black text-lg rounded-2xl text-center shadow-sm cursor-default">
+            Already Paid
+          </div>
         {% endif %}
       </div>
     </div>
   </section>
+  {% endif %}
 
+  {% if next_bill_preview %}
+  <section class="tenant-card border-l-[12px] border-l-indigo-600 mb-10 p-8">
+    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
+      <div class="flex-1">
+        <div class="flex items-center gap-3 mb-3">
+          <span class="text-sm font-black text-slate-400 uppercase tracking-widest">Next Month Bill</span>
+          <span class="px-4 py-1 bg-indigo-100 text-indigo-700 text-xs font-black rounded-full uppercase tracking-widest">Preview</span>
+        </div>
+        <h2 class="text-5xl sm:text-6xl font-black text-slate-900 tracking-tighter">
+          ₱{{ next_bill_preview.total_due|floatformat:2|intcomma }}
+        </h2>
+        <div class="flex flex-wrap gap-x-6 gap-y-2 mt-3 text-lg font-bold text-slate-500">
+          <span>Month: <span class="text-slate-900 font-black">{{ next_bill_preview.billing_month|date:"F Y" }}</span></span>
+          <span>Rent: <span class="text-slate-900 font-black">₱{{ next_bill_preview.base_rent|floatformat:2|intcomma }}</span></span>
+          {% if next_bill_preview.parking_fee > 0 %}
+            <span>Parking: <span class="text-slate-900 font-black">₱{{ next_bill_preview.parking_fee|floatformat:2|intcomma }}</span></span>
+          {% endif %}
+          {% if next_bill_preview.water_amount > 0 %}
+            <span>Water: <span class="text-slate-900 font-black">₱{{ next_bill_preview.water_amount|floatformat:2|intcomma }}</span></span>
+          {% endif %}
+        </div>
+      </div>
+      
+      <div class="w-full lg:w-auto bg-indigo-50 border-2 border-indigo-100 rounded-3xl p-8 flex flex-col items-center lg:items-end justify-center shrink-0">
+        <span class="text-xs font-black text-indigo-500 uppercase tracking-widest mb-2">Due Date</span>
+        <span class="text-2xl sm:text-3xl font-black text-slate-900 mb-2">
+          {{ next_bill_preview.due_date|date:"F d, Y" }}
+        </span>
+        <span class="text-sm font-bold text-slate-500 text-center lg:text-right">
+          This is your upcoming monthly bill.
+        </span>
+      </div>
+    </div>
+  </section>
+  {% endif %}
   <!-- Move-in Payment Status -->
   {% if move_in_payment %}
   <section class="tenant-card border-l-[12px] {% if move_in_payment.status == 'APPROVED' %}border-l-emerald-600{% else %}border-l-amber-500{% endif %} mb-10 p-8">
@@ -368,3 +430,5 @@
   </script>
   {% endif %}
 {% endblock %}
+
+

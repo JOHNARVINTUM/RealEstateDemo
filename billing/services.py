@@ -281,6 +281,49 @@ def serialize_bill_ids(bill_ids: list[int]) -> str:
     return ",".join(str(bill_id) for bill_id in bill_ids)
 
 
+def _is_payment_applied_to_bill(bill: MonthlyBill, payment) -> bool:
+    payment_type = getattr(payment, "payment_type", "full")
+    payment_reference = getattr(payment, "reference_code", "")
+
+    if payment_type == "rent_only":
+        return (
+            bill.payment_reference == payment_reference
+            and bill.rent_paid >= bill.base_rent
+            and bill.parking_paid >= bill.parking_fee
+        )
+    if payment_type == "water_only":
+        return (
+            bill.payment_reference == payment_reference
+            and bill.water_paid >= bill.water_amount
+        )
+    return (
+        bill.payment_reference == payment_reference
+        and bill.status == "PAID"
+    )
+
+
+@transaction.atomic
+def reconcile_approved_payments_for_tenant(user):
+    from payments.models import ManualPayment
+
+    approved_payments = ManualPayment.objects.select_for_update().filter(
+        user=user,
+        status="APPROVED",
+    ).exclude(payment_type="move_in").order_by("created_at")
+
+    for payment in approved_payments:
+        bill_ids = parse_bill_ids(payment.bill_ids)
+        if not bill_ids:
+            continue
+
+        bills = MonthlyBill.objects.filter(
+            pk__in=bill_ids,
+            lease__tenant=user,
+        )
+        if bills and not all(_is_payment_applied_to_bill(bill, payment) for bill in bills):
+            approve_manual_payment(payment)
+
+
 @transaction.atomic
 def set_bill_status(bill: MonthlyBill, *, status: str, payment_reference: str = "", paid_at=None) -> MonthlyBill:
     bill = MonthlyBill.objects.select_for_update().get(pk=bill.pk)
@@ -323,9 +366,7 @@ def approve_manual_payment(payment):
     logger = logging.getLogger(__name__)
 
     payment = ManualPayment.objects.select_for_update().select_related("user").get(pk=payment.pk)
-    if payment.status == "APPROVED":
-        logger.info(f"Payment {payment.id} already approved")
-        return payment
+    was_previously_approved = payment.status == "APPROVED"
 
     # Check if this is a move-in payment with a pending lease
     # If so, use centralized activation service instead of normal approval
@@ -376,6 +417,9 @@ def approve_manual_payment(payment):
     logger.info(f"Found {bills.count()} bills to update")
     if bills.count() != len(bill_ids):
         raise ValidationError("Some selected bills were not found or do not belong to this tenant.")
+    if was_previously_approved and all(_is_payment_applied_to_bill(bill, payment) for bill in bills):
+        logger.info(f"Payment {payment.id} already approved and applied")
+        return payment
 
     approved_at = timezone.now()
     payment_type = getattr(payment, 'payment_type', 'full')  # Default to full if not set
@@ -389,21 +433,22 @@ def approve_manual_payment(payment):
     expected_amount = Decimal("0.00")
     for bill in bills:
         if payment_type == "rent_only":
-            expected_amount += bill.rent_balance
+            expected_amount += bill.rent_balance + bill.parking_balance
         elif payment_type == "water_only":
             expected_amount += bill.water_balance
         else:
             expected_amount += bill.total_balance
     expected_amount = expected_amount.quantize(Decimal("0.01"))
     
-    if payment_amount != expected_amount:
+    if not was_previously_approved and payment_amount != expected_amount:
         raise ValidationError(
             f"Payment amount ₱{payment_amount:,.2f} does not match the selected "
             f"{payment_type.replace('_', ' ')} balance of ₱{expected_amount:,.2f}."
         )
     
-    payment.status = "APPROVED"
-    payment.save(update_fields=["status"])
+    if not was_previously_approved:
+        payment.status = "APPROVED"
+        payment.save(update_fields=["status"])
     
     # Determine correct payment method display
     if payment.payment_method == "GCASH":
@@ -414,7 +459,7 @@ def approve_manual_payment(payment):
         method_display = "Face-to-Face Cash"
     
     try:
-        Notification.create_tenant_notification(
+        (Notification.create_tenant_notification if not was_previously_approved else (lambda **kwargs: None))(
             title="Payment Approved",
             message=f"Your {method_display} payment of ₱{payment.amount:,.2f} has been approved and your bills have been updated.",
             notification_type='PAYMENT',

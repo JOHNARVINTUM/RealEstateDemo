@@ -9,9 +9,10 @@ from billing.services import (
     approve_manual_payment,
     ensure_bills_since_move_in,
     parse_bill_ids,
+    reconcile_approved_payments_for_tenant,
 )
 from payments.models import ManualPayment
-from rentals.models import Lease, Unit
+from rentals.models import Lease, Notification, Unit
 from water.models import WaterBill
 
 
@@ -132,6 +133,71 @@ class BillingWorkflowTests(TestCase):
         payment.refresh_from_db()
 
         self.assertEqual(payment.bill_ids, "9999")
+
+    def test_rent_only_payment_settles_rent_and_parking_but_leaves_water(self):
+        bill = MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=date(2026, 2, 1),
+            due_date=date(2026, 2, 28),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("1200.00"),
+            parking_fee=Decimal("500.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("11700.00"),
+            status="UNPAID",
+        )
+        payment = ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="REF-RENT-PARKING",
+            bill_ids=str(bill.id),
+            payment_type="rent_only",
+            amount=Decimal("10500.00"),
+            status="PENDING",
+        )
+
+        approve_manual_payment(payment)
+
+        bill.refresh_from_db()
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, "APPROVED")
+        self.assertEqual(bill.rent_paid, Decimal("10000.00"))
+        self.assertEqual(bill.parking_paid, Decimal("500.00"))
+        self.assertEqual(bill.water_paid, Decimal("0.00"))
+        self.assertEqual(bill.water_balance, Decimal("1200.00"))
+        self.assertEqual(bill.total_balance, Decimal("1200.00"))
+        self.assertEqual(bill.status, "PARTIALLY_PAID")
+
+    def test_reconcile_approved_payment_repairs_unapplied_online_payment(self):
+        bill = MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=date(2026, 3, 1),
+            due_date=date(2026, 3, 31),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("900.00"),
+            parking_fee=Decimal("350.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("11250.00"),
+            status="UNPAID",
+        )
+        payment = ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="REF-REPAIR",
+            bill_ids=str(bill.id),
+            payment_type="rent_only",
+            amount=Decimal("10350.00"),
+            status="APPROVED",
+        )
+
+        reconcile_approved_payments_for_tenant(self.tenant)
+
+        bill.refresh_from_db()
+        self.assertEqual(Notification.objects.filter(user=self.tenant, title="Payment Approved").count(), 0)
+        self.assertEqual(bill.rent_paid, Decimal("10000.00"))
+        self.assertEqual(bill.parking_paid, Decimal("350.00"))
+        self.assertEqual(bill.water_balance, Decimal("900.00"))
+        self.assertEqual(bill.total_balance, Decimal("900.00"))
+        self.assertEqual(bill.status, "PARTIALLY_PAID")
+        self.assertEqual(bill.payment_reference, payment.reference_code)
 
 
 class LeaseActivationTimezoneTests(TestCase):

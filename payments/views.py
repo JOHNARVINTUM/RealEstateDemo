@@ -493,7 +493,7 @@ def admin_paymongo_checkout_generate(request):
         checkout_session_id=result["checkout_session_id"],
         checkout_url=result["checkout_url"],
         status="PENDING",
-        notes=f"Admin-generated checkout for move-in payment",
+        tenant_note=f"Admin-generated checkout for move-in payment",
         metadata=metadata,
     )
 
@@ -635,7 +635,8 @@ def _auto_approve_paymongo_payment(payment):
             logger.info(f"PayMongo payment {payment.id} auto-approved successfully")
         except Exception as e:
             logger.exception(f"Failed to auto-approve PayMongo payment {payment.id}: {e}")
-            # Even if bill approval fails, mark payment as approved so we don't retry incorrectly
+            # Keep the payment out of APPROVED state if ledger settlement failed.
+            # This preserves accounting integrity and allows a later safe retry.
 
     # For move-in payments that were activated, mark as approved
     if lease_activated:

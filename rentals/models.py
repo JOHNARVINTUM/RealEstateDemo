@@ -254,6 +254,7 @@ class Notification(models.Model):
     notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, default='INFO')
     recipient_type = models.CharField(max_length=20, choices=RECIPIENT_TYPES, default='SPECIFIC_USER', help_text="Type of recipient for role-based filtering")
     is_read = models.BooleanField(default=False)
+    read_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
     # Optional relationships

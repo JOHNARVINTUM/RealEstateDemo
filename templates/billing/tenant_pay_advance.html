@@ -52,11 +52,11 @@
             </div>
             <div>
               {% if has_pending %}
-                <span class="font-black text-slate-900 block mb-1">Pending Bills</span>
-                We found <span class="text-rose-600 font-black">{{ unpaid_count }} unpaid bill{{ unpaid_count|pluralize }}</span>. Your payment will cover the oldest ones first.
+                <span class="font-black text-rose-700 block mb-1">Settle Your Due First</span>
+                Please pay your due balance before proceeding with advance payments. We found <span class="text-rose-600 font-black">{{ unpaid_count }} unpaid bill{{ unpaid_count|pluralize }}</span>, and your payment will cover the oldest one{{ unpaid_count|pluralize }} first.
               {% else %}
-                <span class="font-black text-slate-900 block mb-1">Pay in Advance</span>
-                You are all caught up! This payment will cover your future bills.
+                <span class="font-black text-emerald-700 block mb-1">You're All Caught Up</span>
+                Good job. Your current dues are already settled, and you can proceed with advance payments anytime if you want to stay ahead.
               {% endif %}
             </div>
           </div>
@@ -70,11 +70,17 @@
           <div class="mb-10">
             <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 block">Payment Type</label>
             <div class="grid grid-cols-1 gap-3">
-              <a href="?months_to_pay={{ months_to_pay }}&payment_type=rent_only" 
-                 class="px-6 py-4 rounded-2xl font-black text-lg text-center transition-all border-2
-                        {% if payment_type == 'rent_only' %}bg-white text-slate-900 border-white shadow-lg{% else %}bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500{% endif %}">
-                Rent Only
-              </a>
+              {% if water_only_locked %}
+                <div class="px-6 py-4 rounded-2xl font-black text-lg text-center border-2 bg-slate-900/50 text-slate-600 border-slate-800 cursor-not-allowed">
+                  Rent Only
+                </div>
+              {% else %}
+                <a href="?months_to_pay={{ months_to_pay }}&payment_type=rent_only" 
+                   class="px-6 py-4 rounded-2xl font-black text-lg text-center transition-all border-2
+                          {% if payment_type == 'rent_only' %}bg-white text-slate-900 border-white shadow-lg{% else %}bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500{% endif %}">
+                  Rent Only
+                </a>
+              {% endif %}
               
               {% if water_available %}
                 <a href="?months_to_pay={{ months_to_pay }}&payment_type=water_only"
@@ -82,11 +88,17 @@
                           {% if payment_type == 'water_only' %}bg-white text-slate-900 border-white shadow-lg{% else %}bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500{% endif %}">
                   Water Only
                 </a>
-                <a href="?months_to_pay={{ months_to_pay }}&payment_type=full"
-                   class="px-6 py-4 rounded-2xl font-black text-lg text-center transition-all border-2
-                          {% if payment_type == 'full' or not payment_type %}bg-white text-slate-900 border-white shadow-lg{% else %}bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500{% endif %}">
-                  Full Bill
-                </a>
+                {% if water_only_locked %}
+                  <div class="px-6 py-4 rounded-2xl font-black text-lg text-center border-2 bg-slate-900/50 text-slate-600 border-slate-800 cursor-not-allowed">
+                    Full Bill
+                  </div>
+                {% else %}
+                  <a href="?months_to_pay={{ months_to_pay }}&payment_type=full"
+                     class="px-6 py-4 rounded-2xl font-black text-lg text-center transition-all border-2
+                            {% if payment_type == 'full' or not payment_type %}bg-white text-slate-900 border-white shadow-lg{% else %}bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500{% endif %}">
+                    Full Bill
+                  </a>
+                {% endif %}
               {% else %}
                 <div class="px-6 py-4 rounded-2xl font-black text-lg text-center border-2 bg-slate-900/50 text-slate-600 border-slate-800 cursor-not-allowed relative group" title="Water bill not yet available. Please check back after meter reading.">
                   Water Only
@@ -104,6 +116,11 @@
                 </div>
               {% endif %}
             </div>
+            {% if water_only_locked %}
+              <p class="mt-4 text-sm font-bold text-amber-300">
+                Rent and parking are already settled for the oldest unpaid bill. Only water payment is available right now.
+              </p>
+            {% endif %}
           </div>
 
           <!-- Total -->

@@ -1,21 +1,12 @@
 from django.urls import path
 from .admin_portal_views import (
     admin_dashboard,
-    admin_tenants,
     debug_lease_form,
     simple_debug,
-    admin_tenant_detail,
     admin_maintenance,
     admin_announcements,
-    admin_create_tenant_profile,
     admin_create_announcement,
-    admin_create_lease,
-    admin_lease_payment,
     admin_create_unit,
-    admin_edit_tenant,
-        admin_delete_tenant,
-    admin_edit_lease,
-    admin_delete_lease,
     admin_edit_announcement,
     admin_delete_announcement,
     admin_update_maintenance,
@@ -28,11 +19,24 @@ from .admin_portal_views import (
     admin_toggle_unit_status,
     api_get_unit_data,
     api_get_unit_data_by_id,
+)
+from .admin_tenant_views import (
+    admin_tenants,
+    admin_tenant_detail,
+    admin_create_tenant_profile,
+    admin_edit_tenant,
+    admin_delete_tenant,
     admin_tenant_attachments,
     admin_view_attachment,
     admin_delete_attachment,
 )
 from .admin_forecasting_views import admin_forecasting, admin_billed_this_month
+from .admin_lease_views import (
+    admin_create_lease,
+    admin_lease_payment,
+    admin_edit_lease,
+    admin_delete_lease,
+)
 from .admin_billing_views import (
     admin_billing,
     admin_billing_export_csv,

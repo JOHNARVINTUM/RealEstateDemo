@@ -14,7 +14,7 @@ from django.db.models import Q
 from billing.models import MonthlyBill
 from billing.services import set_bill_status
 
-from .admin_portal_views import admin_required
+from .admin_portal_views import admin_required, admin_password_verified, render_admin_password_confirm
 
 
 @admin_required
@@ -209,15 +209,25 @@ def admin_billing(request):
 def admin_delete_bill(request, bill_id: int):
     bill = get_object_or_404(MonthlyBill.objects.select_related("lease", "lease__tenant", "lease__unit"), pk=bill_id)
     if request.method == "POST":
+        if not admin_password_verified(request):
+            return render_admin_password_confirm(
+                request,
+                title="Delete Billing Record",
+                message=f"Delete billing record for {bill.lease.tenant.email} / {bill.lease.unit.number} / {bill.billing_month}? Linked payment history references will be cleaned up.",
+                post_url=reverse("admin_delete_bill", args=[bill.id]),
+                back_url=reverse("admin_billing"),
+                error="Incorrect admin password. Billing record was not deleted.",
+            )
         with transaction.atomic():
             bill.delete()
         return redirect("admin_billing")
-    return render(request, "admin_portal/confirm.html", {
-        "title": "Delete Billing Record",
-        "message": f"Delete billing record for {bill.lease.tenant.email} / {bill.lease.unit.number} / {bill.billing_month}? Linked payment history references will be cleaned up.",
-        "post_url": reverse("admin_delete_bill", args=[bill.id]),
-        "back_url": reverse("admin_billing"),
-    })
+    return render_admin_password_confirm(
+        request,
+        title="Delete Billing Record",
+        message=f"Delete billing record for {bill.lease.tenant.email} / {bill.lease.unit.number} / {bill.billing_month}? Linked payment history references will be cleaned up.",
+        post_url=reverse("admin_delete_bill", args=[bill.id]),
+        back_url=reverse("admin_billing"),
+    )
 
 
 @admin_required

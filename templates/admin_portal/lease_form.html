@@ -207,9 +207,9 @@ function toggleMoveInPaymentMethod() {
 
             <div>
               <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider" for="id_due_day">Payment Due Day <span class="text-rose-600">*</span></label>
-              <input type="number" name="due_day" id="id_due_day" value="{{ form.due_day.value|default:5 }}" min="1" max="31" 
-                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none" required>
-              <p class="text-[10px] text-slate-500 mt-2 font-bold uppercase tracking-tight">Day of the month rent is due.</p>
+              <input type="number" name="due_day" id="id_due_day" value="{% if lease %}{{ lease.start_date|date:'j' }}{% else %}{{ form.due_day.value|default:'' }}{% endif %}" min="1" max="31" readonly
+                     class="w-full px-4 py-3 bg-slate-100 border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-0 focus:border-slate-300 transition-all outline-none cursor-not-allowed" required>
+              <p class="text-[10px] text-slate-500 mt-2 font-bold uppercase tracking-tight">Automatically follows the move-in date day.</p>
             </div>
           </div>
         </div>

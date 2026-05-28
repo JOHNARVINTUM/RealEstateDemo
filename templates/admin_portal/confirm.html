@@ -34,6 +34,12 @@
                         {{ message|default:"Are you sure you want to proceed? This action may permanently modify or remove records from the system." }}
                     </p>
                 </div>
+
+                {% if error %}
+                <div class="bg-rose-50 border border-rose-200 text-rose-700 text-sm font-bold rounded-2xl px-4 py-3">
+                    {{ error }}
+                </div>
+                {% endif %}
                 
                 <div class="text-[10px] text-slate-400 font-black uppercase tracking-tighter">
                     Please verify before proceeding
@@ -43,6 +49,19 @@
                 <div class="flex flex-col gap-3 pt-4">
                     <form method="post" action="{{ post_url }}" class="w-full">
                         {% csrf_token %}
+                        {% if require_admin_password %}
+                        <div class="mb-3 text-left">
+                            <label for="id_admin_password" class="block text-xs font-black uppercase tracking-widest text-slate-500 mb-2">Confirm Admin Password</label>
+                            <input
+                                type="password"
+                                name="admin_password"
+                                id="id_admin_password"
+                                autocomplete="current-password"
+                                required
+                                class="w-full px-4 py-3 bg-white border border-slate-300 rounded-2xl text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all"
+                                placeholder="Enter your admin password">
+                        </div>
+                        {% endif %}
                         <button type="submit" class="w-full bg-rose-600 text-white py-4 rounded-2xl font-display font-bold text-sm hover:bg-rose-700 transition-all shadow-xl shadow-rose-200">
                             Yes, Confirm Action
                         </button>

@@ -823,7 +823,8 @@ class LeaseActivationService:
         payment_reference: str,
         amount: Decimal,
         activated_at=None,
-        skip_billing_generation: bool = False
+        skip_billing_generation: bool = False,
+        existing_payment=None,
     ) -> tuple[bool, str]:
         """
         Centralized lease activation after payment verification.
@@ -892,17 +893,39 @@ class LeaseActivationService:
                             paid_at=activated_at or timezone.now()
                         )
                 
-                # CREATE PAYMENT RECORD
-                payment = ManualPayment.objects.create(
-                    user=lease.tenant,
-                    payment_type="move_in",
-                    payment_method=payment_method,
-                    amount=amount,
-                    reference_code=payment_reference,
-                    status="APPROVED",
-                    bill_ids=str(first_bill.id) if first_bill else "",
-                    tenant_note=f"Move-in payment via {payment_method}",
-                )
+                # CREATE OR UPDATE PAYMENT RECORD
+                if existing_payment is not None:
+                    payment = ManualPayment.objects.select_for_update().get(pk=existing_payment.pk)
+                    payment.payment_type = "move_in"
+                    payment.payment_method = payment_method
+                    payment.amount = amount
+                    payment.reference_code = payment_reference
+                    payment.status = "APPROVED"
+                    payment.bill_ids = str(first_bill.id) if first_bill else ""
+                    if not payment.tenant_note:
+                        payment.tenant_note = f"Move-in payment via {payment_method}"
+                    payment.save(
+                        update_fields=[
+                            "payment_type",
+                            "payment_method",
+                            "amount",
+                            "reference_code",
+                            "status",
+                            "bill_ids",
+                            "tenant_note",
+                        ]
+                    )
+                else:
+                    payment = ManualPayment.objects.create(
+                        user=lease.tenant,
+                        payment_type="move_in",
+                        payment_method=payment_method,
+                        amount=amount,
+                        reference_code=payment_reference,
+                        status="APPROVED",
+                        bill_ids=str(first_bill.id) if first_bill else "",
+                        tenant_note=f"Move-in payment via {payment_method}",
+                    )
                 
                 logger.info(
                     f"Lease {lease_id} activated successfully. "

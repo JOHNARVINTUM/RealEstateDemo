@@ -511,6 +511,7 @@ class LeaseForm(forms.ModelForm):
         cleaned = super().clean()
         unit = cleaned.get("unit")
         start_date = cleaned.get("start_date")
+        due_day = cleaned.get("due_day")
         end_date = cleaned.get("end_date")
         monthly_rent = cleaned.get("monthly_rent")
         security_deposit = cleaned.get("security_deposit")
@@ -542,6 +543,12 @@ class LeaseForm(forms.ModelForm):
         if start_date and end_date:
             if start_date > end_date:
                 raise ValidationError({"end_date": "End date must be after start date."})
+
+        # Payment due day follows the tenant move-in date.
+        if start_date:
+            cleaned["due_day"] = start_date.day
+        elif due_day and (due_day < 1 or due_day > 31):
+            raise ValidationError({"due_day": "Payment due day must be between 1 and 31."})
         
         # Validate payment fields
         if monthly_rent and monthly_rent <= 0:
@@ -569,6 +576,9 @@ class LeaseForm(forms.ModelForm):
         # Auto-populate monthly rent from unit if not provided
         if instance.unit and not instance.monthly_rent:
             instance.monthly_rent = instance.unit.monthly_rent
+
+        if instance.start_date:
+            instance.due_day = instance.start_date.day
         
         # Auto-populate security deposit = monthly_rent × 2 only on create.
         if is_existing_lease:
@@ -656,15 +666,19 @@ class LeaseForm(forms.ModelForm):
             self.initial["unit"] = self.instance.unit_id
             self.initial["start_date"] = self.instance.start_date
             self.initial["end_date"] = self.instance.end_date
+            self.initial["due_day"] = self.instance.start_date.day
             self.initial["security_deposit"] = locked_security_deposit
             self.fields["tenant"].initial = self.instance.tenant_id
             self.fields["unit"].initial = self.instance.unit_id
             self.fields["start_date"].initial = self.instance.start_date
             self.fields["end_date"].initial = self.instance.end_date
+            self.fields["due_day"].initial = self.instance.start_date.day
             self.fields["security_deposit"].initial = locked_security_deposit
             self.fields["tenant"].widget.attrs["disabled"] = "disabled"
             self.fields["unit"].widget.attrs["disabled"] = "disabled"
             self.fields["security_deposit"].widget.attrs["readonly"] = "readonly"
+
+        self.fields["due_day"].widget.attrs["readonly"] = "readonly"
 
 
 class UnitForm(forms.ModelForm):

@@ -174,12 +174,36 @@
                 </label>
             </div>
 
-            <button type="submit" class="w-full py-4 bg-slate-900 text-white font-bold text-sm uppercase tracking-wider rounded-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-2 mt-6">
+            <div id="cash-payment-panel" class="hidden rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm font-bold text-emerald-900 uppercase tracking-wider">Cash Payment Reference</p>
+                        <p class="mt-1 text-lg font-black text-emerald-950">{{ cash_reference }}</p>
+                        <p class="mt-1 text-xs text-emerald-800">This reference will be recorded in the payment history for this move-in transaction.</p>
+                    </div>
+                    <div class="rounded-lg bg-white px-3 py-2 border border-emerald-200 text-xs font-bold text-emerald-900">
+                        Status after submit: APPROVED
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <label for="id_admin_password" class="block text-sm font-bold text-emerald-950 mb-2 uppercase tracking-wider">Confirm Admin Password</label>
+                    <input
+                        type="password"
+                        name="admin_password"
+                        id="id_admin_password"
+                        autocomplete="current-password"
+                        class="w-full px-4 py-3 bg-white border border-emerald-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none"
+                        placeholder="Enter your admin password to record cash payment">
+                    <p class="mt-2 text-xs font-bold uppercase tracking-tight text-emerald-800">Required before face-to-face cash can be recorded.</p>
+                </div>
+            </div>
+
+            <button type="submit" id="lease-payment-submit" class="w-full py-4 bg-slate-900 text-white font-bold text-sm uppercase tracking-wider rounded-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-2 mt-6">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="2" y="5" width="20" height="14" rx="2"></rect>
                     <line x1="2" y1="10" x2="22" y2="10"></line>
                 </svg>
-                Proceed with Payment
+                <span id="lease-payment-submit-label">Proceed with Payment</span>
             </button>
         </form>
     </div>
@@ -195,4 +219,35 @@
         </ul>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const methodInputs = document.querySelectorAll('input[name="payment_method"]');
+    const cashPanel = document.getElementById('cash-payment-panel');
+    const submitLabel = document.getElementById('lease-payment-submit-label');
+    const adminPasswordInput = document.getElementById('id_admin_password');
+
+    function syncLeasePaymentUI() {
+        const selected = document.querySelector('input[name="payment_method"]:checked')?.value || '';
+        if (cashPanel) {
+            cashPanel.classList.toggle('hidden', selected !== 'CASH');
+        }
+        if (adminPasswordInput) {
+            adminPasswordInput.required = selected === 'CASH';
+            if (selected !== 'CASH') {
+                adminPasswordInput.value = '';
+            }
+        }
+        if (submitLabel) {
+            submitLabel.textContent = selected === 'CASH' ? 'Record Cash Payment' : 'Proceed with Payment';
+        }
+    }
+
+    methodInputs.forEach((input) => {
+        input.addEventListener('change', syncLeasePaymentUI);
+    });
+
+    syncLeasePaymentUI();
+});
+</script>
 {% endblock %}

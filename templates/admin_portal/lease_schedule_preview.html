@@ -128,11 +128,26 @@ document.addEventListener('DOMContentLoaded', function() {
             return el ? el.value : String(fallback);
         }
 
+        function syncDueDayWithStartDate() {
+            const startDateInput = getVal('id_start_date', '');
+            const dueDayField = document.getElementById('id_due_day');
+            if (!dueDayField) return;
+            if (!startDateInput) {
+                dueDayField.value = '';
+                return;
+            }
+            const parsed = new Date(startDateInput);
+            if (!isNaN(parsed.getTime())) {
+                dueDayField.value = parsed.getDate();
+            }
+        }
+
         function updatePreview() {
             const monthlyRent = parseFloat(getVal('id_monthly_rent', 0)) || 0;
             const depositMultiplier = 2; // Fixed 2x multiplier
             const startDateInput = getVal('id_start_date', '');
-            const dueDay = parseInt(getVal('id_due_day', 5)) || 5;
+            syncDueDayWithStartDate();
+            const dueDay = parseInt(getVal('id_due_day', 1)) || 1;
             const motorcycleSlots = parseInt(getVal('id_motorcycle_slots', 0)) || 0;
             const carSlots = parseInt(getVal('id_car_slots', 0)) || 0;
             const parkingFee = (motorcycleSlots * 350) + (carSlots * 2500);

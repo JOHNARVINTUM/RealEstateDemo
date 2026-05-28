@@ -97,12 +97,22 @@
 
         <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs border-l-4 border-l-purple-600">
           <span class="text-xs font-bold text-slate-600 block mb-1">Rent Amount</span>
-          <strong class="text-2xl font-black text-slate-900 tracking-tight">₱{{ leases.0.monthly_rent|add:leases.0.parking_fee|floatformat:0|intcomma|default:"0" }}</strong>
+          {% if leases %}
+            <strong class="text-2xl font-black text-slate-900 tracking-tight">₱{{ leases.0.monthly_rent|add:leases.0.parking_fee|floatformat:0|intcomma }}</strong>
+          {% else %}
+            <strong class="text-2xl font-black text-slate-900 tracking-tight">₱0</strong>
+          {% endif %}
         </div>
 
         <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs border-l-4 border-l-amber-600">
           <span class="text-xs font-bold text-slate-600 block mb-1">Moved In</span>
-          <strong class="text-base font-black text-slate-900 tracking-tight block mt-1">{{ leases.last.start_date|date:"M Y"|default:"N/A" }}</strong>
+          <strong class="text-base font-black text-slate-900 tracking-tight block mt-1">
+            {% if leases %}
+              {{ leases.last.start_date|date:"M Y" }}
+            {% else %}
+              N/A
+            {% endif %}
+          </strong>
         </div>
 
       </section>

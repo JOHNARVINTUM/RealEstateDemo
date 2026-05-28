@@ -9,7 +9,7 @@ from django.utils import timezone
 from maintenance.models import MaintenanceRequest
 from rentals.models import Notification
 
-from .admin_portal_views import admin_required
+from .admin_portal_views import admin_required, admin_password_verified, render_admin_password_confirm
 
 
 @lru_cache(maxsize=1)
@@ -153,14 +153,24 @@ def admin_delete_notification(request, notification_id):
     notification = get_object_or_404(Notification, id=notification_id)
 
     if request.method == "POST":
+        if not admin_password_verified(request):
+            return render_admin_password_confirm(
+                request,
+                title="Delete Notification",
+                message=f"Delete notification '{notification.title}'?",
+                post_url=reverse("admin_delete_notification", args=[notification.id]),
+                back_url=reverse("admin_notifications"),
+                error="Incorrect admin password. Notification was not deleted.",
+            )
         notification_title = notification.title
         notification.delete()
         messages.success(request, f"Notification '{notification_title}' has been deleted successfully.")
         return redirect("admin_notifications")
 
-    return render(request, "admin_portal/confirm.html", {
-        "title": "Delete Notification",
-        "message": f"Delete notification '{notification.title}'?",
-        "post_url": reverse("admin_delete_notification", args=[notification.id]),
-        "back_url": reverse("admin_notifications"),
-    })
+    return render_admin_password_confirm(
+        request,
+        title="Delete Notification",
+        message=f"Delete notification '{notification.title}'?",
+        post_url=reverse("admin_delete_notification", args=[notification.id]),
+        back_url=reverse("admin_notifications"),
+    )

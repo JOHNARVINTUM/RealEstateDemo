@@ -13,7 +13,7 @@ from payments.models import ManualPayment
 from rentals.models import Lease
 from rentals.services import repair_historical_move_in_payment
 
-from .admin_portal_views import admin_required
+from .admin_portal_views import admin_required, admin_password_verified, render_admin_password_confirm
 
 logger = logging.getLogger(__name__)
 
@@ -243,15 +243,25 @@ def admin_payments(request):
 def admin_delete_payment(request, payment_id: int):
     payment = get_object_or_404(ManualPayment.objects.select_related("user"), pk=payment_id)
     if request.method == "POST":
+        if not admin_password_verified(request):
+            return render_admin_password_confirm(
+                request,
+                title="Delete Billing History",
+                message=f"Delete payment history {payment.reference_code} for {payment.user.email}?",
+                post_url=reverse("admin_delete_payment", args=[payment.id]),
+                back_url=reverse("admin_payments"),
+                error="Incorrect admin password. Payment history was not deleted.",
+            )
         with transaction.atomic():
             payment.delete()
         return redirect("admin_payments")
-    return render(request, "admin_portal/confirm.html", {
-        "title": "Delete Billing History",
-        "message": f"Delete payment history {payment.reference_code} for {payment.user.email}?",
-        "post_url": reverse("admin_delete_payment", args=[payment.id]),
-        "back_url": reverse("admin_payments"),
-    })
+    return render_admin_password_confirm(
+        request,
+        title="Delete Billing History",
+        message=f"Delete payment history {payment.reference_code} for {payment.user.email}?",
+        post_url=reverse("admin_delete_payment", args=[payment.id]),
+        back_url=reverse("admin_payments"),
+    )
 
 
 @admin_required

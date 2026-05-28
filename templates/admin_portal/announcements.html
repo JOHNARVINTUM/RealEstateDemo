@@ -133,12 +133,10 @@
             Edit
           </a>
 
-          <form method="post" action="{% url 'admin_delete_announcement' a.id %}" class="confirm-action inline-block" data-confirm="Permanently delete this announcement? This cannot be undone.">
-            {% csrf_token %}
-            <button type="submit" class="px-4 py-2 bg-white border border-slate-200 hover:bg-rose-600 hover:text-white hover:border-rose-600 text-rose-600 rounded-lg text-xs font-black uppercase tracking-wider transition-all shadow-xs">
-              Delete
-            </button>
-          </form>
+          <a href="{% url 'admin_delete_announcement' a.id %}"
+             class="inline-flex items-center px-4 py-2 bg-white border border-slate-200 hover:bg-rose-600 hover:text-white hover:border-rose-600 text-rose-600 rounded-lg text-xs font-black uppercase tracking-wider transition-all shadow-xs">
+            Delete
+          </a>
         </div>
 
       </div>

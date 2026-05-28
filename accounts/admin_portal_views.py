@@ -55,36 +55,6 @@ from django.utils import timezone as dj_timezone
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
 
-def tenant_has_records(tenant):
-    """Check if tenant has any records that should prevent hard delete."""
-    user = tenant.user
-    return (
-        Lease.objects.filter(tenant=user).exists()
-        or ManualPayment.objects.filter(user=user).exists()
-        or MaintenanceRequest.objects.filter(tenant=user).exists()
-        or TenantAttachment.objects.filter(tenant=user).exists()
-    )
-
-
-def deactivate_tenant(tenant):
-    """Deactivate tenant: disable login, close active leases, free units."""
-    today = date.today()
-    user = tenant.user
-
-    # Disable account login
-    user.is_active = False
-    user.save()
-
-    # Close active leases and free units
-    active_leases = Lease.objects.filter(tenant=user, status=Lease.STATUS_ACTIVE)
-    for lease in active_leases:
-        lease.deactivate(end_date=today)
-
-        unit = lease.unit
-        unit.status = "AVAILABLE"
-        unit.save()
-
-
 def admin_required(view_func):
     """
     Decorator to ensure user is authenticated and has ADMIN role
@@ -92,6 +62,26 @@ def admin_required(view_func):
     def check(user):
         return user.is_authenticated and (getattr(user, "role", "") == "ADMIN" or user.is_superuser)
     return user_passes_test(check)(view_func)
+
+
+def admin_password_verified(request) -> bool:
+    return request.user.check_password((request.POST.get("admin_password") or "").strip())
+
+
+def render_admin_password_confirm(request, *, title, message, post_url, back_url, error=None):
+    return render(
+        request,
+        "admin_portal/confirm.html",
+        {
+            "title": title,
+            "message": message,
+            "post_url": post_url,
+            "back_url": back_url,
+            "require_admin_password": True,
+            "error": error,
+        },
+    )
+
 
 logger = logging.getLogger(__name__)
 
@@ -293,162 +283,6 @@ def admin_dashboard(request):
 
 
 @admin_required
-def admin_tenants(request):
-    q = request.GET.get("q", "").strip()
-    lease_filter = request.GET.get("lease", "").strip()
-
-    today = timezone.localdate()
-    tenants_list = TenantProfile.objects.select_related("user").annotate(
-        has_active_lease=Exists(
-            Lease.objects.filter(
-                tenant=OuterRef("user"),
-                start_date__lte=today,
-            ).filter(
-                Q(end_date__isnull=True) | Q(end_date__gte=today)
-            )
-        )
-    )
-    if q:
-        tenants_list = tenants_list.filter(
-            Q(first_name__icontains=q) |
-            Q(last_name__icontains=q) |
-            Q(contact_no__icontains=q) |
-            Q(user__email__icontains=q) |
-            Q(user__username__icontains=q)
-        )
-
-    if lease_filter == "active":
-        tenants_list = tenants_list.filter(has_active_lease=True)
-    elif lease_filter == "none":
-        tenants_list = tenants_list.filter(has_active_lease=False)
-
-    tenants_list = tenants_list.order_by("first_name", "last_name")
-    
-    paginator = Paginator(tenants_list, 10)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
-    page_user_ids = [tenant.user_id for tenant in page_obj]
-    lease_user_ids = set(
-        Lease.objects.filter(tenant_id__in=page_user_ids).values_list("tenant_id", flat=True)
-    )
-    payment_user_ids = set(
-        ManualPayment.objects.filter(user_id__in=page_user_ids).values_list("user_id", flat=True)
-    )
-    maintenance_user_ids = set(
-        MaintenanceRequest.objects.filter(tenant_id__in=page_user_ids).values_list("tenant_id", flat=True)
-    )
-    attachment_user_ids = set(
-        TenantAttachment.objects.filter(tenant_id__in=page_user_ids).values_list("tenant_id", flat=True)
-    )
-
-    for tenant in page_obj:
-        tenant.has_records = tenant.user_id in (
-            lease_user_ids | payment_user_ids | maintenance_user_ids | attachment_user_ids
-        )
-
-    # Calculate stats for the header
-    total_tenants_count = TenantProfile.objects.count()
-    active_tenants_count = Lease.objects.filter(status=Lease.STATUS_ACTIVE).values("tenant").distinct().count()
-    
-    today = timezone.now()
-    new_tenants_count = TenantProfile.objects.filter(
-        user__date_joined__year=today.year, 
-        user__date_joined__month=today.month
-    ).count()
-
-    return render(request, "admin_portal/tenants.html", {
-        "page_obj": page_obj,
-        "q": q,
-        "lease_filter": lease_filter,
-        "total_tenants_count": total_tenants_count,
-        "active_tenants_count": active_tenants_count,
-        "new_tenants_count": new_tenants_count,
-    })
-
-
-@admin_required
-def admin_tenant_detail(request, tenant_id: int):
-    from payments.models import ManualPayment
-    tenant = get_object_or_404(TenantProfile.objects.select_related("user"), pk=tenant_id)
-    leases = list(
-        Lease.objects.select_related("unit", "tenant")
-        .filter(tenant=tenant.user)
-        .order_by("-start_date")
-    )
-    attachments = TenantAttachment.objects.filter(tenant=tenant.user).select_related('uploaded_by').order_by('-uploaded_at')
-    tenant.has_records = tenant_has_records(tenant)
-
-    # Payment history: all MonthlyBills across all leases
-    lease_ids = [lease.id for lease in leases]
-    bill_history = MonthlyBill.objects.filter(
-        lease_id__in=lease_ids
-    ).select_related("lease__unit").order_by("-billing_month")[:24]
-
-    # Manual payment submissions (GCash / Cash)
-    manual_payments = ManualPayment.objects.filter(
-        user=tenant.user
-    ).order_by("-created_at")[:20]
-
-    return render(request, "admin_portal/tenant_detail.html", {
-        "tenant": tenant,
-        "leases": leases,
-        "attachments": attachments,
-        "bill_history": bill_history,
-        "manual_payments": manual_payments,
-    })
-
-
-@admin_required
-def admin_create_tenant_profile(request):
-    """
-    Admin portal: create a TenantProfile row with auto-generated password and email notification.
-    """
-    # Check tenant limit: cannot have more tenants than total units
-    total_units = Unit.objects.filter(is_active=True).count()
-    total_tenants = TenantProfile.objects.count()
-    if total_tenants >= total_units:
-        messages.error(request, f"Cannot add more tenants. Maximum limit ({total_units} tenants for {total_units} units) reached.")
-        return redirect("admin_tenants")
-    
-    form = TenantProfileForm(request.POST or None, request.FILES or None)
-
-    if request.method == "POST" and form.is_valid():
-        try:
-            tenant_profile = form.save(uploaded_by=request.user)
-            
-            # Success message with information about auto-generated password and email
-            tenant_name = f"{tenant_profile.first_name} {tenant_profile.last_name}"
-            success_message = f"Tenant {tenant_name} has been created successfully! "
-            success_message += "An auto-generated password has been created and credentials email has been sent to {tenant_profile.user.email}."
-            
-            messages.success(request, success_message)
-            
-            # after creating a tenant, redirect admin to create a lease for that tenant
-            try:
-                tenant_id = tenant_profile.user.id
-                return redirect(f"{reverse('admin_create_lease')}?tenant_id={tenant_id}")
-            except Exception as e:
-                logger.exception("Failed to redirect to create lease for tenant %s: %s", getattr(tenant_profile.user, 'id', None), e)
-                messages.warning(request, "Tenant created but could not prefill lease form. Redirecting to tenants list.")
-                return redirect("admin_tenants")
-                
-        except Exception as e:
-            logger.exception("Failed to create tenant profile: %s", e)
-            messages.error(request, f"Error creating tenant: {str(e)}")
-
-    recent_tenants = TenantProfile.objects.all().order_by('-id')[:5]
-    
-    return render(request, "admin_portal/tenant_form.html", {
-        "title": "Add Tenant",
-        "form": form,
-        "back_url": reverse("admin_tenants"),
-        "recent_tenants": recent_tenants,
-        "help_text": "Password will be automatically generated based on the tenant's name and sent via email."
-    })
-
-
-@admin_required
 def admin_units(request):
     """Admin portal: list all units with filtering."""
     status_filter = request.GET.get('status', 'all')
@@ -604,17 +438,27 @@ def admin_delete_unit(request, unit_id):
     unit = get_object_or_404(Unit, id=unit_id)
     
     if request.method == "POST":
+        if not admin_password_verified(request):
+            return render_admin_password_confirm(
+                request,
+                title="Delete Unit",
+                message=f"Delete unit {unit.number}? This will mark it as inactive but preserve all historical data.",
+                post_url=reverse("admin_delete_unit", args=[unit.id]),
+                back_url=reverse("admin_unit_detail", args=[unit.id]),
+                error="Incorrect admin password. Unit deletion was not completed.",
+            )
         unit.is_active = False
         unit.save()
         messages.success(request, f'Unit {unit.number} has been deleted successfully!')
         return redirect("admin_units")
     
-    return render(request, "admin_portal/confirm.html", {
-        "title": "Delete Unit",
-        "message": f"Delete unit {unit.number}? This will mark it as inactive but preserve all historical data.",
-        "post_url": reverse("admin_delete_unit", args=[unit.id]),
-        "back_url": reverse("admin_unit_detail", args=[unit.id]),
-    })
+    return render_admin_password_confirm(
+        request,
+        title="Delete Unit",
+        message=f"Delete unit {unit.number}? This will mark it as inactive but preserve all historical data.",
+        post_url=reverse("admin_delete_unit", args=[unit.id]),
+        back_url=reverse("admin_unit_detail", args=[unit.id]),
+    )
 
 
 @admin_required
@@ -634,314 +478,6 @@ def admin_toggle_unit_status(request, unit_id):
     return redirect("admin_unit_detail", unit_id=unit.id)
 
 
-@admin_required
-def admin_create_lease(request):
-    """
-    Admin portal: create a Lease row (linking a tenant to a unit) with enhanced payment scheduling.
-    """
-    from rentals.services import LeaseSchedulingService
-    
-    # allow pre-filling tenant via ?tenant_id=... when redirected from tenant creation
-    initial = {}
-    tenant_id = request.GET.get("tenant_id")
-    if tenant_id:
-        initial["tenant"] = tenant_id
-
-    form = LeaseForm(request.POST or None, initial=initial)
-    schedule_preview = None
-
-    if request.method == "POST":
-        if form.is_valid():
-            try:
-                lease = form.save()
-                
-                # Create real-time notification for admin about new lease
-                try:
-                    Notification.create_notification(
-                        title=f"New Lease Created",
-                        message=f"""Lease created for {lease.tenant.email} in Unit {lease.unit.number}
-
-Lease Details:
-• Monthly Rent: ₱{lease.monthly_rent:,.2f}
-• Advance Payment: ₱{lease.advance_payment_amount:,.2f} ({lease.advance_months} months)
-• Security Deposit: ₱{lease.security_deposit:,.2f}
-• Total Move-in Cost: ₱{lease.total_move_in_cost:,.2f}
-• Lease Start: {lease.start_date.strftime('%B %d, %Y')}
-• First Rent Due: {lease.first_rent_due_date.strftime('%B %d, %Y')}""",
-                        notification_type='LEASE',
-                        related_tenant=lease.tenant,
-                        related_unit=lease.unit
-                    )
-                except Exception as e:
-                    logger.exception(f"Failed to create lease notification: {e}")
-                
-                # Create enhanced welcome notification for tenant with payment details
-                try:
-                    tenant_name = lease.tenant.tenantprofile.full_name if hasattr(lease.tenant, 'tenantprofile') else lease.tenant.email
-                    welcome_message = f"""Welcome to your new home at REALESTATE360+!
-
-Your lease has been successfully created. Here are your payment details:
-
-Unit Information:
-• Unit Number: {lease.unit.number}
-• Unit Type: {lease.unit.get_unit_type_display()}
-• Floor Level: {lease.unit.floor_level}
-• Size: {lease.unit.size_sqm} sqm
-
-Payment Schedule:
-• Monthly Rent: ₱{lease.monthly_rent:,.2f}
-• Security Deposit: ₱{lease.security_deposit:,.2f} (due on move-in)
-• Advance Payment: ₱{lease.advance_payment_amount:,.2f} ({lease.advance_months} months prepaid)
-• Total Move-in Cost: ₱{lease.total_move_in_cost:,.2f}
-• Lease Start Date: {lease.start_date.strftime('%B %d, %Y')}
-• First Regular Rent Due: {lease.first_rent_due_date.strftime('%B %d, %Y')}
-
-Your unit features: {lease.unit.description or 'Modern living space with premium amenities.'}
-Amenities included: {lease.unit.amenities or 'Contact admin for full amenities list.'}
-
-Payment Due Dates:
-• Rent is due on the {_ordinal(lease.due_day)} of each month
-• Your advance payment covers the first {lease.advance_months} months
-• Regular rent payments start {lease.first_rent_due_date.strftime('%B %d, %Y')}
-
-You can access your tenant portal to view bills, make payments, and request maintenance.
-
-Welcome aboard! We're excited to have you as part of our community!"""
-                    
-                    Notification.create_notification(
-                        title=f"Welcome to Your New Unit {lease.unit.number}!",
-                        message=welcome_message,
-                        notification_type='SYSTEM',
-                        related_tenant=lease.tenant,
-                        related_unit=lease.unit
-                    )
-                except Exception as e:
-                    logger.exception(f"Failed to create welcome notification for tenant: {e}")
-                
-                # Update unit status to OCCUPIED when lease is created
-                try:
-                    unit = lease.unit
-                    unit.status = 'OCCUPIED'
-                    unit.save()
-                    logger.info(f"Unit {unit.number} status updated to OCCUPIED for lease {lease.id}")
-                except Exception as e:
-                    logger.exception(f"Failed to update unit status for lease {lease.id}: {e}")
-                    # Don't block lease creation if unit status update fails
-                
-                # Reset tenant's welcome popup flag so they see the welcome message
-                try:
-                    from rentals.models import TenantProfile
-                    tenant_profile = TenantProfile.objects.get(user=lease.tenant)
-                    tenant_profile.has_seen_unit_welcome = False
-                    tenant_profile.save()
-                    logger.info(f"Reset welcome popup flag for tenant {lease.tenant.email}")
-                except Exception as e:
-                    logger.exception(f"Failed to reset welcome popup flag for tenant {lease.tenant.email}: {e}")
-
-                # Send lease assignment email to tenant
-                try:
-                    from rentals.services import send_email_via_resend
-                    tenant_name = lease.tenant.tenantprofile.full_name if hasattr(lease.tenant, 'tenantprofile') else lease.tenant.email
-                    send_email_via_resend(
-                        to_email=lease.tenant.email,
-                        subject=f"[REALESTATE360+] Unit {lease.unit.number} Assigned to You",
-                        message=(
-                            f"Dear {tenant_name},\n\n"
-                            f"Your unit has been successfully assigned. Here are your lease details:\n\n"
-                            f"  Unit Number:        {lease.unit.number}\n"
-                            f"  Unit Type:          {lease.unit.get_unit_type_display()}\n"
-                            f"  Monthly Rent:       PHP {lease.monthly_rent:,.2f}\n"
-                            f"  Security Deposit:   PHP {lease.security_deposit:,.2f}\n"
-                            f"  Contract Deposit:   PHP {lease.contract_deposit:,.2f} ({lease.deposit_multiplier}× monthly rent)\n"
-                            f"  Parking Fee:        PHP {lease.parking_fee:,.2f}/mo\n"
-                            f"  Total Move-in Due:  PHP {lease.total_move_in_cost:,.2f}\n"
-                            f"  Lease Start:        {lease.start_date.strftime('%B %d, %Y')}\n"
-                            f"  Rent Due:           Every {lease.due_day} of the month\n\n"
-                            f"Move-in Breakdown:\n"
-                            f"  1st Month Rent:     PHP {lease.monthly_rent:,.2f}\n"
-                            f"  + Security Deposit: PHP {lease.security_deposit:,.2f}\n"
-                            f"  + Parking Fee:      PHP {lease.parking_fee:,.2f}\n"
-                            f"  = Total:            PHP {lease.total_move_in_cost:,.2f}\n\n"
-                            f"You can log in to your tenant portal to view your bills and payment schedule.\n\n"
-                            f"Welcome to your new home!\n\n"
-                            f"REALESTATE360+ Administration"
-                        )
-                    )
-                except Exception as e:
-                    logger.exception(f"Failed to send lease assignment email: {e}")
-                
-                # Lease is created with status=PENDING_PAYMENT (see LeaseForm.save)
-                # DO NOT generate bills yet - will happen after payment
-                # DO NOT mark unit occupied yet - will happen after payment
-                
-                # Send lease creation email (tenant can see pending lease)
-                try:
-                    tenant_name = lease.tenant.tenantprofile.full_name if hasattr(lease.tenant, 'tenantprofile') else lease.tenant.email
-                    from django.core.mail import send_mail
-                    send_mail(
-                        subject="Your Lease is Pending Activation - REALESTATE360+",
-                        message=(
-                            f"Hi {tenant_name},\n\n"
-                            f"Your lease for Unit {lease.unit.number} has been created and is pending activation.\n"
-                            f"Please complete the move-in payment to activate your lease and access your tenant portal.\n\n"
-                            f"Lease Details:\n"
-                            f"- Unit: {lease.unit.number}\n"
-                            f"- Monthly Rent: ₱{lease.monthly_rent:,.2f}\n"
-                            f"- Start Date: {lease.start_date}\n"
-                            f"- Move-in Cost: ₱{lease.total_move_in_cost:,.2f}\n\n"
-                            f"Once payment is confirmed, you'll receive access to your tenant portal.\n\n"
-                            f"REALESTATE360+ Administration"
-                        ),
-                        from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@realestate360.com'),
-                        recipient_list=[lease.tenant.email],
-                        fail_silently=True,
-                    )
-                except Exception as e:
-                    logger.exception(f"Failed to send pending lease email: {e}")
-                
-                messages.success(
-                    request, 
-                    f"Lease created for {lease.tenant.email} – Unit {lease.unit.number}. "
-                    f"Status: PENDING PAYMENT. Please complete payment to activate."
-                )
-                
-                # Redirect to payment page for this lease
-                return redirect("admin_lease_payment", lease_id=lease.id)
-                
-            except Exception as e:
-                logger.exception(f"Error creating lease: {e}")
-                messages.error(request, f'Error creating lease: {str(e)}')
-        else:
-            messages.error(request, 'Please correct the errors below.')
-    else:
-        # Generate schedule preview for GET request
-        if request.GET.get('preview') == '1':
-            # Get sample data for preview
-            service = LeaseSchedulingService()
-            sample_data = {
-                'monthly_rent': 17000,
-                'advance_months': 2,
-                'security_deposit': 17000,
-                'start_date': date.today(),
-                'due_day': 5,
-            }
-            schedule_preview = service.get_payment_schedule_preview(sample_data)
-
-    # Determine back URL: if unit_id is provided, go back to unit detail, else tenants list
-    back_url = reverse("admin_tenants")
-    u_id = request.GET.get("unit_id")
-    if u_id:
-        back_url = reverse("admin_unit_detail", args=[u_id])
-
-    return render(request, "admin_portal/lease_form.html", {
-        "title": "Add Lease",
-        "form": form,
-        "back_url": back_url,
-        "schedule_preview": schedule_preview,
-        "gcash_name": getattr(settings, 'GCASH_NAME', ''),
-        "gcash_number": getattr(settings, 'GCASH_NUMBER', ''),
-    })
-
-
-@admin_required
-def admin_lease_payment(request, lease_id: int):
-    """
-    Admin portal: Move-in payment page for pending lease.
-    Shows payment options after lease is created but not yet activated.
-    """
-    from rentals.models import Lease
-    
-    lease = get_object_or_404(
-        Lease.objects.select_related('tenant', 'unit'),
-        id=lease_id,
-        status=Lease.STATUS_PENDING_PAYMENT
-    )
-    
-    if request.method == "POST":
-        payment_method = request.POST.get("payment_method", "")
-        
-        if payment_method == "CASH":
-            # For cash, mark payment received and activate immediately
-            from rentals.services import LeaseActivationService
-            success, message = LeaseActivationService.activate_lease_after_payment(
-                lease_id=lease.id,
-                payment_method="CASH",
-                payment_reference=f"REF-CASH-MOVEIN-{lease.id}",
-                amount=lease.total_move_in_cost
-            )
-            if success:
-                messages.success(request, f"Lease activated successfully! {message}")
-                return redirect("admin_tenant_detail", tenant_id=lease.tenant.id)
-            else:
-                messages.error(request, f"Activation failed: {message}")
-        
-        elif payment_method == "GCASH":
-            # Redirect to manual GCash payment page
-            from django.http import HttpResponseRedirect
-            return HttpResponseRedirect(
-                f"/payments/manual-gcash/?amount={lease.total_move_in_cost}&lease_id={lease.id}&payment_type=move_in"
-            )
-        
-        elif payment_method == "PAYMONGO":
-            # Redirect to PayMongo checkout with lease_id
-            from django.http import HttpResponseRedirect
-            return HttpResponseRedirect(
-                f"/payments/paymongo/admin-checkout/?amount={lease.total_move_in_cost}&lease_id={lease.id}&payment_type=move_in"
-            )
-    
-    return render(request, "admin_portal/lease_payment.html", {
-        "title": "Lease Payment",
-        "lease": lease,
-        "total_move_in_cost": lease.total_move_in_cost,
-        "back_url": reverse("admin_create_lease"),
-    })
-
-
-@admin_required
-def admin_edit_tenant(request, tenant_id: int):
-    tenant = get_object_or_404(TenantProfile, pk=tenant_id)
-    form = ComprehensiveTenantEditForm(tenant, request.POST or None, request.FILES or None)
-    
-    if request.method == "POST" and form.is_valid():
-        try:
-            updated_tenant = form.save(uploaded_by=request.user)
-            
-            # Create notification about tenant account changes
-            try:
-                changes_made = []
-                if tenant.user.email != form.cleaned_data['email']:
-                    changes_made.append("email")
-                if tenant.user.username != form.cleaned_data['username']:
-                    changes_made.append("username")
-                if tenant.user.role != form.cleaned_data['role']:
-                    changes_made.append("role")
-                if form.cleaned_data.get('new_password'):
-                    changes_made.append("password")
-                
-                if changes_made:
-                    from notifications.models import Notification
-                    change_list = ", ".join(changes_made)
-                    Notification.create_notification(
-                        title=f"Tenant Account Updated",
-                        message=f"Admin updated {updated_tenant.first_name} {updated_tenant.last_name}'s account: {change_list}",
-                        notification_type='SYSTEM',
-                        related_tenant=updated_tenant.user
-                    )
-            except Exception as e:
-                logger.exception(f"Failed to create tenant update notification: {e}")
-            
-            messages.success(request, f'Tenant {updated_tenant.first_name} {updated_tenant.last_name} has been updated successfully!')
-            return redirect("admin_tenant_detail", tenant_id=tenant.id)
-        except Exception as e:
-            messages.error(request, f'Error updating tenant: {str(e)}')
-            logger.exception("Error updating tenant")
-    
-    return render(request, "admin_portal/comprehensive_tenant_edit.html", {
-        "title": "Edit Tenant",
-        "form": form,
-        "tenant": tenant,
-        "back_url": reverse("admin_tenant_detail", args=[tenant.id]),
-    })
 
 
 @admin_required
@@ -1101,49 +637,6 @@ def admin_delete_tenant(request, tenant_id: int):
     })
 
 
-@admin_required
-def admin_edit_lease(request, lease_id: int):
-    lease = get_object_or_404(Lease, pk=lease_id)
-    form = LeaseForm(request.POST or None, instance=lease)
-    if request.method == "POST" and form.is_valid():
-        lease = form.save()
-        try:
-            ensure_bills_since_move_in(lease)
-            removed_duplicates = cleanup_duplicate_monthly_bills_for_lease(lease)
-            if removed_duplicates:
-                messages.info(request, f"Cleaned up {removed_duplicates} duplicate historical bill record{'s' if removed_duplicates != 1 else ''} for this lease.")
-        except Exception:
-            logger.exception("ensure_bills_since_move_in failed while editing lease id %s", getattr(lease, 'id', None))
-            messages.warning(request, "Failed to update billing rows; please regenerate bills if needed.")
-        return redirect("admin_tenant_detail", tenant_id=lease.tenant.tenantprofile.id if hasattr(lease.tenant, 'tenantprofile') else lease.tenant.id)
-    return render(request, "admin_portal/lease_form.html", {
-        "title": "Edit Lease",
-        "form": form,
-        "lease": lease,
-        "back_url": reverse("admin_tenants"),
-        "schedule_preview": None,
-        "gcash_name": getattr(settings, 'GCASH_NAME', ''),
-        "gcash_number": getattr(settings, 'GCASH_NUMBER', ''),
-    })
-
-
-@admin_required
-def admin_delete_lease(request, lease_id: int):
-    lease = get_object_or_404(Lease, pk=lease_id)
-    if request.method == "POST":
-        unit = lease.unit
-        unit_number = unit.number
-        lease.delete()
-        unit.status = "AVAILABLE"
-        unit.save(update_fields=["status"])
-        messages.success(request, f"Lease deleted and unit {unit_number} is now available.")
-        return redirect("admin_tenants")
-    return render(request, "admin_portal/confirm.html", {
-        "title": "Delete Lease",
-        "message": f"Delete lease for unit {lease.unit.number}? This cannot be undone.",
-        "post_url": reverse("admin_delete_lease", args=[lease.id]),
-        "back_url": reverse("admin_tenants"),
-    })
 
 
 @admin_required
@@ -1224,14 +717,24 @@ def admin_edit_announcement(request, ann_id: int):
 def admin_delete_announcement(request, ann_id: int):
     ann = get_object_or_404(Announcement, pk=ann_id)
     if request.method == "POST":
+        if not admin_password_verified(request):
+            return render_admin_password_confirm(
+                request,
+                title="Delete Announcement",
+                message=f"Delete announcement {ann.title}?",
+                post_url=reverse("admin_delete_announcement", args=[ann.id]),
+                back_url=reverse("admin_announcements"),
+                error="Incorrect admin password. Announcement deletion was not completed.",
+            )
         ann.delete()
         return redirect("admin_announcements")
-    return render(request, "admin_portal/confirm.html", {
-        "title": "Delete Announcement",
-        "message": f"Delete announcement {ann.title}?",
-        "post_url": reverse("admin_delete_announcement", args=[ann.id]),
-        "back_url": reverse("admin_announcements"),
-    })
+    return render_admin_password_confirm(
+        request,
+        title="Delete Announcement",
+        message=f"Delete announcement {ann.title}?",
+        post_url=reverse("admin_delete_announcement", args=[ann.id]),
+        back_url=reverse("admin_announcements"),
+    )
 
 
 
@@ -1599,63 +1102,5 @@ def handle_image_deletions(request, unit):
             unit_image.save()
         except (ValueError, UnitImage.DoesNotExist):
             pass
-
-
-@admin_required
-def admin_tenant_attachments(request, tenant_id: int):
-    """Admin portal: view and manage tenant attachments with image preview"""
-    tenant = get_object_or_404(TenantProfile.objects.select_related("user"), pk=tenant_id)
-    attachments = TenantAttachment.objects.filter(tenant=tenant.user).select_related('uploaded_by').order_by('-uploaded_at')
-    
-    return render(request, "admin_portal/tenant_attachments.html", {
-        "tenant": tenant,
-        "attachments": attachments,
-    })
-
-
-@admin_required
-@require_GET
-def admin_view_attachment(request, attachment_id: int):
-    """Admin portal: view attachment file with image preview support"""
-    attachment = get_object_or_404(TenantAttachment, pk=attachment_id)
-    
-    if not attachment.file:
-        return HttpResponse("File not found", status=404)
-    
-    # Serve the file for download or preview
-    response = HttpResponse(attachment.file.read(), content_type='application/octet-stream')
-    
-    # Set appropriate content type for images
-    if attachment.is_image:
-        response['Content-Type'] = f'image/{attachment.file_extension[1:]}'
-    elif attachment.is_pdf:
-        response['Content-Type'] = 'application/pdf'
-    
-    # Set filename for download
-    response['Content-Disposition'] = f'inline; filename="{attachment.filename}"'
-    
-    return response
-
-
-@admin_required
-def admin_delete_attachment(request, attachment_id: int):
-    """Admin portal: delete tenant attachment"""
-    attachment = get_object_or_404(TenantAttachment, pk=attachment_id)
-    tenant_id = attachment.tenant.tenantprofile.id
-    
-    if request.method == "POST":
-        # Delete the file and the attachment record
-        if attachment.file:
-            attachment.file.delete()
-        attachment.delete()
-        messages.success(request, f"Attachment '{attachment.filename}' has been deleted successfully.")
-        return redirect("admin_tenant_attachments", tenant_id=tenant_id)
-    
-    return render(request, "admin_portal/confirm.html", {
-        "title": "Delete Attachment",
-        "message": f"Delete attachment '{attachment.filename}'? This cannot be undone.",
-        "post_url": reverse("admin_delete_attachment", args=[attachment.id]),
-        "back_url": reverse("admin_tenant_attachments", args=[tenant_id]),
-    })
 
 

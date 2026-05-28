@@ -15,10 +15,9 @@ from django.core.paginator import Paginator
 from django.utils.timezone import now
 import json
 from django.utils import timezone
-from rentals.models import Lease, Unit, TenantProfile, Notification, TenantRiskClassification, Room, TenantAttachment
+from rentals.models import Lease, Unit, TenantProfile, Notification, TenantRiskClassification, Room
 from billing.models import MonthlyBill
 from billing.services import ensure_bills_since_move_in, set_bill_status, approve_manual_payment, reject_manual_payment, cleanup_duplicate_monthly_bills_for_lease
-from payments.models import ManualPayment
 from maintenance.models import MaintenanceRequest
 from water.models import WaterReading
 from accounts.admin_portal_forms import _ordinal
@@ -43,7 +42,6 @@ def simple_debug(request):
     """Simple debug view without Django template inheritance"""
     return render(request, 'admin_portal/simple_debug.html')
 from announcements.models import Announcement
-from maintenance.forms import AdminMaintenanceUpdateForm
 from rentals.services import TenantRiskService, repair_historical_move_in_payment
 
 from .admin_portal_forms import TenantProfileForm, AnnouncementForm, LeaseForm
@@ -51,7 +49,6 @@ from .admin_portal_forms import TenantProfileEditForm
 from .admin_portal_forms import ComprehensiveTenantEditForm
 from .admin_portal_forms import UnitForm
 from rentals.models import UnitImage
-from django.utils import timezone as dj_timezone
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
 
@@ -481,220 +478,6 @@ def admin_toggle_unit_status(request, unit_id):
 
 
 @admin_required
-def admin_delete_tenant(request, tenant_id: int):
-    """
-    Delete tenant with password confirmation and archive options.
-    Phase 1: Password verification
-    Phase 2: Choose archive or permanent delete
-    """
-    from rentals.models import ArchivedTenant
-    from django.utils import timezone
-    import json
-    
-    tenant = get_object_or_404(TenantProfile.objects.select_related('user'), pk=tenant_id)
-    user = tenant.user
-    has_records = tenant_has_records(tenant)
-    
-    # PHASE 2: Process deletion after password verified
-    if request.method == "POST" and request.POST.get("phase") == "2":
-        # Re-verify password
-        admin_password = request.POST.get("admin_password", "").strip()
-        if not request.user.check_password(admin_password):
-            messages.error(request, "Password verification failed. Action cancelled.")
-            return redirect("admin_tenant_detail", tenant_id=tenant.id)
-        
-        deletion_type = request.POST.get("deletion_type", "")
-        deletion_reason = request.POST.get("deletion_reason", "").strip()
-        
-        # Collect all tenant data for archiving
-        tenant_data = {
-            'full_name': tenant.full_name,
-            'first_name': tenant.first_name,
-            'last_name': tenant.last_name,
-            'email': user.email,
-            'contact_no': tenant.contact_no,
-            'created_at': tenant.created_at.isoformat() if tenant.created_at else None,
-            'has_records': has_records,
-        }
-        
-        # Collect related records summary
-        if has_records:
-            leases = list(Lease.objects.filter(tenant=user).values(
-                'id', 'unit__number', 'monthly_rent', 'start_date', 'end_date', 'is_active'
-            ))
-            payments = list(ManualPayment.objects.filter(user=user).values(
-                'id', 'amount', 'payment_method', 'status', 'created_at'
-            )[:10])  # Last 10 payments
-            maintenance = list(MaintenanceRequest.objects.filter(tenant=user).values(
-                'id', 'title', 'status', 'created_at'
-            )[:10])  # Last 10 requests
-            
-            tenant_data['records_summary'] = {
-                'leases': leases,
-                'payments_count': ManualPayment.objects.filter(user=user).count(),
-                'payments_sample': payments,
-                'maintenance_count': MaintenanceRequest.objects.filter(tenant=user).count(),
-                'maintenance_sample': maintenance,
-            }
-        
-        if deletion_type == "ARCHIVE":
-            # Archive tenant data and deactivate
-            ArchivedTenant.objects.create(
-                original_user_id=user.id,
-                original_tenant_id=tenant.id,
-                email=user.email,
-                tenant_data=tenant_data,
-                archive_type='DEACTIVATED',
-                deleted_by=request.user,
-                deletion_reason=deletion_reason,
-                can_be_restored=True,
-            )
-            
-            # Deactivate (preserve records, disable login)
-            deactivate_tenant(tenant)
-            messages.success(
-                request, 
-                f"✓ Tenant {tenant.full_name} archived and deactivated. "
-                f"All records preserved. Unit is now available."
-            )
-            
-        elif deletion_type == "DELETE":
-            # Archive then hard delete
-            ArchivedTenant.objects.create(
-                original_user_id=user.id,
-                original_tenant_id=tenant.id,
-                email=user.email,
-                tenant_data=tenant_data,
-                archive_type='DELETED_HARD' if has_records else 'DELETED_SOFT',
-                deleted_by=request.user,
-                deletion_reason=deletion_reason,
-                can_be_restored=not has_records,  # Can only restore if no records
-            )
-            
-            full_name = tenant.full_name
-            
-            if has_records:
-                # Delete all related records
-                Lease.objects.filter(tenant=user).delete()
-                ManualPayment.objects.filter(user=user).delete()
-                MaintenanceRequest.objects.filter(tenant=user).delete()
-                TenantAttachment.objects.filter(tenant=user).delete()
-            
-            # Delete tenant profile and user
-            tenant.delete()
-            user.delete()
-            
-            messages.success(
-                request,
-                f"✓ Tenant {full_name} and all records permanently deleted. "
-                f"Archive created for audit trail."
-            )
-        else:
-            messages.error(request, "Invalid deletion type selected.")
-            return redirect("admin_tenant_detail", tenant_id=tenant.id)
-        
-        return redirect("admin_tenants")
-    
-    # PHASE 1: Password verification
-    if request.method == "POST":
-        admin_password = request.POST.get("admin_password", "").strip()
-        
-        # Verify password
-        if not request.user.check_password(admin_password):
-            return render(request, "admin_portal/confirm_delete_tenant.html", {
-                "title": "⚠️ Security Verification Failed",
-                "error": "Incorrect password. Please try again.",
-                "tenant": tenant,
-                "has_records": has_records,
-                "phase": 1,
-                "post_url": reverse("admin_delete_tenant", args=[tenant.id]),
-                "back_url": reverse("admin_tenant_detail", args=[tenant.id]),
-            })
-        
-        # Password verified, show deletion options (Phase 2)
-        return render(request, "admin_portal/confirm_delete_tenant.html", {
-            "title": "Select Deletion Option",
-            "tenant": tenant,
-            "has_records": has_records,
-            "phase": 2,
-            "post_url": reverse("admin_delete_tenant", args=[tenant.id]),
-            "back_url": reverse("admin_tenant_detail", args=[tenant.id]),
-        })
-    
-    # GET: Show password verification form (Phase 1)
-    return render(request, "admin_portal/confirm_delete_tenant.html", {
-        "title": "⚠️ Security Verification Required",
-        "message": (
-            f"You are attempting to delete tenant: {tenant.full_name}\n\n"
-            f"For security, please enter your admin password to continue. "
-            f"You will then be able to choose between archiving or permanent deletion."
-        ),
-        "tenant": tenant,
-        "has_records": has_records,
-        "phase": 1,
-        "post_url": reverse("admin_delete_tenant", args=[tenant.id]),
-        "back_url": reverse("admin_tenant_detail", args=[tenant.id]),
-    })
-
-
-
-
-@admin_required
-def admin_update_maintenance(request, req_id: int):
-    req = get_object_or_404(MaintenanceRequest, pk=req_id)
-    if request.method == "POST":
-        form = AdminMaintenanceUpdateForm(request.POST, instance=req)
-        if form.is_valid():
-            updated = form.save(commit=False)
-            old_status = req.status
-            if updated.status == "RESOLVED" and not req.resolved_at:
-                updated.resolved_at = dj_timezone.now()
-            if updated.status != "RESOLVED":
-                updated.resolved_at = None
-            updated.save()
-
-            if updated.status != old_status:
-                try:
-                    from rentals.services import send_email_via_resend
-                    status_label = dict(req.STATUS_CHOICES).get(updated.status, updated.status)
-                    tenant_name = req.tenant.email
-                    if hasattr(req.tenant, 'tenantprofile'):
-                        tenant_name = req.tenant.tenantprofile.full_name
-                    unit_number = req.lease.unit.number if req.lease else 'N/A'
-                    fixed_by_line = f"  Fixed By:    {updated.fixed_by}\n" if updated.fixed_by else ""
-                    send_email_via_resend(
-                        to_email=req.tenant.email,
-                        subject=f"[REALESTATE360+] Maintenance Request Update – {req.title}",
-                        message=(
-                            f"Dear {tenant_name},\n\n"
-                            f"Your maintenance request has been updated.\n\n"
-                            f"  Request:     {req.title}\n"
-                            f"  Category:    {req.get_category_display()}\n"
-                            f"  Unit:        {unit_number}\n"
-                            f"  New Status:  {status_label}\n"
-                            f"{fixed_by_line}"
-                            f"\n"
-                            f"{'Your issue has been resolved. Thank you for your patience!' if updated.status == 'RESOLVED' else 'Our team is working on your request.'}\n\n"
-                            f"You can view the status in your tenant portal.\n\n"
-                            f"REALESTATE360+ Administration"
-                        )
-                    )
-                except Exception as e:
-                    logger.exception(f"Failed to send maintenance update email: {e}")
-
-            return redirect("admin_maintenance")
-    else:
-        form = AdminMaintenanceUpdateForm(instance=req)
-
-    return render(request, "admin_portal/maintenance_update.html", {
-        "title": "Resolve Maintenance Issue",
-        "form": form,
-        "req": req,
-        "back_url": reverse("admin_maintenance"),
-    })
-
-
-@admin_required
 def admin_edit_announcement(request, ann_id: int):
     ann = get_object_or_404(Announcement, pk=ann_id)
     form = AnnouncementForm(request.POST or None, instance=ann)
@@ -811,67 +594,6 @@ def admin_update_tenant_risks(request):
             messages.error(request, f'Error updating risk classifications: {e}')
     
     return redirect('admin_tenant_risk')
-
-
-@admin_required
-def admin_maintenance(request):
-    q = request.GET.get("q", "").strip()
-    status = request.GET.get("status", "").strip()
-    priority = request.GET.get("priority", "").strip()
-
-    reqs = MaintenanceRequest.objects.select_related("lease", "lease__unit", "lease__tenant")
-
-    if status:
-        reqs = reqs.filter(status=status)
-        
-    if priority:
-        reqs = reqs.filter(priority=priority)
-
-    if q:
-        reqs = reqs.filter(
-            Q(lease__tenant__email__icontains=q) |
-            Q(lease__unit__number__icontains=q) |
-            Q(description__icontains=q)
-        )
-
-    reqs = reqs.order_by("-created_at")
-
-    # Calculate statistics
-    all_reqs = MaintenanceRequest.objects.all()
-    if q:
-        all_reqs = all_reqs.filter(
-            Q(lease__tenant__email__icontains=q) |
-            Q(lease__unit__number__icontains=q) |
-            Q(description__icontains=q)
-        )
-    
-    total_count = all_reqs.count()
-    pending_count = all_reqs.filter(status="PENDING").count()
-    in_progress_count = all_reqs.filter(status="IN_PROGRESS").count()
-    resolved_count = all_reqs.filter(status="RESOLVED").count()
-
-    # Pagination (10 items per page)
-    paginator = Paginator(reqs, 10)
-    page_number = request.GET.get("page")
-    page_obj = paginator.get_page(page_number)
-
-    try:
-        from accounts.ml.maintenance_nlp import load_metrics
-        nlp_metrics = load_metrics()
-    except Exception:
-        nlp_metrics = None
-
-    return render(request, "admin_portal/maintenance.html", {
-        "page_obj": page_obj,
-        "q": q,
-        "status": status,
-        "priority": priority,
-        "total_count": total_count,
-        "pending_count": pending_count,
-        "in_progress_count": in_progress_count,
-        "resolved_count": resolved_count,
-        "nlp_metrics": nlp_metrics,
-    })
 
 
 @admin_required
@@ -1102,5 +824,6 @@ def handle_image_deletions(request, unit):
             unit_image.save()
         except (ValueError, UnitImage.DoesNotExist):
             pass
+
 
 

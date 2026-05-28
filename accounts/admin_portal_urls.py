@@ -3,13 +3,11 @@ from .admin_portal_views import (
     admin_dashboard,
     debug_lease_form,
     simple_debug,
-    admin_maintenance,
     admin_announcements,
     admin_create_announcement,
     admin_create_unit,
     admin_edit_announcement,
     admin_delete_announcement,
-    admin_update_maintenance,
     admin_units,
     admin_unit_detail,
     admin_edit_unit,
@@ -30,6 +28,7 @@ from .admin_tenant_views import (
     admin_view_attachment,
     admin_delete_attachment,
 )
+from .admin_maintenance_views import admin_maintenance, admin_update_maintenance
 from .admin_forecasting_views import admin_forecasting, admin_billed_this_month
 from .admin_lease_views import (
     admin_create_lease,

@@ -106,7 +106,7 @@ def admin_maintenance(request):
         )
 
     total_count = all_reqs.count()
-    pending_count = all_reqs.filter(status="PENDING").count()
+    pending_count = all_reqs.filter(status="OPEN").count()
     in_progress_count = all_reqs.filter(status="IN_PROGRESS").count()
     resolved_count = all_reqs.filter(status="RESOLVED").count()
 

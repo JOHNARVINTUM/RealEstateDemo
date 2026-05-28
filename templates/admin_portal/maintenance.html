@@ -18,10 +18,11 @@
       <div>
         <div class="flex items-center gap-2 mb-1">
           <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 font-black text-xs">AI</span>
-          <span class="text-sm font-black text-slate-900">NLP Priority Classifier</span>
+          <span class="text-sm font-black text-slate-900">Maintenance NLP Classifier</span>
           <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">TF-IDF + Logistic Regression</span>
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-50 text-slate-700 border border-slate-200">Rule-based issue category</span>
         </div>
-        <p class="text-xs text-slate-500 font-medium">Auto-predicts urgency from description text &mdash; English only</p>
+        <p class="text-xs text-slate-500 font-medium">Auto-predicts priority level from description text and assigns issue category with keyword rules.</p>
       </div>
       <div class="flex flex-wrap items-center gap-3 shrink-0">
         <div class="text-center">
@@ -122,7 +123,7 @@
         
         <select name="status" onchange="this.form.submit()" class="bg-white border-2 border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-800 focus:border-slate-800 transition-all outline-none cursor-pointer w-full md:w-[150px] appearance-none">
           <option value="">All Statuses</option>
-          <option value="PENDING" {% if status == "PENDING" %}selected{% endif %}>Waiting</option>
+          <option value="OPEN" {% if status == "OPEN" %}selected{% endif %}>Waiting</option>
           <option value="IN_PROGRESS" {% if status == "IN_PROGRESS" %}selected{% endif %}>Being Fixed</option>
           <option value="RESOLVED" {% if status == "RESOLVED" %}selected{% endif %}>Fixed</option>
         </select>
@@ -144,7 +145,8 @@
         <thead>
           <tr class="bg-slate-50 border-b border-slate-200">
             <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Tenant & Unit</th>
-            <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-center">Urgency</th>
+            <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-center">Issue Category</th>
+            <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-center">Priority Level</th>
             <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-center">NLP Suggest</th>
             <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-center">Status</th>
             <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Problem</th>
@@ -171,7 +173,14 @@
               </div>
             </td>
 
-            <!-- Urgency -->
+            <!-- Issue Category -->
+            <td class="px-6 py-5 text-center">
+              <span class="inline-flex px-3 py-1 rounded-lg bg-slate-100 text-slate-700 font-black text-[11px] uppercase tracking-wider border border-slate-200">
+                {{ r.get_category_display }}
+              </span>
+            </td>
+
+            <!-- Priority Level -->
             <td class="px-6 py-5 text-center">
               {% if r.priority == 'HIGH' or r.priority == 'URGENT' %}
                 <span class="inline-flex px-3 py-1 rounded-lg bg-rose-50 text-rose-700 font-black text-[11px] uppercase tracking-wider border border-rose-100">
@@ -261,7 +270,7 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="6" class="py-24 text-center bg-white">
+            <td colspan="8" class="py-24 text-center bg-white">
               <div class="max-w-xs mx-auto">
                 <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100">
                   <svg class="w-8 h-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">

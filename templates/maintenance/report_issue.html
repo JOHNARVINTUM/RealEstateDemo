@@ -30,12 +30,6 @@
         <form method="post" enctype="multipart/form-data" class="space-y-8 tenant-form">
           {% csrf_token %}
           
-          <!-- Type -->
-          <div>
-            <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3">Type</label>
-            {{ form.category }}
-          </div>
-
           <!-- Title -->
           <div>
             <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3">Short Title</label>
@@ -47,6 +41,11 @@
             <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3">Description</label>
             {{ form.description }}
             <p class="text-sm text-slate-400 mt-3 font-bold italic">* Tell us exactly what and where the problem is (e.g. kitchen sink, bedroom light).</p>
+          </div>
+
+          <div class="rounded-2xl border-2 border-slate-100 bg-slate-50 px-6 py-5">
+            <p class="text-sm font-black text-slate-700 uppercase tracking-widest mb-1">Issue category</p>
+            <p class="text-base font-bold text-slate-600">Detected automatically from your description.</p>
           </div>
 
           <!-- Photo Upload -->

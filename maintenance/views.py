@@ -20,6 +20,14 @@ def report_issue(request):
             obj: MaintenanceRequest = form.save(commit=False)
             obj.tenant = user
             obj.lease = lease
+            category_result = None
+            try:
+                from accounts.ml.maintenance_nlp import classify_issue_category
+
+                category_result = classify_issue_category(f"{obj.title} {obj.description}")
+                obj.category = category_result["category"]
+            except Exception:
+                obj.category = "OTHER"
             # Run NLP priority prediction from description
             try:
                 from accounts.ml.maintenance_nlp import predict_priority
@@ -27,6 +35,7 @@ def report_issue(request):
                 if result.get("available"):
                     obj.nlp_priority = result["priority"]
                     obj.nlp_priority_confidence = result["confidence"]
+                    obj.priority = result["priority"]
             except Exception:
                 pass
             obj.save()

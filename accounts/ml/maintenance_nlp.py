@@ -5,6 +5,7 @@ Language: English only (multilingual support is future work)
 """
 import os
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +15,56 @@ MODEL_PATH = os.path.join(
 MODEL_PATH = os.path.normpath(MODEL_PATH)
 
 _model_cache = None
+
+ISSUE_CATEGORY_KEYWORDS = {
+    "PLUMBING": [
+        "leak", "leaking", "water", "faucet", "sink", "toilet", "flush", "drain",
+        "clogged", "pipe", "shower", "bidet", "drainage", "hose",
+    ],
+    "ELECTRICAL": [
+        "electricity", "electric", "outlet", "socket", "wiring", "wire", "power",
+        "breaker", "light", "bulb", "switch", "spark", "short circuit", "no power",
+    ],
+    "STRUCTURAL": [
+        "wall", "ceiling", "floor", "crack", "door", "window", "roof", "tile",
+        "stairs", "gate", "lock", "knob", "cabinet", "structural", "damage",
+    ],
+}
+
+
+def _normalize_text(text):
+    return re.sub(r"\s+", " ", (text or "").strip().lower())
+
+
+def classify_issue_category(text):
+    """
+    Rule-based maintenance issue category classifier.
+    Returns dict: {category, confidence, matched_keywords}
+    - category: PLUMBING / ELECTRICAL / STRUCTURAL / OTHER
+    """
+    normalized = _normalize_text(text)
+    if not normalized:
+        return {"category": "OTHER", "confidence": 0.0, "matched_keywords": []}
+
+    scores = {}
+    matches = {}
+    for category, keywords in ISSUE_CATEGORY_KEYWORDS.items():
+        matched = [keyword for keyword in keywords if keyword in normalized]
+        matches[category] = matched
+        scores[category] = len(matched)
+
+    best_category = max(scores, key=scores.get)
+    best_score = scores[best_category]
+    if best_score <= 0:
+        return {"category": "OTHER", "confidence": 0.0, "matched_keywords": []}
+
+    total_matches = sum(scores.values())
+    confidence = round(best_score / total_matches, 4) if total_matches else 0.0
+    return {
+        "category": best_category,
+        "confidence": confidence,
+        "matched_keywords": matches[best_category],
+    }
 
 
 def _load_model():

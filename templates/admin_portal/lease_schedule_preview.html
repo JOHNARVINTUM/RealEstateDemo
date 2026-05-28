@@ -1,7 +1,7 @@
 {% load humanize %}
 {% load l10n %}
 
-<div class="lease-schedule-preview h-full" id="lease-schedule-preview" style="display: none;">
+<div class="lease-schedule-preview h-full" id="lease-schedule-preview" data-existing-lease="{% if lease %}true{% else %}false{% endif %}" style="display: none;">
     <div class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden flex flex-col h-full sticky top-6">
         
         <!-- Ledger Schedule Header -->
@@ -15,6 +15,7 @@
 
         <div class="p-5 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
             
+            {% if not lease %}
             <!-- Move-in Cost Focus Box -->
             <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
                 <div class="flex justify-between items-center mb-3">
@@ -32,18 +33,19 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
 
             <!-- Milestone Details -->
             <div class="space-y-2.5">
                 <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500 block">Key Action Milestones</span>
                 <div class="grid grid-cols-2 gap-3 text-xs">
                     <div class="p-3 bg-white border border-slate-200 rounded-lg shadow-2xs">
-                        <span class="text-[10px] font-bold text-amber-700 block mb-0.5">Move-in Date Target</span>
-                        <strong class="text-sm font-black text-slate-900 block" id="milestone-security">₱0.00</strong>
+                        <span class="text-[10px] font-bold text-amber-700 block mb-0.5">{% if lease %}Lease Start{% else %}Move-in Date Target{% endif %}</span>
+                        <strong class="text-sm font-black text-slate-900 block" id="milestone-security">{% if lease %}—{% else %}₱0.00{% endif %}</strong>
                         <span class="text-[10px] text-slate-500 block mt-1">Commences: <strong class="text-slate-700" id="milestone-movein-date">—</strong></span>
                     </div>
                     <div class="p-3 bg-white border border-slate-200 rounded-lg shadow-2xs">
-                        <span class="text-[10px] font-bold text-blue-700 block mb-0.5">First Regular Cycle</span>
+                        <span class="text-[10px] font-bold text-blue-700 block mb-0.5">{% if lease %}Regular Monthly Cycle{% else %}First Regular Cycle{% endif %}</span>
                         <strong class="text-sm font-black text-slate-900 block" id="milestone-first-rent">₱0.00</strong>
                         <span class="text-[10px] text-slate-500 block mt-1">Target: <strong class="text-slate-700" id="milestone-first-rent-date">—</strong></span>
                     </div>
@@ -99,6 +101,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const previewContainer = document.getElementById('lease-schedule-preview');
     const monthlyScheduleBody = document.getElementById('monthly-schedule-body');
     const gcashPreviewFooter = document.getElementById('preview-gcash-footer');
+    const isExistingLease = previewContainer?.dataset.existingLease === 'true';
     
     if (form && previewContainer) {
         const fields = ['id_monthly_rent', 'id_security_deposit', 'id_start_date', 'id_due_day', 'id_motorcycle_slots', 'id_car_slots'];
@@ -170,7 +173,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 setPreview('total_move_in_cost', formatCurrency(totalMoveInCost), false);
                 
                 function setEl(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
-                setEl('milestone-security', formatCurrency(totalMoveInCost));
+                setEl('milestone-security', isExistingLease ? formatDate(startDate) : formatCurrency(totalMoveInCost));
                 setEl('milestone-movein-date', formatDate(startDate));
                 setEl('milestone-first-rent', formatCurrency(monthlyTotal));
                 const firstRentDueDate = calculateDueDate(startDate, 0, dueDay);
@@ -185,7 +188,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     let amount = monthlyRent;
                     let amountDisplay = '';
                     
-                    if (i === 0) {
+                    if (i === 0 && !isExistingLease) {
                         amount = totalMoveInCost;
                         amountDisplay = `<span class="text-amber-700 font-extrabold">${formatCurrency(amount)}</span>`;
                         total12Months += amount;

@@ -52,9 +52,15 @@
             {% if payment.payment_method == "GCASH" %}
               <span class="w-2 h-2 rounded-full bg-blue-500"></span>
               <span class="font-bold text-slate-900">GCash</span>
+            {% elif payment.payment_method == "PAYMONGO" %}
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span class="font-bold text-slate-900">{{ payment_method_label }}</span>
+              {% if paymongo_method_label %}
+                <span class="text-xs text-slate-500">via {{ paymongo_method_label }}</span>
+              {% endif %}
             {% else %}
               <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-              <span class="font-bold text-slate-900">Face-to-Face Cash</span>
+              <span class="font-bold text-slate-900">{{ payment_method_label }}</span>
             {% endif %}
           </span>
         </div>
@@ -162,7 +168,7 @@
   <!-- Actions -->
   <div class="flex flex-wrap items-center gap-3">
     {% if payment.status == "PENDING" %}
-      {% if payment.payment_method == "GCASH" %}
+      {% if payment.payment_method == "GCASH" or payment.payment_method == "PAYMONGO" %}
         <form method="post" action="{% url 'admin_approve_payment' payment.id %}" class="inline-block" data-loading-form>
           {% csrf_token %}
           <button type="submit" data-loading-button data-loading-text="Approving..." class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-sm transition-colors flex items-center gap-2">

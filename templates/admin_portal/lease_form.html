@@ -25,12 +25,9 @@ function handleUnitSelection(selectElement) {
             const rent = rentMatch[1].replace(/,/g, '');
             monthlyRentInput.value = rent;
             
-            // Always update security deposit when room changes: (rent + parking) × 2
+            // Security deposit is always based on monthly rent only.
             if (securityDepositInput) {
-                const motorcycleSlots = parseInt(motorcycleSlotsInput?.value || 0);
-                const carSlots = parseInt(carSlotsInput?.value || 0);
-                const parkingFee = (motorcycleSlots * 350) + (carSlots * 2500);
-                securityDepositInput.value = ((parseFloat(rent) + parkingFee) * 2).toFixed(2);
+                securityDepositInput.value = (parseFloat(rent) * 2).toFixed(2);
             }
             
             // Trigger the preview update in the companion template
@@ -111,26 +108,28 @@ function toggleMoveInPaymentMethod() {
           <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
               <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider" for="id_tenant">Select Tenant <span class="text-rose-600">*</span></label>
-              <select name="tenant" id="id_tenant" class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none cursor-pointer" required>
+              <select name="tenant" id="id_tenant" class="w-full px-4 py-3 {% if lease %}bg-slate-100 text-slate-700 cursor-not-allowed{% else %}bg-white text-slate-900{% endif %} border border-slate-300 rounded-lg text-base font-medium focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none cursor-pointer" {% if lease %}disabled{% endif %} required>
                 <option value="">Choose a Tenant</option>
                 {% for tenant in form.tenant.field.queryset %}
-                  <option value="{{ tenant.pk }}" {% if form.tenant.value == tenant.pk|stringformat:"s" %}selected{% endif %}>
+                  <option value="{{ tenant.pk }}" {% if form.tenant.value == tenant.pk|stringformat:"s" or lease and lease.tenant_id == tenant.pk %}selected{% endif %}>
                     {{ tenant.tenantprofile.full_name|default:tenant.email }}
                   </option>
                 {% endfor %}
               </select>
+              {% if lease %}<input type="hidden" name="tenant" value="{{ lease.tenant_id }}">{% endif %}
             </div>
 
             <div>
               <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider" for="id_unit">Select Room <span class="text-rose-600">*</span></label>
-              <select name="unit" id="id_unit" onchange="handleUnitSelection(this)" class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none cursor-pointer" required>
+              <select name="unit" id="id_unit" onchange="handleUnitSelection(this)" class="w-full px-4 py-3 {% if lease %}bg-slate-100 text-slate-700 cursor-not-allowed{% else %}bg-white text-slate-900{% endif %} border border-slate-300 rounded-lg text-base font-medium focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none cursor-pointer" {% if lease %}disabled{% endif %} required>
                 <option value="">Choose an Available Room</option>
                 {% for unit in form.unit.field.queryset %}
-                  <option value="{{ unit.pk }}" {% if form.unit.value == unit.pk|stringformat:"s" %}selected{% endif %}>
+                  <option value="{{ unit.pk }}" {% if form.unit.value == unit.pk|stringformat:"s" or lease and lease.unit_id == unit.pk %}selected{% endif %}>
                     Room {{ unit.number }} ({{ unit.get_unit_type_display }}) - ₱{{ unit.monthly_rent|floatformat:0|intcomma }}
                   </option>
                 {% endfor %}
               </select>
+              {% if lease %}<input type="hidden" name="unit" value="{{ lease.unit_id }}">{% endif %}
             </div>
           </div>
         </div>
@@ -157,10 +156,11 @@ function toggleMoveInPaymentMethod() {
               <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider" for="id_security_deposit">Security Deposit</label>
               <div class="relative">
                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-base">₱</span>
-                <input type="number" name="security_deposit" id="id_security_deposit" value="{{ form.security_deposit.value|default:'' }}"
-                       class="w-full pl-9 pr-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none" placeholder="34,000.00">
+                <input type="number" name="security_deposit" id="id_security_deposit" value="{% if lease %}{{ lease.contract_deposit|floatformat:2 }}{% else %}{{ form.security_deposit.value|default:'' }}{% endif %}"
+                       {% if lease %}readonly{% endif %}
+                       class="w-full pl-9 pr-4 py-3 {% if lease %}bg-slate-100 text-slate-700 cursor-not-allowed focus:ring-0 focus:border-slate-300{% else %}bg-white text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500{% endif %} border border-slate-300 rounded-lg text-base font-medium transition-all outline-none" placeholder="34,000.00">
               </div>
-              <p class="text-[10px] text-slate-500 mt-2 font-bold uppercase tracking-tight">Fixed at 2× (rent + parking).</p>
+              <p class="text-[10px] text-slate-500 mt-2 font-bold uppercase tracking-tight">{% if lease %}Collateral deposit. Locked after move-in and based on 2 months rent only.{% else %}Fixed at 2× monthly rent. Parking is excluded.{% endif %}</p>
             </div>
           </div>
           <!-- Note: Contract Deposit Multiplier removed - using fixed 2x multiplier -->
@@ -195,13 +195,13 @@ function toggleMoveInPaymentMethod() {
           <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
             <div>
               <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider" for="id_start_date">Start Date <span class="text-rose-600">*</span></label>
-              <input type="text" name="start_date" id="id_start_date" value="{{ form.start_date.value|default:'' }}" 
+              <input type="text" name="start_date" id="id_start_date" value="{% if lease %}{{ lease.start_date|date:'Y-m-d' }}{% else %}{{ form.start_date.value|default:'' }}{% endif %}" 
                      class="flatpickr w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none cursor-pointer" placeholder="Select Date" required>
             </div>
 
             <div>
               <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider" for="id_end_date">End Date (Optional)</label>
-              <input type="text" name="end_date" id="id_end_date" value="{{ form.end_date.value|default:'' }}" 
+              <input type="text" name="end_date" id="id_end_date" value="{% if lease and lease.end_date %}{{ lease.end_date|date:'Y-m-d' }}{% else %}{{ form.end_date.value|default:'' }}{% endif %}" 
                      class="flatpickr w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none cursor-pointer" placeholder="No end date">
             </div>
 
@@ -214,6 +214,7 @@ function toggleMoveInPaymentMethod() {
           </div>
         </div>
 
+        {% if not lease %}
         <!-- Section 4: Payment Notice -->
         <div class="p-6 sm:p-8 space-y-5 bg-slate-50/30">
           <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
@@ -238,6 +239,7 @@ function toggleMoveInPaymentMethod() {
             </div>
           </div>
         </div>
+        {% endif %}
 
         <!-- Form Buttons -->
         <div class="p-6 bg-slate-50 flex flex-col sm:flex-row items-center gap-3 justify-between">
@@ -275,28 +277,27 @@ function toggleMoveInPaymentMethod() {
 document.addEventListener('DOMContentLoaded', function() {
     flatpickr(".flatpickr", {
         dateFormat: "Y-m-d",
-        minDate: "today",
+        {% if not lease %}minDate: "today",{% endif %}
         onChange: function(selectedDates, dateStr, instance) {
             instance.element.dispatchEvent(new Event('input', { bubbles: true }));
         }
     });
 
-    // Auto-update security deposit when monthly rent or parking changes (2x multiplier)
+    // Auto-update security deposit from monthly rent only.
     const monthlyRentInput = document.getElementById('id_monthly_rent');
     const securityDepositInput = document.getElementById('id_security_deposit');
     const motorcycleSlotsInput = document.getElementById('id_motorcycle_slots');
     const carSlotsInput = document.getElementById('id_car_slots');
     
+    const isExistingLease = {{ lease|yesno:"true,false" }};
     if (monthlyRentInput && securityDepositInput) {
         function updateSecurityDeposit() {
+            if (isExistingLease) return;
             const rent = parseFloat(monthlyRentInput.value) || 0;
-            const motorcycleSlots = parseInt(motorcycleSlotsInput?.value || 0);
-            const carSlots = parseInt(carSlotsInput?.value || 0);
-            const parkingFee = (motorcycleSlots * 350) + (carSlots * 2500);
             
-            // Security deposit = (rent + parking) × 2
+            // Security deposit = monthly rent × 2. Parking is excluded.
             if (rent > 0) {
-                securityDepositInput.value = ((rent + parkingFee) * 2).toFixed(2);
+                securityDepositInput.value = (rent * 2).toFixed(2);
             }
         }
         
@@ -304,18 +305,8 @@ document.addEventListener('DOMContentLoaded', function() {
         monthlyRentInput.addEventListener('input', updateSecurityDeposit);
         monthlyRentInput.addEventListener('change', updateSecurityDeposit);
         
-        // Also update when parking changes
-        if (motorcycleSlotsInput) {
-            motorcycleSlotsInput.addEventListener('input', updateSecurityDeposit);
-            motorcycleSlotsInput.addEventListener('change', updateSecurityDeposit);
-        }
-        if (carSlotsInput) {
-            carSlotsInput.addEventListener('input', updateSecurityDeposit);
-            carSlotsInput.addEventListener('change', updateSecurityDeposit);
-        }
-        
         // Initial update if rent is already filled
-        if (monthlyRentInput.value) {
+        if (!isExistingLease && monthlyRentInput.value) {
             updateSecurityDeposit();
         }
     }

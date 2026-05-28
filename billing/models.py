@@ -55,6 +55,16 @@ class MonthlyBill(models.Model):
     class Meta:
         unique_together = ("lease", "billing_month")
         ordering = ("-billing_month",)
+        indexes = [
+            models.Index(
+                fields=["lease", "status", "billing_month"],
+                name="bill_lease_stat_month_idx",
+            ),
+            models.Index(
+                fields=["status", "due_date"],
+                name="bill_stat_due_idx",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.lease} - {self.billing_month} ({self.status})"

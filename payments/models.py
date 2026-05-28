@@ -63,6 +63,18 @@ class ManualPayment(models.Model):
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="PENDING")
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["user", "status", "created_at"],
+                name="pay_user_stat_created_idx",
+            ),
+            models.Index(
+                fields=["status", "payment_method", "created_at"],
+                name="pay_stat_method_created_idx",
+            ),
+        ]
+
     def save(self, *args, **kwargs):
         self.reference_code = normalize_reference_code(self.reference_code)
         super().save(*args, **kwargs)

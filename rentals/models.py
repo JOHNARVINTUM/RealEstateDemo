@@ -264,6 +264,16 @@ class Notification(models.Model):
     
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(
+                fields=['user', 'recipient_type', 'is_read', 'created_at'],
+                name='notif_user_read_created_idx',
+            ),
+            models.Index(
+                fields=['is_read', 'read_at'],
+                name='notif_read_at_idx',
+            ),
+        ]
     
     def __str__(self):
         return f"{self.title} - {self.get_notification_type_display()}"

@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 from decimal import Decimal
+from functools import lru_cache
 
 from django import forms
 from django.contrib import messages
@@ -156,7 +157,7 @@ def tenant_dashboard(request):
         reconcile_approved_payments_for_tenant(user)
         ensure_bills_since_move_in(lease)
         # Get all bills with unpaid balances (including partial payments)
-        all_bills = MonthlyBill.objects.filter(lease=lease).order_by("billing_month")
+        all_bills = list(MonthlyBill.objects.filter(lease=lease).order_by("billing_month"))
         
         # Calculate total unpaid balance across all bills (for summary)
         total_unpaid_rent = sum(b.rent_balance for b in all_bills if b.rent_balance > 0)
@@ -188,10 +189,10 @@ def tenant_dashboard(request):
         # Find the actual "next" bill after the displayed balance, or use the
         # next unpaid future bill as preview when the current cycle is already paid.
         if current_balance:
-            next_bill = MonthlyBill.objects.filter(
-                lease=lease, 
-                billing_month__gt=current_balance.billing_month
-            ).order_by('billing_month').first()
+            next_bill = next(
+                (bill for bill in all_bills if bill.billing_month > current_balance.billing_month),
+                None,
+            )
             
             if next_bill:
                 next_billing_month = next_bill.billing_month
@@ -286,7 +287,7 @@ def tenant_billing(request):
     # Start with all bills for this tenant (include PARTIALLY_PAID)
     bills_query = MonthlyBill.objects.filter(
         lease=lease
-    ).exclude(status="PAID").order_by("-billing_month")
+    ).exclude(status="PAID").select_related("source_water_reading").order_by("-billing_month")
 
     # Apply filters
     if month_filter and month_filter.isdigit():
@@ -341,12 +342,26 @@ def tenant_billing(request):
     ).order_by("-created_at")
 
     transactions = []
+    payment_bill_ids = []
+    payment_bill_map = {}
     for payment in approved_payments:
         bill_id_list = parse_bill_ids(payment.bill_ids)
         if not bill_id_list:
             continue
+        payment_bill_ids.extend(bill_id_list)
+        payment_bill_map[payment.id] = bill_id_list
 
-        bills_paid = MonthlyBill.objects.filter(id__in=bill_id_list)
+    bills_by_id = {
+        bill.id: bill
+        for bill in MonthlyBill.objects.filter(id__in=payment_bill_ids)
+    }
+
+    for payment in approved_payments:
+        bill_id_list = payment_bill_map.get(payment.id)
+        if not bill_id_list:
+            continue
+
+        bills_paid = [bills_by_id[bill_id] for bill_id in bill_id_list if bill_id in bills_by_id]
         
         # Use stored amount if available, otherwise calculate from bills (for old payments)
         if payment.amount and payment.amount > 0:
@@ -357,7 +372,7 @@ def tenant_billing(request):
         transactions.append({
             "paid_at": payment.created_at,
             "reference": payment.reference_code,
-            "months_paid": bills_paid.count(),
+            "months_paid": len(bills_paid),
             "total_amount": total_amount,
         })
 
@@ -422,10 +437,9 @@ def tenant_pay_advance(request):
     reconcile_approved_payments_for_tenant(request.user)
     ensure_bills_since_move_in(lease)
 
-    oldest_outstanding_bill = MonthlyBill.objects.filter(
-        lease=lease,
-    ).order_by("billing_month").first()
-    for candidate_bill in MonthlyBill.objects.filter(lease=lease).order_by("billing_month"):
+    existing_bills = list(MonthlyBill.objects.filter(lease=lease).order_by("billing_month"))
+    oldest_outstanding_bill = existing_bills[0] if existing_bills else None
+    for candidate_bill in existing_bills:
         if candidate_bill.total_balance > 0:
             oldest_outstanding_bill = candidate_bill
             break
@@ -450,53 +464,52 @@ def tenant_pay_advance(request):
     
     # For partial payments, include bills that have balance for that type
     # Get all bills ordered by month
-    all_bills_qs = MonthlyBill.objects.filter(lease=lease).order_by("billing_month")
+    all_bills = list(MonthlyBill.objects.filter(lease=lease).order_by("billing_month"))
     
     if payment_type == "rent_only":
         # Filter to bills with unpaid rent, then slice
-        bills_with_unpaid_rent = [b for b in all_bills_qs if b.rent_balance > 0]
+        bills_with_unpaid_rent = [b for b in all_bills if b.rent_balance > 0]
         bills_to_process = bills_with_unpaid_rent[:months_to_pay]
         # If no unpaid rent bills but user wants to pay in advance, get future bills
         if not bills_to_process:
-            future_bills = [b for b in all_bills_qs if b.rent_balance > 0 or b.status == "UPCOMING"]
+            future_bills = [b for b in all_bills if b.rent_balance > 0 or b.status == "UPCOMING"]
             bills_to_process = future_bills[:months_to_pay]
     elif payment_type == "water_only":
         # Filter to bills with unpaid water, then slice
-        bills_with_unpaid_water = [b for b in all_bills_qs if b.water_balance > 0]
+        bills_with_unpaid_water = [b for b in all_bills if b.water_balance > 0]
         bills_to_process = bills_with_unpaid_water[:months_to_pay]
         # If no unpaid water bills but user wants to pay in advance, get future bills
         if not bills_to_process:
-            future_bills = [b for b in all_bills_qs if b.water_balance > 0 or b.status == "UPCOMING"]
+            future_bills = [b for b in all_bills if b.water_balance > 0 or b.status == "UPCOMING"]
             bills_to_process = future_bills[:months_to_pay]
     else:
         # Full payment - include UNPAID and PARTIALLY_PAID bills (total_balance > 0)
-        all_unpaid_qs = MonthlyBill.objects.filter(
-            lease=lease, status__in=["UNPAID", "PARTIALLY_PAID"]
-        ).order_by("billing_month")
-        bills_to_process = list(all_unpaid_qs[:months_to_pay])
+        all_unpaid_bills = [
+            bill for bill in all_bills
+            if bill.status in ["UNPAID", "PARTIALLY_PAID"]
+        ]
+        bills_to_process = all_unpaid_bills[:months_to_pay]
         # If no unpaid bills but user wants to pay in advance, get future upcoming bills
         if not bills_to_process:
             # Get upcoming/future bills for advance payment
-            future_bills_qs = MonthlyBill.objects.filter(
-                lease=lease
-            ).filter(
-                Q(status="UNPAID") | Q(status="UPCOMING") | 
-                Q(billing_month__gt=today_start)
-            ).order_by("billing_month")
-            bills_to_process = list(future_bills_qs[:months_to_pay])
+            future_bills = [
+                bill for bill in all_bills
+                if bill.status in ["UNPAID", "UPCOMING"] or bill.billing_month > today_start
+            ]
+            bills_to_process = future_bills[:months_to_pay]
 
     # Count truly unpaid bills for warning
-    unpaid_count = MonthlyBill.objects.filter(
-        lease=lease, status="UNPAID", due_date__lte=today
-    ).count()
+    unpaid_count = sum(
+        1 for bill in all_bills
+        if bill.status == "UNPAID" and bill.due_date <= today
+    )
     has_pending = unpaid_count > 0
     
     # Check if water bills are available (water_amount > 0 on any bill)
-    water_available = MonthlyBill.objects.filter(
-        lease=lease,
-        billing_month__gte=today_start,
-        water_amount__gt=0
-    ).exists()
+    water_available = any(
+        bill.billing_month >= today_start and bill.water_amount > 0
+        for bill in all_bills
+    )
 
     preview_rows = []
     total_rent = Decimal("0.00")
@@ -618,10 +631,11 @@ def tenant_notifications(request):
     purge_read_notifications_for_tenant(request.user)
 
     # Get notifications for this tenant
-    notifications = Notification.objects.filter(
+    base_notifications = Notification.objects.filter(
         recipient_type='TENANT',
         user=request.user
     )
+    notifications = base_notifications
     
     # Handle filtering
     status_filter = request.GET.get('status', 'all')
@@ -633,9 +647,7 @@ def tenant_notifications(request):
     notifications = notifications.order_by('is_read', '-created_at')
     
     # Calculate unread count (unfiltered)
-    unread_count = Notification.objects.filter(
-        recipient_type='TENANT', user=request.user, is_read=False
-    ).count()
+    unread_count = base_notifications.filter(is_read=False).count()
     
     context = {
         "notifications": notifications,
@@ -645,6 +657,7 @@ def tenant_notifications(request):
     return render(request, "rentals/tenant_notifications.html", context)
 
 
+@lru_cache(maxsize=1)
 def notification_has_read_at_column() -> bool:
     """Return True when the notifications table already has the read_at column."""
     with connection.cursor() as cursor:

@@ -17,7 +17,7 @@ import json
 from django.utils import timezone
 from rentals.models import Lease, Unit, TenantProfile, Notification, TenantRiskClassification, Room, TenantAttachment
 from billing.models import MonthlyBill
-from billing.services import ensure_bills_since_move_in, set_bill_status, approve_manual_payment, reject_manual_payment
+from billing.services import ensure_bills_since_move_in, set_bill_status, approve_manual_payment, reject_manual_payment, cleanup_duplicate_monthly_bills_for_lease
 from payments.models import ManualPayment
 from maintenance.models import MaintenanceRequest
 from water.models import WaterReading
@@ -1082,6 +1082,9 @@ def admin_edit_lease(request, lease_id: int):
         lease = form.save()
         try:
             ensure_bills_since_move_in(lease)
+            removed_duplicates = cleanup_duplicate_monthly_bills_for_lease(lease)
+            if removed_duplicates:
+                messages.info(request, f"Cleaned up {removed_duplicates} duplicate historical bill record{'s' if removed_duplicates != 1 else ''} for this lease.")
         except Exception:
             logger.exception("ensure_bills_since_move_in failed while editing lease id %s", getattr(lease, 'id', None))
             messages.warning(request, "Failed to update billing rows; please regenerate bills if needed.")
@@ -1334,9 +1337,10 @@ def admin_delete_announcement(request, ann_id: int):
 def admin_notifications(request):
     """Admin portal: view admin notifications only"""
     # Only show notifications meant for admins (not tenant notifications)
-    notifications = Notification.objects.filter(
+    base_notifications = Notification.objects.filter(
         recipient_type__in=['ADMIN', 'SPECIFIC_USER']
-    )
+    ).select_related('related_tenant__tenantprofile', 'related_unit')
+    notifications = base_notifications
     
     # Handle filtering
     status_filter = request.GET.get('status', 'all')
@@ -1348,9 +1352,7 @@ def admin_notifications(request):
     notifications = notifications.order_by('is_read', '-created_at')
     
     # Unread count (unfiltered)
-    unread_count = Notification.objects.filter(
-        recipient_type__in=['ADMIN', 'SPECIFIC_USER'], is_read=False
-    ).count()
+    unread_count = base_notifications.filter(is_read=False).count()
     
     # Return JSON only when explicitly requested via ?format=json AND AJAX header
     is_ajax = (
@@ -1517,13 +1519,17 @@ def admin_billing(request):
     current_month = today.replace(day=1)
 
     # ── Base queryset with search + date filters applied (no status filter yet) ──
-    base_qs = MonthlyBill.objects.select_related("lease", "lease__unit", "lease__tenant")
+    base_qs = MonthlyBill.objects.select_related("lease", "lease__unit", "lease__tenant", "lease__tenant__tenantprofile")
     if q:
-        base_qs = base_qs.filter(
-            Q(lease__tenant__email__icontains=q) |
-            Q(lease__unit__number__icontains=q) |
-            Q(payment_reference__icontains=q)
-        )
+        for term in q.split():
+            base_qs = base_qs.filter(
+                Q(lease__tenant__email__icontains=term) |
+                Q(lease__tenant__username__icontains=term) |
+                Q(lease__tenant__tenantprofile__first_name__icontains=term) |
+                Q(lease__tenant__tenantprofile__last_name__icontains=term) |
+                Q(lease__unit__number__icontains=term) |
+                Q(payment_reference__icontains=term)
+            )
     if month_filter and month_filter.isdigit():
         base_qs = base_qs.filter(billing_month__month=int(month_filter))
     if year_filter and year_filter.isdigit():
@@ -1547,34 +1553,25 @@ def admin_billing(request):
         billing_month__gt=current_month
     ).count()
 
-    # ── Fetch all matching bills for display (split in Python using total_balance) ──
-    all_bills = list(base_qs.order_by("-billing_month"))
-
-    # Active = current month and older (operations happen here)
-    active_bills = [b for b in all_bills if b.billing_month.replace(day=1) <= current_month]
-    # Upcoming = future months only (informational)
-    upcoming_bills = [b for b in all_bills if b.billing_month.replace(day=1) > current_month]
-
-    # ── Apply status sub-filter within the active tab using b.status as source of truth ──
+    # ── Build the display queryset in SQL instead of materializing every bill in Python ──
     if active_tab == "active":
+        display_qs = base_qs.filter(billing_month__lte=current_month)
         if status_filter == "UNPAID":
-            display_bills = [b for b in active_bills if b.status in ("UNPAID", "PARTIALLY_PAID")]
+            display_qs = display_qs.filter(status__in=("UNPAID", "PARTIALLY_PAID"))
         elif status_filter == "OVERDUE":
-            display_bills = [b for b in active_bills
-                             if b.status in ("UNPAID", "PARTIALLY_PAID") and b.billing_month.replace(day=1) < current_month]
+            display_qs = display_qs.filter(
+                status__in=("UNPAID", "PARTIALLY_PAID"),
+                billing_month__lt=current_month,
+            )
         elif status_filter == "PARTIAL":
-            display_bills = [b for b in active_bills
-                             if b.status == "PARTIALLY_PAID"]
+            display_qs = display_qs.filter(status="PARTIALLY_PAID")
         elif status_filter == "PAID":
-            display_bills = [b for b in active_bills if b.status == "PAID"]
-        else:
-            display_bills = active_bills
+            display_qs = display_qs.filter(status="PAID")
     else:
-        # Upcoming tab — no status sub-filter needed
-        display_bills = upcoming_bills
+        display_qs = base_qs.filter(billing_month__gt=current_month)
 
     # Paginate results (10 items per page)
-    paginator = Paginator(display_bills, 10)
+    paginator = Paginator(display_qs.order_by("-billing_month"), 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
@@ -1725,17 +1722,39 @@ def admin_payments(request):
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
+    page_payments = list(page_obj.object_list)
+    page_user_ids = {payment.user_id for payment in page_payments}
+    tenant_leases = (
+        Lease.objects.filter(tenant_id__in=page_user_ids)
+        .select_related("unit")
+        .order_by("tenant_id", "-start_date")
+    )
+    latest_lease_by_user_id = {}
+    for tenant_lease in tenant_leases:
+        latest_lease_by_user_id.setdefault(tenant_lease.tenant_id, tenant_lease)
+
+    page_bill_ids = []
+    payment_bill_ids = {}
+    for payment in page_payments:
+        bid_list = [int(x.strip()) for x in payment.bill_ids.split(',') if x.strip().isdigit()]
+        payment_bill_ids[payment.id] = bid_list
+        page_bill_ids.extend(bid_list)
+
+    bills_by_id = {
+        bill.id: bill
+        for bill in MonthlyBill.objects.filter(pk__in=page_bill_ids)
+    }
+
     # Annotate each payment on the current page with unit number and bill type breakdown
-    for p in page_obj:
-        # Get tenant unit from active lease
-        tenant_lease = Lease.objects.filter(tenant=p.user).select_related('unit').order_by('-start_date').first()
+    for p in page_payments:
+        tenant_lease = latest_lease_by_user_id.get(p.user_id)
         p.unit_number = tenant_lease.unit.number if tenant_lease and tenant_lease.unit else None
         # Parse bill_ids and get bill type summary
         p.bill_type_label = p.get_payment_type_display() if hasattr(p, 'get_payment_type_display') else p.payment_type
         try:
-            bid_list = [int(x.strip()) for x in p.bill_ids.split(',') if x.strip().isdigit()]
+            bid_list = payment_bill_ids.get(p.id, [])
             if bid_list:
-                bills = MonthlyBill.objects.filter(pk__in=bid_list)
+                bills = [bills_by_id[bill_id] for bill_id in bid_list if bill_id in bills_by_id]
                 parts = []
                 has_rent = any(b.base_rent > 0 for b in bills)
                 has_water = any(b.water_amount > 0 for b in bills)
@@ -1787,6 +1806,7 @@ def admin_payment_detail(request, payment_id: int):
     from billing.models import MonthlyBill
     
     payment = get_object_or_404(ManualPayment.objects.select_related("user"), pk=payment_id)
+    is_settled_payment = payment.status == "APPROVED"
     
     # Parse bill IDs from the payment
     bill_ids = parse_bill_ids(payment.bill_ids)
@@ -1797,22 +1817,23 @@ def admin_payment_detail(request, payment_id: int):
         try:
             bill = MonthlyBill.objects.select_related("lease", "lease__unit").get(pk=bill_id)
             
-            # Calculate what was actually paid based on payment_type
+            # Approved payments should display the covered components, not the
+            # current remaining balances after settlement.
             if payment.payment_type == "rent_only":
-                pay_rent = bill.rent_balance
+                pay_rent = bill.base_rent if is_settled_payment else bill.rent_balance
                 pay_water = 0
-                pay_parking = bill.parking_balance  # Parking included in rent-only
+                pay_parking = bill.parking_fee if is_settled_payment else bill.parking_balance
                 pay_penalty = 0
             elif payment.payment_type == "water_only":
                 pay_rent = 0
-                pay_water = bill.water_balance
+                pay_water = bill.water_amount if is_settled_payment else bill.water_balance
                 pay_parking = 0
                 pay_penalty = 0
             else:
                 # Full payment
-                pay_rent = bill.rent_balance
-                pay_water = bill.water_balance
-                pay_parking = bill.parking_balance
+                pay_rent = bill.base_rent if is_settled_payment else bill.rent_balance
+                pay_water = bill.water_amount if is_settled_payment else bill.water_balance
+                pay_parking = bill.parking_fee if is_settled_payment else bill.parking_balance
                 pay_penalty = bill.interest
             
             pay_total = pay_rent + pay_water + pay_parking + pay_penalty
@@ -1858,6 +1879,8 @@ def admin_payment_detail(request, payment_id: int):
     
     context = {
         "payment": payment,
+        "payment_method_label": payment.get_payment_method_display() if hasattr(payment, "get_payment_method_display") else payment.payment_method,
+        "paymongo_method_label": (payment.paid_via or "").replace("_", " ").title(),
         "bills": bills,
         "bill_count": len(bills),
         "total_rent": total_rent,

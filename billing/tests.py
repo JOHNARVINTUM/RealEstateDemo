@@ -7,6 +7,7 @@ from accounts.models import User
 from billing.models import MonthlyBill
 from billing.services import (
     approve_manual_payment,
+    compute_weekly_interest,
     ensure_bills_since_move_in,
     parse_bill_ids,
     reconcile_approved_payments_for_tenant,
@@ -166,6 +167,66 @@ class BillingWorkflowTests(TestCase):
         self.assertEqual(bill.water_balance, Decimal("1200.00"))
         self.assertEqual(bill.total_balance, Decimal("1200.00"))
         self.assertEqual(bill.status, "PARTIALLY_PAID")
+
+    def test_penalty_starts_only_after_two_weeks_late(self):
+        interest, is_late, weeks_late = compute_weekly_interest(
+            Decimal("10000.00"),
+            due_date=date(2026, 7, 5),
+            today=date(2026, 7, 18),
+        )
+
+        self.assertTrue(is_late)
+        self.assertEqual(weeks_late, 0)
+        self.assertEqual(interest, Decimal("0.00"))
+
+    def test_penalty_becomes_flat_three_percent_after_two_weeks(self):
+        interest, is_late, weeks_late = compute_weekly_interest(
+            Decimal("10000.00"),
+            due_date=date(2026, 7, 5),
+            today=date(2026, 7, 19),
+        )
+
+        self.assertTrue(is_late)
+        self.assertEqual(weeks_late, 2)
+        self.assertEqual(interest, Decimal("300.00"))
+
+    def test_penalty_does_not_continue_progressing_after_two_weeks(self):
+        interest, is_late, weeks_late = compute_weekly_interest(
+            Decimal("10000.00"),
+            due_date=date(2026, 7, 5),
+            today=date(2026, 8, 20),
+        )
+
+        self.assertTrue(is_late)
+        self.assertEqual(weeks_late, 2)
+        self.assertEqual(interest, Decimal("300.00"))
+
+    def test_late_penalty_uses_rent_and_parking_base(self):
+        bill = MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=date(2026, 7, 1),
+            due_date=date(2026, 7, 31),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("900.00"),
+            parking_fee=Decimal("350.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("11250.00"),
+            status="UNPAID",
+        )
+        self.lease.parking_fee = Decimal("350.00")
+        self.lease.save(update_fields=["parking_fee"])
+
+        from billing.services import get_or_update_monthly_bill
+
+        updated_bill = get_or_update_monthly_bill(
+            self.lease,
+            billing_month=date(2026, 7, 1),
+            today=date(2026, 8, 14),
+        )
+
+        bill.refresh_from_db()
+        self.assertEqual(updated_bill.interest, Decimal("310.50"))
+        self.assertEqual(bill.interest, Decimal("310.50"))
 
     def test_reconcile_approved_payment_repairs_unapplied_online_payment(self):
         bill = MonthlyBill.objects.create(

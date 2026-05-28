@@ -495,6 +495,18 @@ class LeaseForm(forms.ModelForm):
             "security_deposit": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
         }
 
+    def _get_locked_security_deposit(self):
+        if not (self.instance and self.instance.pk):
+            return self.instance.security_deposit
+
+        if (
+            self.instance.deposit_multiplier == 2
+            and self.instance.monthly_rent
+            and self.instance.security_deposit == self.instance.monthly_rent
+        ):
+            return self.instance.monthly_rent * 2
+        return self.instance.security_deposit
+
     def clean(self):
         cleaned = super().clean()
         unit = cleaned.get("unit")
@@ -546,21 +558,38 @@ class LeaseForm(forms.ModelForm):
     def save(self, commit=True):
         # Get the instance without saving yet
         instance = super().save(commit=False)
+        is_existing_lease = bool(instance.pk)
+        original_tenant = self.instance.tenant if is_existing_lease else None
+        original_unit = self.instance.unit if is_existing_lease else None
+        original_status = self.instance.status if is_existing_lease else None
+        original_is_active = self.instance.is_active if is_existing_lease else None
+        original_activated_at = self.instance.activated_at if is_existing_lease else None
+        original_security_deposit = self._get_locked_security_deposit() if is_existing_lease else None
         
         # Auto-populate monthly rent from unit if not provided
         if instance.unit and not instance.monthly_rent:
             instance.monthly_rent = instance.unit.monthly_rent
         
-        # Auto-populate security deposit = monthly_rent × 2 (fixed multiplier)
-        if not instance.security_deposit and instance.monthly_rent:
+        # Auto-populate security deposit = monthly_rent × 2 only on create.
+        if is_existing_lease:
+            instance.tenant = original_tenant
+            instance.unit = original_unit
+            instance.security_deposit = original_security_deposit
+        elif not instance.security_deposit and instance.monthly_rent:
             instance.security_deposit = instance.monthly_rent * 2
         
         # Ensure deposit_multiplier is always 2 for consistency
         instance.deposit_multiplier = 2
         
-        # Set lease to PENDING_PAYMENT status - will be activated after payment
-        instance.status = Lease.STATUS_PENDING_PAYMENT
-        instance.is_active = False
+        # Preserve existing lease lifecycle state on edit.
+        if is_existing_lease:
+            instance.status = original_status
+            instance.is_active = original_is_active
+            instance.activated_at = original_activated_at
+        else:
+            # New leases stay pending until move-in payment succeeds.
+            instance.status = Lease.STATUS_PENDING_PAYMENT
+            instance.is_active = False
         
         if commit:
             instance.save()
@@ -608,16 +637,34 @@ class LeaseForm(forms.ModelForm):
         except Exception as e:
             logger.exception("Failed to set tenant queryset: %s", e)
         
-        # only allow selecting available units (active, not under maintenance, without active leases)
+        # only allow selecting available units, but preserve the current unit on edit
         try:
-            # Get units that are active, not under maintenance, and don't have active leases
             occupied_units = Lease.objects.filter(is_active=True).values_list('unit_id', flat=True)
-            self.fields["unit"].queryset = Unit.objects.filter(
+            unit_queryset = Unit.objects.filter(
                 is_active=True,
                 status__in=['AVAILABLE', 'OCCUPIED']  # Exclude MAINTENANCE/Being Fixed units
             ).exclude(id__in=occupied_units)
+            if self.instance and self.instance.pk and self.instance.unit_id:
+                unit_queryset = (unit_queryset | Unit.objects.filter(pk=self.instance.unit_id)).distinct()
+            self.fields["unit"].queryset = unit_queryset.order_by('floor_level', 'number')
         except Exception as e:
             logger.exception("Failed to set unit queryset: %s", e)
+
+        if self.instance and self.instance.pk:
+            locked_security_deposit = self._get_locked_security_deposit()
+            self.initial["tenant"] = self.instance.tenant_id
+            self.initial["unit"] = self.instance.unit_id
+            self.initial["start_date"] = self.instance.start_date
+            self.initial["end_date"] = self.instance.end_date
+            self.initial["security_deposit"] = locked_security_deposit
+            self.fields["tenant"].initial = self.instance.tenant_id
+            self.fields["unit"].initial = self.instance.unit_id
+            self.fields["start_date"].initial = self.instance.start_date
+            self.fields["end_date"].initial = self.instance.end_date
+            self.fields["security_deposit"].initial = locked_security_deposit
+            self.fields["tenant"].widget.attrs["disabled"] = "disabled"
+            self.fields["unit"].widget.attrs["disabled"] = "disabled"
+            self.fields["security_deposit"].widget.attrs["readonly"] = "readonly"
 
 
 class UnitForm(forms.ModelForm):

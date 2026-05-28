@@ -9,7 +9,7 @@ from django.utils import timezone
 from billing.models import MonthlyBill
 from water.models import WaterBill
 
-# 3% interest PER WEEK late (BASE RENT ONLY for now)
+# 3% flat late interest (BASE RENT ONLY for now)
 WEEKLY_LATE_INTEREST_RATE = Decimal("0.03")
 
 
@@ -46,20 +46,22 @@ def normalized_monthly_rent(lease) -> Decimal:
     return rent.quantize(Decimal("0.01"))
 
 
-def compute_weekly_interest(base_rent: Decimal, due_date: date, today: date) -> tuple[Decimal, bool, int]:
+def compute_weekly_interest(charge_base: Decimal, due_date: date, today: date) -> tuple[Decimal, bool, int]:
     """
-    Weekly 3% strategy (base rent only):
-    - day after due_date => week 1 => +3%
-    - 7 days late => week 2 => +6%
-    - 14 days late => week 3 => +9%
+    Flat 3% strategy after a 2-week grace period:
+    - 0 to 13 days late => no penalty yet
+    - 14+ days late => +3% once
+    - penalty does not keep increasing after that
     """
     if today <= due_date:
         return Decimal("0.00"), False, 0
 
     days_late = (today - due_date).days
-    weeks_late = (days_late // 7) + 1
-    interest = (base_rent * WEEKLY_LATE_INTEREST_RATE * weeks_late).quantize(Decimal("0.01"))
-    return interest, True, weeks_late
+    if days_late < 14:
+        return Decimal("0.00"), True, 0
+
+    interest = (charge_base * WEEKLY_LATE_INTEREST_RATE).quantize(Decimal("0.01"))
+    return interest, True, 2
 
 
 def get_water_amount_for_month(unit, billing_month: date) -> Decimal:
@@ -76,6 +78,67 @@ def get_water_amount_for_month(unit, billing_month: date) -> Decimal:
     return wb.total_amount if wb else Decimal("0.00")
 
 
+def _same_calendar_month_bill_queryset(lease, billing_month: date):
+    return MonthlyBill.objects.filter(
+        lease=lease,
+        billing_month__year=billing_month.year,
+        billing_month__month=billing_month.month,
+    ).order_by("billing_month", "id")
+
+
+def _preferred_monthly_bill(month_bills):
+    return next(
+        (
+            candidate for candidate in month_bills
+            if candidate.status in ("PAID", "PARTIALLY_PAID")
+            or candidate.rent_paid > 0
+            or candidate.water_paid > 0
+            or candidate.parking_paid > 0
+            or candidate.water_amount > 0
+        ),
+        month_bills[0] if month_bills else None,
+    )
+
+
+def cleanup_duplicate_monthly_bills_for_lease(lease) -> int:
+    """
+    Remove redundant unpaid duplicate rows that were created when older bills used
+    non-normalized billing_month dates within the same calendar month.
+
+    Safety rules:
+    - never delete a PAID or PARTIALLY_PAID row
+    - only delete UNPAID rows with zero paid amounts
+    - only delete when another row already exists for the same lease+calendar month
+    """
+    removed = 0
+    seen_months = set()
+    for bill in MonthlyBill.objects.filter(lease=lease).order_by("billing_month", "id"):
+        month_key = (bill.billing_month.year, bill.billing_month.month)
+        if month_key in seen_months:
+            continue
+        seen_months.add(month_key)
+
+        month_bills = list(_same_calendar_month_bill_queryset(lease, bill.billing_month))
+        if len(month_bills) <= 1:
+            continue
+
+        keeper = _preferred_monthly_bill(month_bills)
+
+        for candidate in month_bills:
+            if candidate.pk == keeper.pk:
+                continue
+            if (
+                candidate.status == "UNPAID"
+                and candidate.rent_paid == 0
+                and candidate.water_paid == 0
+                and candidate.parking_paid == 0
+            ):
+                candidate.delete()
+                removed += 1
+
+    return removed
+
+
 def get_or_update_monthly_bill(lease, billing_month: date, today: date | None = None) -> MonthlyBill:
     """
     Creates/updates MonthlyBill totals for the month.
@@ -90,12 +153,14 @@ def get_or_update_monthly_bill(lease, billing_month: date, today: date | None = 
     due_date = due_date_for_month(billing_month.year, billing_month.month, lease.due_day)
     base_rent = normalized_monthly_rent(lease)
     
+    same_month_bills = list(_same_calendar_month_bill_queryset(lease, billing_month))
+    bill = _preferred_monthly_bill(same_month_bills)
+
     # Check if bill exists with system-computed water (from WaterReading)
-    existing_bill = MonthlyBill.objects.filter(
-        lease=lease, 
-        billing_month=billing_month,
-        water_computed_from_system=True
-    ).first()
+    existing_bill = next(
+        (candidate for candidate in same_month_bills if candidate.water_computed_from_system),
+        None,
+    )
     
     if existing_bill:
         # Preserve system-computed water amount
@@ -105,23 +170,23 @@ def get_or_update_monthly_bill(lease, billing_month: date, today: date | None = 
         water_amount = Decimal(get_water_amount_for_month(lease.unit, billing_month))
 
     parking_fee = Decimal(getattr(lease, 'parking_fee', 0)).quantize(Decimal("0.01"))
-    interest, is_late, weeks_late = compute_weekly_interest(base_rent, due_date, today)
+    interest_base = (base_rent + parking_fee).quantize(Decimal("0.01"))
+    interest, is_late, weeks_late = compute_weekly_interest(interest_base, due_date, today)
     total_due = (base_rent + water_amount + parking_fee + interest).quantize(Decimal("0.01"))
 
-    bill, _ = MonthlyBill.objects.get_or_create(
-        lease=lease,
-        billing_month=billing_month,
-        defaults={
-            "due_date": due_date,
-            "base_rent": base_rent,
-            "water_amount": water_amount,
-            "parking_fee": parking_fee,
-            "interest": interest,
-            "total_due": total_due,
-            "status": "UNPAID",
-            "bill_type": "RENT",
-        },
-    )
+    if bill is None:
+        bill = MonthlyBill.objects.create(
+            lease=lease,
+            billing_month=billing_month,
+            due_date=due_date,
+            base_rent=base_rent,
+            water_amount=water_amount,
+            parking_fee=parking_fee,
+            interest=interest,
+            total_due=total_due,
+            status="UNPAID",
+            bill_type="RENT",
+        )
 
     # Never modify PAID bills - immutable for audit safety
     if bill.status == "PAID":

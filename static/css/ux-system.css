@@ -1,0 +1,152 @@
+.ux-page-loader {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(248, 250, 252, 0.78);
+  backdrop-filter: blur(10px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  z-index: 1400;
+}
+
+.ux-page-loader.is-visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.ux-page-loader-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 20px 50px -20px rgba(15, 23, 42, 0.3);
+}
+
+.ux-page-loader-spinner {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  border: 3px solid #cbd5e1;
+  border-top-color: #0f172a;
+  animation: uxPageLoaderSpin 0.75s linear infinite;
+}
+
+@keyframes uxPageLoaderSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ux-toast-stack {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: min(24rem, calc(100vw - 2rem));
+  z-index: 1500;
+  pointer-events: none;
+}
+
+.ux-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  padding: 1rem 1rem 1rem 1.125rem;
+  border-radius: 1rem;
+  border: 1px solid;
+  box-shadow: 0 20px 45px -25px rgba(15, 23, 42, 0.45);
+  animation: uxToastSlideIn 0.2s ease-out both;
+  background: #fff;
+}
+
+.ux-toast[data-level="success"] {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #065f46;
+}
+
+.ux-toast[data-level="error"] {
+  background: #fff1f2;
+  border-color: #fecdd3;
+  color: #9f1239;
+}
+
+.ux-toast[data-level="warning"] {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.ux-toast[data-level="info"] {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
+.ux-toast-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.ux-toast-title {
+  font-size: 0.75rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.7;
+}
+
+.ux-toast-message {
+  margin-top: 0.2rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.ux-toast-close {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  opacity: 0.55;
+  padding: 0.15rem;
+}
+
+.ux-toast-close:hover {
+  opacity: 0.9;
+}
+
+@keyframes uxToastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) translateX(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .ux-toast-stack {
+    top: auto;
+    bottom: 1rem;
+    left: 1rem;
+    right: 1rem;
+    width: auto;
+  }
+}

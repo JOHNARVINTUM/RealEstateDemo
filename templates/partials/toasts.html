@@ -1,0 +1,23 @@
+{% if messages %}
+  <div class="ux-toast-stack" aria-live="polite" aria-atomic="true">
+    {% for message in messages %}
+      <div class="ux-toast" data-level="{% if message.tags == 'error' %}error{% elif message.tags == 'success' %}success{% elif message.tags == 'warning' %}warning{% else %}info{% endif %}" data-autodismiss="4500">
+        <div class="ux-toast-body">
+          <div class="ux-toast-title">
+            {% if message.tags == 'error' %}
+              Error
+            {% elif message.tags == 'success' %}
+              Success
+            {% elif message.tags == 'warning' %}
+              Warning
+            {% else %}
+              Notice
+            {% endif %}
+          </div>
+          <div class="ux-toast-message">{{ message }}</div>
+        </div>
+        <button type="button" class="ux-toast-close" data-toast-close aria-label="Dismiss notification">×</button>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}

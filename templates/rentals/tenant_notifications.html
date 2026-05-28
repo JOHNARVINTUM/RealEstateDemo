@@ -157,27 +157,3 @@
   </div>
 
 {% endblock %}
-
-{% block tenant_modals %}
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('form[data-loading-form]').forEach(function (form) {
-      form.addEventListener('submit', function () {
-        const button = form.querySelector('[data-loading-button]');
-        if (!button || button.dataset.loading === 'true') return;
-
-        button.dataset.loading = 'true';
-        button.disabled = true;
-        button.classList.add('opacity-70', 'cursor-not-allowed');
-
-        const label = button.querySelector('.button-label');
-        if (label) {
-          label.textContent = button.dataset.loadingText || 'Loading...';
-        } else {
-          button.textContent = button.dataset.loadingText || 'Loading...';
-        }
-      });
-    });
-  });
-</script>
-{% endblock %}

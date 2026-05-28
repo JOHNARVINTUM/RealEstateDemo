@@ -156,20 +156,26 @@ def tenant_dashboard(request):
     if lease and lease.status == Lease.STATUS_ACTIVE:
         reconcile_approved_payments_for_tenant(user)
         ensure_bills_since_move_in(lease)
-        # Get all bills with unpaid balances (including partial payments)
         all_bills = list(MonthlyBill.objects.filter(lease=lease).order_by("billing_month"))
-        
-        # Calculate total unpaid balance across all bills (for summary)
-        total_unpaid_rent = sum(b.rent_balance for b in all_bills if b.rent_balance > 0)
-        total_unpaid_water = sum(b.water_balance for b in all_bills if b.water_balance > 0)
+        total_unpaid_rent = Decimal("0.00")
+        total_unpaid_water = Decimal("0.00")
+        actual_balance_candidate = None
+        actual_balance_index = None
+
+        for index, bill in enumerate(all_bills):
+            if bill.rent_balance > 0:
+                total_unpaid_rent += bill.rent_balance
+            if bill.water_balance > 0:
+                total_unpaid_water += bill.water_balance
+            if actual_balance_candidate is None and bill.total_balance > 0:
+                actual_balance_candidate = bill
+                actual_balance_index = index
+
         total_balance_due = total_unpaid_rent + total_unpaid_water
-        
-        # Get first bill with remaining balance - total_balance is the source of truth
-        actual_balance = None
-        for bill in all_bills:
-            if bill.total_balance > 0:
-                actual_balance = get_or_update_monthly_bill(lease, bill.billing_month)
-                break
+        actual_balance = (
+            get_or_update_monthly_bill(lease, actual_balance_candidate.billing_month)
+            if actual_balance_candidate else None
+        )
 
         today_start = month_start(today)
         # Surface the red billing card only for current/past due balances or
@@ -189,9 +195,10 @@ def tenant_dashboard(request):
         # Find the actual "next" bill after the displayed balance, or use the
         # next unpaid future bill as preview when the current cycle is already paid.
         if current_balance:
-            next_bill = next(
-                (bill for bill in all_bills if bill.billing_month > current_balance.billing_month),
-                None,
+            next_bill = (
+                all_bills[actual_balance_index + 1]
+                if actual_balance_index is not None and actual_balance_index + 1 < len(all_bills)
+                else None
             )
             
             if next_bill:
@@ -229,15 +236,14 @@ def tenant_dashboard(request):
     move_in_payment = None
     has_pending_payment = False
     if request.user.is_authenticated:
-        recent_payments = ManualPayment.objects.filter(
-            user=request.user
-        ).order_by("-created_at")[:5]
-        move_in_payment = ManualPayment.objects.filter(
-            user=request.user, payment_type="move_in"
-        ).first()
-        has_pending_payment = ManualPayment.objects.filter(
-            user=request.user, status="PENDING"
-        ).exists()
+        tenant_payments = ManualPayment.objects.filter(user=request.user).order_by("-created_at")
+        recent_payments = tenant_payments[:5]
+        move_in_payments = list(tenant_payments.filter(payment_type="move_in"))
+        move_in_payment = next(
+            (payment for payment in move_in_payments if payment.status == "APPROVED"),
+            move_in_payments[0] if move_in_payments else None,
+        )
+        has_pending_payment = tenant_payments.filter(status="PENDING").exists()
     
     context = {
         "profile": profile,
@@ -296,22 +302,19 @@ def tenant_billing(request):
     if year_filter and year_filter.isdigit():
         bills_query = bills_query.filter(billing_month__year=int(year_filter))
 
-    current_bill = bills_query.filter(status__in=["UNPAID", "PARTIALLY_PAID"]).order_by("billing_month").first()
-
-    water_reading = None
-    if current_bill:
-        current_bill = get_or_update_monthly_bill(lease, current_bill.billing_month)
-        # Fetch water reading details if available
-        if current_bill.source_water_reading:
-            water_reading = current_bill.source_water_reading
-
-    all_bills = bills_query.filter(status__in=["UNPAID", "PARTIALLY_PAID"]).order_by("billing_month")
+    filtered_bills = list(
+        bills_query.filter(status__in=["UNPAID", "PARTIALLY_PAID"]).order_by("billing_month")
+    )
+    refreshed_bills = [
+        get_or_update_monthly_bill(lease, bill.billing_month)
+        for bill in filtered_bills
+    ]
+    current_bill = refreshed_bills[0] if refreshed_bills else None
+    water_reading = current_bill.source_water_reading if current_bill and current_bill.source_water_reading else None
     ongoing_rows = []
     today = date.today()
 
-    for bill in all_bills:
-        bill = get_or_update_monthly_bill(lease, bill.billing_month)
-
+    for bill in refreshed_bills:
         if bill.due_date < today:
             display_status = "OVERDUE"
         elif bill.due_date == today:
@@ -342,13 +345,13 @@ def tenant_billing(request):
     ).order_by("-created_at")
 
     transactions = []
-    payment_bill_ids = []
+    payment_bill_ids = set()
     payment_bill_map = {}
     for payment in approved_payments:
         bill_id_list = parse_bill_ids(payment.bill_ids)
         if not bill_id_list:
             continue
-        payment_bill_ids.extend(bill_id_list)
+        payment_bill_ids.update(bill_id_list)
         payment_bill_map[payment.id] = bill_id_list
 
     bills_by_id = {
@@ -438,11 +441,10 @@ def tenant_pay_advance(request):
     ensure_bills_since_move_in(lease)
 
     existing_bills = list(MonthlyBill.objects.filter(lease=lease).order_by("billing_month"))
-    oldest_outstanding_bill = existing_bills[0] if existing_bills else None
-    for candidate_bill in existing_bills:
-        if candidate_bill.total_balance > 0:
-            oldest_outstanding_bill = candidate_bill
-            break
+    oldest_outstanding_bill = next(
+        (candidate_bill for candidate_bill in existing_bills if candidate_bill.total_balance > 0),
+        existing_bills[0] if existing_bills else None,
+    )
 
     water_only_locked = bool(
         oldest_outstanding_bill

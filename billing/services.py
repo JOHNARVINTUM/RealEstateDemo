@@ -251,8 +251,7 @@ def ensure_bills_since_move_in(lease, today: date | None = None):
     for m in months_between(start, end):
         get_or_update_monthly_bill(lease, m, today=today)
 
-    # Mark first month's bill as PAID if move-in payment was approved
-    # (Move-in payment covers first month rent + parking; security deposit is held separately)
+    # Mark first month's bill as settled for rent + parking if move-in payment was approved.
     first_bill = MonthlyBill.objects.filter(lease=lease, billing_month=start).first()
     if first_bill and first_bill.status != "PAID":
         from payments.models import ManualPayment
@@ -262,16 +261,43 @@ def ensure_bills_since_move_in(lease, today: date | None = None):
             status="APPROVED",
         ).exists()
         if has_approved_movein:
-            from django.utils import timezone as tz
-            first_bill.rent_paid = first_bill.base_rent
-            first_bill.parking_paid = first_bill.parking_fee
-            first_bill.rent_paid_at = tz.now()
-            first_bill.interest = Decimal("0.00")
-            first_bill.total_due = (first_bill.base_rent + first_bill.water_amount + first_bill.parking_fee).quantize(Decimal("0.01"))
-            first_bill.status = "PAID" if first_bill.water_balance == 0 else "PARTIALLY_PAID"
-            first_bill.paid_at = tz.now() if first_bill.status == "PAID" else None
-            first_bill.payment_reference = "MOVE-IN-PAYMENT"
-            first_bill.save()
+            apply_move_in_payment_to_first_bill(lease, payment_reference="MOVE-IN-PAYMENT")
+
+
+def apply_move_in_payment_to_first_bill(lease, payment_reference: str = "MOVE-IN-PAYMENT", paid_at=None):
+    """
+    Move-in payments cover first month rent + parking only.
+    Water remains open if it was posted later for the same month.
+    """
+    from django.utils import timezone as tz
+
+    first_bill_month = month_start(lease.start_date)
+    first_bill = MonthlyBill.objects.filter(lease=lease, billing_month=first_bill_month).first()
+    if not first_bill:
+        return None
+
+    paid_time = paid_at or tz.now()
+    first_bill.rent_paid = first_bill.base_rent
+    first_bill.parking_paid = first_bill.parking_fee
+    first_bill.rent_paid_at = paid_time
+    first_bill.interest = Decimal("0.00")
+    first_bill.total_due = (
+        first_bill.base_rent + first_bill.water_amount + first_bill.parking_fee
+    ).quantize(Decimal("0.01"))
+    first_bill.status = "PAID" if first_bill.water_balance == 0 else "PARTIALLY_PAID"
+    first_bill.paid_at = paid_time if first_bill.status == "PAID" else None
+    first_bill.payment_reference = payment_reference
+    first_bill.save(update_fields=[
+        "rent_paid",
+        "parking_paid",
+        "rent_paid_at",
+        "interest",
+        "total_due",
+        "status",
+        "paid_at",
+        "payment_reference",
+    ])
+    return first_bill
 
 
 def ensure_bills_up_to(lease, end_month: date, today: date | None = None):

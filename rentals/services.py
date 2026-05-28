@@ -1,6 +1,7 @@
 from django.utils import timezone
 from datetime import timedelta, date
 from decimal import Decimal
+from django.db import transaction
 from django.db.models import Count, Q, Avg, Max, F
 from django.core.mail import send_mail
 from django.conf import settings
@@ -10,6 +11,63 @@ from payments.models import ManualPayment
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+@transaction.atomic
+def repair_historical_move_in_payment(payment):
+    """
+    Repair test-era move-in payments that were manually rejected even though the
+    tenant really paid and the lease has already progressed.
+
+    This preserves the original payment record and updates the lease/billing
+    state through the existing lease and billing models.
+    """
+    from billing.services import ensure_bills_since_move_in, apply_move_in_payment_to_first_bill
+
+    payment = ManualPayment.objects.select_for_update().select_related("user").get(pk=payment.pk)
+    if payment.payment_type != "move_in":
+        return False, "Only move-in payments can be repaired with this action."
+    if payment.status == "APPROVED":
+        return True, "Move-in payment is already approved."
+
+    lease_id = None
+    if isinstance(payment.metadata, dict):
+        lease_id = payment.metadata.get("lease_id")
+
+    lease_qs = Lease.objects.select_for_update().filter(tenant=payment.user).select_related("unit")
+    lease = None
+    if lease_id:
+        lease = lease_qs.filter(id=lease_id).first()
+    if lease is None:
+        lease = lease_qs.filter(status=Lease.STATUS_ACTIVE).order_by("-start_date").first()
+    if lease is None:
+        lease = lease_qs.filter(status=Lease.STATUS_PENDING_PAYMENT).order_by("-created_at").first()
+    if lease is None:
+        lease = lease_qs.order_by("-start_date", "-created_at").first()
+
+    if lease is None:
+        return False, "No related lease was found for this move-in payment."
+
+    if lease.status == Lease.STATUS_PENDING_PAYMENT:
+        lease.activate(activated_at=payment.created_at or timezone.now())
+        lease.unit.status = "OCCUPIED"
+        lease.unit.save(update_fields=["status"])
+
+    ensure_bills_since_move_in(lease)
+    first_bill = apply_move_in_payment_to_first_bill(
+        lease,
+        payment_reference=payment.reference_code or "MOVE-IN-PAYMENT",
+        paid_at=payment.created_at or timezone.now(),
+    )
+
+    update_fields = ["status"]
+    payment.status = "APPROVED"
+    if first_bill and payment.bill_ids != str(first_bill.id):
+        payment.bill_ids = str(first_bill.id)
+        update_fields.append("bill_ids")
+    payment.save(update_fields=update_fields)
+
+    return True, "Historical move-in payment repaired successfully."
 
 
 def send_email_via_resend(to_email, subject, message):

@@ -212,6 +212,18 @@
         </button>
       </form>
     {% endif %}
+
+    {% if payment.status == "REJECTED" and payment.payment_type == "move_in" and payment.payment_method == "PAYMONGO" %}
+      <form method="post" action="{% url 'admin_repair_move_in_payment' payment.id %}" class="inline-block" data-loading-form>
+        {% csrf_token %}
+        <button type="submit" data-loading-button data-loading-text="Repairing..." class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm transition-colors flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span class="button-label">Repair Historical Move-in Payment</span>
+        </button>
+      </form>
+    {% endif %}
     
     <a href="{% url 'admin_delete_payment' payment.id %}" class="px-4 py-2 text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-lg font-bold text-sm transition-colors ml-auto">
       Delete Record
@@ -223,25 +235,4 @@
 
 {% block scripts %}
   {{ block.super }}
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      document.querySelectorAll('form[data-loading-form]').forEach(function (form) {
-        form.addEventListener('submit', function () {
-          const button = form.querySelector('[data-loading-button]');
-          if (!button || button.dataset.loading === 'true') return;
-
-          button.dataset.loading = 'true';
-          button.disabled = true;
-          button.classList.add('opacity-70', 'cursor-not-allowed');
-
-          const label = button.querySelector('.button-label');
-          if (label) {
-            label.textContent = button.dataset.loadingText || 'Loading...';
-          } else {
-            button.textContent = button.dataset.loadingText || 'Loading...';
-          }
-        });
-      });
-    });
-  </script>
 {% endblock %}

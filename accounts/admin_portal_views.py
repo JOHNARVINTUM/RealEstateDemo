@@ -3,8 +3,8 @@ import logging
 import os
 
 from django.conf import settings
-from django.db.models import Sum, Q, F, ExpressionWrapper, DecimalField, Exists, OuterRef, Subquery
-from django.db.models.functions import Coalesce
+from django.db.models import Sum, Q, F, ExpressionWrapper, DecimalField, Exists, OuterRef, Subquery, Count
+from django.db.models.functions import Coalesce, TruncMonth
 from django.db import transaction
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -44,7 +44,7 @@ def simple_debug(request):
     return render(request, 'admin_portal/simple_debug.html')
 from announcements.models import Announcement
 from maintenance.forms import AdminMaintenanceUpdateForm
-from rentals.services import TenantRiskService
+from rentals.services import TenantRiskService, repair_historical_move_in_payment
 
 from .admin_portal_forms import TenantProfileForm, AnnouncementForm, LeaseForm
 from .admin_portal_forms import TenantProfileEditForm
@@ -98,20 +98,22 @@ logger = logging.getLogger(__name__)
 
 @admin_required
 def admin_dashboard(request):
-    # Use status='ACTIVE' instead of is_active for proper lease lifecycle tracking
-    total_tenants = Lease.objects.filter(status=Lease.STATUS_ACTIVE).values("tenant").distinct().count()
-    occupied_units = Lease.objects.filter(status=Lease.STATUS_ACTIVE).count()
-    vacant_units = Unit.objects.filter(is_active=True).count() - occupied_units
+    active_leases = Lease.objects.filter(status=Lease.STATUS_ACTIVE)
+    total_tenants = active_leases.values("tenant").distinct().count()
+    occupied_units = active_leases.count()
+    total_units = Unit.objects.filter(is_active=True).count()
+    vacant_units = total_units - occupied_units
 
     today = timezone.now().date()
     current_year = today.year
     current_month = today.month
-    
-    # Get expected monthly rent from active leases
-    expected_monthly_rent = (
-        Lease.objects.filter(status=Lease.STATUS_ACTIVE)
-        .aggregate(total=Sum("monthly_rent"))["total"] or 0
-    )
+    current_month_start = today.replace(day=1)
+    start_month = current_month_start
+    for _ in range(11):
+        start_month = (start_month - timedelta(days=1)).replace(day=1)
+    next_month_start = (current_month_start + timedelta(days=32)).replace(day=1)
+
+    expected_monthly_rent = active_leases.aggregate(total=Sum("monthly_rent"))["total"] or 0
     
     # Get expected amounts from current month's bills (all active bills)
     current_month_bills = MonthlyBill.objects.filter(
@@ -119,36 +121,33 @@ def admin_dashboard(request):
         billing_month__month=current_month,
     )
     
-    expected_parking = current_month_bills.aggregate(total=Sum("parking_fee"))["total"] or 0
-    expected_water_revenue = current_month_bills.aggregate(total=Sum("water_amount"))["total"] or 0
-    expected_penalties = current_month_bills.aggregate(total=Sum("interest"))["total"] or 0
+    month_bill_totals = current_month_bills.aggregate(
+        expected_parking=Sum("parking_fee"),
+        expected_water_revenue=Sum("water_amount"),
+        expected_penalties=Sum("interest"),
+        rent_collected=Sum("rent_paid"),
+        water_collected=Sum("water_paid"),
+        parking_collected=Sum("parking_paid"),
+        interest_collected=Sum("interest", filter=Q(status="PAID")),
+    )
+    expected_parking = month_bill_totals["expected_parking"] or 0
+    expected_water_revenue = month_bill_totals["expected_water_revenue"] or 0
+    expected_penalties = month_bill_totals["expected_penalties"] or 0
+    rent_collected = month_bill_totals["rent_collected"] or 0
+    water_collected = month_bill_totals["water_collected"] or 0
+    parking_collected = month_bill_totals["parking_collected"] or 0
+    interest_collected = month_bill_totals["interest_collected"] or 0
     
     # ACTUAL COLLECTED this month — use _paid fields to capture partial payments too
-    all_month_bills = MonthlyBill.objects.filter(
-        billing_month__year=current_year,
-        billing_month__month=current_month,
-    )
+    # Current-month collected values already come from month_bill_totals above
+    rent_collected = rent_collected
     
-    # Rent collected (actual amount received, not just from fully-paid bills)
-    rent_collected = all_month_bills.aggregate(
-        total=Sum("rent_paid")
-    )["total"] or 0
+    water_collected = water_collected
     
-    # Water collected (actual amount received)
-    water_collected = all_month_bills.aggregate(
-        total=Sum("water_paid")
-    )["total"] or 0
-    
-    # Parking collected (actual amount received)
-    parking_collected = all_month_bills.aggregate(
-        total=Sum("parking_paid")
-    )["total"] or 0
+    parking_collected = parking_collected
     
     # Late fees collected (from PAID bills only — interest is zeroed out on payment)
-    paid_bills = all_month_bills.filter(status="PAID")
-    interest_collected = paid_bills.aggregate(
-        total=Sum("interest")
-    )["total"] or 0
+    interest_collected = interest_collected
     
     # Total money received this month
     total_collected = rent_collected + water_collected + parking_collected + interest_collected
@@ -163,14 +162,51 @@ def admin_dashboard(request):
     overdue_payments = MonthlyBill.objects.filter(status="UNPAID", due_date__lt=today).count()
 
     
+    monthly_bill_totals = {
+        (row["month_bucket"].year, row["month_bucket"].month): row["total"] or 0
+        for row in MonthlyBill.objects.filter(
+            billing_month__gte=start_month,
+            billing_month__lt=next_month_start,
+            status="PAID",
+        ).annotate(
+            month_bucket=TruncMonth("billing_month")
+        ).values("month_bucket").annotate(
+            total=Sum(
+                ExpressionWrapper(
+                    F("base_rent") + F("water_amount") + F("parking_fee") + F("interest"),
+                    output_field=DecimalField()
+                )
+            )
+        )
+    }
+    water_usage_totals = {
+        (row["month_bucket"].year, row["month_bucket"].month): row["total"] or 0
+        for row in WaterReading.objects.filter(
+            reading_month__gte=start_month,
+            reading_month__lt=next_month_start,
+        ).annotate(
+            month_bucket=TruncMonth("reading_month")
+        ).values("month_bucket").annotate(
+            total=Sum("consumption")
+        )
+    }
+    maintenance_totals = {
+        (row["month_bucket"].year, row["month_bucket"].month): row["count"] or 0
+        for row in MaintenanceRequest.objects.filter(
+            created_at__date__gte=start_month,
+            created_at__date__lt=next_month_start,
+        ).annotate(
+            month_bucket=TruncMonth("created_at")
+        ).values("month_bucket").annotate(
+            count=Count("id")
+        )
+    }
+
     # Get monthly rental income data for the past 12 months including current month
     monthly_income_data = []
     water_usage_data = []
     maintenance_trend_data = []
     months_labels = []
-    
-    # Calculate months from 11 months ago to current month (inclusive)
-    current_month_start = today.replace(day=1)
     
     for i in range(12):
         # Calculate month date: current month minus i months
@@ -190,42 +226,17 @@ def admin_dashboard(request):
             
             month_date = datetime(month_year, month_month, 1).date()
         
-        # Get monthly revenue (rent + water + parking + interest) for PAID bills in this billing month
-        actual_revenue = (
-            MonthlyBill.objects.filter(
-                billing_month__year=month_date.year,
-                billing_month__month=month_date.month,
-                status="PAID"
-            ).aggregate(
-                total=Sum(
-                    ExpressionWrapper(F("base_rent") + F("water_amount") + F("parking_fee") + F("interest"),
-                    output_field=DecimalField()
-                    )
-                )
-            )["total"] or 0
-        )
-        
-        # Get expected revenue from active leases
-        expected_revenue = (
-            Lease.objects.filter(status=Lease.STATUS_ACTIVE)
-            .aggregate(total=Sum("monthly_rent"))["total"] or 0
-        )
+        month_key = (month_date.year, month_date.month)
+        actual_revenue = monthly_bill_totals.get(month_key, 0)
+        expected_revenue = expected_monthly_rent
         
         monthly_income_data.append({
             'month': month_date.strftime('%b %Y'),
             'actual': float(actual_revenue),
             'expected': float(expected_revenue)
         })
-        monthly_water_usage = (
-            WaterReading.objects.filter(
-                reading_month__year=month_date.year,
-                reading_month__month=month_date.month
-            ).aggregate(total=Sum("consumption"))["total"] or 0
-        )
-        monthly_maintenance_count = MaintenanceRequest.objects.filter(
-            created_at__year=month_date.year,
-            created_at__month=month_date.month
-        ).count()
+        monthly_water_usage = water_usage_totals.get(month_key, 0)
+        monthly_maintenance_count = maintenance_totals.get(month_key, 0)
 
         water_usage_data.append({
             'month': month_date.strftime('%b %Y'),
@@ -250,9 +261,6 @@ def admin_dashboard(request):
     unread_notifications = all_notifications.filter(is_read=False)
     notifications = unread_notifications[:5]  # Quick panel shows only unread
     unread_count = unread_notifications.count()
-
-    # Calculate total units for capacity context
-    total_units = Unit.objects.filter(is_active=True).count()
 
     return render(request, "admin_portal/dashboard.html", {
         "total_tenants": total_tenants,
@@ -320,9 +328,24 @@ def admin_tenants(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    # Add has_records flag to each tenant in current page
+    page_user_ids = [tenant.user_id for tenant in page_obj]
+    lease_user_ids = set(
+        Lease.objects.filter(tenant_id__in=page_user_ids).values_list("tenant_id", flat=True)
+    )
+    payment_user_ids = set(
+        ManualPayment.objects.filter(user_id__in=page_user_ids).values_list("user_id", flat=True)
+    )
+    maintenance_user_ids = set(
+        MaintenanceRequest.objects.filter(tenant_id__in=page_user_ids).values_list("tenant_id", flat=True)
+    )
+    attachment_user_ids = set(
+        TenantAttachment.objects.filter(tenant_id__in=page_user_ids).values_list("tenant_id", flat=True)
+    )
+
     for tenant in page_obj:
-        tenant.has_records = tenant_has_records(tenant)
+        tenant.has_records = tenant.user_id in (
+            lease_user_ids | payment_user_ids | maintenance_user_ids | attachment_user_ids
+        )
 
     # Calculate stats for the header
     total_tenants_count = TenantProfile.objects.count()
@@ -348,12 +371,16 @@ def admin_tenants(request):
 def admin_tenant_detail(request, tenant_id: int):
     from payments.models import ManualPayment
     tenant = get_object_or_404(TenantProfile.objects.select_related("user"), pk=tenant_id)
-    leases = Lease.objects.select_related("unit", "tenant").filter(tenant=tenant.user).order_by("-start_date")
+    leases = list(
+        Lease.objects.select_related("unit", "tenant")
+        .filter(tenant=tenant.user)
+        .order_by("-start_date")
+    )
     attachments = TenantAttachment.objects.filter(tenant=tenant.user).select_related('uploaded_by').order_by('-uploaded_at')
     tenant.has_records = tenant_has_records(tenant)
 
     # Payment history: all MonthlyBills across all leases
-    lease_ids = leases.values_list("id", flat=True)
+    lease_ids = [lease.id for lease in leases]
     bill_history = MonthlyBill.objects.filter(
         lease_id__in=lease_ids
     ).select_related("lease__unit").order_by("-billing_month")[:24]
@@ -1192,6 +1219,32 @@ def admin_approve_payment(request, payment_id: int):
 
 
 @admin_required
+def admin_repair_move_in_payment(request, payment_id: int):
+    p = get_object_or_404(ManualPayment, pk=payment_id)
+    if request.method == "POST":
+        try:
+            success, message = repair_historical_move_in_payment(p)
+            if success:
+                messages.success(request, message)
+            else:
+                messages.error(request, message)
+        except Exception as e:
+            messages.error(request, f"Error repairing move-in payment: {e}")
+            logger.exception("Error repairing historical move-in payment")
+        return redirect("admin_payment_detail", payment_id=p.id)
+    return render(request, "admin_portal/confirm.html", {
+        "title": "Repair Move-in Payment",
+        "message": (
+            f"Repair historical move-in payment {p.reference_code} for {p.user.email}?\n\n"
+            f"This is intended only for old testing records where the tenant actually paid "
+            f"but the payment was manually rejected."
+        ),
+        "post_url": reverse("admin_repair_move_in_payment", args=[p.id]),
+        "back_url": reverse("admin_payment_detail", args=[p.id]),
+    })
+
+
+@admin_required
 def admin_reject_payment(request, payment_id: int):
     p = get_object_or_404(ManualPayment, pk=payment_id)
     if request.method == "POST":
@@ -1689,33 +1742,18 @@ def admin_payments(request):
             Q(bill_ids__icontains=q)
         )
 
-    payments = payments.order_by("-created_at")[:500]
+    filtered_payments = payments.order_by("-created_at")
+    payments = filtered_payments[:500]
     
     # Calculate payment status counts
-    all_payments = ManualPayment.objects.select_related("user")
-    if q:
-        all_payments = all_payments.filter(
-            Q(user__email__icontains=q) |
-            Q(reference_code__icontains=q) |
-            Q(bill_ids__icontains=q)
-        )
-    
-    if status == "PENDING":
-        pending_count = payments.count()
-        approved_count = 0
-        rejected_count = 0
-    elif status == "APPROVED":
-        pending_count = 0
-        approved_count = payments.count()
-        rejected_count = 0
-    elif status == "REJECTED":
-        pending_count = 0
-        approved_count = 0
-        rejected_count = payments.count()
-    else:
-        pending_count = all_payments.filter(status="PENDING").count()
-        approved_count = all_payments.filter(status="APPROVED").count()
-        rejected_count = all_payments.filter(status="REJECTED").count()
+    status_counts = filtered_payments.aggregate(
+        pending_count=Count("id", filter=Q(status="PENDING")),
+        approved_count=Count("id", filter=Q(status="APPROVED")),
+        rejected_count=Count("id", filter=Q(status="REJECTED")),
+    )
+    pending_count = status_counts["pending_count"] or 0
+    approved_count = status_counts["approved_count"] or 0
+    rejected_count = status_counts["rejected_count"] or 0
     
     # Paginate results (10 items per page)
     paginator = Paginator(payments, 10)
@@ -1733,12 +1771,12 @@ def admin_payments(request):
     for tenant_lease in tenant_leases:
         latest_lease_by_user_id.setdefault(tenant_lease.tenant_id, tenant_lease)
 
-    page_bill_ids = []
+    page_bill_ids = set()
     payment_bill_ids = {}
     for payment in page_payments:
         bid_list = [int(x.strip()) for x in payment.bill_ids.split(',') if x.strip().isdigit()]
         payment_bill_ids[payment.id] = bid_list
-        page_bill_ids.extend(bid_list)
+        page_bill_ids.update(bid_list)
 
     bills_by_id = {
         bill.id: bill
@@ -1811,50 +1849,15 @@ def admin_payment_detail(request, payment_id: int):
     # Parse bill IDs from the payment
     bill_ids = parse_bill_ids(payment.bill_ids)
     bills = []
-    
+    bills_by_id = {
+        bill.id: bill
+        for bill in MonthlyBill.objects.select_related("lease", "lease__unit").filter(pk__in=bill_ids)
+    }
+
     # Get detailed bill information with actual paid amounts
     for bill_id in bill_ids:
-        try:
-            bill = MonthlyBill.objects.select_related("lease", "lease__unit").get(pk=bill_id)
-            
-            # Approved payments should display the covered components, not the
-            # current remaining balances after settlement.
-            if payment.payment_type == "rent_only":
-                pay_rent = bill.base_rent if is_settled_payment else bill.rent_balance
-                pay_water = 0
-                pay_parking = bill.parking_fee if is_settled_payment else bill.parking_balance
-                pay_penalty = 0
-            elif payment.payment_type == "water_only":
-                pay_rent = 0
-                pay_water = bill.water_amount if is_settled_payment else bill.water_balance
-                pay_parking = 0
-                pay_penalty = 0
-            else:
-                # Full payment
-                pay_rent = bill.base_rent if is_settled_payment else bill.rent_balance
-                pay_water = bill.water_amount if is_settled_payment else bill.water_balance
-                pay_parking = bill.parking_fee if is_settled_payment else bill.parking_balance
-                pay_penalty = bill.interest
-            
-            pay_total = pay_rent + pay_water + pay_parking + pay_penalty
-            
-            bills.append({
-                "id": bill.id,
-                "month": bill.billing_month.strftime("%B %Y"),
-                "unit": bill.lease.unit.number if bill.lease and bill.lease.unit else "Unknown",
-                # Full bill amounts (for reference)
-                "full_rent": bill.base_rent,
-                "full_water": bill.water_amount,
-                "full_parking": bill.parking_fee,
-                "full_penalty": bill.interest,
-                # Actually paid amounts
-                "rent": pay_rent,
-                "water": pay_water,
-                "parking": pay_parking,
-                "penalty": pay_penalty,
-                "total": pay_total,
-            })
-        except MonthlyBill.DoesNotExist:
+        bill = bills_by_id.get(bill_id)
+        if bill is None:
             bills.append({
                 "id": bill_id,
                 "month": "Unknown",
@@ -1869,6 +1872,42 @@ def admin_payment_detail(request, payment_id: int):
                 "penalty": 0,
                 "total": 0,
             })
+            continue
+
+        # Approved payments should display the covered components, not the
+        # current remaining balances after settlement.
+        if payment.payment_type == "rent_only":
+            pay_rent = bill.base_rent if is_settled_payment else bill.rent_balance
+            pay_water = 0
+            pay_parking = bill.parking_fee if is_settled_payment else bill.parking_balance
+            pay_penalty = 0
+        elif payment.payment_type == "water_only":
+            pay_rent = 0
+            pay_water = bill.water_amount if is_settled_payment else bill.water_balance
+            pay_parking = 0
+            pay_penalty = 0
+        else:
+            pay_rent = bill.base_rent if is_settled_payment else bill.rent_balance
+            pay_water = bill.water_amount if is_settled_payment else bill.water_balance
+            pay_parking = bill.parking_fee if is_settled_payment else bill.parking_balance
+            pay_penalty = bill.interest
+
+        pay_total = pay_rent + pay_water + pay_parking + pay_penalty
+
+        bills.append({
+            "id": bill.id,
+            "month": bill.billing_month.strftime("%B %Y"),
+            "unit": bill.lease.unit.number if bill.lease and bill.lease.unit else "Unknown",
+            "full_rent": bill.base_rent,
+            "full_water": bill.water_amount,
+            "full_parking": bill.parking_fee,
+            "full_penalty": bill.interest,
+            "rent": pay_rent,
+            "water": pay_water,
+            "parking": pay_parking,
+            "penalty": pay_penalty,
+            "total": pay_total,
+        })
     
     # Calculate totals from actually paid amounts
     total_rent = sum(b["rent"] for b in bills)

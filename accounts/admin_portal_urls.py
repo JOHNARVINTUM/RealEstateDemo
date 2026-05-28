@@ -31,9 +31,8 @@ from .admin_portal_views import (
     admin_tenant_attachments,
     admin_view_attachment,
     admin_delete_attachment,
-    admin_forecasting,
-    admin_billed_this_month,
 )
+from .admin_forecasting_views import admin_forecasting, admin_billed_this_month
 from .admin_billing_views import (
     admin_billing,
     admin_billing_export_csv,

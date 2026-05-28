@@ -302,9 +302,9 @@ def apply_move_in_payment_to_first_bill(lease, payment_reference: str = "MOVE-IN
 
 def ensure_bills_up_to(lease, end_month: date, today: date | None = None):
     """
-    For advance payment previews/payments (creates future MonthlyBill rows).
-    Allows up to 3 months advance to support thesis advance payment feature.
-    """
+     For advance payment previews/payments (creates future MonthlyBill rows).
+      Allows up to 12 months advance to match the tenant payment UI.
+     """
     if lease is None:
         return
     if today is None:
@@ -318,9 +318,9 @@ def ensure_bills_up_to(lease, end_month: date, today: date | None = None):
     start = month_start(lease.start_date)
     end = month_start(end_month)
 
-    # Limit to 3 months advance to prevent unlimited future generation
+    # Keep future generation bounded, but align it with the largest UI option.
     current_month = month_start(today)
-    max_advance_months = 3
+    max_advance_months = 12
     max_date = add_months(current_month, max_advance_months)
     if end > max_date:
         end = max_date

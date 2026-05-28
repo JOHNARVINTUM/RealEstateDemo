@@ -1,8 +1,12 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
-from rentals.models import Lease
+import logging
+
+from rentals.models import Lease, Notification
 from .forms import MaintenanceRequestForm
 from .models import MaintenanceRequest
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -26,6 +30,26 @@ def report_issue(request):
             except Exception:
                 pass
             obj.save()
+            try:
+                unit = lease.unit if lease else None
+                try:
+                    tenant_name = user.tenantprofile.full_name
+                except Exception:
+                    tenant_name = user.email
+                unit_label = f" for Unit {unit.number}" if unit else ""
+                Notification.objects.create(
+                    title=f"New Maintenance Request{unit_label}",
+                    message=(
+                        f"{tenant_name} submitted a {obj.get_category_display().lower()} "
+                        f"maintenance request: {obj.title}."
+                    ),
+                    notification_type="MAINTENANCE",
+                    recipient_type="ADMIN",
+                    related_unit=unit,
+                    related_tenant=user,
+                )
+            except Exception as exc:
+                logger.exception("Failed to create admin maintenance notification: %s", exc)
             return redirect("maintenance_list")
     else:
         form = MaintenanceRequestForm()

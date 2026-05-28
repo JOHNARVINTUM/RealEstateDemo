@@ -115,32 +115,8 @@ function applyPagination() {
   paginationNumbers.appendChild(nextBtn);
 }
 
-function handleDeletedNotifications() {
-  const notifications = document.querySelectorAll('.notification-item');
-  notifications.forEach(notification => {
-    const deleteLink = notification.querySelector('a[href*="/delete/"]');
-    if (deleteLink) {
-      fetch(deleteLink.getAttribute('href'), {
-        method: 'POST',
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest',
-          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-        }
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.not_found) {
-          notification.remove(); 
-          applyPagination();
-        }
-      })
-      .catch(error => console.error('Error checking notification deletion:', error));
-    }
-  });
-}
-
 function sortNotificationsFrontend() {
-  const container = document.querySelector('.space-y-4');
+  const container = document.getElementById('notification-feed');
   if (!container) return;
   const items = Array.from(container.querySelectorAll('.notification-item'));
   if (items.length === 0) return;
@@ -166,16 +142,15 @@ function refreshNotifications() {
   .then(html => {
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = html;
-    const newNotifications = tempDiv.querySelector('.space-y-4');
+    const newNotifications = tempDiv.querySelector('#notification-feed');
     
     if (newNotifications) {
-      const currentNotifications = document.querySelector('.space-y-4');
+      const currentNotifications = document.getElementById('notification-feed');
       if (currentNotifications) {
         currentNotifications.innerHTML = newNotifications.innerHTML; 
         sortNotificationsFrontend();
         applyPagination();
         updateUnreadCount();
-        handleDeletedNotifications();
       }
     }
   })
@@ -236,7 +211,7 @@ document.addEventListener('submit', function(e) {
         notificationItem.classList.remove('bg-slate-50/70');
         
         // Move to the end of the container
-        const container = document.querySelector('.space-y-4');
+        const container = document.getElementById('notification-feed');
         if (container) {
           container.appendChild(notificationItem);
         }
@@ -300,7 +275,7 @@ document.addEventListener('submit', function(e) {
   </div>
 
   <!-- Feed Output Array Container -->
-  <div class="space-y-4">
+  <div id="notification-feed" class="space-y-4">
     {% for notification in notifications %}
       
       <!-- Bounded Iconless Entry Card -->
@@ -339,15 +314,22 @@ document.addEventListener('submit', function(e) {
           </div>
 
           <!-- Associated References Routing Links -->
-          {% if notification.related_unit or notification.related_tenant or notification.notification_type == 'PAYMENT' %}
+          {% if notification.related_unit or notification.related_tenant or notification.target_url %}
             <div class="pt-2 flex flex-wrap items-center gap-2">
-              {% if notification.notification_type == 'PAYMENT' %}
-                <a href="{% url 'admin_payments' %}?status=PENDING" 
+              {% if notification.notification_type == 'PAYMENT' and notification.target_url %}
+                <a href="{{ notification.target_url }}" 
                    class="inline-block px-3 py-1 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 text-emerald-800 rounded text-xs font-bold transition-colors select-none">
                   Approve Payment →
                 </a>
               {% endif %}
-              
+
+              {% if notification.notification_type == 'MAINTENANCE' and notification.target_url %}
+                <a href="{{ notification.target_url }}"
+                   class="inline-block px-3 py-1 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 text-emerald-800 rounded text-xs font-bold transition-colors select-none">
+                  Open Issue →
+                </a>
+              {% endif %}
+               
               {% if notification.related_unit %}
                 <a href="{% url 'admin_unit_detail' notification.related_unit.id %}" 
                    class="inline-block px-3 py-1 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 rounded text-xs font-bold transition-colors select-none">

@@ -30,8 +30,9 @@
     var href = link.getAttribute("href");
     var target = link.getAttribute("target");
     var isModifiedClick = event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0;
+    var skipLoader = link.hasAttribute("data-skip-loader") || link.hasAttribute("download");
 
-    if (!href || href.startsWith("#") || href.startsWith("javascript:") || target === "_blank" || isModifiedClick) {
+    if (!href || href.startsWith("#") || href.startsWith("javascript:") || target === "_blank" || isModifiedClick || skipLoader) {
       return;
     }
 

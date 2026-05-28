@@ -301,7 +301,7 @@
 </div>
 
 <script src="{% static 'js/form-guard.js' %}"></script>
-<script src="{% static 'js/ux-loader.js' %}"></script>
+<script src="{% static 'js/ux-loader.js' %}?v={% now 'U' %}"></script>
 <script src="{% static 'js/toast-system.js' %}"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function () {

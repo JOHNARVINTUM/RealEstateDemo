@@ -1,6 +1,5 @@
 from django.contrib import messages
 from functools import lru_cache
-from datetime import timedelta
 from django.db import connection
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -19,19 +18,6 @@ def notification_has_read_at_column() -> bool:
     with connection.cursor() as cursor:
         columns = connection.introspection.get_table_description(cursor, Notification._meta.db_table)
     return any(column.name == "read_at" for column in columns)
-
-
-def purge_read_notifications_for_admin():
-    """Delete admin-visible notifications that have been read for over 24 hours."""
-    if not notification_has_read_at_column():
-        return
-
-    cutoff = timezone.now() - timedelta(days=1)
-    Notification.objects.filter(
-        recipient_type__in=["ADMIN", "SPECIFIC_USER"],
-        is_read=True,
-        read_at__lte=cutoff,
-    ).delete()
 
 
 def resolve_notification_target_url(notification):
@@ -67,8 +53,6 @@ def resolve_notification_target_url(notification):
 @admin_required
 def admin_notifications(request):
     """Admin portal: view admin notifications only."""
-    purge_read_notifications_for_admin()
-
     base_notifications = Notification.objects.filter(
         recipient_type__in=["ADMIN", "SPECIFIC_USER"]
     ).select_related("related_tenant__tenantprofile", "related_unit")
@@ -80,7 +64,7 @@ def admin_notifications(request):
     elif status_filter == "read":
         notifications = notifications.filter(is_read=True)
 
-    notifications = notifications.order_by("is_read", "-created_at")
+    notifications = notifications.order_by("-created_at")
     notification_list = list(notifications)
     for notification in notification_list:
         notification.target_url = resolve_notification_target_url(notification)

@@ -144,6 +144,8 @@
 
       <!-- CSV Export Button -->
       <a href="{% url 'admin_billing_export_csv' %}?month={{ month_filter }}&year={{ year_filter }}&status={{ status_filter }}"
+         data-skip-loader
+         onclick="var loader=document.querySelector('[data-ux-loader]'); if(loader){loader.classList.remove('is-visible'); loader.setAttribute('aria-hidden','true');}"
          class="w-full xl:w-auto inline-flex items-center justify-center gap-2 px-5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-sm font-extrabold transition-colors shrink-0"
          title="Export current filters to CSV">
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

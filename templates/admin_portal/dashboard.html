@@ -3,6 +3,15 @@
 {% block title %}Home | RealEstate360+{% endblock %}
 
 {% block content %}
+<style>
+  .dashboard-amount-full {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    line-height: 1.1;
+    word-break: break-word;
+  }
+</style>
 <div class="dashboard-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-8 pb-12 overflow-x-hidden w-full max-w-full">
   
   <!-- Top Title & Navigation Header -->
@@ -68,12 +77,12 @@
     <!-- Rent Collection Status -->
     <a href="{% url 'admin_billed_this_month' %}?month={{ current_month_str }}" class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-slate-700 flex flex-col justify-between hover:shadow-md hover:border-slate-400 transition-all group">
       <div>
-        <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Rent Collection</span>
-        <div class="flex items-baseline gap-2 mt-1">
-          <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight truncate" title="₱{{ rent_collected|floatformat:0|intcomma }}">
-            ₱{{ rent_collected|floatformat:0|intcomma }}
+        <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Collected This Month</span>
+        <div class="mt-1 space-y-1">
+          <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight dashboard-amount-full" title="₱{{ total_collected|floatformat:0|intcomma }}">
+            ₱{{ total_collected|floatformat:0|intcomma }}
           </div>
-          <span class="text-sm text-slate-500">/ ₱{{ expected_monthly_rent|floatformat:0|intcomma }}</span>
+          <div class="text-sm text-slate-500 font-medium">Rent Target: ₱{{ expected_monthly_rent|floatformat:0|intcomma }}</div>
         </div>
       </div>
       <div class="mt-3">
@@ -91,7 +100,7 @@
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-indigo-600 flex flex-col justify-between">
       <div>
         <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Total Collected</span>
-        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight truncate" title="₱{{ total_collected|floatformat:0|intcomma }}">
+        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight dashboard-amount-full" title="₱{{ total_collected|floatformat:0|intcomma }}">
           ₱{{ total_collected|floatformat:0|intcomma }}
         </div>
       </div>

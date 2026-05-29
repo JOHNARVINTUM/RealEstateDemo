@@ -23,10 +23,10 @@
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-800 font-bold text-sm border border-slate-200">
-            {{ payment.user.email|first|upper }}
+            {{ tenant_display_name|first|upper }}
           </div>
           <div>
-            <h2 class="font-bold text-slate-900">{{ payment.user.email }}</h2>
+            <h2 class="font-bold text-slate-900">{{ tenant_display_name }}</h2>
             <span class="text-xs text-slate-500">Tenant</span>
           </div>
         </div>
@@ -111,6 +111,29 @@
       </div>
       {% endif %}
     </div>
+
+    {% if payment.payment_type != "move_in" %}
+    <div class="px-6 pb-6">
+      <form method="post" class="mt-2 flex flex-col sm:flex-row sm:items-end gap-3">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="update_payment_type">
+        <div class="flex-1">
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Change Payment Type</label>
+          <select name="payment_type" class="w-full px-4 py-3 border border-slate-300 rounded-lg bg-white text-slate-900 font-medium">
+            {% for value, label in payment_type_choices %}
+              <option value="{{ value }}" {% if payment.payment_type == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="px-4 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold text-sm transition-colors">
+          Update Type
+        </button>
+      </form>
+      <p class="mt-2 text-xs text-slate-500">
+        This changes the record label only. It does not recalculate bill balances.
+      </p>
+    </div>
+    {% endif %}
   </div>
 
   <!-- Bills Breakdown -->

@@ -18,6 +18,14 @@ from .admin_portal_views import admin_required, admin_password_verified, render_
 logger = logging.getLogger(__name__)
 
 
+def _tenant_display_name(user):
+    if hasattr(user, "tenantprofile"):
+        full_name = getattr(user.tenantprofile, "full_name", "").strip()
+        if full_name:
+            return full_name
+    return user.email
+
+
 @admin_required
 def admin_approve_payment(request, payment_id: int):
     p = get_object_or_404(ManualPayment, pk=payment_id)
@@ -28,9 +36,7 @@ def admin_approve_payment(request, payment_id: int):
 
             try:
                 from rentals.services import send_email_via_resend
-                tenant_name = p.user.email
-                if hasattr(p.user, 'tenantprofile'):
-                    tenant_name = p.user.tenantprofile.full_name
+                tenant_name = _tenant_display_name(p.user)
                 payment_type_label = {'full': 'Full Payment', 'rent_only': 'Rent Only', 'water_only': 'Water Only'}.get(p.payment_type, 'Payment')
                 send_email_via_resend(
                     to_email=p.user.email,
@@ -207,6 +213,7 @@ def admin_payments(request):
     for p in page_payments:
         tenant_lease = latest_lease_by_user_id.get(p.user_id)
         p.unit_number = tenant_lease.unit.number if tenant_lease and tenant_lease.unit else None
+        p.tenant_display_name = _tenant_display_name(p.user)
         p.bill_type_label = p.get_payment_type_display() if hasattr(p, 'get_payment_type_display') else p.payment_type
         try:
             bid_list = payment_bill_ids.get(p.id, [])
@@ -223,10 +230,14 @@ def admin_payments(request):
                 if has_parking:
                     parts.append('Parking')
                 p.bill_components = ', '.join(parts) if parts else 'Rent'
+                months = sorted({bill.billing_month for bill in bills})
+                p.affected_months = ", ".join(month.strftime("%b %Y") for month in months) if months else "—"
             else:
                 p.bill_components = '—'
+                p.affected_months = '—'
         except Exception:
             p.bill_components = '—'
+            p.affected_months = '—'
 
     return render(request, "admin_portal/payments.html", {
         "page_obj": page_obj,
@@ -273,6 +284,34 @@ def admin_payment_detail(request, payment_id: int):
 
     payment = get_object_or_404(ManualPayment.objects.select_related("user"), pk=payment_id)
     is_settled_payment = payment.status == "APPROVED"
+    tenant_display_name = _tenant_display_name(payment.user)
+
+    payment_type_choices = [
+        ("rent_only", "Rent Only"),
+        ("water_only", "Water Only"),
+        ("full", "Full Bill"),
+    ]
+
+    if request.method == "POST" and request.POST.get("action") == "update_payment_type":
+        if payment.payment_type != "move_in":
+            new_payment_type = (request.POST.get("payment_type") or "").strip()
+            valid_types = {value for value, _ in payment_type_choices}
+            if new_payment_type in valid_types and new_payment_type != payment.payment_type:
+                payment.payment_type = new_payment_type
+                metadata = payment.metadata if isinstance(payment.metadata, dict) else {}
+                if metadata:
+                    metadata = dict(metadata)
+                    metadata["payment_type"] = new_payment_type
+                    payment.metadata = metadata
+                    payment.save(update_fields=["payment_type", "metadata"])
+                else:
+                    payment.save(update_fields=["payment_type"])
+                messages.success(request, f"Payment type updated to {payment.get_payment_type_display()}.")
+            else:
+                messages.info(request, "Payment type was not changed.")
+        else:
+            messages.error(request, "Move-in payments cannot be changed from this page.")
+        return redirect("admin_payment_detail", payment_id=payment.id)
 
     bill_ids = parse_bill_ids(payment.bill_ids)
     bills = []
@@ -341,8 +380,10 @@ def admin_payment_detail(request, payment_id: int):
 
     context = {
         "payment": payment,
+        "tenant_display_name": tenant_display_name,
         "payment_method_label": payment.get_payment_method_display() if hasattr(payment, "get_payment_method_display") else payment.payment_method,
         "paymongo_method_label": (payment.paid_via or "").replace("_", " ").title(),
+        "payment_type_choices": payment_type_choices,
         "bills": bills,
         "bill_count": len(bills),
         "total_rent": total_rent,

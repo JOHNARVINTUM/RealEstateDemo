@@ -117,7 +117,7 @@
             <th class="px-5 py-3.5 text-xs font-bold text-slate-700">Unit</th>
             <th class="px-5 py-3.5 text-xs font-bold text-slate-700">Method</th>
             <th class="px-5 py-3.5 text-xs font-bold text-slate-700 text-right">Amount</th>
-            <th class="px-5 py-3.5 text-xs font-bold text-slate-700">Bill Type</th>
+            <th class="px-5 py-3.5 text-xs font-bold text-slate-700">Date Affected</th>
             <th class="px-5 py-3.5 text-xs font-bold text-slate-700">Details</th>
             <th class="px-5 py-3.5 text-xs font-bold text-slate-700 text-center">Status</th>
             <th class="px-5 py-3.5 text-xs font-bold text-slate-700 text-right">Actions</th>
@@ -131,11 +131,11 @@
             <td class="px-5 py-4">
               <div class="flex items-center gap-2.5">
                 <div class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-800 font-bold text-xs shrink-0 border border-slate-200">
-                  {{ p.user.email|first|upper }}
+                  {{ p.tenant_display_name|default:p.user.email|first|upper }}
                 </div>
                 <div class="min-w-0">
                   <div class="font-bold text-slate-900 text-sm truncate max-w-[180px]">
-                    {{ p.user.email }}
+                    {{ p.tenant_display_name|default:p.user.email }}
                   </div>
                   <div class="text-xs text-slate-600 font-medium">Tenant</div>
                 </div>
@@ -178,10 +178,10 @@
               </span>
             </td>
 
-            <!-- Bill Type Column -->
+            <!-- Date Affected Column -->
             <td class="px-5 py-4">
               <span class="text-xs font-bold text-slate-700">{{ p.bill_components }}</span>
-              <span class="text-[10px] text-slate-500 block mt-0.5">{{ p.bill_type_label }}</span>
+              <span class="text-[10px] text-slate-500 block mt-0.5">{{ p.affected_months }}</span>
             </td>
 
             <!-- Identifier / Schedule Mapping Column -->
@@ -197,11 +197,19 @@
                 {% endif %}
               {% else %}
                 <div class="space-y-0.5">
-                  <strong class="text-xs font-bold text-slate-800 block">
-                    {{ p.preferred_date|date:"M d, Y"|default:"No Date" }}
+                  <strong class="text-xs font-mono font-bold text-slate-800 block">
+                    {{ p.reference_code|default:"—" }}
                   </strong>
-                  <div class="text-xs text-slate-600 font-medium">
-                    {{ p.preferred_time|time:"g:i A"|default:"No Time" }}
+                  <div class="text-[10px] text-slate-500 font-medium">
+                    Generated cash reference
+                    {% if p.preferred_date %}
+                      <span class="mx-1 text-slate-300">|</span>
+                      {{ p.preferred_date|date:"M d, Y" }}
+                    {% endif %}
+                    {% if p.preferred_time %}
+                      <span class="mx-1 text-slate-300">|</span>
+                      {{ p.preferred_time|time:"g:i A" }}
+                    {% endif %}
                     {% if p.tenant_note %}
                       <span class="mx-1 text-slate-300">|</span>
                       <span class="italic text-slate-700" title="{{ p.tenant_note }}">"{{ p.tenant_note|truncatechars:28 }}"</span>

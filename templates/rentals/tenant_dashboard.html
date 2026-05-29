@@ -7,19 +7,19 @@
 
   <div id="tenantDashboardSkeleton" class="space-y-8">
     <div class="tenant-skeleton p-10 sm:p-12">
-      <div class="flex flex-col lg:flex-row justify-between gap-8">
+      <div class="flex flex-col min-[800px]:flex-row justify-between gap-8">
         <div class="flex-1 space-y-4">
           <div class="tenant-skeleton-bar h-4 w-36"></div>
           <div class="tenant-skeleton-bar h-12 w-72 max-w-full"></div>
           <div class="tenant-skeleton-bar h-6 w-56 max-w-full"></div>
         </div>
-        <div class="w-full lg:w-64 space-y-3">
+        <div class="w-full min-[800px]:w-64 space-y-3">
           <div class="tenant-skeleton-bar h-4 w-24 ml-auto"></div>
           <div class="tenant-skeleton-bar h-10 w-48 ml-auto max-w-full"></div>
         </div>
       </div>
     </div>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 min-[800px]:grid-cols-4 gap-6">
       {% for _ in "1234" %}
       <div class="tenant-skeleton p-6 space-y-4">
         <div class="tenant-skeleton-bar h-4 w-24"></div>
@@ -28,7 +28,7 @@
       </div>
       {% endfor %}
     </div>
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+    <div class="grid grid-cols-1 min-[800px]:grid-cols-2 gap-10">
       {% for _ in "12" %}
       <div class="tenant-skeleton p-8 space-y-5">
         <div class="tenant-skeleton-bar h-6 w-40"></div>
@@ -46,7 +46,7 @@
   <div data-page-content class="tenant-page-content-hidden transition-opacity duration-300">
 
   <!-- Page Header -->
-  <header class="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6 border-b-2 border-slate-100 pb-8">
+  <header class="mb-10 flex flex-col min-[800px]:flex-row min-[800px]:items-center justify-between gap-6 border-b-2 border-slate-100 pb-8">
     <div>
       <div class="flex items-center gap-3 mb-2">
         <span class="inline-block w-4 h-4 rounded-full {% if lease %}bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]{% else %}bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.4)]{% endif %}"></span>
@@ -76,7 +76,7 @@
       </h1>
       <p class="text-lg text-slate-500 mt-2 font-medium">Email: {{ request.user.email }}</p>
     </div>
-    <div class="shrink-0 bg-white border-2 border-slate-100 rounded-2xl px-6 py-4 text-left md:text-right shadow-sm">
+    <div class="shrink-0 bg-white border-2 border-slate-100 rounded-2xl px-6 py-4 text-left min-[800px]:text-right shadow-sm">
       <span class="text-xs font-black text-slate-400 uppercase block tracking-widest mb-1">Today</span>
       <span class="text-xl font-black text-slate-800">{% now "F d, Y" %}</span>
     </div>
@@ -86,7 +86,7 @@
 
   {% if show_paid_hero %}
   <section class="tenant-card border-l-[12px] border-l-emerald-600 mb-10 p-10 sm:p-12">
-    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
+    <div class="flex flex-col min-[800px]:flex-row justify-between items-start min-[800px]:items-center gap-8">
       <div class="flex-1">
         <div class="flex items-center gap-3 mb-4">
           <span class="text-sm font-black text-emerald-700 uppercase tracking-widest">Billing Status</span>
@@ -100,10 +100,10 @@
         </p>
       </div>
 
-      <div class="w-full lg:w-auto bg-emerald-50 border-2 border-emerald-100 rounded-3xl p-8 flex flex-col items-center lg:items-end justify-center shrink-0">
+      <div class="w-full min-[800px]:w-auto bg-emerald-50 border-2 border-emerald-100 rounded-3xl p-8 flex flex-col items-center min-[800px]:items-end justify-center shrink-0">
         <span class="text-xs font-black text-emerald-600 uppercase tracking-widest mb-2">Status</span>
         <span class="text-2xl sm:text-3xl font-black text-emerald-700 mb-2">Cleared</span>
-        <span class="text-sm font-bold text-slate-500 text-center lg:text-right">
+        <span class="text-sm font-bold text-slate-500 text-center min-[800px]:text-right">
           Your current billing cycle has been fully settled.
         </span>
       </div>
@@ -114,7 +114,7 @@
   <!-- Payment Status Card -->
   {% if current_balance %}
   <section class="tenant-card border-l-[12px] border-l-rose-600 mb-10 p-8">
-    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
+    <div class="flex flex-col min-[800px]:flex-row justify-between items-start min-[800px]:items-center gap-8">
       <div class="flex-1">
         <div class="flex items-center gap-3 mb-3">
           <span class="text-sm font-black text-slate-400 uppercase tracking-widest">Amount to Pay</span>
@@ -161,21 +161,21 @@
         {% endif %}
       </div>
       
-      <div class="w-full lg:w-auto bg-slate-50 border-2 border-slate-100 rounded-3xl p-8 flex flex-col items-center lg:items-end justify-center shrink-0">
+      <div class="w-full min-[800px]:w-auto bg-slate-50 border-2 border-slate-100 rounded-3xl p-8 flex flex-col items-center min-[800px]:items-end justify-center shrink-0">
         <span class="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Pay By</span>
         <span class="text-2xl sm:text-3xl font-black text-slate-900 mb-6">
           {% if current_balance %}{{ current_balance.due_date|date:"F d, Y" }}{% else %}N/A{% endif %}
         </span>
         {% if has_pending_payment %}
-          <div class="w-full lg:w-auto py-4 px-6 bg-emerald-100 border-2 border-emerald-200 text-emerald-800 font-black text-lg rounded-2xl text-center shadow-sm cursor-default">
+          <div class="w-full min-[800px]:w-auto py-4 px-6 bg-emerald-100 border-2 border-emerald-200 text-emerald-800 font-black text-lg rounded-2xl text-center shadow-sm cursor-default">
             Waiting for approval
           </div>
         {% elif current_balance and current_balance.total_balance > 0 %}
-          <a href="{% url 'tenant_pay_advance' %}" class="w-full lg:w-48 py-4 bg-slate-900 hover:bg-slate-800 text-white font-black text-lg rounded-2xl text-center transition-all shadow-lg active:scale-95">
+          <a href="{% url 'tenant_pay_advance' %}" class="w-full min-[800px]:w-48 py-4 bg-slate-900 hover:bg-slate-800 text-white font-black text-lg rounded-2xl text-center transition-all shadow-lg active:scale-95">
             Pay Now
           </a>
         {% else %}
-          <div class="w-full lg:w-auto py-4 px-6 bg-emerald-100 border-2 border-emerald-200 text-emerald-800 font-black text-lg rounded-2xl text-center shadow-sm cursor-default">
+          <div class="w-full min-[800px]:w-auto py-4 px-6 bg-emerald-100 border-2 border-emerald-200 text-emerald-800 font-black text-lg rounded-2xl text-center shadow-sm cursor-default">
             Already Paid
           </div>
         {% endif %}
@@ -186,7 +186,7 @@
 
   {% if next_bill_preview %}
   <section class="tenant-card border-l-[12px] border-l-indigo-600 mb-10 p-8">
-    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
+    <div class="flex flex-col min-[800px]:flex-row justify-between items-start min-[800px]:items-center gap-8">
       <div class="flex-1">
         <div class="flex items-center gap-3 mb-3">
           <span class="text-sm font-black text-slate-400 uppercase tracking-widest">Next Month Bill</span>
@@ -207,12 +207,12 @@
         </div>
       </div>
       
-      <div class="w-full lg:w-auto bg-indigo-50 border-2 border-indigo-100 rounded-3xl p-8 flex flex-col items-center lg:items-end justify-center shrink-0">
+      <div class="w-full min-[800px]:w-auto bg-indigo-50 border-2 border-indigo-100 rounded-3xl p-8 flex flex-col items-center min-[800px]:items-end justify-center shrink-0">
         <span class="text-xs font-black text-indigo-500 uppercase tracking-widest mb-2">Due Date</span>
         <span class="text-2xl sm:text-3xl font-black text-slate-900 mb-2">
           {{ next_bill_preview.due_date|date:"F d, Y" }}
         </span>
-        <span class="text-sm font-bold text-slate-500 text-center lg:text-right">
+        <span class="text-sm font-bold text-slate-500 text-center min-[800px]:text-right">
           This is your upcoming monthly bill.
         </span>
       </div>
@@ -245,7 +245,7 @@
   {% endif %}
 
   <!-- Quick Stats Grid -->
-  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+  <section class="grid grid-cols-1 sm:grid-cols-2 min-[800px]:grid-cols-4 gap-6 mb-12">
     <div class="tenant-card p-6 flex flex-col justify-between group hover:border-slate-400 transition-colors">
       <span class="text-xs font-black text-slate-400 uppercase tracking-widest block mb-3">Move-In Date</span>
       <span class="text-2xl font-black text-slate-900">{% if lease %}{{ lease.start_date|date:"M d, Y" }}{% else %}-{% endif %}</span>
@@ -268,14 +268,14 @@
   </section>
 
   <!-- Feed Workspace Grid -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+  <div class="grid grid-cols-1 min-[800px]:grid-cols-2 gap-10">
     
     <!-- Left Column: My Payments -->
     <section class="tenant-card flex flex-col h-full p-8">
       <div class="flex flex-row justify-between items-center gap-4 pb-6 border-b-2 border-slate-50 mb-8 shrink-0">
         <div class="min-w-0">
-          <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight truncate">My Past Payments</h2>
-          <p class="text-xs sm:text-base text-slate-500 font-bold mt-1 truncate">Your recent transactions</p>
+          <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">My Past Payments</h2>
+          <p class="text-xs sm:text-base text-slate-500 font-bold mt-1">Your recent transactions</p>
         </div>
         {% if has_pending_payment %}
           <span class="shrink-0 whitespace-nowrap px-4 py-2 sm:px-6 bg-emerald-50 text-emerald-700 text-xs sm:text-sm font-black rounded-xl uppercase tracking-widest border border-emerald-100 cursor-default">Waiting for approval</span>
@@ -290,11 +290,11 @@
             
             <div class="flex flex-row justify-between items-start gap-4">
               <div class="flex flex-col min-w-0">
-                <span class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight truncate">₱{{ payment.amount|floatformat:2|intcomma }}</span>
+                <span class="text-2xl sm:text-3xl min-[800px]:text-2xl xl:text-3xl font-black text-slate-900 tracking-tight whitespace-nowrap">₱{{ payment.amount|floatformat:2|intcomma }}</span>
                 {% if payment.payment_type == "rent_only" %}
-                  <span class="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1 truncate">Rent Only</span>
+                  <span class="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1 break-words">Rent Only</span>
                 {% elif payment.payment_type == "water_only" %}
-                  <span class="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1 truncate">Water Only</span>
+                  <span class="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1 break-words">Water Only</span>
                 {% endif %}
               </div>
               <span class="shrink-0 px-3 py-1.5 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-widest text-center {% if payment.status == 'APPROVED' %}bg-emerald-100 text-emerald-700{% elif payment.status == 'PENDING' %}bg-amber-100 text-amber-700{% else %}bg-rose-100 text-rose-700{% endif %}">
@@ -306,7 +306,7 @@
               <div class="flex flex-row items-center gap-2 max-w-full">
                  <span class="text-slate-700 shrink-0">{{ payment.payment_method }}</span>
                  <span class="text-slate-300 shrink-0">&bull;</span>
-                 <span class="truncate max-w-full break-all">{{ payment.reference_code }}</span>
+                 <span class="max-w-full break-all">{{ payment.reference_code }}</span>
               </div>
               <div class="flex flex-row items-center gap-2">
                  <span class="text-slate-500">{{ payment.created_at|date:"M d, Y" }}</span>

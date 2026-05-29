@@ -5,7 +5,7 @@
 {% block tenant_content %}
 
   <!-- Page Header -->
-  <div class="mb-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6 border-b-2 border-slate-100 pb-8">
+  <div class="mb-10 flex flex-col min-[800px]:flex-row min-[800px]:items-center min-[800px]:justify-between gap-6 border-b-2 border-slate-100 pb-8">
     <div>
       <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">Notifications</h1>
       <p class="text-lg text-slate-500 mt-2 font-medium">
@@ -16,7 +16,7 @@
         {% endif %}
       </p>
     </div>
-    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 self-end md:self-auto">
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 self-end min-[800px]:self-auto">
       {% if unread_count > 0 %}
         <form method="post" action="{% url 'mark_all_notifications_read' %}" data-loading-form>
           {% csrf_token %}
@@ -25,7 +25,7 @@
           </button>
         </form>
       {% endif %}
-      <div class="bg-white border-2 border-slate-100 px-6 py-4 rounded-2xl shadow-sm w-fit text-right md:text-left">
+      <div class="bg-white border-2 border-slate-100 px-6 py-4 rounded-2xl shadow-sm w-fit text-right min-[800px]:text-left">
         <span class="text-xs font-black text-slate-400 block uppercase tracking-widest mb-1">Total</span>
         <span class="text-xl font-black text-slate-800">{{ notifications|length }} Notification{{ notifications|pluralize }}</span>
       </div>
@@ -52,7 +52,7 @@
         <div class="space-y-4">
           {% for notification in notifications %}
             <div class="{% if not notification.is_read %}bg-blue-50/50 border-blue-200{% else %}bg-slate-50 border-slate-100{% endif %} border-2 rounded-2xl p-6 transition-all hover:shadow-sm group" data-notification-id="{{ notification.id }}">
-              <div class="flex flex-col md:flex-row justify-between gap-4">
+              <div class="flex flex-col min-[800px]:flex-row justify-between gap-4">
                 <div class="flex-1">
                   <!-- Header: Type + Date -->
                   <div class="flex flex-row items-center justify-between gap-2 mb-3">

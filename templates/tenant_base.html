@@ -206,7 +206,7 @@
   }
 
   /* Tenant Sidebar Collapse Behavior - Desktop Only */
-  @media (min-width: 768px) {
+  @media (min-width: 800px) {
     body.tenant-collapsed .tenant-sidebar {
       width: 100px !important;
     }
@@ -263,10 +263,10 @@
 {% endblock %}
 
 {% block content %}
-<div class="min-h-screen flex flex-col md:flex-row tenant-workspace-bg">
+<div class="min-h-screen flex flex-col min-[800px]:flex-row tenant-workspace-bg">
 
   <!-- Mobile Header -->
-  <header class="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-slate-200 sticky top-0 z-50">
+  <header class="min-[800px]:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-slate-200 sticky top-0 z-50">
     <div class="flex items-center gap-3">
       <div class="w-8 h-8 bg-white rounded-lg flex justify-center items-center shadow-sm p-1">
         <img src="{% static 'img/accounts/RealEstate360+ Logo2 jpg.jpg' %}" alt="Logo" class="w-full h-full object-contain">
@@ -283,11 +283,11 @@
   </header>
 
   <!-- Mobile Sidebar Backdrop -->
-  <div id="mobileBackdrop" class="fixed inset-0 bg-slate-900/50 z-[990] hidden transition-opacity opacity-0 duration-300 md:hidden"></div>
+  <div id="mobileBackdrop" class="fixed inset-0 bg-slate-900/50 z-[990] hidden transition-opacity opacity-0 duration-300 min-[800px]:hidden"></div>
 
   {% include "includes/tenant_sidebar.html" %}
 
-  <main class="flex-1 md:ml-72 px-4 py-6 md:px-8 md:py-10 overflow-y-auto transition-all duration-300">
+  <main class="flex-1 min-[800px]:ml-72 px-4 py-6 min-[800px]:px-8 min-[800px]:py-10 overflow-y-auto transition-all duration-300">
     <div class="max-w-7xl mx-auto animate-fade-in">
       {% include "partials/toasts.html" %}
       

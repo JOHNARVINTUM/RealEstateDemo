@@ -22,10 +22,10 @@
 
   <!-- Main Payment Setup -->
   <div class="tenant-card mb-10 p-2">
-    <div class="flex flex-col lg:flex-row lg:items-stretch lg:justify-between gap-2">
+    <div class="flex flex-col min-[800px]:flex-row min-[800px]:items-stretch min-[800px]:justify-between gap-2">
 
       <!-- Settings -->
-      <form method="get" class="w-full lg:flex-1 p-8">
+      <form method="get" class="w-full min-[800px]:flex-1 p-8">
         <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-4">Select Number of Months</label>
         <div class="relative">
           <select name="months_to_pay"
@@ -64,7 +64,7 @@
       </form>
 
       <!-- Summary & Checkout -->
-      <div class="w-full lg:max-w-md bg-slate-900 rounded-[2rem] p-10 flex flex-col justify-between shadow-2xl">
+      <div class="w-full min-[800px]:max-w-md bg-slate-900 rounded-[2rem] p-10 flex flex-col justify-between shadow-2xl">
         <div>
           <!-- Type -->
           <div class="mb-10">
@@ -220,7 +220,7 @@
         <h2 class="text-2xl font-black text-slate-900 tracking-tight">Detailed Breakdown</h2>
         <p class="text-lg text-slate-500 font-bold mt-1">See exactly what this payment covers.</p>
       </div>
-      <span class="px-4 py-2 bg-slate-200/50 text-slate-600 text-sm font-black rounded-xl uppercase tracking-widest">{{ preview_rows|length }} Months</span>
+      <span class="px-4 py-2 bg-slate-200/50 text-slate-600 text-sm font-black rounded-xl uppercase tracking-widest">{{ preview_rows|length }} Month{{ preview_rows|length|pluralize }}</span>
     </div>
 
     <div class="overflow-x-auto p-4">

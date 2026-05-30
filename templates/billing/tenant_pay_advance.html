@@ -75,9 +75,11 @@
                   Rent Only
                 </div>
               {% else %}
-                <div class="px-6 py-4 rounded-2xl font-black text-lg text-center border-2 bg-white text-slate-900 border-white shadow-lg">
+                <a href="?months_to_pay={{ months_to_pay }}&payment_type=rent_only"
+                   class="px-6 py-4 rounded-2xl font-black text-lg text-center transition-all border-2
+                          {% if payment_type == 'rent_only' %}bg-white text-slate-900 border-white shadow-lg{% else %}bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500{% endif %}">
                   Rent Only
-                </div>
+                </a>
               {% endif %}
               
               {% if water_available %}
@@ -95,10 +97,30 @@
                   </div>
                 </div>
               {% endif %}
+
+              {% if can_pay_full_bill %}
+                <a href="?months_to_pay={{ months_to_pay }}&payment_type=full"
+                   class="px-6 py-4 rounded-2xl font-black text-lg text-center transition-all border-2
+                          {% if payment_type == 'full' %}bg-white text-slate-900 border-white shadow-lg{% else %}bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500{% endif %}">
+                  Full Bill
+                </a>
+              {% else %}
+                <div class="px-6 py-4 rounded-2xl font-black text-lg text-center border-2 bg-slate-900/50 text-slate-600 border-slate-800 cursor-not-allowed relative group" title="Full bill is available only when rent and water are both posted.">
+                  Full Bill
+                  <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                    Rent and water must both be posted
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                  </div>
+                </div>
+              {% endif %}
             </div>
             {% if water_only_locked %}
               <p class="mt-4 text-sm font-bold text-amber-300">
                 Rent and parking are already settled for the oldest unpaid bill. Only water payment is available right now.
+              {% elif full_bill_available %}
+                <p class="mt-4 text-sm font-bold text-slate-400">
+                  Full bill is available because rent and water are both posted.
+                </p>
               {% else %}
                 <p class="mt-4 text-sm font-bold text-slate-400">
                   Advance payment is rent only. Water is handled separately when posted.

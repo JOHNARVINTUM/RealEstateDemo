@@ -1,6 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from accounts.models import User
@@ -74,7 +75,7 @@ class BillingWorkflowTests(TestCase):
         self.assertEqual(bills[0].due_date, date(2026, 1, 31))
         self.assertEqual(bills[1].water_amount, Decimal("50.00"))
 
-    def test_approve_manual_payment_is_idempotent_and_scoped_to_payment_owner(self):
+    def test_approve_manual_payment_rejects_bills_outside_payment_owner(self):
         tenant_bill = MonthlyBill.objects.create(
             lease=self.lease,
             billing_month=date(2026, 2, 1),
@@ -97,21 +98,49 @@ class BillingWorkflowTests(TestCase):
             user=self.tenant,
             reference_code="REF-123",
             bill_ids=f"{tenant_bill.id},{tenant_bill.id},{other_bill.id},invalid",
+            amount=Decimal("10000.00"),
+        )
+
+        with self.assertRaises(ValidationError):
+            approve_manual_payment(payment)
+
+        tenant_bill.refresh_from_db()
+        other_bill.refresh_from_db()
+        payment.refresh_from_db()
+
+        self.assertEqual(payment.status, "PENDING")
+        self.assertEqual(tenant_bill.status, "UNPAID")
+        self.assertEqual(other_bill.status, "UNPAID")
+        self.assertEqual(parse_bill_ids(payment.bill_ids), [tenant_bill.id, other_bill.id])
+
+    def test_approve_manual_payment_is_idempotent_for_payment_owner_bill(self):
+        tenant_bill = MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=date(2026, 2, 1),
+            due_date=date(2026, 2, 28),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("0.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("10000.00"),
+        )
+        payment = ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="REF-123",
+            bill_ids=f"{tenant_bill.id},{tenant_bill.id},invalid",
+            amount=Decimal("10000.00"),
         )
 
         approve_manual_payment(payment)
         approve_manual_payment(payment)
 
         tenant_bill.refresh_from_db()
-        other_bill.refresh_from_db()
         payment.refresh_from_db()
 
         self.assertEqual(payment.status, "APPROVED")
         self.assertEqual(tenant_bill.status, "PAID")
         self.assertEqual(tenant_bill.payment_reference, "REF-123")
         self.assertIsNotNone(tenant_bill.paid_at)
-        self.assertEqual(other_bill.status, "UNPAID")
-        self.assertEqual(parse_bill_ids(payment.bill_ids), [tenant_bill.id, other_bill.id])
+        self.assertEqual(parse_bill_ids(payment.bill_ids), [tenant_bill.id])
 
     def test_deleting_bill_removes_payment_history_reference(self):
         bill = MonthlyBill.objects.create(
@@ -213,8 +242,8 @@ class BillingWorkflowTests(TestCase):
             total_due=Decimal("11250.00"),
             status="UNPAID",
         )
-        self.lease.parking_fee = Decimal("350.00")
-        self.lease.save(update_fields=["parking_fee"])
+        self.lease.motorcycle_slots = 1
+        self.lease.save(update_fields=["motorcycle_slots"])
 
         from billing.services import get_or_update_monthly_bill
 
@@ -284,14 +313,16 @@ class LeaseActivationTimezoneTests(TestCase):
             tenant=self.tenant, unit=self.unit,
             monthly_rent=Decimal("10000.00"), due_day=5, start_date=today_local,
         )
-        self.assertTrue(lease.is_active)
+        self.assertEqual(lease.status, Lease.STATUS_PENDING_PAYMENT)
+        self.assertFalse(lease.is_active)
 
     def test_lease_active_when_start_date_is_in_past(self):
         lease = Lease.objects.create(
             tenant=self.tenant, unit=self.unit,
             monthly_rent=Decimal("10000.00"), due_day=5, start_date=date(2025, 1, 1),
         )
-        self.assertTrue(lease.is_active)
+        self.assertEqual(lease.status, Lease.STATUS_PENDING_PAYMENT)
+        self.assertFalse(lease.is_active)
 
     def test_lease_inactive_when_start_date_is_future(self):
         from django.utils import timezone
@@ -318,7 +349,8 @@ class LeaseActivationTimezoneTests(TestCase):
                 monthly_rent=Decimal("10000.00"), due_day=5, start_date=date(2026, 5, 25),
             )
             self.assertEqual(local_date, date(2026, 5, 25))
-            self.assertTrue(lease.is_active)
+            self.assertEqual(lease.status, Lease.STATUS_PENDING_PAYMENT)
+            self.assertFalse(lease.is_active)
 
 
 class MoveInFirstMonthPaidTests(TestCase):

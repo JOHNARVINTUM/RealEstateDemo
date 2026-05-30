@@ -208,12 +208,16 @@
       </div>
       
       <div class="w-full min-[800px]:w-auto bg-indigo-50 border-2 border-indigo-100 rounded-3xl p-8 flex flex-col items-center min-[800px]:items-end justify-center shrink-0">
-        <span class="text-xs font-black text-indigo-500 uppercase tracking-widest mb-2">Due Date</span>
+        <span class="text-xs font-black text-indigo-500 uppercase tracking-widest mb-2">{{ next_due_label|default:"Due Date" }}</span>
         <span class="text-2xl sm:text-3xl font-black text-slate-900 mb-2">
           {{ next_bill_preview.due_date|date:"F d, Y" }}
         </span>
         <span class="text-sm font-bold text-slate-500 text-center min-[800px]:text-right">
-          This is your upcoming monthly bill.
+          {% if next_due_in_days and next_due_in_days > 0 %}
+            Your upcoming monthly bill is due soon.
+          {% else %}
+            This is your upcoming monthly bill.
+          {% endif %}
         </span>
       </div>
     </div>

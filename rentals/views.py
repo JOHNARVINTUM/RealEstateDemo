@@ -164,8 +164,7 @@ def _should_show_due_card(actual_balance, today, today_start):
     if not actual_balance:
         return False
 
-    days_until_due = (actual_balance.due_date - today).days
-    return actual_balance.billing_month <= today_start or days_until_due <= 7
+    return actual_balance.billing_month <= today_start
 
 
 def _next_bill_after_current(lease, all_bills, current_balance, actual_balance_index):
@@ -223,6 +222,18 @@ def _dashboard_billing_context(user, lease, today):
         context["next_bill_preview"] = next_bill
         context["next_billing_month"] = next_bill.billing_month
         context["next_due_date"] = next_bill.due_date
+        next_due_in_days = (next_bill.due_date - today).days if next_bill.due_date else None
+        context["next_due_in_days"] = next_due_in_days
+        if next_due_in_days is None:
+            context["next_due_label"] = "Due Date"
+        elif next_due_in_days > 1:
+            context["next_due_label"] = f"Due in {next_due_in_days} days"
+        elif next_due_in_days == 1:
+            context["next_due_label"] = "Due in 1 day"
+        elif next_due_in_days == 0:
+            context["next_due_label"] = "Due today"
+        else:
+            context["next_due_label"] = "Due Date"
 
     return context
 
@@ -437,12 +448,21 @@ def _water_only_locked(existing_bills):
     )
 
 
-def _selected_payment_type(request, water_only_locked):
+def _full_bill_available(all_bills):
+    return any(
+        (bill.rent_balance + bill.parking_balance) > 0 and bill.water_balance > 0
+        for bill in all_bills
+    )
+
+
+def _selected_payment_type(request, water_only_locked, full_bill_available):
     requested_payment_type = request.GET.get("payment_type", "").strip()
     if water_only_locked:
         return "water_only"
     if requested_payment_type == "water_only":
         return "water_only"
+    if requested_payment_type == "full" and full_bill_available:
+        return "full"
     return "rent_only"
 
 
@@ -562,13 +582,15 @@ def _payment_preview_context(request, lease, months_to_pay):
 
     existing_bills = list(MonthlyBill.objects.filter(lease=lease).order_by("billing_month"))
     water_only_locked = _water_only_locked(existing_bills)
-    payment_type = _selected_payment_type(request, water_only_locked)
 
     today = date.today()
     today_start = month_start(today)
     ensure_bills_up_to(lease, add_months(today_start, months_to_pay + 1))
 
     all_bills = list(MonthlyBill.objects.filter(lease=lease).order_by("billing_month"))
+    full_bill_available = _full_bill_available(all_bills)
+    can_pay_full_bill = full_bill_available and not water_only_locked
+    payment_type = _selected_payment_type(request, water_only_locked, full_bill_available)
     bills_to_process = _bills_for_payment_type(all_bills, payment_type, months_to_pay, today_start)
     preview_rows = _payment_preview_rows(lease, bills_to_process, payment_type)
     totals = _payment_totals(preview_rows, payment_type)
@@ -588,6 +610,8 @@ def _payment_preview_context(request, lease, months_to_pay):
         "months_to_pay": months_to_pay,
         "payment_type": payment_type,
         "water_only_locked": water_only_locked,
+        "full_bill_available": full_bill_available,
+        "can_pay_full_bill": can_pay_full_bill,
         "has_pending": unpaid_count > 0,
         "unpaid_count": unpaid_count,
         "water_available": water_available,

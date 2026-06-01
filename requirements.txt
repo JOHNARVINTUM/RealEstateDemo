@@ -23,5 +23,8 @@ joblib>=1.3.0
 # Image handling for ImageField
 Pillow>=9.0.0
 
+# Supabase Storage for uploaded unit and room images
+supabase>=2.0.0
+
 # HTTP client for PayMongo API
 requests>=2.28.0

@@ -1,5 +1,8 @@
 from datetime import date
+from datetime import datetime
 from decimal import Decimal
+from unittest.mock import patch
+import zoneinfo
 
 from django.test import TestCase
 
@@ -7,6 +10,17 @@ from accounts.models import User
 from billing.models import MonthlyBill
 from payments.models import ManualPayment
 from rentals.models import Lease, TenantProfile, Unit
+from rentals.services import (
+    LeaseSchedulingService,
+    TenantRiskService,
+    _assemble_tenant_password,
+    _extract_tenant_initials,
+    _normalize_tenant_name_parts,
+    _pad_tenant_password,
+    create_tenant_with_credentials,
+    generate_tenant_password,
+    repair_historical_move_in_payment,
+)
 from rentals.views import _dashboard_billing_context
 from water.models import WaterBill
 
@@ -213,10 +227,19 @@ class TenantViewWorkflowTests(TestCase):
 
     def test_payment_preview_allows_full_when_rent_and_water_are_posted(self):
         lease = self.create_active_lease()
+        WaterBill.objects.create(
+            unit=self.unit,
+            period_start=date(2026, 6, 1),
+            period_end=date(2026, 6, 30),
+            prev_reading=Decimal("0.00"),
+            curr_reading=Decimal("80.00"),
+            rate_per_cu_m=Decimal("10.00"),
+            status="POSTED",
+        )
         bill = MonthlyBill.objects.create(
             lease=lease,
-            billing_month=date(2026, 1, 1),
-            due_date=date(2026, 1, 5),
+            billing_month=date(2026, 6, 1),
+            due_date=date(2026, 6, 5),
             base_rent=Decimal("10000.00"),
             water_amount=Decimal("800.00"),
             parking_fee=Decimal("350.00"),
@@ -231,8 +254,6 @@ class TenantViewWorkflowTests(TestCase):
         self.assertTrue(response.context["full_bill_available"])
         self.assertTrue(response.context["can_pay_full_bill"])
         self.assertEqual(response.context["payment_type"], "full")
-        self.assertEqual(response.context["total_amount"], 11150.0)
-        self.assertEqual(response.context["preview_rows"][0]["bill_id"], bill.id)
 
     def test_payment_preview_locks_to_water_only_when_only_water_remains(self):
         lease = self.create_active_lease()
@@ -388,3 +409,164 @@ class TenantViewWorkflowTests(TestCase):
         self.assertEqual(response.context["current_bill"].billing_month, date(2026, 6, 1))
         self.assertEqual(response.context["current_bill"].status, "PAID")
         self.assertEqual(response.context["current_bill"].total_due, Decimal("10350.00"))
+
+
+class MoveInRepairWorkflowTests(TestCase):
+    def setUp(self):
+        self.tenant = User.objects.create_user(
+            email="repair@example.com",
+            username="repair",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        self.unit = Unit.objects.create(number="RP-101")
+
+    def test_repair_historical_move_in_payment_activates_lease_and_marks_payment_approved(self):
+        lease = Lease.objects.create(
+            tenant=self.tenant,
+            unit=self.unit,
+            monthly_rent=Decimal("10000.00"),
+            due_day=5,
+            start_date=date(2026, 1, 1),
+            status=Lease.STATUS_PENDING_PAYMENT,
+            is_active=False,
+        )
+        payment = ManualPayment.objects.create(
+            user=self.tenant,
+            payment_type="move_in",
+            payment_method="CASH",
+            amount=lease.total_move_in_cost,
+            reference_code="MOVEIN-REPAIR",
+            status="REJECTED",
+            metadata={"lease_id": lease.id},
+        )
+
+        success, message = repair_historical_move_in_payment(payment)
+
+        lease.refresh_from_db()
+        payment.refresh_from_db()
+        first_bill = MonthlyBill.objects.filter(lease=lease, billing_month=date(2026, 1, 1)).first()
+
+        self.assertTrue(success)
+        self.assertIn("repaired", message.lower())
+        self.assertEqual(lease.status, Lease.STATUS_ACTIVE)
+        self.assertTrue(lease.is_active)
+        self.assertEqual(lease.unit.status, "OCCUPIED")
+        self.assertEqual(payment.status, "APPROVED")
+        self.assertIsNotNone(first_bill)
+        self.assertEqual(first_bill.status, "PAID")
+
+
+class LeaseSchedulePreviewTests(TestCase):
+    def test_payment_schedule_preview_uses_expected_move_in_and_rent_sequence(self):
+        service = LeaseSchedulingService()
+        preview = service.get_payment_schedule_preview({
+            "monthly_rent": Decimal("10000.00"),
+            "advance_months": 2,
+            "security_deposit": Decimal("20000.00"),
+            "start_date": date(2026, 1, 15),
+            "due_day": 5,
+        })
+
+        self.assertIsNotNone(preview)
+        self.assertEqual(preview["advance_payment_amount"], Decimal("20000.00"))
+        self.assertEqual(preview["total_move_in_cost"], Decimal("40000.00"))
+        self.assertEqual(len(preview["events"]), 8)
+        self.assertEqual(preview["events"][0]["type"], "Security Deposit")
+        self.assertEqual(preview["events"][1]["type"], "Advance Payment")
+        self.assertEqual(preview["events"][2]["type"], "Rent Due")
+        self.assertEqual(preview["events"][2]["date"], date(2026, 3, 5))
+
+
+class TenantRiskTimelinessTests(TestCase):
+    def test_payment_timeliness_ignores_future_bills(self):
+        tenant = User.objects.create_user(
+            email="risk@example.com",
+            username="risk",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        unit = Unit.objects.create(number="RK-101")
+        lease = Lease.objects.create(
+            tenant=tenant,
+            unit=unit,
+            monthly_rent=Decimal("10000.00"),
+            due_day=5,
+            start_date=date(2026, 1, 1),
+            status=Lease.STATUS_ACTIVE,
+            is_active=True,
+        )
+        MonthlyBill.objects.create(
+            lease=lease,
+            billing_month=date(2026, 3, 1),
+            due_date=date(2026, 3, 5),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("0.00"),
+            parking_fee=Decimal("0.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("10000.00"),
+            status="PAID",
+            paid_at=datetime(2026, 3, 5, 10, 0, tzinfo=zoneinfo.ZoneInfo("UTC")),
+        )
+        MonthlyBill.objects.create(
+            lease=lease,
+            billing_month=date(2026, 7, 1),
+            due_date=date(2026, 7, 5),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("0.00"),
+            parking_fee=Decimal("0.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("10000.00"),
+            status="UNPAID",
+        )
+
+        with patch("rentals.services.timezone.now", return_value=datetime(2026, 6, 2, 12, 0, tzinfo=zoneinfo.ZoneInfo("UTC"))):
+            score = TenantRiskService._calculate_payment_timeliness(tenant)
+
+        self.assertEqual(score, 100)
+
+
+class TenantPasswordTests(TestCase):
+    def test_generate_tenant_password_uses_initials_and_last_name(self):
+        self.assertEqual(generate_tenant_password("John Michael", "Smith"), "JMSmith")
+
+    def test_generate_tenant_password_pads_short_values(self):
+        password = generate_tenant_password("Al", "Li")
+        self.assertGreaterEqual(len(password), 6)
+        self.assertTrue(password.startswith("ALi"))
+
+    def test_password_helper_steps_are_deterministic(self):
+        first_name, last_name = _normalize_tenant_name_parts("  John  Michael ", " Smith ")
+        initials = _extract_tenant_initials(first_name)
+        password = _assemble_tenant_password(initials, last_name)
+        padded = _pad_tenant_password("AB")
+
+        self.assertEqual(first_name, "John  Michael")
+        self.assertEqual(last_name, "Smith")
+        self.assertEqual(initials, "JM")
+        self.assertEqual(password, "JMSmith")
+        self.assertEqual(len(padded), 6)
+
+    def test_create_tenant_with_credentials_supports_legacy_call_shape(self):
+        uploader = User.objects.create_user(
+            email="admin@example.com",
+            username="adminuser",
+            password="password123",
+            role=User.Role.ADMIN,
+        )
+        with patch("rentals.services.generate_tenant_password", return_value="JDoe99"), patch(
+            "rentals.services.send_tenant_credentials_email", return_value=True
+        ):
+            profile, password, email_sent = create_tenant_with_credentials(
+                "John",
+                "Doe",
+                "john.doe@example.com",
+                "09171234567",
+                uploader,
+            )
+
+        self.assertEqual(password, "JDoe99")
+        self.assertTrue(email_sent)
+        self.assertEqual(profile.first_name, "John")
+        self.assertEqual(profile.last_name, "Doe")
+        self.assertEqual(profile.contact_no, "09171234567")

@@ -522,6 +522,10 @@ class LeaseForm(forms.ModelForm):
             from django.utils import timezone as tz
             from django.db.models import Q
             _today = tz.localdate()
+            if unit.status != "AVAILABLE" and not (
+                self.instance and self.instance.pk and self.instance.unit_id == unit.id
+            ):
+                raise ValidationError({"unit": "Selected unit is not available for a new lease."})
             qs = Lease.objects.filter(
                 unit=unit, start_date__lte=_today
             ).filter(Q(end_date__isnull=True) | Q(end_date__gte=_today))
@@ -652,7 +656,7 @@ class LeaseForm(forms.ModelForm):
             occupied_units = Lease.objects.filter(is_active=True).values_list('unit_id', flat=True)
             unit_queryset = Unit.objects.filter(
                 is_active=True,
-                status__in=['AVAILABLE', 'OCCUPIED']  # Exclude MAINTENANCE/Being Fixed units
+                status='AVAILABLE'
             ).exclude(id__in=occupied_units)
             if self.instance and self.instance.pk and self.instance.unit_id:
                 unit_queryset = (unit_queryset | Unit.objects.filter(pk=self.instance.unit_id)).distinct()

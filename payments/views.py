@@ -6,6 +6,7 @@ from decimal import Decimal
 import logging
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponseBadRequest
 from django.shortcuts import render, redirect, get_object_or_404
@@ -19,6 +20,55 @@ from .paymongo import create_checkout_session, retrieve_checkout_session, verify
 from rentals.models import Notification
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_payment_tenant_user(payment):
+    metadata = payment.metadata if isinstance(payment.metadata, dict) else {}
+
+    tenant_id = metadata.get("tenant_id")
+    if tenant_id:
+        User = get_user_model()
+        tenant = User.objects.select_related("tenantprofile").filter(pk=tenant_id).first()
+        if tenant:
+            return tenant
+
+    lease_id = metadata.get("lease_id")
+    if lease_id:
+        from rentals.models import Lease
+
+        lease = Lease.objects.select_related("tenant").filter(pk=lease_id).first()
+        if lease and lease.tenant:
+            return lease.tenant
+
+    return payment.user
+
+
+def _display_name_for_user(user):
+    try:
+        tenant_profile = user.tenantprofile
+    except Exception:
+        tenant_profile = None
+
+    if tenant_profile:
+        full_name = tenant_profile.full_name.strip()
+        if full_name:
+            return full_name
+
+    return user.email
+
+
+def _resolve_payment_display_name(payment):
+    metadata = payment.metadata if isinstance(payment.metadata, dict) else {}
+
+    lease_id = metadata.get("lease_id")
+    if lease_id:
+        from rentals.models import Lease
+
+        lease = Lease.objects.select_related("tenant__tenantprofile").filter(pk=lease_id).first()
+        if lease and lease.tenant:
+            return _display_name_for_user(lease.tenant)
+
+    return _display_name_for_user(_resolve_payment_tenant_user(payment))
 
 @login_required
 @require_http_methods(["GET", "POST"])
@@ -646,9 +696,8 @@ def _auto_approve_paymongo_payment(payment):
 
     # Notify admin about the auto-approved payment
     try:
-        tenant_name = payment.user.email
-        if hasattr(payment.user, 'tenantprofile'):
-            tenant_name = payment.user.tenantprofile.full_name
+        tenant_user = _resolve_payment_tenant_user(payment)
+        tenant_name = _resolve_payment_display_name(payment)
         paid_via_display = (payment.paid_via or "online").replace("_", " ").title()
 
         if lease_activated:
@@ -670,7 +719,7 @@ def _auto_approve_paymongo_payment(payment):
             message=message,
             notification_type='PAYMENT',
             recipient_type='ADMIN',
-            related_tenant=payment.user,
+            related_tenant=tenant_user,
         )
     except Exception as e:
         logger.exception(f"Failed to create admin notification for PayMongo payment: {e}")

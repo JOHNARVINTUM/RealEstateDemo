@@ -288,7 +288,6 @@ def admin_units(request):
     # Handle filter logic
     if status_filter == 'MAINTENANCE':
         # Show both MAINTENANCE status units AND inactive units (both count as "Being Fixed")
-        from django.db.models import Q
         units = Unit.objects.filter(
             Q(status='MAINTENANCE') | Q(is_active=False)
         ).select_related()

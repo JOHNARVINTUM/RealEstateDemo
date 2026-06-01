@@ -22,6 +22,32 @@ def _build_cash_move_in_reference(lease) -> str:
     return f"REF-CASH-MOVEIN-{lease.id}"
 
 
+def _tenant_display_name(user) -> str:
+    try:
+        full_name = user.tenantprofile.full_name.strip()
+        if full_name:
+            return full_name
+    except Exception:
+        pass
+    return user.email
+
+
+def _create_cash_move_in_notification(lease, payment):
+    tenant_name = _tenant_display_name(lease.tenant)
+    Notification.create_notification(
+        title="Move-in Payment Received - Lease Activated",
+        message=(
+            f"{tenant_name} paid ₱{payment.amount:,.2f} via Face-to-Face Cash. "
+            f"Reference: {payment.reference_code}. "
+            "Lease has been activated and first month's bill marked as PAID."
+        ),
+        notification_type="PAYMENT",
+        recipient_type="ADMIN",
+        related_tenant=lease.tenant,
+        related_unit=lease.unit,
+    )
+
+
 @admin_required
 def admin_create_lease(request):
     """Create a lease row linking a tenant to a unit."""
@@ -275,6 +301,10 @@ def admin_lease_payment(request, lease_id: int):
                 existing_payment=payment,
             )
             if success:
+                try:
+                    _create_cash_move_in_notification(lease, payment)
+                except Exception as exc:
+                    logger.exception("Failed to create cash move-in notification for lease %s: %s", lease.id, exc)
                 messages.success(request, f"Lease activated successfully! {message}")
                 tenant_id = lease.tenant.tenantprofile.id if hasattr(lease.tenant, "tenantprofile") else lease.tenant.id
                 return redirect("admin_tenant_detail", tenant_id=tenant_id)

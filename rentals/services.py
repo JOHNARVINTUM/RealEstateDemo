@@ -1,6 +1,7 @@
 from django.utils import timezone
 from datetime import timedelta, date
 from decimal import Decimal
+from dataclasses import dataclass
 from django.db import transaction
 from django.db.models import Count, Q, Avg, Max, F
 from django.core.mail import send_mail
@@ -11,6 +12,48 @@ from payments.models import ManualPayment
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def _repair_get_lease_id_from_payment(payment):
+    if isinstance(payment.metadata, dict):
+        return payment.metadata.get("lease_id")
+    return None
+
+
+def _repair_candidate_leases(payment, lease_id=None):
+    lease_qs = Lease.objects.select_for_update().filter(tenant=payment.user).select_related("unit")
+    if lease_id:
+        lease = lease_qs.filter(id=lease_id).first()
+        if lease:
+            return lease
+
+    lease = lease_qs.filter(status=Lease.STATUS_ACTIVE).order_by("-start_date").first()
+    if lease:
+        return lease
+
+    lease = lease_qs.filter(status=Lease.STATUS_PENDING_PAYMENT).order_by("-created_at").first()
+    if lease:
+        return lease
+
+    return lease_qs.order_by("-start_date", "-created_at").first()
+
+
+def _repair_activate_pending_lease(lease, payment):
+    if lease.status != Lease.STATUS_PENDING_PAYMENT:
+        return
+
+    lease.activate(activated_at=payment.created_at or timezone.now())
+    lease.unit.status = "OCCUPIED"
+    lease.unit.save(update_fields=["status"])
+
+
+def _repair_finalize_payment_record(payment, first_bill):
+    update_fields = ["status"]
+    payment.status = "APPROVED"
+    if first_bill and payment.bill_ids != str(first_bill.id):
+        payment.bill_ids = str(first_bill.id)
+        update_fields.append("bill_ids")
+    payment.save(update_fields=update_fields)
 
 
 @transaction.atomic
@@ -30,28 +73,12 @@ def repair_historical_move_in_payment(payment):
     if payment.status == "APPROVED":
         return True, "Move-in payment is already approved."
 
-    lease_id = None
-    if isinstance(payment.metadata, dict):
-        lease_id = payment.metadata.get("lease_id")
-
-    lease_qs = Lease.objects.select_for_update().filter(tenant=payment.user).select_related("unit")
-    lease = None
-    if lease_id:
-        lease = lease_qs.filter(id=lease_id).first()
-    if lease is None:
-        lease = lease_qs.filter(status=Lease.STATUS_ACTIVE).order_by("-start_date").first()
-    if lease is None:
-        lease = lease_qs.filter(status=Lease.STATUS_PENDING_PAYMENT).order_by("-created_at").first()
-    if lease is None:
-        lease = lease_qs.order_by("-start_date", "-created_at").first()
-
+    lease_id = _repair_get_lease_id_from_payment(payment)
+    lease = _repair_candidate_leases(payment, lease_id=lease_id)
     if lease is None:
         return False, "No related lease was found for this move-in payment."
 
-    if lease.status == Lease.STATUS_PENDING_PAYMENT:
-        lease.activate(activated_at=payment.created_at or timezone.now())
-        lease.unit.status = "OCCUPIED"
-        lease.unit.save(update_fields=["status"])
+    _repair_activate_pending_lease(lease, payment)
 
     ensure_bills_since_move_in(lease)
     first_bill = apply_move_in_payment_to_first_bill(
@@ -60,12 +87,7 @@ def repair_historical_move_in_payment(payment):
         paid_at=payment.created_at or timezone.now(),
     )
 
-    update_fields = ["status"]
-    payment.status = "APPROVED"
-    if first_bill and payment.bill_ids != str(first_bill.id):
-        payment.bill_ids = str(first_bill.id)
-        update_fields.append("bill_ids")
-    payment.save(update_fields=update_fields)
+    _repair_finalize_payment_record(payment, first_bill)
 
     return True, "Historical move-in payment repaired successfully."
 
@@ -94,6 +116,40 @@ def send_email_via_resend(to_email, subject, message):
 
 class TenantRiskService:
     """Service for calculating and managing tenant risk classifications"""
+
+    @staticmethod
+    def _timeliness_bill_queryset(tenant, since_date):
+        bills = MonthlyBill.objects.filter(
+            lease__tenant=tenant,
+            billing_month__gte=since_date,
+        )
+        if bills.count() == 0:
+            return MonthlyBill.objects.filter(lease__tenant=tenant)
+        return bills
+
+    @staticmethod
+    def _bill_is_future_month(bill, today):
+        return bill.billing_month.replace(day=1) > today.replace(day=1)
+
+    @staticmethod
+    def _bill_paid_on_time(bill):
+        if bill.status != 'PAID' or not bill.paid_at or not bill.due_date:
+            return False
+        return (bill.paid_at.date() - bill.due_date).days <= 0
+
+    @staticmethod
+    def _timeliness_score_from_percentage(on_time_percentage):
+        if on_time_percentage >= 90:
+            return 100
+        if on_time_percentage >= 75:
+            return 85
+        if on_time_percentage >= 60:
+            return 70
+        if on_time_percentage >= 40:
+            return 50
+        if on_time_percentage >= 20:
+            return 30
+        return 10
     
     @staticmethod
     def calculate_tenant_risk_score(tenant):
@@ -149,60 +205,38 @@ class TenantRiskService:
             today = timezone.now().date()
             six_months_ago = timezone.now() - timedelta(days=180)
 
-            # All bills in last 6 months (paid and unpaid)
-            all_bills = MonthlyBill.objects.filter(
-                lease__tenant=tenant,
-                billing_month__gte=six_months_ago.date().replace(day=1)
+            all_bills = list(
+                TenantRiskService._timeliness_bill_queryset(
+                    tenant,
+                    six_months_ago.date().replace(day=1),
+                )
             )
 
-            # Fall back to full history if no recent bills
-            if all_bills.count() == 0:
-                all_bills = MonthlyBill.objects.filter(lease__tenant=tenant)
-
-            if all_bills.count() == 0:
+            if not all_bills:
                 return 50
 
             on_time_count = 0
             total_count = 0
 
             for bill in all_bills:
-                # Skip upcoming bills (not yet due)
-                if bill.billing_month.replace(day=1) > today.replace(day=1):
+                if TenantRiskService._bill_is_future_month(bill, today):
                     continue
 
                 total_count += 1
 
-                if bill.status == 'PAID' and bill.paid_at and bill.due_date:
-                    days_late = (bill.paid_at.date() - bill.due_date).days
-                    if days_late <= 0:
-                        on_time_count += 1
-                    # else: paid late — counts as not on time
-                elif bill.status in ('UNPAID', 'PARTIALLY_PAID'):
-                    # Overdue unpaid bill counts as not on time — do NOT increment on_time_count
-                    pass
+                if TenantRiskService._bill_paid_on_time(bill):
+                    on_time_count += 1
 
             if total_count == 0:
                 return 50
 
             on_time_percentage = (on_time_count / total_count) * 100
-
-            if on_time_percentage >= 90:
-                return 100
-            elif on_time_percentage >= 75:
-                return 85
-            elif on_time_percentage >= 60:
-                return 70
-            elif on_time_percentage >= 40:
-                return 50
-            elif on_time_percentage >= 20:
-                return 30
-            else:
-                return 10
+            return TenantRiskService._timeliness_score_from_percentage(on_time_percentage)
 
         except Exception as e:
             logger.error(f"Error calculating payment timeliness: {e}")
             return 50
-    
+
     @staticmethod
     def _calculate_payment_consistency(tenant):
         """Calculate payment consistency score (0-100)"""
@@ -436,38 +470,41 @@ def generate_tenant_password(first_name, last_name):
     - Maria Garcia -> MGarcia
     - John Andrew Michael Smith -> JAMSmith
     """
+    first_name_clean, last_name_clean = _normalize_tenant_name_parts(first_name, last_name)
+    initials = _extract_tenant_initials(first_name_clean)
+    password = _assemble_tenant_password(initials, last_name_clean)
+    return _pad_tenant_password(password)
+
+
+def _normalize_tenant_name_parts(first_name, last_name):
     if not first_name or not last_name:
         raise ValueError("Both first_name and last_name are required")
-    
-    # Clean and split first name into parts to handle middle names
+
     first_name_clean = first_name.strip()
     last_name_clean = last_name.strip()
-    
     if not first_name_clean or not last_name_clean:
         raise ValueError("First name and last name cannot be empty or whitespace only")
-    
-    # Split first name into parts to handle middle names (split by whitespace, not hyphens)
-    name_parts = first_name_clean.split()
-    
-    # Get first letter of each part of the first name (including middle names)
-    # Filter out any empty parts that might result from multiple spaces
-    initials = ''.join([part[0].upper() for part in name_parts if part and len(part) > 0])
-    
+    return first_name_clean, last_name_clean
+
+
+def _extract_tenant_initials(first_name_clean):
+    initials = ''.join(part[0].upper() for part in first_name_clean.split() if part)
     if not initials:
         raise ValueError("Unable to generate initials from first name")
-    
-    # Combine with last name (preserve original casing, but strip whitespace)
-    password = initials + last_name_clean
-    
-    # Ensure password is not too short (minimum 6 characters)
-    if len(password) < 6:
-        # Add random digits to make it more secure if too short
-        import secrets
-        # Calculate how many digits needed to reach minimum 6 characters
-        digits_needed = 6 - len(password)
-        password += ''.join(str(secrets.randbelow(10)) for _ in range(digits_needed))
-    
-    return password
+    return initials
+
+
+def _assemble_tenant_password(initials, last_name_clean):
+    return initials + last_name_clean
+
+
+def _pad_tenant_password(password):
+    if len(password) >= 6:
+        return password
+
+    import secrets
+    digits_needed = 6 - len(password)
+    return password + ''.join(str(secrets.randbelow(10)) for _ in range(digits_needed))
 
 
 def send_tenant_credentials_email(tenant_email, tenant_name, password):
@@ -519,6 +556,31 @@ REALESTATE360+ Team
     except Exception as e:
         logger.error(f"Failed to send credentials email to {tenant_email}: {str(e)}")
         return False
+
+
+@dataclass(frozen=True)
+class TenantCreationRequest:
+    first_name: str
+    last_name: str
+    email: str
+    contact_no: str | None = None
+    uploaded_by: object | None = None
+
+
+def _coerce_tenant_creation_request(*args, **kwargs):
+    if len(args) == 1 and isinstance(args[0], TenantCreationRequest):
+        return args[0]
+    if len(args) == 1 and isinstance(args[0], dict):
+        return TenantCreationRequest(**args[0])
+
+    values = {
+        "first_name": kwargs.get("first_name", args[0] if len(args) > 0 else None),
+        "last_name": kwargs.get("last_name", args[1] if len(args) > 1 else None),
+        "email": kwargs.get("email", args[2] if len(args) > 2 else None),
+        "contact_no": kwargs.get("contact_no", args[3] if len(args) > 3 else None),
+        "uploaded_by": kwargs.get("uploaded_by", args[4] if len(args) > 4 else None),
+    }
+    return TenantCreationRequest(**values)
 
 
 class LeaseSchedulingService:
@@ -652,7 +714,68 @@ class LeaseSchedulingService:
     def get_upcoming_events(self, tenant=None, limit=10):
         """Get upcoming pending events for dashboard"""
         return CalendarEvent.get_upcoming_events(tenant=tenant, limit=limit)
-    
+
+    @staticmethod
+    def _schedule_next_month_date(current_date, due_day):
+        if current_date.month == 12:
+            next_year = current_date.year + 1
+            next_month = 1
+        else:
+            next_year = current_date.year
+            next_month = current_date.month + 1
+
+        import calendar
+        last_day_of_month = calendar.monthrange(next_year, next_month)[1]
+        adjusted_due_day = min(due_day, last_day_of_month)
+        return date(next_year, next_month, adjusted_due_day)
+
+    @staticmethod
+    def _build_payment_schedule_events(
+        start_date,
+        monthly_rent,
+        advance_months,
+        security_deposit,
+        due_day,
+    ):
+        import calendar
+
+        events = [
+            {
+                'date': start_date,
+                'type': 'Security Deposit',
+                'amount': security_deposit
+            }
+        ]
+
+        if advance_months > 0:
+            events.append({
+                'date': start_date,
+                'type': 'Advance Payment',
+                'amount': monthly_rent * advance_months
+            })
+
+        first_rent_month = start_date
+        for _ in range(advance_months):
+            if first_rent_month.month == 12:
+                first_rent_month = date(first_rent_month.year + 1, 1, 1)
+            else:
+                first_rent_month = date(first_rent_month.year, first_rent_month.month + 1, 1)
+
+        last_day_of_month = calendar.monthrange(first_rent_month.year, first_rent_month.month)[1]
+        adjusted_due_day = min(due_day, last_day_of_month)
+        first_rent_date = date(first_rent_month.year, first_rent_month.month, adjusted_due_day)
+
+        current_date = first_rent_date
+        for _ in range(min(6, 12 - advance_months)):
+            events.append({
+                'date': current_date,
+                'type': 'Rent Due',
+                'amount': monthly_rent
+            })
+            current_date = LeaseSchedulingService._schedule_next_month_date(current_date, due_day)
+
+        return events
+
     def get_payment_schedule_preview(self, lease_data):
         """
         Generate a preview of payment schedule without saving events
@@ -663,9 +786,6 @@ class LeaseSchedulingService:
         Returns:
             dict: Payment schedule preview
         """
-        from datetime import date, timedelta
-        import calendar
-        
         monthly_rent = lease_data.get('monthly_rent', 0)
         advance_months = lease_data.get('advance_months', 2)
         security_deposit = lease_data.get('security_deposit', monthly_rent)
@@ -674,62 +794,17 @@ class LeaseSchedulingService:
         
         if not start_date:
             return None
-        
-        # Calculate amounts
+
         advance_payment_amount = monthly_rent * advance_months
         total_move_in_cost = security_deposit + advance_payment_amount
-        
-        # Generate upcoming events preview
-        events = []
-        
-        # Initial payments
-        events.append({
-            'date': start_date,
-            'type': 'Security Deposit',
-            'amount': security_deposit
-        })
-        
-        if advance_months > 0:
-            events.append({
-                'date': start_date,
-                'type': 'Advance Payment',
-                'amount': advance_payment_amount
-            })
-        
-        # Calculate first rent due date
-        first_rent_month = start_date
-        for _ in range(advance_months):
-            if first_rent_month.month == 12:
-                first_rent_month = date(first_rent_month.year + 1, 1, 1)
-            else:
-                first_rent_month = date(first_rent_month.year, first_rent_month.month + 1, 1)
-        
-        last_day_of_month = calendar.monthrange(first_rent_month.year, first_rent_month.month)[1]
-        adjusted_due_day = min(due_day, last_day_of_month)
-        first_rent_date = date(first_rent_month.year, first_rent_month.month, adjusted_due_day)
-        
-        # Add next few rent payments (up to 6 months for preview)
-        current_date = first_rent_date
-        for i in range(min(6, 12 - advance_months)):
-            events.append({
-                'date': current_date,
-                'type': 'Rent Due',
-                'amount': monthly_rent
-            })
-            
-            # Move to next month
-            if current_date.month == 12:
-                next_year = current_date.year + 1
-                next_month = 1
-            else:
-                next_year = current_date.year
-                next_month = current_date.month + 1
-            
-            # Adjust for invalid dates (e.g., February 31st)
-            last_day_of_month = calendar.monthrange(next_year, next_month)[1]
-            adjusted_due_day = min(due_day, last_day_of_month)
-            current_date = date(next_year, next_month, adjusted_due_day)
-        
+        events = self._build_payment_schedule_events(
+            start_date=start_date,
+            monthly_rent=monthly_rent,
+            advance_months=advance_months,
+            security_deposit=security_deposit,
+            due_day=due_day,
+        )
+
         return {
             'monthly_rent': monthly_rent,
             'advance_months': advance_months,
@@ -740,60 +815,52 @@ class LeaseSchedulingService:
         }
 
 
-def create_tenant_with_credentials(first_name, last_name, email, contact_no=None, uploaded_by=None):
+def create_tenant_with_credentials(*args, **kwargs):
     """
     Create a new tenant with auto-generated password and send credentials email
     
     Args:
-        first_name: Tenant's first name (may include middle names)
-        last_name: Tenant's last name
-        email: Tenant's email address
-        contact_no: Optional contact number
-        uploaded_by: Admin user who created the tenant
+        Accepts either a TenantCreationRequest, a dict, or legacy positional fields.
     
     Returns:
         tuple: (tenant_profile, generated_password, email_sent_status)
     """
     from django.contrib.auth import get_user_model
     from .models import TenantProfile
-    
+
     User = get_user_model()
+    request = _coerce_tenant_creation_request(*args, **kwargs)
     
     try:
-        # Generate password
-        password = generate_tenant_password(first_name, last_name)
-        
-        # Generate username from full name
-        full_name = f"{first_name} {last_name}"
+        password = generate_tenant_password(request.first_name, request.last_name)
+
+        full_name = f"{request.first_name} {request.last_name}"
         username = User.generate_username_from_name(full_name)
-        
-        # Create user account
+
         user = User.objects.create_user(
-            email=email,
+            email=request.email,
             username=username,
             password=password
         )
         user.role = "TENANT"
         user.save()
-        
-        # Create tenant profile
+
         tenant_profile = TenantProfile.objects.create(
             user=user,
-            first_name=first_name,
-            last_name=last_name,
-            contact_no=contact_no or '',
+            first_name=request.first_name,
+            last_name=request.last_name,
+            contact_no=request.contact_no or '',
             send_credentials=True,  # Default to True for new tenants
             password_change_required=False,  # Default to False for new tenants
-            created_by=uploaded_by
+            created_by=request.uploaded_by
         )
-        
-        # Send credentials email
+
         email_sent = send_tenant_credentials_email(
-            tenant_email=email,
+            tenant_email=request.email,
             tenant_name=full_name,
             password=password
         )
-        
+
         return tenant_profile, password, email_sent
         
     except Exception as e:
@@ -815,6 +882,103 @@ class LeaseActivationService:
     - Unit occupancy update
     - Audit trail
     """
+
+    @staticmethod
+    def _get_pending_or_active_lease(lease_id: int):
+        try:
+            return Lease.objects.select_for_update().get(
+                id=lease_id,
+                status=Lease.STATUS_PENDING_PAYMENT
+            ), None
+        except Lease.DoesNotExist:
+            try:
+                lease = Lease.objects.get(id=lease_id, status=Lease.STATUS_ACTIVE)
+                logger.info(f"Lease {lease_id} already active, skipping activation")
+                return None, (True, "Lease already active")
+            except Lease.DoesNotExist:
+                logger.error(f"Lease {lease_id} not found or not in PENDING_PAYMENT status")
+                return None, (False, "Lease not found or invalid status")
+
+    @staticmethod
+    def _activate_pending_lease(lease, lease_id: int, activated_at):
+        activated = lease.activate(activated_at=activated_at)
+        if not activated:
+            logger.warning(f"Lease {lease_id} activation returned False (already active?)")
+            return False, "Lease already active"
+        return True, ""
+
+    @staticmethod
+    def _mark_unit_occupied(lease):
+        unit = lease.unit
+        unit.status = "OCCUPIED"
+        unit.save(update_fields=['status'])
+
+    @staticmethod
+    def _generate_initial_billing(lease, payment_reference: str, activated_at):
+        from billing.services import ensure_bills_since_move_in, set_bill_status, month_start
+
+        ensure_bills_since_move_in(lease)
+
+        first_bill_month = month_start(lease.start_date)
+        first_bill = MonthlyBill.objects.filter(
+            lease=lease,
+            billing_month=first_bill_month
+        ).first()
+
+        if first_bill:
+            set_bill_status(
+                first_bill,
+                status="PAID",
+                payment_reference=payment_reference,
+                paid_at=activated_at or timezone.now()
+            )
+        return first_bill
+
+    @staticmethod
+    def _record_move_in_payment(
+        *,
+        lease,
+        payment_method: str,
+        payment_reference: str,
+        amount: Decimal,
+        first_bill,
+        existing_payment=None,
+    ):
+        bill_ids = str(first_bill.id) if first_bill else ""
+
+        if existing_payment is not None:
+            payment = ManualPayment.objects.select_for_update().get(pk=existing_payment.pk)
+            payment.payment_type = "move_in"
+            payment.payment_method = payment_method
+            payment.amount = amount
+            payment.reference_code = payment_reference
+            payment.status = "APPROVED"
+            payment.bill_ids = bill_ids
+            if not payment.tenant_note:
+                payment.tenant_note = f"Move-in payment via {payment_method}"
+            payment.save(
+                update_fields=[
+                    "payment_type",
+                    "payment_method",
+                    "amount",
+                    "reference_code",
+                    "status",
+                    "bill_ids",
+                    "tenant_note",
+                ]
+            )
+            return payment
+
+        return ManualPayment.objects.create(
+            user=lease.tenant,
+            payment_type="move_in",
+            payment_method=payment_method,
+            amount=amount,
+            reference_code=payment_reference,
+            status="APPROVED",
+            bill_ids=bill_ids,
+            tenant_note=f"Move-in payment via {payment_method}",
+        )
     
     @staticmethod
     def activate_lease_after_payment(
@@ -841,91 +1005,39 @@ class LeaseActivationService:
             tuple: (success: bool, message: str)
         """
         from django.db import transaction
-        from billing.services import ensure_bills_since_move_in, set_bill_status
-        from datetime import datetime
         
         try:
             with transaction.atomic():
-                # Fetch lease with lock to prevent race conditions
-                try:
-                    lease = Lease.objects.select_for_update().get(
-                        id=lease_id,
-                        status=Lease.STATUS_PENDING_PAYMENT
-                    )
-                except Lease.DoesNotExist:
-                    # Check if already active (idempotent)
-                    try:
-                        lease = Lease.objects.get(id=lease_id, status=Lease.STATUS_ACTIVE)
-                        logger.info(f"Lease {lease_id} already active, skipping activation")
-                        return True, "Lease already active"
-                    except Lease.DoesNotExist:
-                        logger.error(f"Lease {lease_id} not found or not in PENDING_PAYMENT status")
-                        return False, "Lease not found or invalid status"
-                
-                # ACTIVATE LEASE
-                activated = lease.activate(activated_at=activated_at)
+                lease, early_result = LeaseActivationService._get_pending_or_active_lease(lease_id)
+                if early_result:
+                    return early_result
+
+                activated, activation_message = LeaseActivationService._activate_pending_lease(
+                    lease,
+                    lease_id,
+                    activated_at,
+                )
                 if not activated:
-                    logger.warning(f"Lease {lease_id} activation returned False (already active?)")
-                    return True, "Lease already active"
-                
-                # UPDATE UNIT OCCUPANCY
-                unit = lease.unit
-                unit.status = "OCCUPIED"
-                unit.save(update_fields=['status'])
-                
-                # GENERATE BILLING (if not skipped)
+                    return True, activation_message
+
+                LeaseActivationService._mark_unit_occupied(lease)
+
+                first_bill = None
                 if not skip_billing_generation:
-                    ensure_bills_since_move_in(lease)
-                    
-                    # MARK FIRST BILL AS PAID (from move-in payment)
-                    from billing.services import month_start
-                    first_bill_month = month_start(lease.start_date)
-                    first_bill = MonthlyBill.objects.filter(
-                        lease=lease,
-                        billing_month=first_bill_month
-                    ).first()
-                    
-                    if first_bill:
-                        set_bill_status(
-                            first_bill,
-                            status="PAID",
-                            payment_reference=payment_reference,
-                            paid_at=activated_at or timezone.now()
-                        )
-                
-                # CREATE OR UPDATE PAYMENT RECORD
-                if existing_payment is not None:
-                    payment = ManualPayment.objects.select_for_update().get(pk=existing_payment.pk)
-                    payment.payment_type = "move_in"
-                    payment.payment_method = payment_method
-                    payment.amount = amount
-                    payment.reference_code = payment_reference
-                    payment.status = "APPROVED"
-                    payment.bill_ids = str(first_bill.id) if first_bill else ""
-                    if not payment.tenant_note:
-                        payment.tenant_note = f"Move-in payment via {payment_method}"
-                    payment.save(
-                        update_fields=[
-                            "payment_type",
-                            "payment_method",
-                            "amount",
-                            "reference_code",
-                            "status",
-                            "bill_ids",
-                            "tenant_note",
-                        ]
+                    first_bill = LeaseActivationService._generate_initial_billing(
+                        lease,
+                        payment_reference,
+                        activated_at,
                     )
-                else:
-                    payment = ManualPayment.objects.create(
-                        user=lease.tenant,
-                        payment_type="move_in",
-                        payment_method=payment_method,
-                        amount=amount,
-                        reference_code=payment_reference,
-                        status="APPROVED",
-                        bill_ids=str(first_bill.id) if first_bill else "",
-                        tenant_note=f"Move-in payment via {payment_method}",
-                    )
+
+                LeaseActivationService._record_move_in_payment(
+                    lease=lease,
+                    payment_method=payment_method,
+                    payment_reference=payment_reference,
+                    amount=amount,
+                    first_bill=first_bill,
+                    existing_payment=existing_payment,
+                )
                 
                 logger.info(
                     f"Lease {lease_id} activated successfully. "
@@ -938,3 +1050,6 @@ class LeaseActivationService:
         except Exception as e:
             logger.exception(f"Failed to activate lease {lease_id}: {e}")
             return False, f"Activation failed: {str(e)}"
+
+
+

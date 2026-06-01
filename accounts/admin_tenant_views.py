@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 import logging
 
 from django.contrib import messages
@@ -33,6 +34,18 @@ def _apply_tenant_search(queryset, query: str):
             | Q(user__username__icontains=term)
         )
     return queryset
+
+
+def _archive_json_safe(value):
+    if isinstance(value, dict):
+        return {key: _archive_json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_archive_json_safe(item) for item in value]
+    if isinstance(value, Decimal):
+        return float(value)
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return value
 
 
 def tenant_has_records(tenant):
@@ -347,6 +360,8 @@ def admin_delete_tenant(request, tenant_id: int):
                 "maintenance_count": MaintenanceRequest.objects.filter(tenant=user).count(),
                 "maintenance_sample": maintenance,
             }
+
+        tenant_data = _archive_json_safe(tenant_data)
 
         if deletion_type == "ARCHIVE":
             ArchivedTenant.objects.create(

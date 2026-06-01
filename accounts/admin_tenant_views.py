@@ -22,6 +22,19 @@ from .admin_portal_views import admin_password_verified, admin_required, render_
 logger = logging.getLogger(__name__)
 
 
+def _apply_tenant_search(queryset, query: str):
+    terms = [term for term in query.replace(",", " ").split() if term]
+    for term in terms:
+        queryset = queryset.filter(
+            Q(first_name__icontains=term)
+            | Q(last_name__icontains=term)
+            | Q(contact_no__icontains=term)
+            | Q(user__email__icontains=term)
+            | Q(user__username__icontains=term)
+        )
+    return queryset
+
+
 def tenant_has_records(tenant):
     """Check if tenant has any records that should prevent hard delete."""
     user = tenant.user
@@ -65,13 +78,7 @@ def admin_tenants(request):
         )
     )
     if q:
-        tenants_list = tenants_list.filter(
-            Q(first_name__icontains=q)
-            | Q(last_name__icontains=q)
-            | Q(contact_no__icontains=q)
-            | Q(user__email__icontains=q)
-            | Q(user__username__icontains=q)
-        )
+        tenants_list = _apply_tenant_search(tenants_list, q)
 
     if lease_filter == "active":
         tenants_list = tenants_list.filter(has_active_lease=True)
@@ -289,7 +296,8 @@ def admin_delete_tenant(request, tenant_id: int):
         }
 
         if has_records:
-            leases = list(
+            # Convert Decimal fields to float for JSON serialization
+            leases_raw = list(
                 Lease.objects.filter(tenant=user).values(
                     "id",
                     "unit__number",
@@ -299,7 +307,15 @@ def admin_delete_tenant(request, tenant_id: int):
                     "is_active",
                 )
             )
-            payments = list(
+            leases = [
+                {
+                    **lease,
+                    "monthly_rent": float(lease["monthly_rent"]) if lease["monthly_rent"] else None,
+                }
+                for lease in leases_raw
+            ]
+            
+            payments_raw = list(
                 ManualPayment.objects.filter(user=user).values(
                     "id",
                     "amount",
@@ -308,6 +324,13 @@ def admin_delete_tenant(request, tenant_id: int):
                     "created_at",
                 )[:10]
             )
+            payments = [
+                {
+                    **payment,
+                    "amount": float(payment["amount"]) if payment["amount"] else None,
+                }
+                for payment in payments_raw
+            ]
             maintenance = list(
                 MaintenanceRequest.objects.filter(tenant=user).values(
                     "id",

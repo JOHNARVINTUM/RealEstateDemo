@@ -41,6 +41,5 @@ urlpatterns = [
     path("login/", RoleBasedLoginView.as_view(), name="login"),
 ]
 
-# Serve media files during development
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Serve media files (development and production with WhiteNoise)
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -3,6 +3,13 @@ from django.db import models
 from django.utils import timezone
 import os
 
+
+# Lazy import for Supabase storage to avoid circular imports
+def get_supabase_storage():
+    from .storage import SupabaseStorage
+    return SupabaseStorage()
+
+
 class Unit(models.Model):
     UNIT_TYPES = [
         ('STUDIO', 'Studio'),
@@ -358,7 +365,7 @@ class TenantRiskClassification(models.Model):
 class UnitImage(models.Model):
     """Model for unit gallery images"""
     unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='images')
-    image = models.ImageField(upload_to='units/', help_text="Unit image")
+    image = models.ImageField(upload_to='units/', storage=get_supabase_storage(), help_text="Unit image")
     caption = models.CharField(max_length=200, blank=True, help_text="Image caption (optional)")
     is_primary = models.BooleanField(default=False, help_text="Set as primary/featured image")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -450,7 +457,7 @@ class Room(models.Model):
     name = models.CharField(max_length=100, unique=True, help_text="Room name/number")
     price = models.DecimalField(max_digits=10, decimal_places=2, help_text="Room price per month")
     description = models.TextField(blank=True, help_text="Room description and features")
-    image = models.ImageField(upload_to='rooms/', blank=True, null=True, help_text="Room image")
+    image = models.ImageField(upload_to='rooms/', storage=get_supabase_storage(), blank=True, null=True, help_text="Room image")
     status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='AVAILABLE', help_text="Room status")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

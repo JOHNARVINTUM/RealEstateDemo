@@ -7,8 +7,8 @@ from unittest.mock import patch
 from accounts.models import User
 from billing.models import MonthlyBill
 from payments.models import ManualPayment
+from payments.paymongo_workflow import resolve_payment_tenant_user, auto_approve_paymongo_payment
 from payments.services import should_relabel_full_payment_as_rent_only
-from payments.views import _resolve_payment_tenant_user, _auto_approve_paymongo_payment
 from rentals.models import Lease, TenantProfile, Unit
 
 
@@ -112,7 +112,7 @@ class MoveInPaymentNotificationTests(TestCase):
             metadata={"tenant_id": self.tenant.id, "lease_id": self.lease.id},
         )
 
-        self.assertEqual(_resolve_payment_tenant_user(payment), self.tenant)
+        self.assertEqual(resolve_payment_tenant_user(payment), self.tenant)
 
     def test_move_in_notification_uses_tenant_identity(self):
         payment = ManualPayment.objects.create(
@@ -125,8 +125,8 @@ class MoveInPaymentNotificationTests(TestCase):
             metadata={"tenant_id": self.tenant.id, "lease_id": self.lease.id},
         )
 
-        with patch("payments.views.Notification.create_notification") as notify_mock:
-            _auto_approve_paymongo_payment(payment)
+        with patch("payments.paymongo_workflow.Notification.create_notification") as notify_mock:
+            auto_approve_paymongo_payment(payment)
 
         notify_mock.assert_called_once()
         kwargs = notify_mock.call_args.kwargs

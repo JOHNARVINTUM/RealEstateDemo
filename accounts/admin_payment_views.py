@@ -182,6 +182,7 @@ def admin_payments(request):
     pending_count = status_counts["pending_count"] or 0
     approved_count = status_counts["approved_count"] or 0
     rejected_count = status_counts["rejected_count"] or 0
+    cash_schedule_count = filtered_payments.filter(payment_method="CASH", status="PENDING").count()
 
     paginator = Paginator(payments, 10)
     page_number = request.GET.get("page")
@@ -239,14 +240,26 @@ def admin_payments(request):
             p.bill_components = '—'
             p.affected_months = '—'
 
+    cash_schedule_payments = [
+        p for p in page_payments
+        if p.payment_method == "CASH" and p.status == "PENDING"
+    ]
+    other_payments = [
+        p for p in page_payments
+        if not (p.payment_method == "CASH" and p.status == "PENDING")
+    ]
+
     return render(request, "admin_portal/payments.html", {
         "page_obj": page_obj,
+        "cash_schedule_payments": cash_schedule_payments,
+        "other_payments": other_payments,
         "q": q,
         "status": status,
         "method": method,
         "pending_count": pending_count,
         "approved_count": approved_count,
         "rejected_count": rejected_count,
+        "cash_schedule_count": cash_schedule_count,
     })
 
 

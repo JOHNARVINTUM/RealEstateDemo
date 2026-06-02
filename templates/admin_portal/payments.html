@@ -11,6 +11,21 @@
     <p class="text-sm text-slate-700 mt-1 leading-relaxed">Check and approve payments from tenants.</p>
   </header>
 
+  <!-- Queue Navigation -->
+  <nav class="bg-white border border-slate-200 rounded-xl p-2 shadow-xs flex flex-wrap gap-2" aria-label="Payment queues">
+    <a href="{% url 'admin_payments' %}"
+       class="px-4 py-2 rounded-lg text-xs font-black transition-colors {% if not method and not status %}bg-slate-900 text-white{% else %}bg-slate-50 text-slate-700 hover:bg-slate-100{% endif %}">
+      All Payments
+    </a>
+    <a href="{% url 'admin_payments' %}?status=PENDING&method=CASH{% if q %}&q={{ q|urlencode }}{% endif %}"
+       class="px-4 py-2 rounded-lg text-xs font-black transition-colors {% if method == 'CASH' and status == 'PENDING' %}bg-slate-900 text-white{% else %}bg-amber-50 text-amber-900 hover:bg-amber-100{% endif %}">
+      F2F Schedule
+      <span class="ml-2 inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[10px] font-black {% if method == 'CASH' and status == 'PENDING' %}bg-white text-slate-900{% else %}bg-amber-200 text-amber-950{% endif %}">
+        {{ cash_schedule_count|default:0 }}
+      </span>
+    </a>
+  </nav>
+
   <!-- Summary Metric Overview Cards (Consistent Iconless Layout) -->
   <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
     
@@ -107,6 +122,12 @@
 
   </div>
 
+  <div class="space-y-6">
+    {% include "admin_portal/payment_list_table.html" with section_title="F2F Schedule" section_description="Pending cash appointments waiting for confirmation." payments=cash_schedule_payments %}
+    {% include "admin_portal/payment_list_table.html" with section_title="Other Payments" section_description="GCash and PayMongo records." payments=other_payments %}
+  </div>
+
+  {% comment %}
   <!-- Master Data Table Workspace Card -->
   <div class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
     <div class="overflow-x-auto custom-scrollbar">
@@ -308,6 +329,8 @@
         </tbody>
       </table>
     </div>
+
+  {% endcomment %}
 
     <!-- Paginator State Injector Section -->
     {% if page_obj.paginator.num_pages > 1 %}

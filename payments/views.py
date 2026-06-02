@@ -1,14 +1,10 @@
-import hashlib
-import hmac
-import json
 from datetime import datetime
 from decimal import Decimal
 import logging
 
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse, HttpResponseBadRequest
+from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
@@ -16,59 +12,26 @@ from django.views.decorators.http import require_http_methods, require_POST
 from django.contrib import messages
 
 from .models import ManualPayment
-from .paymongo import create_checkout_session, retrieve_checkout_session, verify_webhook_signature
-from rentals.models import Notification
-
+from .paymongo import retrieve_checkout_session
 logger = logging.getLogger(__name__)
 
+from .paymongo_workflow import (
+    build_paymongo_checkout_metadata,
+    build_paymongo_success_url,
+    create_f2f_cash_payment_request,
+    create_paymongo_checkout_session_or_error,
+    get_paymongo_admin_success_context,
+    get_paymongo_session_updates,
+    get_recent_pending_manual_payment,
+    get_pending_paymongo_payment,
+    parse_paymongo_webhook_payload,
+    process_paymongo_webhook_payload,
+    validate_paymongo_webhook_request,
+    upsert_pending_paymongo_checkout_payment,
+    render_paymongo_tenant_success,
+)
+from rentals.models import Notification
 
-def _resolve_payment_tenant_user(payment):
-    metadata = payment.metadata if isinstance(payment.metadata, dict) else {}
-
-    tenant_id = metadata.get("tenant_id")
-    if tenant_id:
-        User = get_user_model()
-        tenant = User.objects.select_related("tenantprofile").filter(pk=tenant_id).first()
-        if tenant:
-            return tenant
-
-    lease_id = metadata.get("lease_id")
-    if lease_id:
-        from rentals.models import Lease
-
-        lease = Lease.objects.select_related("tenant").filter(pk=lease_id).first()
-        if lease and lease.tenant:
-            return lease.tenant
-
-    return payment.user
-
-
-def _display_name_for_user(user):
-    try:
-        tenant_profile = user.tenantprofile
-    except Exception:
-        tenant_profile = None
-
-    if tenant_profile:
-        full_name = tenant_profile.full_name.strip()
-        if full_name:
-            return full_name
-
-    return user.email
-
-
-def _resolve_payment_display_name(payment):
-    metadata = payment.metadata if isinstance(payment.metadata, dict) else {}
-
-    lease_id = metadata.get("lease_id")
-    if lease_id:
-        from rentals.models import Lease
-
-        lease = Lease.objects.select_related("tenant__tenantprofile").filter(pk=lease_id).first()
-        if lease and lease.tenant:
-            return _display_name_for_user(lease.tenant)
-
-    return _display_name_for_user(_resolve_payment_tenant_user(payment))
 
 @login_required
 @require_http_methods(["GET", "POST"])
@@ -93,13 +56,11 @@ def manual_gcash_payment(request):
         payment_type = request.POST.get("payment_type", "full")
 
         # Prevent duplicate submissions (same user + bills within 2 minutes)
-        from django.utils import timezone as tz
-        from datetime import timedelta
-        recent_cutoff = tz.now() - timedelta(minutes=2)
-        if ManualPayment.objects.filter(
-            user=request.user, bill_ids=bill_ids, status="PENDING",
-            created_at__gte=recent_cutoff
-        ).exists():
+        if get_recent_pending_manual_payment(
+            user=request.user,
+            bill_ids=bill_ids,
+            payment_methods=["GCASH"],
+        ):
             messages.info(request, "You already have a pending payment for these bills. Please wait for admin verification.")
             return redirect("tenant_dashboard")
 
@@ -188,29 +149,18 @@ def f2f_cash_payment(request):
                 "tenant_note": tenant_note,
             })
 
-        # Prevent duplicate submissions (same user + bills within 2 minutes)
-        from django.utils import timezone as tz
-        from datetime import timedelta
-        recent_cutoff = tz.now() - timedelta(minutes=2)
-        if ManualPayment.objects.filter(
-            user=request.user, bill_ids=bill_ids, payment_method="CASH", status="PENDING",
-            created_at__gte=recent_cutoff
-        ).exists():
-            messages.info(request, "You already have a pending cash payment for these bills. Please wait for admin confirmation.")
-            return redirect("tenant_dashboard")
-
-        # Create F2F payment request
-        payment = ManualPayment.objects.create(
+        payment, duplicate_reason = create_f2f_cash_payment_request(
             user=request.user,
-            reference_code="REF-F2F-" + datetime.now().strftime("%Y%m%d-%H%M%S"),
+            amount=amount_to_pay,
             bill_ids=bill_ids,
             payment_type=payment_type,
-            payment_method="CASH",
-            amount=amount_to_pay,
             preferred_date=parsed_date,
             preferred_time=parsed_time,
             tenant_note=tenant_note,
         )
+        if duplicate_reason == "duplicate":
+            messages.info(request, "You already have a pending cash payment for these bills. Please wait for admin confirmation.")
+            return redirect("tenant_dashboard")
 
         # Create notification for admin
         try:
@@ -268,9 +218,6 @@ def paymongo_checkout(request):
         messages.error(request, "Payment amount must be greater than zero.")
         return redirect("tenant_pay_advance")
 
-    # Convert to centavos (PayMongo expects integer centavos)
-    amount_cents = int(amount * 100)
-
     # Build description
     type_label = {"full": "Full Payment", "rent_only": "Rent Only", "water_only": "Water Only"}.get(payment_type, "Payment")
     description = f"REALESTATE360+ {type_label} - {request.user.email}"
@@ -280,74 +227,40 @@ def paymongo_checkout(request):
     # Add cancelled flag so we can detect when user returns without paying
     cancel_url = base_url + reverse("tenant_pay_advance") + "?cancelled=1"
 
-    metadata = {
-        "user_id": str(request.user.id),
-        "bill_ids": bill_ids,
-        "payment_type": payment_type,
-        "amount": str(amount),
-    }
+    metadata = build_paymongo_checkout_metadata(
+        user=request.user,
+        bill_ids=bill_ids,
+        payment_type=payment_type,
+        amount=amount,
+    )
 
     # First pass: create session with a placeholder success_url
     # PayMongo does NOT template-substitute variables in success_url,
     # so we embed the session ID ourselves after creation.
-    placeholder_success = base_url + reverse("paymongo_success")
+    placeholder_success = build_paymongo_success_url(base_url)
 
-    result = create_checkout_session(
-        amount_cents=amount_cents,
+    result, error_message = create_paymongo_checkout_session_or_error(
+        amount=amount,
         description=description,
         metadata=metadata,
         success_url=placeholder_success,
         cancel_url=cancel_url,
     )
 
-    if not result:
-        messages.error(request, "Failed to create checkout session. Please try another payment method.")
-        return redirect("tenant_pay_advance")
-    
-    # Check for configuration error
-    if isinstance(result, dict) and result.get("error"):
-        error_msg = result.get("error")
-        if "not configured" in error_msg.lower():
-            messages.error(request, "PayMongo payment gateway is not configured. Please contact the administrator.")
+    if error_message:
+        messages.error(request, error_message)
+        if "not configured" in error_message.lower():
             logger.error("PayMongo attempted but API keys not configured in settings/.env")
-        else:
-            messages.error(request, f"Payment gateway error: {error_msg}. Please try another payment method.")
         return redirect("tenant_pay_advance")
 
-    # Check for existing pending payment for these bills and update it instead of creating duplicate
-    existing_payment = ManualPayment.objects.filter(
+    payment = upsert_pending_paymongo_checkout_payment(
         user=request.user,
         bill_ids=bill_ids,
-        status="PENDING",
-        payment_method__in=["PAYMONGO", "GCASH"]  # Check for any pending online payment
-    ).first()
-    
-    if existing_payment:
-        # Update existing payment record with new PayMongo session
-        logger.info(f"Updating existing payment {existing_payment.id} with new PayMongo session")
-        existing_payment.checkout_session_id = result["checkout_session_id"]
-        existing_payment.checkout_url = result["checkout_url"]
-        existing_payment.reference_code = f"REF-PM-{result['checkout_session_id'][-8:].upper()}"
-        existing_payment.payment_method = "PAYMONGO"  # Ensure it's set to PAYMONGO
-        existing_payment.amount = amount
-        existing_payment.save(update_fields=[
-            "checkout_session_id", "checkout_url", "reference_code", 
-            "payment_method", "amount"
-        ])
-        payment = existing_payment
-    else:
-        # Create a new PENDING ManualPayment record
-        payment = ManualPayment.objects.create(
-            user=request.user,
-            bill_ids=bill_ids,
-            payment_type=payment_type,
-            payment_method="PAYMONGO",
-            amount=amount,
-            reference_code=f"REF-PM-{result['checkout_session_id'][-8:].upper()}",
-            checkout_session_id=result["checkout_session_id"],
-            checkout_url=result["checkout_url"],
-            status="PENDING",
-        )
+        payment_type=payment_type,
+        amount=amount,
+        checkout_session_id=result["checkout_session_id"],
+        checkout_url=result["checkout_url"],
+    )
 
     # Redirect tenant to PayMongo's hosted checkout page
     return redirect(result["checkout_url"])
@@ -364,21 +277,8 @@ def paymongo_success(request):
     # Check if admin user
     is_admin = getattr(request.user, "role", "") == "ADMIN" or request.user.is_superuser
     
-    # Try session_id from query param first, fall back to latest PENDING
     session_id = request.GET.get("session_id", "").strip()
-
-    if session_id and session_id != "{checkout_session_id}":
-        payment = ManualPayment.objects.filter(
-            checkout_session_id=session_id,
-            user=request.user,
-        ).first()
-    else:
-        # Fallback: find the most recent PENDING PayMongo payment for this user
-        payment = ManualPayment.objects.filter(
-            user=request.user,
-            payment_method="PAYMONGO",
-            status="PENDING",
-        ).order_by("-created_at").first()
+    payment = get_pending_paymongo_payment(request.user, session_id)
 
     if not payment:
         if is_admin:
@@ -390,103 +290,14 @@ def paymongo_success(request):
 
     session_id = payment.checkout_session_id
 
-    # Retrieve session from PayMongo to confirm payment
     session_data = retrieve_checkout_session(session_id)
-    payment_approved = False
-    
-    if session_data:
-        attrs = session_data.get("attributes", {})
-        payments_list = attrs.get("payments", [])
-        
-        # Check if payment is actually paid in PayMongo
-        payment_status = attrs.get("payment_intent", {}).get("status", "")
-        session_status = attrs.get("status", "")
-        
-        logger.info(
-            f"PayMongo session status for payment {payment.id}: "
-            f"session_status={session_status}, payments_count={len(payments_list)}, "
-            f"current_db_status={payment.status}"
-        )
-
-        if payments_list and payment.status != "APPROVED":
-            # Extract payment info
-            pm_payment = payments_list[0]
-            pm_attrs = pm_payment.get("attributes", {})
-            paid_via = pm_attrs.get("source", {}).get("type", "unknown")
-            paymongo_payment_id = pm_payment.get("id", "")
-
-            payment.paymongo_payment_id = paymongo_payment_id
-            payment.paid_via = paid_via
-            payment.save(update_fields=["paymongo_payment_id", "paid_via"])
-
-            # Auto-approve the payment
-            try:
-                _auto_approve_paymongo_payment(payment)
-                payment_approved = True
-                logger.info(f"Payment {payment.id} auto-approved via success page")
-            except Exception as e:
-                logger.error(f"Failed to auto-approve payment {payment.id}: {e}")
-
-        # Also approve if session shows paid but we haven't detected it yet
-        elif session_status == "paid" and payment.status != "APPROVED":
-            try:
-                _auto_approve_paymongo_payment(payment)
-                payment_approved = True
-                logger.info(f"Payment {payment.id} auto-approved via session status")
-            except Exception as e:
-                logger.error(f"Failed to auto-approve payment {payment.id} from session: {e}")
-
-        # Refresh from DB to get updated status
-        payment.refresh_from_db()
+    payment_approved = get_paymongo_session_updates(payment, session_data)
     
     # For admin users, render admin success page with tenant welcome
     if is_admin:
-        # Get lease info if this is a move-in payment
-        lease = None
-        tenant_name = ""
-        if payment.payment_type == "move_in":
-            from rentals.models import Lease
-            # Try to find lease from metadata
-            lease_id = payment.metadata.get("lease_id") if payment.metadata else None
-            if lease_id:
-                try:
-                    lease = Lease.objects.get(id=lease_id)
-                    tenant_name = lease.tenant.tenantprofile.full_name if hasattr(lease.tenant, 'tenantprofile') else lease.tenant.email
-                except Lease.DoesNotExist:
-                    pass
-        
-        return render(request, "admin_portal/paymongo_success.html", {
-            "payment": payment,
-            "payment_approved": payment.status == "APPROVED",
-            "auto_refresh": payment.status != "APPROVED",
-            "lease": lease,
-            "tenant_name": tenant_name,
-        })
-    
-    # For tenant users, render tenant success page
-    # Set appropriate message based on payment status
-    if payment.status == "APPROVED":
-        messages.success(
-            request, 
-            "Payment successful! Your bills have been updated. Thank you for your payment."
-        )
-    elif payment_approved:
-        messages.success(
-            request,
-            "Payment received and is being processed. Your account will be updated shortly."
-        )
-    else:
-        messages.info(
-            request,
-            "Payment confirmation received. Please allow a moment for your account to be updated. "
-            "You will receive a notification once the payment is confirmed."
-        )
+        return render(request, "admin_portal/paymongo_success.html", get_paymongo_admin_success_context(payment))
 
-    return render(request, "payments/paymongo_success.html", {
-        "payment": payment,
-        "payment_approved": payment.status == "APPROVED",
-        "auto_refresh": payment.status != "APPROVED",  # Flag for template to auto-refresh
-    })
+    return render_paymongo_tenant_success(request, payment, payment_approved)
 
 
 @login_required
@@ -502,7 +313,6 @@ def admin_paymongo_checkout_generate(request):
 
     try:
         amount = Decimal(amount_str)
-        amount_cents = int(amount * 100)
     except Exception:
         messages.error(request, "Invalid amount")
         return redirect("admin_dashboard")
@@ -519,18 +329,28 @@ def admin_paymongo_checkout_generate(request):
     else:
         cancel_url = base_url + reverse("admin_dashboard")
 
-    metadata = {"payment_type": "move_in", "generated_by_admin": str(request.user.id), "tenant_id": tenant_id or "", "lease_id": lease_id or ""}
+    metadata = build_paymongo_checkout_metadata(
+        user=request.user,
+        bill_ids="",
+        payment_type="move_in",
+        amount=amount,
+        extra={
+            "generated_by_admin": str(request.user.id),
+            "tenant_id": tenant_id or "",
+            "lease_id": lease_id or "",
+        },
+    )
 
-    result = create_checkout_session(
-        amount_cents=amount_cents,
+    result, error_message = create_paymongo_checkout_session_or_error(
+        amount=amount,
         description="REALESTATE360+ Move-in Payment",
         metadata=metadata,
-        success_url=base_url + reverse("paymongo_success"),
+        success_url=build_paymongo_success_url(base_url),
         cancel_url=cancel_url,
     )
 
-    if not result or result.get("error"):
-        messages.error(request, result.get("error", "PayMongo checkout failed"))
+    if error_message:
+        messages.error(request, error_message)
         return redirect("admin_dashboard")
 
     # Create payment record with PENDING status
@@ -563,163 +383,21 @@ def paymongo_webhook(request):
     
     Security: Verifies PayMongo signature before processing.
     """
-    # Get raw body for signature verification (must be done before reading body)
     payload_body = request.body
-    
-    # Verify webhook signature
     signature_header = request.headers.get('Paymongo-Signature', '')
     webhook_secret = getattr(settings, 'PAYMONGO_WEBHOOK_SECRET', '')
-    
-    if not webhook_secret:
-        logger.error("PAYMONGO_WEBHOOK_SECRET not configured - webhook verification disabled")
-        # In production, reject webhooks if secret not configured
-        if settings.IS_PRODUCTION:
-            return HttpResponse("Webhook secret not configured", status=500)
-    elif not verify_webhook_signature(payload_body, signature_header, webhook_secret):
-        logger.warning(f"Invalid webhook signature from {request.META.get('REMOTE_ADDR')}")
-        from django.http import HttpResponseForbidden
-        return HttpResponseForbidden("Invalid signature")
-    
-    try:
-        payload = json.loads(payload_body)
-    except json.JSONDecodeError:
-        return HttpResponseBadRequest("Invalid JSON")
 
-    event_type = payload.get("data", {}).get("attributes", {}).get("type", "")
-    logger.info(f"PayMongo webhook received: {event_type}")
+    signature_error = validate_paymongo_webhook_request(
+        payload_body,
+        signature_header,
+        webhook_secret,
+        settings.IS_PRODUCTION,
+    )
+    if signature_error:
+        return signature_error
 
-    if event_type == "checkout_session.payment.paid":
-        event_data = payload["data"]["attributes"]["data"]
-        attrs = event_data.get("attributes", {})
-        checkout_session_id = event_data.get("id", "")
+    payload, payload_error = parse_paymongo_webhook_payload(request)
+    if payload_error:
+        return payload_error
 
-        # If the event wraps a payment inside a checkout session
-        payments_list = attrs.get("payments", [])
-        metadata = attrs.get("metadata", {})
-
-        # Try to find payment by checkout_session_id
-        payment = ManualPayment.objects.filter(
-            checkout_session_id=checkout_session_id,
-            payment_method="PAYMONGO",
-        ).first()
-
-        if not payment and metadata.get("user_id"):
-            # Fallback: look by metadata
-            payment = ManualPayment.objects.filter(
-                user_id=metadata["user_id"],
-                bill_ids=metadata.get("bill_ids", ""),
-                payment_method="PAYMONGO",
-                status="PENDING",
-            ).first()
-
-        if payment and payment.status != "APPROVED":
-            # Extract actual payment method used
-            if payments_list:
-                pm_payment = payments_list[0]
-                pm_attrs = pm_payment.get("attributes", {})
-                payment.paid_via = pm_attrs.get("source", {}).get("type", "unknown")
-                payment.paymongo_payment_id = pm_payment.get("id", "")
-                payment.save(update_fields=["paid_via", "paymongo_payment_id"])
-
-            _auto_approve_paymongo_payment(payment)
-            logger.info(f"PayMongo webhook auto-approved payment {payment.id}")
-
-    return JsonResponse({"status": "ok"})
-
-
-def _auto_approve_paymongo_payment(payment):
-    """
-    Auto-approve a PayMongo payment: mark bills as PAID and notify admin.
-
-    If this is a move-in payment with a lease_id, activate the pending lease.
-    """
-    from billing.services import approve_manual_payment
-    from decimal import Decimal
-
-    if payment.status == "APPROVED":
-        return
-
-    # Check if this is a move-in payment with a pending lease to activate
-    lease_activated = False
-    try:
-        # Read lease_id from metadata field
-        lease_id = None
-        if payment.metadata and isinstance(payment.metadata, dict):
-            lease_id = payment.metadata.get("lease_id")
-
-        # Fallback: if no metadata but this is a move-in payment, try to find pending lease
-        if not lease_id and payment.payment_type == "move_in":
-            from rentals.models import Lease
-            pending_lease = Lease.objects.filter(
-                tenant=payment.user,
-                status=Lease.STATUS_PENDING_PAYMENT
-            ).order_by('-created_at').first()
-            if pending_lease:
-                lease_id = pending_lease.id
-                logger.info(f"Found pending lease {lease_id} for move-in payment {payment.id} via fallback")
-
-        if lease_id and payment.payment_type == "move_in":
-            # Use centralized activation service
-            from rentals.services import LeaseActivationService
-            success, message = LeaseActivationService.activate_lease_after_payment(
-                lease_id=int(lease_id),
-                payment_method="PAYMONGO",
-                payment_reference=payment.reference_code,
-                amount=payment.amount,
-            )
-
-            if success:
-                lease_activated = True
-                logger.info(f"Lease {lease_id} activated via PayMongo webhook")
-            else:
-                logger.warning(f"Lease activation failed for {lease_id}: {message}")
-    except Exception as e:
-        logger.exception(f"Error checking lease activation for payment {payment.id}: {e}")
-        # Continue with normal approval even if lease activation fails
-
-    # Only run normal approval if lease wasn't activated and this is not a move-in payment
-    # Move-in payments don't have bills to approve - lease activation handles everything
-    if not lease_activated and payment.payment_type != "move_in":
-        try:
-            approve_manual_payment(payment)
-            logger.info(f"PayMongo payment {payment.id} auto-approved successfully")
-        except Exception as e:
-            logger.exception(f"Failed to auto-approve PayMongo payment {payment.id}: {e}")
-            # Keep the payment out of APPROVED state if ledger settlement failed.
-            # This preserves accounting integrity and allows a later safe retry.
-
-    # For move-in payments that were activated, mark as approved
-    if lease_activated:
-        payment.status = "APPROVED"
-        payment.save(update_fields=["status"])
-        logger.info(f"Move-in payment {payment.id} marked as APPROVED after lease activation")
-
-    # Notify admin about the auto-approved payment
-    try:
-        tenant_user = _resolve_payment_tenant_user(payment)
-        tenant_name = _resolve_payment_display_name(payment)
-        paid_via_display = (payment.paid_via or "online").replace("_", " ").title()
-
-        if lease_activated:
-            title = "Move-in Payment Received - Lease Activated"
-            message = (
-                f"{tenant_name} paid ₱{payment.amount:,.2f} via PayMongo ({paid_via_display}). "
-                f"Reference: {payment.reference_code}. "
-                f"Lease has been automatically ACTIVATED and first month's bill marked as PAID."
-            )
-        else:
-            title = "Online Payment Received & Auto-Approved"
-            message = (
-                f"{tenant_name} paid ₱{payment.amount:,.2f} via PayMongo ({paid_via_display}). "
-                f"Reference: {payment.reference_code}. Bills have been automatically marked as PAID."
-            )
-
-        Notification.create_notification(
-            title=title,
-            message=message,
-            notification_type='PAYMENT',
-            recipient_type='ADMIN',
-            related_tenant=tenant_user,
-        )
-    except Exception as e:
-        logger.exception(f"Failed to create admin notification for PayMongo payment: {e}")
+    return process_paymongo_webhook_payload(payload)

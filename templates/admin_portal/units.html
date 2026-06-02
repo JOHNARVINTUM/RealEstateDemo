@@ -96,7 +96,9 @@
         
         <!-- Badge Overlay -->
         <div class="absolute top-4 right-4">
-          {% if not unit.is_active %}
+          {% if unit.pending_lease and not unit.current_tenant %}
+            <span class="px-3 py-1 bg-sky-600 text-white text-[11px] font-black uppercase tracking-wider rounded-lg shadow-lg">Pending Payment</span>
+          {% elif not unit.is_active %}
             <span class="px-3 py-1 bg-amber-500 text-white text-[11px] font-black uppercase tracking-wider rounded-lg shadow-lg">Being Fixed</span>
           {% elif unit.status == 'AVAILABLE' %}
             <span class="px-3 py-1 bg-emerald-500 text-white text-[11px] font-black uppercase tracking-wider rounded-lg shadow-lg">Available</span>
@@ -127,7 +129,7 @@
         <div class="grid grid-cols-2 gap-4 mb-6">
           <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
             <span class="text-[10px] font-black text-slate-400 uppercase block mb-1">Status</span>
-            <strong class="text-sm font-black text-slate-800">{% if not unit.is_active %}Under Maintenance{% else %}{{ unit.get_status_display }}{% endif %}</strong>
+            <strong class="text-sm font-black text-slate-800">{% if unit.pending_lease and not unit.current_tenant %}Pending Payment{% elif not unit.is_active %}Under Maintenance{% else %}{{ unit.get_status_display }}{% endif %}</strong>
           </div>
           <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
             <span class="text-[10px] font-black text-slate-400 uppercase block mb-1">Size</span>
@@ -139,7 +141,21 @@
         <div class="mb-8">
           <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Who's inside</span>
           
-          {% if not unit.is_active or unit.status == 'MAINTENANCE' %}
+          {% if unit.pending_lease and not unit.current_tenant %}
+            {% with tenant=unit.pending_tenant %}
+              <div class="flex items-center gap-3 p-3 bg-sky-50 border border-sky-100 rounded-xl">
+                <div class="w-10 h-10 rounded-lg bg-white border border-sky-200 flex items-center justify-center text-sm font-black text-sky-700 shrink-0">
+                  {{ tenant.email|first|upper|default:"?" }}
+                </div>
+                <div class="min-w-0">
+                  <strong class="text-sm font-black text-slate-900 block truncate">
+                    {{ tenant.tenantprofile.full_name|default:tenant.email }}
+                  </strong>
+                  <span class="text-[11px] text-sky-700 font-black uppercase tracking-tighter">Pending move-in payment</span>
+                </div>
+              </div>
+            {% endwith %}
+          {% elif not unit.is_active or unit.status == 'MAINTENANCE' %}
             <div class="p-4 bg-amber-50 border border-amber-100 rounded-xl text-center">
               <span class="text-xs text-amber-700 font-black uppercase">Room is being fixed</span>
             </div>

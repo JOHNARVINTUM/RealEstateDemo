@@ -218,6 +218,22 @@
             <li>The first month's rent will be marked as PAID from the move-in payment</li>
         </ul>
     </div>
+
+    <!-- Cancel Pending Lease -->
+    <div class="mt-6 bg-rose-50 border border-rose-200 rounded-xl p-4">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h3 class="font-semibold text-rose-900">Cancel Pending Lease</h3>
+                <p class="text-sm text-rose-700 mt-1">
+                    Use this if the tenant will not complete move-in payment. The unit will remain available.
+                </p>
+            </div>
+            <a href="{% url 'admin_delete_lease' lease.id %}?next=unit"
+               class="px-5 py-3 bg-white border-2 border-rose-200 text-rose-700 hover:bg-rose-600 hover:text-white rounded-xl font-black text-sm transition-all text-center whitespace-nowrap">
+                Cancel Pending Lease
+            </a>
+        </div>
+    </div>
 </div>
 
 <script>

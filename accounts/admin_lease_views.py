@@ -73,7 +73,7 @@ def admin_create_lease(request):
                             f"Lease created for {lease.tenant.email} in Unit {lease.unit.number}\n\n"
                             f"Lease Details:\n"
                             f"• Monthly Rent: ₱{lease.monthly_rent:,.2f}\n"
-                            f"• Advance Payment: ₱{lease.advance_payment_amount:,.2f} ({lease.advance_months} months)\n"
+                            f"• Contract Deposit: ₱{lease.contract_deposit:,.2f} ({lease.deposit_multiplier}x monthly rent)\n"
                             f"• Security Deposit: ₱{lease.security_deposit:,.2f}\n"
                             f"• Total Move-in Cost: ₱{lease.total_move_in_cost:,.2f}\n"
                             f"• Lease Start: {lease.start_date.strftime('%B %d, %Y')}\n"
@@ -98,7 +98,7 @@ def admin_create_lease(request):
                         "Payment Schedule:\n"
                         f"• Monthly Rent: ₱{lease.monthly_rent:,.2f}\n"
                         f"• Security Deposit: ₱{lease.security_deposit:,.2f} (due on move-in)\n"
-                        f"• Advance Payment: ₱{lease.advance_payment_amount:,.2f} ({lease.advance_months} months prepaid)\n"
+                        f"• Contract Deposit: ₱{lease.contract_deposit:,.2f} ({lease.deposit_multiplier}x monthly rent)\n"
                         f"• Total Move-in Cost: ₱{lease.total_move_in_cost:,.2f}\n"
                         f"• Lease Start Date: {lease.start_date.strftime('%B %d, %Y')}\n"
                         f"• First Regular Rent Due: {lease.first_rent_due_date.strftime('%B %d, %Y')}\n\n"
@@ -106,7 +106,7 @@ def admin_create_lease(request):
                         f"Amenities included: {lease.unit.amenities or 'Contact admin for full amenities list.'}\n\n"
                         "Payment Due Dates:\n"
                         f"• Rent is due on the {_ordinal(lease.due_day)} of each month\n"
-                        f"• Your advance payment covers the first {lease.advance_months} months\n"
+                        f"• Your contract deposit is recorded separately from monthly rent\n"
                         f"• Regular rent payments start {lease.first_rent_due_date.strftime('%B %d, %Y')}\n\n"
                         "You can access your tenant portal to view bills, make payments, and request maintenance.\n\n"
                         "Welcome aboard! We're excited to have you as part of our community!"
@@ -123,9 +123,9 @@ def admin_create_lease(request):
 
                 try:
                     unit = lease.unit
-                    unit.status = "OCCUPIED"
-                    unit.save()
-                    logger.info("Unit %s status updated to OCCUPIED for lease %s", unit.number, lease.id)
+                    unit.status = "AVAILABLE"
+                    unit.save(update_fields=["status"])
+                    logger.info("Unit %s remains AVAILABLE while lease %s is pending payment", unit.number, lease.id)
                 except Exception as exc:
                     logger.exception("Failed to update unit status for lease %s: %s", lease.id, exc)
 
@@ -370,29 +370,46 @@ def admin_edit_lease(request, lease_id: int):
 
 @admin_required
 def admin_delete_lease(request, lease_id: int):
-    lease = get_object_or_404(Lease, pk=lease_id)
+    lease = get_object_or_404(Lease.objects.select_related("unit"), pk=lease_id)
+    is_pending = lease.status == Lease.STATUS_PENDING_PAYMENT
+    action_title = "Cancel Pending Lease" if is_pending else "Delete Lease"
+    action_message = (
+        f"Cancel the pending lease for unit {lease.unit.number}? "
+        "No payment has been confirmed, and the unit will remain available."
+        if is_pending
+        else f"Delete lease for unit {lease.unit.number}? This cannot be undone."
+    )
+    next_target = request.GET.get("next")
+    back_url = reverse("admin_unit_detail", args=[lease.unit.id]) if next_target == "unit" else reverse("admin_tenants")
+    post_url = reverse("admin_delete_lease", args=[lease.id])
+    if next_target:
+        post_url = f"{post_url}?next={next_target}"
+
     if request.method == "POST":
         if not admin_password_verified(request):
             return render_admin_password_confirm(
                 request,
-                title="Delete Lease",
-                message=f"Delete lease for unit {lease.unit.number}? This cannot be undone.",
-                post_url=reverse("admin_delete_lease", args=[lease.id]),
-                back_url=reverse("admin_tenants"),
-                error="Incorrect admin password. Lease was not deleted.",
+                title=action_title,
+                message=action_message,
+                post_url=post_url,
+                back_url=back_url,
+                error="Incorrect admin password. Lease was not cancelled." if is_pending else "Incorrect admin password. Lease was not deleted.",
             )
         unit = lease.unit
         unit_number = unit.number
         lease.delete()
         unit.status = "AVAILABLE"
         unit.save(update_fields=["status"])
-        messages.success(request, f"Lease deleted and unit {unit_number} is now available.")
-        return redirect("admin_tenants")
+        if is_pending:
+            messages.success(request, f"Pending lease cancelled and unit {unit_number} remains available.")
+        else:
+            messages.success(request, f"Lease deleted and unit {unit_number} is now available.")
+        return redirect(back_url)
 
     return render_admin_password_confirm(
         request,
-        title="Delete Lease",
-        message=f"Delete lease for unit {lease.unit.number}? This cannot be undone.",
-        post_url=reverse("admin_delete_lease", args=[lease.id]),
-        back_url=reverse("admin_tenants"),
+        title=action_title,
+        message=action_message,
+        post_url=post_url,
+        back_url=back_url,
     )

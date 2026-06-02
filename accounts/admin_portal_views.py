@@ -80,6 +80,26 @@ def render_admin_password_confirm(request, *, title, message, post_url, back_url
     )
 
 
+def _admin_visible_units():
+    active_lease_exists = Lease.objects.filter(unit_id=OuterRef('pk'), is_active=True)
+    return Unit.objects.annotate(
+        has_active_lease=Exists(active_lease_exists)
+    ).filter(
+        Q(is_active=True) |
+        Q(status='MAINTENANCE') |
+        Q(has_active_lease=True)
+    )
+
+
+def _sync_unit_active_state(unit, *, previous_status=None, previous_is_active=True):
+    if unit.status == 'MAINTENANCE':
+        unit.is_active = False
+    elif not previous_is_active and unit.status == previous_status:
+        unit.is_active = False
+    else:
+        unit.is_active = True
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -294,15 +314,21 @@ def admin_units(request):
     )
     active_lease_prefetch = Prefetch(
         'lease_set',
-        queryset=Lease.objects.filter(is_active=True).select_related('tenant__tenantprofile'),
-        to_attr='active_leases',
+        queryset=Lease.objects.filter(
+            status__in=[Lease.STATUS_ACTIVE, Lease.STATUS_PENDING_PAYMENT]
+        ).select_related('tenant__tenantprofile').order_by('-is_active', '-start_date', '-id'),
+        to_attr='admin_display_leases',
     )
     
     # Handle filter logic
     if status_filter == 'MAINTENANCE':
-        # Show both MAINTENANCE status units AND inactive units (both count as "Being Fixed")
-        units = Unit.objects.filter(
-            Q(status='MAINTENANCE') | Q(is_active=False)
+        # Show rooms marked maintenance plus inactive occupied rooms still tied to an active lease.
+        active_lease_exists = Lease.objects.filter(unit_id=OuterRef('pk'), is_active=True)
+        units = Unit.objects.annotate(
+            has_active_lease=Exists(active_lease_exists)
+        ).filter(
+            Q(status='MAINTENANCE') |
+            Q(is_active=False, has_active_lease=True)
         ).prefetch_related(image_prefetch, active_lease_prefetch)
     else:
         units = Unit.objects.filter(is_active=True).prefetch_related(image_prefetch, active_lease_prefetch)
@@ -325,14 +351,17 @@ def admin_units(request):
         total_active=Count('id', filter=Q(is_active=True)),
         available=Count('id', filter=Q(is_active=True, status='AVAILABLE')),
         occupied=Count('id', filter=Q(is_active=True, status='OCCUPIED')),
-        maintenance_active=Count('id', filter=Q(is_active=True, status='MAINTENANCE')),
-        maintenance_inactive=Count('id', filter=Q(is_active=False)),
+        maintenance=Count(
+            'id',
+            filter=Q(status='MAINTENANCE') | Q(is_active=False, lease__is_active=True),
+            distinct=True,
+        ),
     )
     total_units_count = unit_counts['total_active']
     available_units_count = unit_counts['available']
     occupied_units_count = unit_counts['occupied']
     # Being Fixed includes both MAINTENANCE status AND inactive units
-    maintenance_units_count = unit_counts['maintenance_active'] + unit_counts['maintenance_inactive']
+    maintenance_units_count = unit_counts['maintenance']
     
     # Pagination (6 per page)
     paginator = Paginator(units, 6)
@@ -349,8 +378,24 @@ def admin_units(request):
             if cover_image and cover_image.image
             else "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
         )
-        active_lease = next(iter(getattr(unit, 'active_leases', [])), None)
+        display_leases = getattr(unit, 'admin_display_leases', [])
+        active_lease = next(
+            (
+                lease for lease in display_leases
+                if lease.is_active or lease.status == Lease.STATUS_ACTIVE
+            ),
+            None,
+        )
+        pending_lease = next(
+            (
+                lease for lease in display_leases
+                if lease.status == Lease.STATUS_PENDING_PAYMENT
+            ),
+            None,
+        )
         unit.current_tenant = active_lease.tenant if active_lease else None
+        unit.pending_lease = pending_lease
+        unit.pending_tenant = pending_lease.tenant if pending_lease else None
     
     return render(request, "admin_portal/units.html", {
         'page_obj': page_obj,
@@ -366,13 +411,21 @@ def admin_units(request):
 @admin_required
 def admin_unit_detail(request, unit_id):
     """Admin portal: view unit details."""
-    unit = get_object_or_404(Unit, id=unit_id, is_active=True)
+    unit = get_object_or_404(_admin_visible_units(), id=unit_id)
     current_tenant = unit.get_current_tenant()
+    pending_lease = (
+        Lease.objects.filter(unit=unit, status=Lease.STATUS_PENDING_PAYMENT)
+        .select_related('tenant__tenantprofile')
+        .order_by('-start_date', '-id')
+        .first()
+    )
     unit_images = unit.get_all_images()
     
     return render(request, "admin_portal/unit_detail.html", {
         'unit': unit,
         'current_tenant': current_tenant,
+        'pending_lease': pending_lease,
+        'pending_tenant': pending_lease.tenant if pending_lease else None,
         'unit_images': unit_images,
         'amenities_list': unit.get_amenities_list(),
     })
@@ -425,15 +478,21 @@ def admin_create_unit(request):
 @admin_required
 def admin_edit_unit(request, unit_id):
     """Admin portal: edit a Unit row."""
-    unit = get_object_or_404(Unit, id=unit_id, is_active=True)
+    unit = get_object_or_404(_admin_visible_units(), id=unit_id)
     
     if request.method == "POST":
+        previous_status = unit.status
+        previous_is_active = unit.is_active
         form = UnitForm(request.POST, instance=unit)
         
         if form.is_valid():
             try:
                 unit = form.save(commit=False)
-                unit.is_active = True
+                _sync_unit_active_state(
+                    unit,
+                    previous_status=previous_status,
+                    previous_is_active=previous_is_active,
+                )
                 unit.save()
                 
                 # Handle image uploads and deletions
@@ -489,14 +548,28 @@ def admin_delete_unit(request, unit_id):
 
 
 @admin_required
+def admin_restore_unit(request, unit_id):
+    """Admin portal: show a previously hidden Unit row again."""
+    unit = get_object_or_404(_admin_visible_units(), id=unit_id)
+
+    if request.method == "POST":
+        unit.is_active = True
+        unit.save(update_fields=["is_active"])
+        messages.success(request, f'Unit {unit.number} is now visible in the room list.')
+
+    return redirect("admin_unit_detail", unit_id=unit.id)
+
+
+@admin_required
 def admin_toggle_unit_status(request, unit_id):
     """Admin portal: toggle unit status."""
-    unit = get_object_or_404(Unit, id=unit_id, is_active=True)
+    unit = get_object_or_404(_admin_visible_units(), id=unit_id)
     
     if request.method == "POST":
         new_status = request.POST.get('status')
-        if new_status in ['AVAILABLE', 'OCCUPIED', 'MAINTENANCE', 'RESERVED']:
+        if new_status in ['AVAILABLE', 'OCCUPIED', 'MAINTENANCE']:
             unit.status = new_status
+            _sync_unit_active_state(unit)
             unit.save()
             messages.success(request, f'Unit {unit.number} status changed to {new_status}!')
         

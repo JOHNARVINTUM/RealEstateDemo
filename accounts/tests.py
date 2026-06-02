@@ -144,6 +144,108 @@ class AdminTenantAndUnitSearchTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertGreaterEqual(response.context["page_obj"].paginator.count, 1)
 
+    def test_admin_can_open_inactive_maintenance_unit_detail(self):
+        unit = Unit.objects.create(
+            number="702",
+            monthly_rent=Decimal("10000.00"),
+            status="MAINTENANCE",
+            is_active=False,
+        )
+        self.client.force_login(self.admin)
+
+        response = self.client.get(f"/admin-portal/units/{unit.id}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["unit"], unit)
+
+    def test_admin_cannot_open_inactive_non_maintenance_unit_detail(self):
+        unit = Unit.objects.create(
+            number="703",
+            monthly_rent=Decimal("10000.00"),
+            status="AVAILABLE",
+            is_active=False,
+        )
+        self.client.force_login(self.admin)
+
+        response = self.client.get(f"/admin-portal/units/{unit.id}/")
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_admin_can_open_inactive_occupied_unit_with_active_lease(self):
+        unit = Unit.objects.create(
+            number="704",
+            monthly_rent=Decimal("10000.00"),
+            status="OCCUPIED",
+            is_active=False,
+        )
+        Lease.objects.create(
+            tenant=self.tenant_john,
+            unit=unit,
+            monthly_rent=Decimal("10000.00"),
+            due_day=5,
+            start_date=date(2026, 6, 1),
+            status=Lease.STATUS_ACTIVE,
+            is_active=True,
+        )
+        self.client.force_login(self.admin)
+
+        response = self.client.get(f"/admin-portal/units/{unit.id}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["unit"], unit)
+
+    def test_admin_can_restore_inactive_occupied_unit_with_active_lease(self):
+        unit = Unit.objects.create(
+            number="705",
+            monthly_rent=Decimal("10000.00"),
+            status="OCCUPIED",
+            is_active=False,
+        )
+        Lease.objects.create(
+            tenant=self.tenant_john,
+            unit=unit,
+            monthly_rent=Decimal("10000.00"),
+            due_day=5,
+            start_date=date(2026, 6, 1),
+            status=Lease.STATUS_ACTIVE,
+            is_active=True,
+        )
+        self.client.force_login(self.admin)
+
+        response = self.client.post(f"/admin-portal/units/{unit.id}/restore/")
+
+        unit.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(unit.is_active)
+        self.assertEqual(unit.status, "OCCUPIED")
+
+    def test_pending_payment_unit_card_shows_pending_tenant_not_missing_info(self):
+        unit = Unit.objects.create(
+            number="706",
+            monthly_rent=Decimal("10000.00"),
+            status="OCCUPIED",
+        )
+        Lease.objects.create(
+            tenant=self.tenant_john,
+            unit=unit,
+            monthly_rent=Decimal("10000.00"),
+            due_day=5,
+            start_date=date(2026, 6, 1),
+            status=Lease.STATUS_PENDING_PAYMENT,
+            is_active=False,
+        )
+        self.client.force_login(self.admin)
+
+        response = self.client.get("/admin-portal/units/?search=706&status=all")
+
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn("John Constantine", content)
+        self.assertIn("Pending move-in payment", content)
+        self.assertIn("Pending Payment", content)
+        self.assertNotIn("Reserved", content)
+        self.assertNotIn("Occupied (missing info)", content)
+
     def test_new_lease_form_blocks_occupied_units(self):
         occupied_unit = Unit.objects.create(number="701", monthly_rent=Decimal("12000.00"), status="OCCUPIED")
         tenant = User.objects.create_user(
@@ -235,6 +337,74 @@ class AdminCashMoveInNotificationTests(TestCase):
         self.assertIn("John Constantine", notification.message)
         self.assertIn("Face-to-Face Cash", notification.message)
         self.assertNotIn("admin-cash@example.com", notification.message)
+
+    def test_new_lease_keeps_unit_available_until_move_in_payment(self):
+        self.client.force_login(self.admin)
+        tenant = User.objects.create_user(
+            email="pending-create@example.com",
+            username="pendingcreate",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        TenantProfile.objects.create(
+            user=tenant,
+            first_name="Pending",
+            last_name="Create",
+            password_change_required=False,
+            created_by=None,
+        )
+        unit = Unit.objects.create(
+            number="C-701",
+            monthly_rent=Decimal("10000.00"),
+            status="AVAILABLE",
+        )
+
+        response = self.client.post(
+            "/admin-portal/leases/add/",
+            {
+                "tenant": tenant.id,
+                "unit": unit.id,
+                "monthly_rent": "10000.00",
+                "due_day": "1",
+                "start_date": "2026-06-01",
+                "end_date": "",
+                "security_deposit": "20000.00",
+                "motorcycle_slots": "0",
+                "car_slots": "0",
+            },
+        )
+
+        unit.refresh_from_db()
+        lease = Lease.objects.get(tenant=tenant, unit=unit)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(lease.status, Lease.STATUS_PENDING_PAYMENT)
+        self.assertFalse(lease.is_active)
+        self.assertEqual(unit.status, "AVAILABLE")
+
+    def test_admin_can_cancel_pending_lease_from_unit_context(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.post(
+            f"/admin-portal/leases/{self.lease.id}/delete/?next=unit",
+            {"admin_password": "password123"},
+        )
+
+        self.unit.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], f"/admin-portal/units/{self.unit.id}/")
+        self.assertFalse(Lease.objects.filter(pk=self.lease.pk).exists())
+        self.assertEqual(self.unit.status, "AVAILABLE")
+
+    def test_pending_lease_detail_pages_show_cancel_action(self):
+        self.client.force_login(self.admin)
+
+        unit_response = self.client.get(f"/admin-portal/units/{self.unit.id}/")
+        payment_response = self.client.get(f"/admin-portal/leases/{self.lease.id}/payment/")
+
+        self.assertEqual(unit_response.status_code, 200)
+        self.assertEqual(payment_response.status_code, 200)
+        self.assertContains(unit_response, "Cancel Pending Lease")
+        self.assertContains(payment_response, "Cancel Pending Lease")
 
 
 class AdminTenantDeleteArchiveTests(TestCase):

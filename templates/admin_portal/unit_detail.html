@@ -58,11 +58,12 @@
           <!-- Status & Unit Info Badges -->
           <div class="absolute top-4 left-4 flex flex-wrap items-center gap-2">
             <span class="inline-block px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl
-              {% if unit.status == 'AVAILABLE' %}bg-emerald-600 text-white
+              {% if pending_lease and not current_tenant %}bg-sky-600 text-white
+              {% elif unit.status == 'AVAILABLE' %}bg-emerald-600 text-white
               {% elif unit.status == 'OCCUPIED' %}bg-blue-600 text-white
               {% elif unit.status == 'MAINTENANCE' %}bg-amber-600 text-white
               {% else %}bg-slate-800 text-white{% endif %}">
-              {{ unit.get_status_display }}
+              {% if pending_lease and not current_tenant %}Pending Payment{% else %}{{ unit.get_status_display }}{% endif %}
             </span>
             
             <span class="inline-block px-4 py-2 bg-white/90 backdrop-blur-md text-slate-900 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl">
@@ -193,6 +194,37 @@
               View Profile
             </a>
           </div>
+        {% elif pending_tenant %}
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+            <div class="flex items-center gap-5">
+              <div class="w-16 h-16 rounded-2xl bg-sky-700 text-white flex items-center justify-center text-2xl font-black shadow-xl">
+                {{ pending_tenant.email|first|upper }}
+              </div>
+              
+              <div>
+                <strong class="text-xl font-black text-slate-900 block leading-tight">
+                  {{ pending_tenant.tenantprofile.full_name|default:pending_tenant.email }}
+                </strong>
+                <span class="text-sm text-slate-500 font-bold mt-1 block">Pending Tenant</span>
+                
+                <div class="flex items-center gap-3 mt-3">
+                  <span class="px-3 py-1 bg-sky-100 text-sky-800 rounded-lg text-[10px] font-black uppercase tracking-wider">Move-in Payment Pending</span>
+                  <span class="px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-[10px] font-black uppercase tracking-wider">Lease Not Active</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <a href="{% url 'admin_tenant_detail' pending_tenant.id %}" 
+                 class="px-6 py-3 bg-white border-2 border-slate-200 hover:bg-slate-50 text-slate-800 rounded-xl font-black text-sm transition-all shadow-sm active:scale-95 whitespace-nowrap text-center">
+                View Profile
+              </a>
+              <a href="{% url 'admin_delete_lease' pending_lease.id %}?next=unit"
+                 class="px-6 py-3 bg-rose-50 border-2 border-rose-200 hover:bg-rose-600 text-rose-700 hover:text-white rounded-xl font-black text-sm transition-all shadow-sm active:scale-95 whitespace-nowrap text-center">
+                Cancel Pending Lease
+              </a>
+            </div>
+          </div>
         {% else %}
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
             <div>
@@ -232,22 +264,41 @@
         </div>
       </div>
 
-      <!-- Danger Zone -->
-      <div class="bg-rose-50 border-2 border-rose-100 rounded-2xl p-8 space-y-4">
-        <h3 class="text-xs font-black uppercase tracking-widest text-rose-800">Hide from List</h3>
-        <p class="text-sm text-rose-700 font-bold leading-relaxed">
-          Hiding this room will remove it from the main list, but we'll still keep its records in our system.
-        </p>
+      {% if unit.is_active %}
+        <!-- Danger Zone -->
+        <div class="bg-rose-50 border-2 border-rose-100 rounded-2xl p-8 space-y-4">
+          <h3 class="text-xs font-black uppercase tracking-widest text-rose-800">Hide from List</h3>
+          <p class="text-sm text-rose-700 font-bold leading-relaxed">
+            Hiding this room will remove it from the main list, but we'll still keep its records in our system.
+          </p>
 
-        <form method="POST" action="{% url 'admin_delete_unit' unit.id %}" class="confirm-action" 
-              data-confirm="Hide this room from the list? You can still see its history later.">
-          {% csrf_token %}
-          <button type="submit" 
-                  class="w-full py-4 bg-white hover:bg-rose-600 text-rose-600 hover:text-white border-2 border-rose-200 rounded-xl font-black text-center transition-all shadow-sm select-none active:scale-95">
-            Hide this Room
-          </button>
-        </form>
-      </div>
+          <form method="POST" action="{% url 'admin_delete_unit' unit.id %}" class="confirm-action" 
+                data-confirm="Hide this room from the list? You can still see its history later.">
+            {% csrf_token %}
+            <button type="submit" 
+                    class="w-full py-4 bg-white hover:bg-rose-600 text-rose-600 hover:text-white border-2 border-rose-200 rounded-xl font-black text-center transition-all shadow-sm select-none active:scale-95">
+              Hide this Room
+            </button>
+          </form>
+        </div>
+      {% else %}
+        <!-- Restore Room -->
+        <div class="bg-emerald-50 border-2 border-emerald-100 rounded-2xl p-8 space-y-4">
+          <h3 class="text-xs font-black uppercase tracking-widest text-emerald-800">Show in List</h3>
+          <p class="text-sm text-emerald-700 font-bold leading-relaxed">
+            This room is currently hidden. Showing it again will return it to the active room lists.
+          </p>
+
+          <form method="POST" action="{% url 'admin_restore_unit' unit.id %}" class="confirm-action"
+                data-confirm="Show this room in the active list again?">
+            {% csrf_token %}
+            <button type="submit"
+                    class="w-full py-4 bg-white hover:bg-emerald-600 text-emerald-700 hover:text-white border-2 border-emerald-200 rounded-xl font-black text-center transition-all shadow-sm select-none active:scale-95">
+              Show this Room
+            </button>
+          </form>
+        </div>
+      {% endif %}
 
     </div>
 

@@ -629,18 +629,17 @@ class LeaseSchedulingService:
                 status='PENDING'
             ))
         
-        # Advance payment event
-        if lease.advance_months > 0:
-            advance_amount = lease.advance_payment_amount
-            if advance_amount > 0:
-                events.append(CalendarEvent.objects.create(
-                    lease=lease,
-                    tenant=lease.tenant,
-                    event_type='ADVANCE_PAYMENT',
-                    event_date=lease.start_date,
-                    amount=advance_amount,
-                    status='PENDING'
-                ))
+        # Contract deposit event, stored under the legacy ADVANCE_PAYMENT event type.
+        contract_deposit = lease.contract_deposit
+        if contract_deposit > 0:
+            events.append(CalendarEvent.objects.create(
+                lease=lease,
+                tenant=lease.tenant,
+                event_type='ADVANCE_PAYMENT',
+                event_date=lease.start_date,
+                amount=contract_deposit,
+                status='PENDING'
+            ))
         
         # Contract start event
         events.append(CalendarEvent.objects.create(

@@ -82,14 +82,14 @@
         <span class="text-base font-black text-violet-600 uppercase tracking-widest">Predictive Analytics</span>
       </div>
       <h1 class="text-3xl md:text-5xl font-black text-slate-900 mt-1">Forecasting</h1>
-      <p class="text-slate-600 mt-3 text-xl font-medium leading-relaxed">SARIMA-based forecast using the last 2 years of historical data.</p>
+      <p class="text-slate-600 mt-3 text-xl font-medium leading-relaxed">Revenue SARIMA with moving-average water and maintenance forecasts.</p>
     </div>
     <div class="flex items-center gap-4 flex-wrap">
       <div class="flex items-center gap-2 px-5 py-3 bg-violet-50 border border-violet-200 rounded-xl">
         <svg class="w-5 h-5 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
-        <span class="text-base font-black text-violet-800 uppercase tracking-tight">SARIMA</span>
+        <span class="text-base font-black text-violet-800 uppercase tracking-tight">Revenue SARIMA</span>
       </div>
       <form method="get" class="flex items-center gap-2">
         <label for="yearSelect" class="text-sm font-bold text-slate-600 uppercase tracking-widest whitespace-nowrap">Year:</label>
@@ -119,14 +119,8 @@
 
     <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm border-l-8 border-l-teal-600">
       <span class="text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest block mb-2">Next Month Water (m³)</span>
-      {% if water_sarima_fc %}
-      <div class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">{{ water_sarima_fc.0|floatformat:1 }} m³</div>
-      <div class="text-sm font-bold text-slate-400 uppercase mt-2 block">SARIMA forecast</div>
-      <div class="text-xs font-bold text-slate-400 mt-1">(CI {{ water_sarima_lower.0|floatformat:1 }}–{{ water_sarima_upper.0|floatformat:1 }})</div>
-      {% else %}
       <div class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">{{ water_forecast.0|floatformat:1 }} m³</div>
-      <div class="text-sm font-bold text-slate-400 uppercase mt-2 block">Forecast</div>
-      {% endif %}
+      <div class="text-sm font-bold text-slate-400 uppercase mt-2 block">Moving-average forecast</div>
     </div>
 
     <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm border-l-8 border-l-violet-600">
@@ -205,23 +199,6 @@
           </tr>
           {% endwith %}
 
-          {% with wm=water_metrics wsm=water_sarima_metrics %}
-          <tr class="hover:bg-slate-50 bg-slate-50/30">
-            <td class="px-8 py-6 font-black text-slate-900">Water RMSE</td>
-            <td class="px-8 py-6 text-center font-black text-indigo-700">{% if wsm.rmse %}{{ wsm.rmse|floatformat:1 }} m³{% else %}—{% endif %}</td>
-          </tr>
-          <tr class="hover:bg-slate-50 bg-slate-50/30">
-            <td class="px-8 py-6 font-black text-slate-900">Water MAE</td>
-            <td class="px-8 py-6 text-center font-black text-indigo-700">{% if wsm.mae %}{{ wsm.mae|floatformat:1 }} m³{% else %}—{% endif %}</td>
-          </tr>
-          <tr class="hover:bg-slate-50 bg-slate-50/30">
-            <td class="px-8 py-6 font-black text-slate-900">Water MAPE</td>
-            <td class="px-8 py-6 text-center">
-              <span class="font-bold {% if wsm.mape < 5 %}text-emerald-700{% elif wsm.mape < 15 %}text-amber-700{% else %}text-red-700{% endif %}">{% if wsm.mape %}{{ wsm.mape|floatformat:1 }}%{% else %}—{% endif %}</span>
-            </td>
-          </tr>
-          {% endwith %}
-
         </tbody>
       </table>
     </div>
@@ -292,23 +269,21 @@
         <canvas id="waterForecastChart"></canvas>
       </div>
       <div class="mt-6 pt-6 border-t border-slate-100 flex flex-wrap gap-4 items-center">
-        {% if sarima_available %}
-          <div class="metric-badge flex items-center gap-2.5 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 cursor-help">
-            <span class="text-xs font-black text-indigo-500 uppercase tracking-widest">RMSE</span>
-            <span class="text-lg font-black text-indigo-900">{% if water_sarima_metrics.rmse %}{{ water_sarima_metrics.rmse|floatformat:1 }} m³{% else %}—{% endif %}</span>
-            <div class="metric-tooltip"><strong>Root Mean Square Error</strong><span class="note">How far off the SARIMA forecast is on average. Lower is better.</span></div>
-          </div>
-          <div class="metric-badge flex items-center gap-2.5 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 cursor-help">
-            <span class="text-xs font-black text-indigo-500 uppercase tracking-widest">MAE</span>
-            <span class="text-lg font-black text-indigo-900">{% if water_sarima_metrics.mae %}{{ water_sarima_metrics.mae|floatformat:1 }} m³{% else %}—{% endif %}</span>
-            <div class="metric-tooltip"><strong>Mean Absolute Error</strong><span class="note">Average m³ error per month. Lower is better.</span></div>
-          </div>
-          <div class="metric-badge flex items-center gap-2.5 {% if water_sarima_metrics.mape %}{% if water_sarima_metrics.mape < 5 %}bg-emerald-50 border-emerald-200{% elif water_sarima_metrics.mape < 15 %}bg-amber-50 border-amber-200{% else %}bg-red-50 border-red-200{% endif %}{% else %}bg-indigo-50 border-indigo-200{% endif %} border rounded-xl px-4 py-3 cursor-help">
-            <span class="text-xs font-black text-indigo-500 uppercase tracking-widest">MAPE</span>
-            <span class="text-lg font-black {% if water_sarima_metrics.mape %}{% if water_sarima_metrics.mape < 5 %}text-emerald-700{% elif water_sarima_metrics.mape < 15 %}text-amber-700{% else %}text-red-700{% endif %}{% else %}text-indigo-900{% endif %}">{% if water_sarima_metrics.mape %}{{ water_sarima_metrics.mape|floatformat:1 }}%{% else %}—{% endif %}</span>
-            <div class="metric-tooltip"><strong>Mean Absolute % Error</strong><span class="note">&lt;5% excellent &nbsp;•&nbsp; &lt;15% acceptable &nbsp;•&nbsp; ≥15% high error</span></div>
-          </div>
-        {% endif %}
+        <div class="metric-badge flex items-center gap-2.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 cursor-help">
+          <span class="text-xs font-black text-slate-400 uppercase tracking-widest">RMSE</span>
+          <span class="text-lg font-black text-slate-900">{% if water_metrics.rmse %}{{ water_metrics.rmse|floatformat:1 }} m³{% else %}—{% endif %}</span>
+          <div class="metric-tooltip"><strong>Root Mean Square Error</strong><span class="note">How far off the moving-average forecast is on average. Lower is better.</span></div>
+        </div>
+        <div class="metric-badge flex items-center gap-2.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 cursor-help">
+          <span class="text-xs font-black text-slate-400 uppercase tracking-widest">MAE</span>
+          <span class="text-lg font-black text-slate-900">{% if water_metrics.mae %}{{ water_metrics.mae|floatformat:1 }} m³{% else %}—{% endif %}</span>
+          <div class="metric-tooltip"><strong>Mean Absolute Error</strong><span class="note">Average m³ error per month. Lower is better.</span></div>
+        </div>
+        <div class="metric-badge flex items-center gap-2.5 {% if water_metrics.mape %}{% if water_metrics.mape < 5 %}bg-emerald-50 border-emerald-200{% elif water_metrics.mape < 15 %}bg-amber-50 border-amber-200{% else %}bg-red-50 border-red-200{% endif %}{% else %}bg-slate-50 border-slate-200{% endif %} border rounded-xl px-4 py-3 cursor-help">
+          <span class="text-xs font-black text-slate-400 uppercase tracking-widest">MAPE</span>
+          <span class="text-lg font-black {% if water_metrics.mape %}{% if water_metrics.mape < 5 %}text-emerald-700{% elif water_metrics.mape < 15 %}text-amber-700{% else %}text-red-700{% endif %}{% else %}text-slate-900{% endif %}">{% if water_metrics.mape %}{{ water_metrics.mape|floatformat:1 }}%{% else %}—{% endif %}</span>
+          <div class="metric-tooltip"><strong>Mean Absolute % Error</strong><span class="note">&lt;5% excellent &nbsp;•&nbsp; &lt;15% acceptable &nbsp;•&nbsp; ≥15% high error</span></div>
+        </div>
         <div class="ml-auto flex items-center gap-1.5 text-xs text-slate-400 font-semibold">
           <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           Backtested on last 3 months
@@ -401,7 +376,7 @@
           <p class="text-sm text-slate-400 font-medium leading-relaxed">Mean Absolute Percentage Error. <span class="text-emerald-400 font-black">Under 5%</span> is good, <span class="text-amber-400 font-black">under 15%</span> is acceptable, and anything higher is high error.</p>
         </div>
       </div>
-      <p class="text-xs text-slate-500 font-black uppercase tracking-widest pt-4">Future versions will compare this against SARIMA for seasonal modeling.</p>
+      <p class="text-xs text-slate-500 font-black uppercase tracking-widest pt-4">Revenue uses SARIMA when enough history is available; water and maintenance use moving averages.</p>
     </div>
   </div>
 
@@ -419,9 +394,6 @@
 {{ rev_sarima_fc|json_script:"rev_sarima_fc" }}
 {{ rev_sarima_lower|json_script:"rev_sarima_lower" }}
 {{ rev_sarima_upper|json_script:"rev_sarima_upper" }}
-{{ water_sarima_fc|json_script:"water_sarima_fc" }}
-{{ water_sarima_lower|json_script:"water_sarima_lower" }}
-{{ water_sarima_upper|json_script:"water_sarima_upper" }}
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -437,9 +409,6 @@ document.addEventListener('DOMContentLoaded', function () {
   const sarFcRev   = JSON.parse(document.getElementById('rev_sarima_fc').textContent);
   const sarLowRev  = JSON.parse(document.getElementById('rev_sarima_lower').textContent);
   const sarUpRev   = JSON.parse(document.getElementById('rev_sarima_upper').textContent);
-  const sarFcWater = JSON.parse(document.getElementById('water_sarima_fc').textContent);
-  const sarLowWat  = JSON.parse(document.getElementById('water_sarima_lower').textContent);
-  const sarUpWat   = JSON.parse(document.getElementById('water_sarima_upper').textContent);
 
   let activeCharts = {};
 
@@ -625,8 +594,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     buildChart(
       'waterForecastChart',
-      histWater, fcWater, sarFcWater, sarLowWat, sarUpWat,
-      '#0f766e', '#14b8a6', '#f59e0b',
+      histWater, fcWater, null, null, null,
+      '#0f766e', '#14b8a6', null,
       'Actual Consumption', 'Mov Avg Forecast',
       v => v + ' m³',
       currentAllLabels

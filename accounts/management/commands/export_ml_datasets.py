@@ -1,6 +1,6 @@
 """
 Management command to export ML-ready datasets for thesis research.
-Exports CSV files for SARIMA forecasting, Random Forest prediction, and NLP classification.
+Exports CSV files for revenue SARIMA forecasting, Random Forest prediction, and NLP classification.
 """
 
 import csv
@@ -10,14 +10,13 @@ from decimal import Decimal
 from typing import Dict, List
 
 from django.core.management.base import BaseCommand
-from django.db.models import Sum, Avg, Count, Q, F, Min, Max
+from django.db.models import Sum, Q, F
 from django.conf import settings
 
 from rentals.models import Unit, Lease
 from maintenance.models import MaintenanceRequest
 from billing.models import MonthlyBill
 from payments.models import ManualPayment
-from water.models import WaterReading
 
 
 class Command(BaseCommand):
@@ -51,7 +50,6 @@ class Command(BaseCommand):
         # Export datasets
         self.export_sarima_monthly_revenue()
         self.export_sarima_collections()
-        self.export_sarima_water_consumption()
         self.export_random_forest_payment_risk()
         self.export_nlp_maintenance_requests()
         
@@ -178,67 +176,6 @@ class Command(BaseCommand):
             fieldnames = [
                 'month', 'total_collected', 'gcash_collected', 'cash_collected',
                 'on_time_collected', 'late_collected', 'partial_collected'
-            ]
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(monthly_data)
-        
-        self.stdout.write(f"  Exported {len(monthly_data)} months to {filename}")
-
-    def export_sarima_water_consumption(self):
-        """Export monthly water consumption for SARIMA forecasting"""
-        self.stdout.write("\nExporting SARIMA water consumption dataset...")
-        
-        filename = os.path.join(self.output_dir, 'sarima_water_consumption.csv')
-        
-        # Get monthly water consumption data
-        monthly_data = []
-        for month_offset in range(self.months):
-            month_date = (date.today().replace(day=1) - 
-                         timedelta(days=month_offset * 30))
-            
-            # Calculate consumption statistics
-            readings = WaterReading.objects.filter(
-                reading_month=month_date
-            ).aggregate(
-                total_consumption=Sum('consumption'),
-                avg_consumption=Avg('consumption'),
-                min_consumption=Min('consumption'),
-                max_consumption=Max('consumption')
-            )
-            
-            # Get occupied units count
-            occupied_units = Unit.objects.filter(status='OCCUPIED').count()
-            
-            # Determine season
-            month = month_date.month
-            if month in [12, 1, 2]:
-                season = 'Winter'
-            elif month in [3, 4, 5]:
-                season = 'Spring'
-            elif month in [6, 7, 8]:
-                season = 'Summer'
-            else:
-                season = 'Fall'
-            
-            monthly_data.append({
-                'month': month_date.strftime('%Y-%m-%d'),
-                'total_consumption': float(readings['total_consumption'] or 0),
-                'average_consumption': float(readings['avg_consumption'] or 0),
-                'min_consumption': float(readings['min_consumption'] or 0),
-                'max_consumption': float(readings['max_consumption'] or 0),
-                'occupied_units': occupied_units,
-                'season': season
-            })
-        
-        # Sort by month
-        monthly_data.sort(key=lambda x: x['month'])
-        
-        # Write CSV
-        with open(filename, 'w', newline='') as csvfile:
-            fieldnames = [
-                'month', 'total_consumption', 'average_consumption',
-                'min_consumption', 'max_consumption', 'occupied_units', 'season'
             ]
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()

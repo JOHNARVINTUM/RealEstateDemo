@@ -214,15 +214,9 @@ def admin_forecasting(request):
     rev_sarima_fc, rev_sarima_lower, rev_sarima_upper = _sarima_forecast(
         revenue_series, order=(0, 1, 1), seasonal_order=(1, 1, 1, 12), steps=3
     )
-    water_sarima_fc, water_sarima_lower, water_sarima_upper = _sarima_forecast(
-        water_series, order=(0, 1, 1), seasonal_order=(1, 1, 1, 12), steps=3
-    )
 
     revenue_sarima_metrics = _sarima_metrics(
         revenue_series, order=(0, 1, 1), seasonal_order=(1, 1, 1, 12)
-    )
-    water_sarima_metrics = _sarima_metrics(
-        water_series, order=(0, 1, 1), seasonal_order=(1, 1, 1, 12)
     )
 
     hist_revenue_last12 = revenue_series[-36:]
@@ -262,7 +256,7 @@ def admin_forecasting(request):
             "next month based on historical patterns."
         )
 
-    water_next = water_sarima_fc[0] if water_sarima_fc else water_forecast[0]
+    water_next = water_forecast[0]
     water_trend = _trend_direction(water_series)
     if water_trend == "up":
         water_insight = (
@@ -314,11 +308,7 @@ def admin_forecasting(request):
             "rev_sarima_fc": rev_sarima_fc,
             "rev_sarima_lower": rev_sarima_lower,
             "rev_sarima_upper": rev_sarima_upper,
-            "water_sarima_fc": water_sarima_fc,
-            "water_sarima_lower": water_sarima_lower,
-            "water_sarima_upper": water_sarima_upper,
             "revenue_sarima_metrics": revenue_sarima_metrics,
-            "water_sarima_metrics": water_sarima_metrics,
             "sarima_available": rev_sarima_fc is not None,
             "selected_year": selected_year,
             "year_choices": year_choices,

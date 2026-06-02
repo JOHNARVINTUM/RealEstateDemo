@@ -6,9 +6,7 @@ from django.shortcuts import render
 from django.utils import timezone
 
 from billing.models import MonthlyBill
-from maintenance.models import MaintenanceRequest
 from rentals.models import Notification
-from water.models import WaterReading
 
 from .admin_portal_views import admin_required
 
@@ -54,31 +52,6 @@ def admin_forecasting(request):
             forecasts.append(val)
             buf.append(val)
         return forecasts
-
-    def _accuracy_metrics(series, window=3, test_steps=3):
-        import math
-
-        n = len(series)
-        if n < window + test_steps:
-            return {"rmse": None, "mae": None, "mape": None}
-        train = series[: n - test_steps]
-        actual = series[n - test_steps :]
-        preds = []
-        buf = list(train)
-        for _ in range(test_steps):
-            val = sum(buf[-window:]) / window
-            preds.append(val)
-            buf.append(val)
-        errors = [a - p for a, p in zip(actual, preds)]
-        mae = round(sum(abs(e) for e in errors) / test_steps, 2)
-        rmse = round(math.sqrt(sum(e**2 for e in errors) / test_steps), 2)
-        non_zero = [(a, e) for a, e in zip(actual, errors) if a != 0]
-        mape = (
-            round(sum(abs(e / a) for a, e in non_zero) / len(non_zero) * 100, 2)
-            if non_zero
-            else None
-        )
-        return {"rmse": rmse, "mae": mae, "mape": mape}
 
     def _clean_series(series):
         s = list(series)
@@ -167,7 +140,7 @@ def admin_forecasting(request):
             labels.append(datetime(y, m, 1).strftime("%b %Y"))
         return labels
 
-    revenue_series, water_series, maintenance_series, hist_labels = [], [], [], []
+    revenue_series, hist_labels = [], []
 
     for i in range(24, -1, -1):
         md = _month_date(i)
@@ -185,31 +158,11 @@ def admin_forecasting(request):
             )["total"]
             or 0
         )
-        water = float(
-            WaterReading.objects.filter(
-                reading_month__year=md.year,
-                reading_month__month=md.month,
-            ).aggregate(total=Sum("consumption"))["total"]
-            or 0
-        )
-        maint = MaintenanceRequest.objects.filter(
-            created_at__year=md.year,
-            created_at__month=md.month,
-        ).count()
-
         revenue_series.append(rev)
-        water_series.append(water)
-        maintenance_series.append(maint)
         hist_labels.append(md.strftime("%b %Y"))
 
     forecast_labels = _next_month_labels(3)
     revenue_forecast = _moving_avg_forecast(revenue_series, window=3, steps=3)
-    water_forecast = _moving_avg_forecast(water_series, window=3, steps=3)
-    maintenance_forecast = _moving_avg_forecast(maintenance_series, window=3, steps=3)
-
-    revenue_metrics = _accuracy_metrics(revenue_series)
-    water_metrics = _accuracy_metrics(water_series)
-    maintenance_metrics = _accuracy_metrics(maintenance_series)
 
     rev_sarima_fc, rev_sarima_lower, rev_sarima_upper = _sarima_forecast(
         revenue_series, order=(0, 1, 1), seasonal_order=(1, 1, 1, 12), steps=3
@@ -220,8 +173,6 @@ def admin_forecasting(request):
     )
 
     hist_revenue_last12 = revenue_series[-36:]
-    hist_water_last12 = water_series[-36:]
-    hist_maintenance_last12 = maintenance_series[-36:]
     hist_labels_last12 = hist_labels[-36:]
 
     def _trend_direction(series, window=3):
@@ -256,55 +207,14 @@ def admin_forecasting(request):
             "next month based on historical patterns."
         )
 
-    water_next = water_forecast[0]
-    water_trend = _trend_direction(water_series)
-    if water_trend == "up":
-        water_insight = (
-            f"Water consumption is rising. Next month's estimate is {water_next:,.1f} m³. "
-            "This may indicate more tenants or seasonal usage increase."
-        )
-    elif water_trend == "down":
-        water_insight = (
-            f"Water usage is decreasing. Next month's forecast is {water_next:,.1f} m³, "
-            "likely due to fewer occupants or conservation."
-        )
-    else:
-        water_insight = (
-            f"Water usage is stable. Expect about {water_next:,.1f} m³ next month "
-            "consistent with recent months."
-        )
-
-    maint_next = maintenance_forecast[0]
-    maint_trend = _trend_direction(maintenance_series)
-    if maint_trend == "up":
-        maintenance_insight = (
-            f"Maintenance requests are increasing. Expect around {maint_next:.0f} requests "
-            "next month. Consider scheduling preventive maintenance."
-        )
-    elif maint_trend == "down":
-        maintenance_insight = (
-            f"Maintenance requests are declining. Forecast: about {maint_next:.0f} requests next month."
-        )
-    else:
-        maintenance_insight = (
-            f"Maintenance volume is steady at around {maint_next:.0f} requests expected next month."
-        )
-
     return render(
         request,
         "admin_portal/forecasting.html",
         {
             "hist_labels": hist_labels_last12,
             "hist_revenue": hist_revenue_last12,
-            "hist_water": hist_water_last12,
-            "hist_maintenance": hist_maintenance_last12,
             "forecast_labels": forecast_labels,
             "revenue_forecast": revenue_forecast,
-            "water_forecast": water_forecast,
-            "maintenance_forecast": maintenance_forecast,
-            "revenue_metrics": revenue_metrics,
-            "water_metrics": water_metrics,
-            "maintenance_metrics": maintenance_metrics,
             "rev_sarima_fc": rev_sarima_fc,
             "rev_sarima_lower": rev_sarima_lower,
             "rev_sarima_upper": rev_sarima_upper,
@@ -313,8 +223,6 @@ def admin_forecasting(request):
             "selected_year": selected_year,
             "year_choices": year_choices,
             "revenue_insight": revenue_insight,
-            "water_insight": water_insight,
-            "maintenance_insight": maintenance_insight,
             "unread_count": Notification.objects.filter(is_read=False).count(),
         },
     )

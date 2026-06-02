@@ -82,7 +82,7 @@
         <span class="text-base font-black text-violet-600 uppercase tracking-widest">Predictive Analytics</span>
       </div>
       <h1 class="text-3xl md:text-5xl font-black text-slate-900 mt-1">Forecasting</h1>
-      <p class="text-slate-600 mt-3 text-xl font-medium leading-relaxed">Revenue SARIMA with moving-average water and maintenance forecasts.</p>
+      <p class="text-slate-600 mt-3 text-xl font-medium leading-relaxed">Revenue forecast using the last 2 years of historical billing data.</p>
     </div>
     <div class="flex items-center gap-4 flex-wrap">
       <div class="flex items-center gap-2 px-5 py-3 bg-violet-50 border border-violet-200 rounded-xl">
@@ -103,7 +103,7 @@
   </header>
 
   <!-- Forecast Summary Cards -->
-  <section class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+  <section class="grid grid-cols-1 gap-6">
 
     <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm border-l-8 border-l-slate-800">
       <span class="text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest block mb-2">Next Month Revenue</span>
@@ -117,42 +117,16 @@
       {% endif %}
     </div>
 
-    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm border-l-8 border-l-teal-600">
-      <span class="text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest block mb-2">Next Month Water (m³)</span>
-      <div class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">{{ water_forecast.0|floatformat:1 }} m³</div>
-      <div class="text-sm font-bold text-slate-400 uppercase mt-2 block">Moving-average forecast</div>
-    </div>
-
-    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm border-l-8 border-l-violet-600">
-      <span class="text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest block mb-2">Next Month Requests</span>
-      <div class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">{{ maintenance_forecast.0|floatformat:0 }}</div>
-      <div class="text-sm font-bold text-slate-400 uppercase mt-2 block">Forecast</div>
-    </div>
-
   </section>
 
   <!-- Plain-English Insights -->
-  <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+  <section class="grid grid-cols-1 gap-6">
     <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5">
       <div class="flex items-center gap-2 mb-2">
         <svg class="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
         <span class="text-sm font-black text-slate-700 uppercase tracking-wider">Revenue Insight</span>
       </div>
       <p class="text-sm font-medium text-slate-600 leading-relaxed">{{ revenue_insight }}</p>
-    </div>
-    <div class="bg-teal-50 border border-teal-200 rounded-2xl p-5">
-      <div class="flex items-center gap-2 mb-2">
-        <svg class="w-5 h-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
-        <span class="text-sm font-black text-teal-700 uppercase tracking-wider">Water Insight</span>
-      </div>
-      <p class="text-sm font-medium text-teal-700 leading-relaxed">{{ water_insight }}</p>
-    </div>
-    <div class="bg-violet-50 border border-violet-200 rounded-2xl p-5">
-      <div class="flex items-center gap-2 mb-2">
-        <svg class="w-5 h-5 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17l-5.384-3.27A1.998 1.998 0 014 10.192V6.75a2 2 0 012-2h12a2 2 0 012 2v3.442c0 .68-.346 1.314-.92 1.683l-5.39 3.27a2 2 0 01-2.27.025z"/></svg>
-        <span class="text-sm font-black text-violet-700 uppercase tracking-wider">Maintenance Insight</span>
-      </div>
-      <p class="text-sm font-medium text-violet-700 leading-relaxed">{{ maintenance_insight }}</p>
     </div>
   </section>
 
@@ -182,7 +156,7 @@
         </thead>
         <tbody class="divide-y divide-slate-100">
 
-          {% with rm=revenue_metrics sm=revenue_sarima_metrics %}
+          {% with sm=revenue_sarima_metrics %}
           <tr class="hover:bg-slate-50">
             <td class="px-8 py-6 font-black text-slate-900">Revenue RMSE</td>
             <td class="px-8 py-6 text-center font-black text-indigo-700">{% if sm.rmse %}₱{{ sm.rmse|floatformat:0|intcomma }}{% else %}—{% endif %}</td>
@@ -256,94 +230,6 @@
       </div>
     </div>
 
-    <!-- Water Forecast Chart -->
-    <div class="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
-      <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
-        <div>
-          <h2 class="text-2xl font-black text-slate-900 tracking-tight">Water Usage Forecast</h2>
-          <p class="chart-subtitle text-base text-slate-500 mt-1 font-medium">Last 24 months + 3-month forecast (dashed)</p>
-        </div>
-        <span class="text-sm font-black text-slate-700 bg-slate-100 px-3 py-1 rounded">m³</span>
-      </div>
-      <div class="h-[400px] w-full">
-        <canvas id="waterForecastChart"></canvas>
-      </div>
-      <div class="mt-6 pt-6 border-t border-slate-100 flex flex-wrap gap-4 items-center">
-        <div class="metric-badge flex items-center gap-2.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 cursor-help">
-          <span class="text-xs font-black text-slate-400 uppercase tracking-widest">RMSE</span>
-          <span class="text-lg font-black text-slate-900">{% if water_metrics.rmse %}{{ water_metrics.rmse|floatformat:1 }} m³{% else %}—{% endif %}</span>
-          <div class="metric-tooltip"><strong>Root Mean Square Error</strong><span class="note">How far off the moving-average forecast is on average. Lower is better.</span></div>
-        </div>
-        <div class="metric-badge flex items-center gap-2.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 cursor-help">
-          <span class="text-xs font-black text-slate-400 uppercase tracking-widest">MAE</span>
-          <span class="text-lg font-black text-slate-900">{% if water_metrics.mae %}{{ water_metrics.mae|floatformat:1 }} m³{% else %}—{% endif %}</span>
-          <div class="metric-tooltip"><strong>Mean Absolute Error</strong><span class="note">Average m³ error per month. Lower is better.</span></div>
-        </div>
-        <div class="metric-badge flex items-center gap-2.5 {% if water_metrics.mape %}{% if water_metrics.mape < 5 %}bg-emerald-50 border-emerald-200{% elif water_metrics.mape < 15 %}bg-amber-50 border-amber-200{% else %}bg-red-50 border-red-200{% endif %}{% else %}bg-slate-50 border-slate-200{% endif %} border rounded-xl px-4 py-3 cursor-help">
-          <span class="text-xs font-black text-slate-400 uppercase tracking-widest">MAPE</span>
-          <span class="text-lg font-black {% if water_metrics.mape %}{% if water_metrics.mape < 5 %}text-emerald-700{% elif water_metrics.mape < 15 %}text-amber-700{% else %}text-red-700{% endif %}{% else %}text-slate-900{% endif %}">{% if water_metrics.mape %}{{ water_metrics.mape|floatformat:1 }}%{% else %}—{% endif %}</span>
-          <div class="metric-tooltip"><strong>Mean Absolute % Error</strong><span class="note">&lt;5% excellent &nbsp;•&nbsp; &lt;15% acceptable &nbsp;•&nbsp; ≥15% high error</span></div>
-        </div>
-        <div class="ml-auto flex items-center gap-1.5 text-xs text-slate-400 font-semibold">
-          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          Backtested on last 3 months
-        </div>
-      </div>
-    </div>
-
-    <!-- Maintenance Forecast Chart -->
-    <div class="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
-      <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
-        <div>
-          <h2 class="text-2xl font-black text-slate-900 tracking-tight">Maintenance Requests Forecast</h2>
-          <p class="chart-subtitle text-base text-slate-500 mt-1 font-medium">Last 24 months + 3-month forecast (dashed)</p>
-        </div>
-        <span class="text-sm font-black text-slate-700 bg-slate-100 px-3 py-1 rounded">requests</span>
-      </div>
-      <div class="h-[400px] w-full">
-        <canvas id="maintenanceForecastChart"></canvas>
-      </div>
-      <div class="mt-6 pt-6 border-t border-slate-100 flex flex-wrap gap-4 items-center">
-        <div class="metric-badge flex items-center gap-2.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 cursor-help">
-          <span class="text-xs font-black text-slate-400 uppercase tracking-widest">RMSE</span>
-          <span class="text-lg font-black text-slate-900">
-            {% if maintenance_metrics.rmse %}{{ maintenance_metrics.rmse|floatformat:1 }}{% else %}—{% endif %}
-          </span>
-          <div class="metric-tooltip" data-metric="rmse">
-            <strong>Root Mean Square Error</strong>
-            <div class="math-block">\[ \text{RMSE} = \sqrt{\frac{\sum_{i=1}^{n}(y_i - \hat{y}_i)^2}{n}} \]</div>
-            <span class="note">Penalizes large errors more heavily. Lower is better.</span>
-          </div>
-        </div>
-        <div class="metric-badge flex items-center gap-2.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 cursor-help">
-          <span class="text-xs font-black text-slate-400 uppercase tracking-widest">MAE</span>
-          <span class="text-lg font-black text-slate-900">
-            {% if maintenance_metrics.mae %}{{ maintenance_metrics.mae|floatformat:1 }}{% else %}—{% endif %}
-          </span>
-          <div class="metric-tooltip" data-metric="mae">
-            <strong>Mean Absolute Error</strong>
-            <div class="math-block">\[ \text{MAE} = \frac{1}{n}\sum_{i=1}^{n}|y_i - \hat{y}_i| \]</div>
-            <span class="note">Average error in the same unit as the data. Lower is better.</span>
-          </div>
-        </div>
-        <div class="metric-badge flex items-center gap-2.5 {% if maintenance_metrics.mape %}{% if maintenance_metrics.mape < 5 %}bg-emerald-50 border-emerald-200{% elif maintenance_metrics.mape < 15 %}bg-amber-50 border-amber-200{% else %}bg-red-50 border-red-200{% endif %}{% else %}bg-slate-50 border-slate-200{% endif %} border rounded-xl px-4 py-3 cursor-help">
-          <span class="text-xs font-black text-slate-400 uppercase tracking-widest">MAPE</span>
-          <span class="text-lg font-black {% if maintenance_metrics.mape %}{% if maintenance_metrics.mape < 5 %}text-emerald-700{% elif maintenance_metrics.mape < 15 %}text-amber-700{% else %}text-red-700{% endif %}{% else %}text-slate-900{% endif %}">
-            {% if maintenance_metrics.mape %}{{ maintenance_metrics.mape|floatformat:1 }}%{% else %}—{% endif %}
-          </span>
-          <div class="metric-tooltip" data-metric="mape">
-            <strong>Mean Absolute Percentage Error</strong>
-            <div class="math-block">\[ \text{MAPE} = \frac{100}{n}\sum_{i=1}^{n}\left|\frac{y_i - \hat{y}_i}{y_i}\right| \]</div>
-            <span class="note">&lt;5% good &nbsp;•&nbsp; &lt;15% acceptable &nbsp;•&nbsp; ≥15% high error</span>
-          </div>
-        </div>
-        <div class="ml-auto flex items-center gap-1.5 text-xs text-slate-400 font-semibold">
-          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          Backtested on last 3 months
-        </div>
-      </div>
-    </div>
-
   </div>
 
   <!-- Method Note -->
@@ -359,8 +245,8 @@
     </button>
     <div id="aboutContent" class="hidden space-y-6 mt-8">
       <p class="text-lg text-slate-300 leading-relaxed font-medium">
-        These forecasts use a <strong>3-month moving average</strong> — a simple, reliable method that smooths short-term fluctuations
-        and projects the near-term trend forward. Accuracy metrics are computed by backtesting on the last 3 months of real data.
+        Revenue forecasting uses <strong>SARIMA</strong> when enough history is available, with a 3-month moving average as a fallback.
+        Accuracy metrics are computed by backtesting on the last 3 months of real billing data.
       </p>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-2">
         <div class="bg-white/5 border border-white/10 rounded-xl p-5">
@@ -376,7 +262,7 @@
           <p class="text-sm text-slate-400 font-medium leading-relaxed">Mean Absolute Percentage Error. <span class="text-emerald-400 font-black">Under 5%</span> is good, <span class="text-amber-400 font-black">under 15%</span> is acceptable, and anything higher is high error.</p>
         </div>
       </div>
-      <p class="text-xs text-slate-500 font-black uppercase tracking-widest pt-4">Revenue uses SARIMA when enough history is available; water and maintenance use moving averages.</p>
+      <p class="text-xs text-slate-500 font-black uppercase tracking-widest pt-4">Revenue uses SARIMA when enough history is available, with a moving-average fallback.</p>
     </div>
   </div>
 
@@ -385,12 +271,8 @@
 <!-- Data -->
 {{ hist_labels|json_script:"hist_labels" }}
 {{ hist_revenue|json_script:"hist_revenue" }}
-{{ hist_water|json_script:"hist_water" }}
-{{ hist_maintenance|json_script:"hist_maintenance" }}
 {{ forecast_labels|json_script:"forecast_labels" }}
 {{ revenue_forecast|json_script:"revenue_forecast" }}
-{{ water_forecast|json_script:"water_forecast" }}
-{{ maintenance_forecast|json_script:"maintenance_forecast" }}
 {{ rev_sarima_fc|json_script:"rev_sarima_fc" }}
 {{ rev_sarima_lower|json_script:"rev_sarima_lower" }}
 {{ rev_sarima_upper|json_script:"rev_sarima_upper" }}
@@ -399,12 +281,8 @@
 document.addEventListener('DOMContentLoaded', function () {
   const rawHistLabels     = JSON.parse(document.getElementById('hist_labels').textContent);
   const rawHistRevenue    = JSON.parse(document.getElementById('hist_revenue').textContent);
-  const rawHistWater      = JSON.parse(document.getElementById('hist_water').textContent);
-  const rawHistMaint      = JSON.parse(document.getElementById('hist_maintenance').textContent);
   const fcLabels       = JSON.parse(document.getElementById('forecast_labels').textContent);
   const fcRevenue      = JSON.parse(document.getElementById('revenue_forecast').textContent);
-  const fcWater        = JSON.parse(document.getElementById('water_forecast').textContent);
-  const fcMaint        = JSON.parse(document.getElementById('maintenance_forecast').textContent);
 
   const sarFcRev   = JSON.parse(document.getElementById('rev_sarima_fc').textContent);
   const sarLowRev  = JSON.parse(document.getElementById('rev_sarima_lower').textContent);
@@ -578,8 +456,6 @@ document.addEventListener('DOMContentLoaded', function () {
     
     const histLabels = rawHistLabels.slice(filterIdx);
     const histRevenue = rawHistRevenue.slice(filterIdx);
-    const histWater = rawHistWater.slice(filterIdx);
-    const histMaint = rawHistMaint.slice(filterIdx);
     
     const currentAllLabels = [...histLabels, ...fcLabels];
 
@@ -589,24 +465,6 @@ document.addEventListener('DOMContentLoaded', function () {
       '#1e293b', '#6366f1', '#f59e0b',
       'Actual Revenue', 'Mov Avg Forecast',
       v => v >= 1000 ? '₱' + (v/1000).toFixed(0) + 'k' : '₱' + v,
-      currentAllLabels
-    );
-
-    buildChart(
-      'waterForecastChart',
-      histWater, fcWater, null, null, null,
-      '#0f766e', '#14b8a6', null,
-      'Actual Consumption', 'Mov Avg Forecast',
-      v => v + ' m³',
-      currentAllLabels
-    );
-
-    buildChart(
-      'maintenanceForecastChart',
-      histMaint, fcMaint, null, null, null,
-      '#7c3aed', '#a78bfa', null,
-      'Actual Requests', 'Mov Avg Forecast',
-      v => v,
       currentAllLabels
     );
   }

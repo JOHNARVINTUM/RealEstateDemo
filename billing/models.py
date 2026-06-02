@@ -64,6 +64,14 @@ class MonthlyBill(models.Model):
                 fields=["status", "due_date"],
                 name="bill_stat_due_idx",
             ),
+            models.Index(
+                fields=["billing_month"],
+                name="bill_month_idx",
+            ),
+            models.Index(
+                fields=["status", "billing_month"],
+                name="bill_stat_month_idx",
+            ),
         ]
 
     def __str__(self):

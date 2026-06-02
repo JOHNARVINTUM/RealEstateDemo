@@ -9,7 +9,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone as dj_timezone
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Count, Q
 
 from billing.models import MonthlyBill
 from billing.services import set_bill_status
@@ -145,20 +145,24 @@ def admin_billing(request):
     if year_filter and year_filter.isdigit():
         base_qs = base_qs.filter(billing_month__year=int(year_filter))
 
-    stats_qs = base_qs
-    paid_count = stats_qs.filter(status="PAID").count()
-    unpaid_count = stats_qs.filter(
-        status__in=["UNPAID", "PARTIALLY_PAID"],
-        billing_month__lte=current_month
-    ).count()
-    overdue_count = stats_qs.filter(
-        status__in=["UNPAID", "PARTIALLY_PAID"],
-        billing_month__lt=current_month
-    ).count()
-    partial_count = stats_qs.filter(status="PARTIALLY_PAID").count()
-    upcoming_count = stats_qs.filter(
-        billing_month__gt=current_month
-    ).count()
+    stats = base_qs.aggregate(
+        paid_count=Count("id", filter=Q(status="PAID")),
+        unpaid_count=Count(
+            "id",
+            filter=Q(status__in=["UNPAID", "PARTIALLY_PAID"], billing_month__lte=current_month),
+        ),
+        overdue_count=Count(
+            "id",
+            filter=Q(status__in=["UNPAID", "PARTIALLY_PAID"], billing_month__lt=current_month),
+        ),
+        partial_count=Count("id", filter=Q(status="PARTIALLY_PAID")),
+        upcoming_count=Count("id", filter=Q(billing_month__gt=current_month)),
+    )
+    paid_count = stats["paid_count"] or 0
+    unpaid_count = stats["unpaid_count"] or 0
+    overdue_count = stats["overdue_count"] or 0
+    partial_count = stats["partial_count"] or 0
+    upcoming_count = stats["upcoming_count"] or 0
 
     if active_tab == "active":
         display_qs = base_qs.filter(billing_month__lte=current_month)

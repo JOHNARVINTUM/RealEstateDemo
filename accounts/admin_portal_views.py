@@ -3,7 +3,7 @@ import logging
 import os
 
 from django.conf import settings
-from django.db.models import Sum, Q, F, ExpressionWrapper, DecimalField, Exists, OuterRef, Subquery, Count
+from django.db.models import Sum, Q, F, ExpressionWrapper, DecimalField, Exists, OuterRef, Subquery, Count, Prefetch
 from django.db.models.functions import Coalesce, TruncMonth
 from django.db import transaction
 from django.shortcuts import render, redirect, get_object_or_404
@@ -15,7 +15,7 @@ from django.core.paginator import Paginator
 from django.utils.timezone import now
 import json
 from django.utils import timezone
-from rentals.models import Lease, Unit, TenantProfile, Notification, TenantRiskClassification, Room
+from rentals.models import Lease, Unit, UnitImage, TenantProfile, Notification, TenantRiskClassification, Room
 from billing.models import MonthlyBill
 from billing.services import ensure_bills_since_move_in, set_bill_status, approve_manual_payment, reject_manual_payment, cleanup_duplicate_monthly_bills_for_lease
 from maintenance.models import MaintenanceRequest
@@ -86,8 +86,12 @@ logger = logging.getLogger(__name__)
 @admin_required
 def admin_dashboard(request):
     active_leases = Lease.objects.filter(status=Lease.STATUS_ACTIVE)
-    total_tenants = active_leases.values("tenant").distinct().count()
-    occupied_units = active_leases.count()
+    lease_counts = active_leases.aggregate(
+        total_tenants=Count("tenant", distinct=True),
+        occupied_units=Count("id"),
+    )
+    total_tenants = lease_counts["total_tenants"]
+    occupied_units = lease_counts["occupied_units"]
     total_units = Unit.objects.filter(is_active=True).count()
     vacant_units = total_units - occupied_units
 
@@ -284,15 +288,24 @@ def admin_units(request):
     """Admin portal: list all units with filtering."""
     status_filter = request.GET.get('status', 'all')
     search_query = request.GET.get('search', '')
+    image_prefetch = Prefetch(
+        'images',
+        queryset=UnitImage.objects.order_by('-is_primary', 'order', 'created_at'),
+    )
+    active_lease_prefetch = Prefetch(
+        'lease_set',
+        queryset=Lease.objects.filter(is_active=True).select_related('tenant__tenantprofile'),
+        to_attr='active_leases',
+    )
     
     # Handle filter logic
     if status_filter == 'MAINTENANCE':
         # Show both MAINTENANCE status units AND inactive units (both count as "Being Fixed")
         units = Unit.objects.filter(
             Q(status='MAINTENANCE') | Q(is_active=False)
-        ).select_related()
+        ).prefetch_related(image_prefetch, active_lease_prefetch)
     else:
-        units = Unit.objects.filter(is_active=True).select_related()
+        units = Unit.objects.filter(is_active=True).prefetch_related(image_prefetch, active_lease_prefetch)
         # Filter by status
         if status_filter != 'all':
             units = units.filter(status=status_filter)
@@ -307,19 +320,37 @@ def admin_units(request):
     
     from django.core.paginator import Paginator
     
-    # Get statistics from ALL active units (not the filtered queryset)
-    all_active_units = Unit.objects.filter(is_active=True)
-    all_inactive_units = Unit.objects.filter(is_active=False)
-    total_units_count = all_active_units.count()
-    available_units_count = all_active_units.filter(status='AVAILABLE').count()
-    occupied_units_count = all_active_units.filter(status='OCCUPIED').count()
+    # Get statistics from all units in one aggregate query
+    unit_counts = Unit.objects.aggregate(
+        total_active=Count('id', filter=Q(is_active=True)),
+        available=Count('id', filter=Q(is_active=True, status='AVAILABLE')),
+        occupied=Count('id', filter=Q(is_active=True, status='OCCUPIED')),
+        maintenance_active=Count('id', filter=Q(is_active=True, status='MAINTENANCE')),
+        maintenance_inactive=Count('id', filter=Q(is_active=False)),
+    )
+    total_units_count = unit_counts['total_active']
+    available_units_count = unit_counts['available']
+    occupied_units_count = unit_counts['occupied']
     # Being Fixed includes both MAINTENANCE status AND inactive units
-    maintenance_units_count = all_active_units.filter(status='MAINTENANCE').count() + all_inactive_units.count()
+    maintenance_units_count = unit_counts['maintenance_active'] + unit_counts['maintenance_inactive']
     
     # Pagination (6 per page)
     paginator = Paginator(units, 6)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
+
+    for unit in page_obj:
+        prefetched_images = list(getattr(unit, 'images').all()) if hasattr(unit, 'images') else []
+        cover_image = next((image for image in prefetched_images if image.is_primary), None)
+        if cover_image is None and prefetched_images:
+            cover_image = prefetched_images[0]
+        unit.cover_image_url = (
+            cover_image.image.url
+            if cover_image and cover_image.image
+            else "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+        )
+        active_lease = next(iter(getattr(unit, 'active_leases', [])), None)
+        unit.current_tenant = active_lease.tenant if active_lease else None
     
     return render(request, "admin_portal/units.html", {
         'page_obj': page_obj,

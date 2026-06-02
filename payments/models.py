@@ -73,6 +73,14 @@ class ManualPayment(models.Model):
                 fields=["status", "payment_method", "created_at"],
                 name="pay_stat_method_created_idx",
             ),
+            models.Index(
+                fields=["created_at"],
+                name="pay_created_idx",
+            ),
+            models.Index(
+                fields=["payment_method", "created_at"],
+                name="pay_method_created_idx",
+            ),
         ]
 
     def save(self, *args, **kwargs):

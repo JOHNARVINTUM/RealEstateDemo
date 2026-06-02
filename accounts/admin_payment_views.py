@@ -28,7 +28,7 @@ def _tenant_display_name(user):
 
 @admin_required
 def admin_approve_payment(request, payment_id: int):
-    p = get_object_or_404(ManualPayment, pk=payment_id)
+    p = get_object_or_404(ManualPayment.objects.select_related("user", "user__tenantprofile"), pk=payment_id)
     if request.method == "POST":
         try:
             approve_manual_payment(p)
@@ -70,7 +70,7 @@ def admin_approve_payment(request, payment_id: int):
 
 @admin_required
 def admin_repair_move_in_payment(request, payment_id: int):
-    p = get_object_or_404(ManualPayment, pk=payment_id)
+    p = get_object_or_404(ManualPayment.objects.select_related("user", "user__tenantprofile"), pk=payment_id)
     if request.method == "POST":
         try:
             success, message = repair_historical_move_in_payment(p)
@@ -96,7 +96,7 @@ def admin_repair_move_in_payment(request, payment_id: int):
 
 @admin_required
 def admin_reject_payment(request, payment_id: int):
-    p = get_object_or_404(ManualPayment, pk=payment_id)
+    p = get_object_or_404(ManualPayment.objects.select_related("user", "user__tenantprofile"), pk=payment_id)
     if request.method == "POST":
         reject_manual_payment(p)
         messages.success(request, f"Payment {p.reference_code} rejected.")
@@ -112,7 +112,7 @@ def admin_reject_payment(request, payment_id: int):
 @admin_required
 def admin_confirm_schedule(request, payment_id: int):
     """Confirm F2F cash payment schedule - notifies tenant that time is confirmed"""
-    p = get_object_or_404(ManualPayment, pk=payment_id)
+    p = get_object_or_404(ManualPayment.objects.select_related("user", "user__tenantprofile"), pk=payment_id)
     if request.method == "POST":
         p.schedule_confirmed = True
         p.save(update_fields=["schedule_confirmed"])
@@ -154,7 +154,7 @@ def admin_payments(request):
     status = request.GET.get("status", "").strip()
     method = request.GET.get("method", "").strip()
 
-    payments = ManualPayment.objects.select_related("user")
+    payments = ManualPayment.objects.select_related("user", "user__tenantprofile")
     if status in ("PENDING", "APPROVED", "REJECTED"):
         payments = payments.filter(status=status)
     if method == "GCASH":
@@ -172,19 +172,19 @@ def admin_payments(request):
         )
 
     filtered_payments = payments.order_by("-created_at")
-    payments = filtered_payments[:500]
 
     status_counts = filtered_payments.aggregate(
         pending_count=Count("id", filter=Q(status="PENDING")),
         approved_count=Count("id", filter=Q(status="APPROVED")),
         rejected_count=Count("id", filter=Q(status="REJECTED")),
+        cash_schedule_count=Count("id", filter=Q(payment_method="CASH", status="PENDING")),
     )
     pending_count = status_counts["pending_count"] or 0
     approved_count = status_counts["approved_count"] or 0
     rejected_count = status_counts["rejected_count"] or 0
-    cash_schedule_count = filtered_payments.filter(payment_method="CASH", status="PENDING").count()
+    cash_schedule_count = status_counts["cash_schedule_count"] or 0
 
-    paginator = Paginator(payments, 10)
+    paginator = Paginator(filtered_payments, 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
@@ -206,10 +206,18 @@ def admin_payments(request):
         payment_bill_ids[payment.id] = bid_list
         page_bill_ids.update(bid_list)
 
-    bills_by_id = {
-        bill.id: bill
-        for bill in MonthlyBill.objects.filter(pk__in=page_bill_ids)
-    }
+    bills_by_id = {}
+    if page_bill_ids:
+        bills_by_id = {
+            bill.id: bill
+            for bill in MonthlyBill.objects.filter(pk__in=page_bill_ids).only(
+                "id",
+                "billing_month",
+                "base_rent",
+                "water_amount",
+                "parking_fee",
+            )
+        }
 
     for p in page_payments:
         tenant_lease = latest_lease_by_user_id.get(p.user_id)
@@ -265,7 +273,7 @@ def admin_payments(request):
 
 @admin_required
 def admin_delete_payment(request, payment_id: int):
-    payment = get_object_or_404(ManualPayment.objects.select_related("user"), pk=payment_id)
+    payment = get_object_or_404(ManualPayment.objects.select_related("user", "user__tenantprofile"), pk=payment_id)
     if request.method == "POST":
         if not admin_password_verified(request):
             return render_admin_password_confirm(
@@ -295,7 +303,7 @@ def admin_payment_detail(request, payment_id: int):
     """
     from billing.services import parse_bill_ids
 
-    payment = get_object_or_404(ManualPayment.objects.select_related("user"), pk=payment_id)
+    payment = get_object_or_404(ManualPayment.objects.select_related("user", "user__tenantprofile"), pk=payment_id)
     is_settled_payment = payment.status == "APPROVED"
     tenant_display_name = _tenant_display_name(payment.user)
 
@@ -312,13 +320,10 @@ def admin_payment_detail(request, payment_id: int):
             if new_payment_type in valid_types and new_payment_type != payment.payment_type:
                 payment.payment_type = new_payment_type
                 metadata = payment.metadata if isinstance(payment.metadata, dict) else {}
-                if metadata:
-                    metadata = dict(metadata)
-                    metadata["payment_type"] = new_payment_type
-                    payment.metadata = metadata
-                    payment.save(update_fields=["payment_type", "metadata"])
-                else:
-                    payment.save(update_fields=["payment_type"])
+                metadata = dict(metadata)
+                metadata["payment_type"] = new_payment_type
+                payment.metadata = metadata
+                payment.save(update_fields=["payment_type", "metadata"])
                 messages.success(request, f"Payment type updated to {payment.get_payment_type_display()}.")
             else:
                 messages.info(request, "Payment type was not changed.")

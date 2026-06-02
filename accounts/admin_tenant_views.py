@@ -4,7 +4,7 @@ import logging
 
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Exists, OuterRef, Q
+from django.db.models import Count, Exists, OuterRef, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -65,15 +65,15 @@ def deactivate_tenant(tenant):
     user = tenant.user
 
     user.is_active = False
-    user.save()
+    user.save(update_fields=["is_active"])
 
-    active_leases = Lease.objects.filter(tenant=user, status=Lease.STATUS_ACTIVE)
+    active_leases = Lease.objects.select_related("unit").filter(tenant=user, status=Lease.STATUS_ACTIVE)
     for lease in active_leases:
         lease.deactivate(end_date=today)
 
         unit = lease.unit
         unit.status = "AVAILABLE"
-        unit.save()
+        unit.save(update_fields=["status"])
 
 
 @admin_required
@@ -123,14 +123,19 @@ def admin_tenants(request):
             lease_user_ids | payment_user_ids | maintenance_user_ids | attachment_user_ids
         )
 
-    total_tenants_count = TenantProfile.objects.count()
-    active_tenants_count = Lease.objects.filter(status=Lease.STATUS_ACTIVE).values("tenant").distinct().count()
-
     now = timezone.now()
-    new_tenants_count = TenantProfile.objects.filter(
-        user__date_joined__year=now.year,
-        user__date_joined__month=now.month,
-    ).count()
+    tenant_counts = TenantProfile.objects.aggregate(
+        total=Count("id"),
+        new_this_month=Count(
+            "id",
+            filter=Q(user__date_joined__year=now.year, user__date_joined__month=now.month),
+        ),
+    )
+    total_tenants_count = tenant_counts["total"]
+    new_tenants_count = tenant_counts["new_this_month"]
+    active_tenants_count = Lease.objects.aggregate(
+        active=Count("tenant", filter=Q(status=Lease.STATUS_ACTIVE), distinct=True)
+    )["active"]
 
     return render(
         request,
@@ -148,7 +153,10 @@ def admin_tenants(request):
 
 @admin_required
 def admin_tenant_detail(request, tenant_id: int):
-    tenant = get_object_or_404(TenantProfile.objects.select_related("user"), pk=tenant_id)
+    tenant = get_object_or_404(
+        TenantProfile.objects.select_related("user", "user__tenantriskclassification"),
+        pk=tenant_id,
+    )
     leases = list(
         Lease.objects.select_related("unit", "tenant").filter(tenant=tenant.user).order_by("-start_date")
     )
@@ -227,7 +235,7 @@ def admin_create_tenant_profile(request):
 
 @admin_required
 def admin_edit_tenant(request, tenant_id: int):
-    tenant = get_object_or_404(TenantProfile, pk=tenant_id)
+    tenant = get_object_or_404(TenantProfile.objects.select_related("user"), pk=tenant_id)
     form = ComprehensiveTenantEditForm(tenant, request.POST or None, request.FILES or None)
 
     if request.method == "POST" and form.is_valid():
@@ -504,7 +512,7 @@ def admin_view_attachment(request, attachment_id: int):
 @admin_required
 def admin_delete_attachment(request, attachment_id: int):
     """Admin portal: delete tenant attachment"""
-    attachment = get_object_or_404(TenantAttachment, pk=attachment_id)
+    attachment = get_object_or_404(TenantAttachment.objects.select_related("tenant__tenantprofile"), pk=attachment_id)
     tenant_id = attachment.tenant.tenantprofile.id
 
     if request.method == "POST":

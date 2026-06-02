@@ -239,16 +239,21 @@ def _dashboard_billing_context(user, lease, today):
 
 
 def _recent_payment_context(user):
-    tenant_payments = ManualPayment.objects.filter(user=user).order_by("-created_at")
-    move_in_payments = list(tenant_payments.filter(payment_type="move_in"))
-    move_in_payment = next(
-        (payment for payment in move_in_payments if payment.status == "APPROVED"),
-        move_in_payments[0] if move_in_payments else None,
+    recent_payments = ManualPayment.objects.filter(user=user).order_by("-created_at")[:5]
+    approved_move_in_payment = (
+        ManualPayment.objects.filter(user=user, payment_type="move_in", status="APPROVED")
+        .order_by("-created_at")
+        .first()
+    )
+    move_in_payment = approved_move_in_payment or (
+        ManualPayment.objects.filter(user=user, payment_type="move_in")
+        .order_by("-created_at")
+        .first()
     )
     return {
-        "recent_payments": tenant_payments[:5],
+        "recent_payments": recent_payments,
         "move_in_payment": move_in_payment,
-        "has_pending_payment": tenant_payments.filter(status="PENDING").exists(),
+        "has_pending_payment": ManualPayment.objects.filter(user=user, status="PENDING").exists(),
     }
 
 
@@ -342,7 +347,7 @@ def _approved_payment_transactions(user):
     approved_payments = ManualPayment.objects.filter(
         user=user,
         status="APPROVED",
-    ).order_by("-created_at")
+    ).only("id", "amount", "bill_ids", "reference_code", "created_at").order_by("-created_at")
 
     payment_bill_ids = set()
     payment_bill_map = {}

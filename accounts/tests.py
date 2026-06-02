@@ -65,7 +65,7 @@ class AdminPaymentTypeEditTests(TestCase):
         self.client.force_login(self.admin)
 
         response = self.client.post(
-            f"/admin/payments/{self.payment.id}/detail/",
+            f"/admin-portal/payments/{self.payment.id}/detail/",
             {
                 "action": "update_payment_type",
                 "payment_type": "rent_only",
@@ -81,7 +81,7 @@ class AdminPaymentTypeEditTests(TestCase):
     def test_admin_payments_context_uses_tenant_full_name_and_affected_month(self):
         self.client.force_login(self.admin)
 
-        response = self.client.get("/admin/payments/")
+        response = self.client.get("/admin-portal/payments/")
 
         self.assertEqual(response.status_code, 200)
         page_payment = response.context["page_obj"][0]

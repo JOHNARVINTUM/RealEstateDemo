@@ -77,6 +77,7 @@
 
         <form method="post" action="{% url 'admin_water_rate' %}" class="space-y-4">
           {% csrf_token %}
+          <input type="hidden" name="settings_month" value="{{ year }}-{{ month|stringformat:'02d' }}-01">
           <div>
             <label class="block text-xs font-bold text-slate-800 mb-1">Effective Timestamp <span class="text-rose-600">*</span></label>
             <input type="date" name="effective_date" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 outline-none" value="{{ today|date:'Y-m-d' }}" required>
@@ -87,6 +88,22 @@
             <div class="relative">
               <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">₱</span>
               <input type="number" name="rate_per_cu_m" class="w-full bg-white border border-slate-300 rounded-lg pl-7 pr-3 py-2 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-slate-500 outline-none" step="0.01" min="0" value="{{ current_rate|default:'45.00' }}" required>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-800 mb-1">Shared Pump Total</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">₱</span>
+              <input type="number" name="shared_pump_total" class="w-full bg-white border border-slate-300 rounded-lg pl-7 pr-3 py-2 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-slate-500 outline-none" step="0.01" min="0" value="{{ shared_pump_total|default:'0.00' }}">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-800 mb-1">VAT Percent</label>
+            <div class="relative">
+              <input type="number" name="vat_percent" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 pr-8 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-slate-500 outline-none" step="0.01" min="0" value="{{ vat_percent|default:'12.00' }}">
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">%</span>
             </div>
           </div>
           
@@ -188,8 +205,11 @@
                   <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Last Reading (m³)</th>
                   <th class="px-5 py-3 text-xs font-bold text-slate-700">Current Reading (m³)</th>
                   <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Usage</th>
-                  <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Total Price</th>
+                  <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Rate</th>
+                  <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Shared Pump</th>
+                  <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Price</th>
                   <th class="px-5 py-3 text-xs font-bold text-slate-700 text-center">Status</th>
+                  <th class="px-5 py-3 text-xs font-bold text-slate-700">Reference</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-200 text-sm" id="water-table-body">
@@ -230,6 +250,8 @@
                            {% if row.bill_paid %}readonly{% endif %}
                            data-previous="{{ row.previous_reading }}"
                            data-rate="{{ rate }}"
+                           data-shared-pump="{{ shared_pump_total }}"
+                           data-vat-percent="{{ vat_percent }}"
                            oninput="calculateRow(this)">
                   </td>
 
@@ -237,6 +259,16 @@
                   <td class="px-5 py-3.5 text-right font-mono font-bold text-slate-800">
                     <span class="usage-display" id="usage_{{ row.lease_id }}">
                       {% if row.has_reading %}{{ row.usage|floatformat:2 }}{% else %}-{% endif %}
+                    </span>
+                  </td>
+
+                  <td class="px-5 py-3.5 text-right font-mono font-bold text-slate-700">
+                    ₱{{ row.rate_used|floatformat:2 }}
+                  </td>
+
+                  <td class="px-5 py-3.5 text-right font-mono font-bold text-slate-800">
+                    <span class="pump-display" id="pump_{{ row.lease_id }}">
+                      {% if row.has_reading %}₱{{ row.shared_pump_amount|floatformat:2|intcomma }}{% else %}-{% endif %}
                     </span>
                   </td>
 
@@ -258,10 +290,14 @@
                     {% endif %}
                   </td>
 
+                  <td class="px-5 py-3.5 text-xs font-bold text-slate-600">
+                    {{ row.reference|default:"-" }}
+                  </td>
+
                 </tr>
                 {% empty %}
                 <tr>
-                  <td colspan="6" class="py-12 text-center bg-white">
+                  <td colspan="9" class="py-12 text-center bg-white">
                     <strong class="text-xs text-slate-600 block">No target unit bindings configured for this timestamp scope.</strong>
                   </td>
                 </tr>
@@ -340,6 +376,53 @@
     }
   }
 
+  function recalculateWaterPreview() {
+    const inputs = Array.from(document.querySelectorAll('.reading-input'));
+    const usages = new Map();
+    let totalUsage = 0;
+
+    inputs.forEach(input => {
+      const current = parseFloat(input.value) || 0;
+      const previous = parseFloat(input.dataset.previous) || 0;
+      const leaseId = input.name.replace('reading_', '');
+      const usage = input.value !== '' ? Math.max(0, current - previous) : 0;
+      usages.set(leaseId, usage);
+      totalUsage += usage;
+    });
+
+    inputs.forEach(input => {
+      const rate = parseFloat(input.dataset.rate) || 0;
+      const sharedPumpTotal = parseFloat(input.dataset.sharedPump) || 0;
+      const vatPercent = parseFloat(input.dataset.vatPercent) || 0;
+      const leaseId = input.name.replace('reading_', '');
+      const row = input.closest('tr');
+
+      if (input.value !== '') {
+        const usage = usages.get(leaseId) || 0;
+        const base = usage * rate;
+        const sharedPump = totalUsage > 0 ? (usage / totalUsage) * sharedPumpTotal : 0;
+        const vat = (base + sharedPump) * (vatPercent / 100);
+        const amount = base + sharedPump + vat;
+
+        document.getElementById('usage_' + leaseId).textContent = usage.toFixed(2);
+        document.getElementById('pump_' + leaseId).textContent = '₱' + sharedPump.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('amount_' + leaseId).textContent = '₱' + amount.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        row.classList.add('bg-emerald-50/40');
+        row.classList.remove('bg-white');
+      } else {
+        document.getElementById('usage_' + leaseId).textContent = '-';
+        document.getElementById('pump_' + leaseId).textContent = '-';
+        document.getElementById('amount_' + leaseId).textContent = '-';
+        row.classList.remove('bg-emerald-50/40');
+        row.classList.add('bg-white');
+      }
+    });
+  }
+
+  function calculateRow(input) {
+    recalculateWaterPreview();
+  }
+
   // Frontend Pagination Logic
   document.addEventListener("DOMContentLoaded", function() {
     const rowsPerPage = 10;
@@ -352,6 +435,7 @@
 
     if (totalRows > 0) {
       document.getElementById('pagination-controls').classList.remove('hidden');
+      recalculateWaterPreview();
       renderTable();
     }
 

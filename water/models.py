@@ -53,6 +53,53 @@ class WaterRate(models.Model):
             raise ValidationError("Rate must be greater than zero")
 
 
+class WaterBillingSettings(models.Model):
+    """
+    Monthly water billing configuration.
+    Values are snapshotted into WaterReading when bills are computed.
+    """
+    reading_month = models.DateField(
+        unique=True,
+        help_text="Month being billed (use first day of month)"
+    )
+    shared_pump_total = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text="Total shared pump charge to allocate by tenant usage"
+    )
+    vat_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("12.00"),
+        help_text="VAT percentage applied to water charge plus shared pump"
+    )
+    notes = models.TextField(blank=True)
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="updated_water_billing_settings"
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-reading_month"]
+        verbose_name = "Water Billing Setting"
+        verbose_name_plural = "Water Billing Settings"
+
+    def __str__(self):
+        return f"{self.reading_month:%b %Y} pump={self.shared_pump_total} VAT={self.vat_percent}%"
+
+    def clean(self):
+        if self.shared_pump_total < 0:
+            raise ValidationError("Shared pump total cannot be negative")
+        if self.vat_percent < 0:
+            raise ValidationError("VAT percent cannot be negative")
+
+
 class WaterReading(models.Model):
     """
     Manual meter readings per tenant per month.
@@ -100,6 +147,37 @@ class WaterReading(models.Model):
         decimal_places=2,
         default=Decimal("0.00"),
         help_text="Computed: Consumption × Rate (auto-filled)"
+    )
+    
+    base_water_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text="Computed: Consumption x rate"
+    )
+    shared_pump_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text="Tenant share of shared pump charge"
+    )
+    vat_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("12.00"),
+        help_text="VAT percentage snapshot"
+    )
+    vat_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text="VAT amount snapshot"
+    )
+    previous_unpaid_water_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text="Previous unpaid water balance included in this bill"
     )
     
     # Special flags
@@ -151,7 +229,13 @@ class WaterReading(models.Model):
         if rate:
             self.rate_used = rate.rate_per_cu_m
         
-        self.computed_amount = (self.consumption * self.rate_used).quantize(Decimal("0.01"))
+        self.base_water_amount = (self.consumption * self.rate_used).quantize(Decimal("0.01"))
+        self.computed_amount = (
+            self.base_water_amount
+            + self.shared_pump_amount
+            + self.vat_amount
+            + self.previous_unpaid_water_amount
+        ).quantize(Decimal("0.01"))
     
     def get_rate_for_month(self):
         """Get the active water rate for this reading month"""

@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from rentals.models import TenantProfile, Lease, Unit, UnitImage, TenantAttachment
-from rentals.services import generate_tenant_password, send_tenant_credentials_email
+from rentals.services import generate_tenant_password
 from announcements.models import Announcement
 from billing.models import MonthlyBill
 
@@ -152,93 +152,10 @@ class TenantProfileForm(forms.ModelForm):
                         uploaded_by=uploaded_by
                     )
                 
-                # Send credentials email to tenant (with edge case handling)
-                email_sent = False
-                email_valid = True
-                
-                # Validate email format using Django's email validation
-                from django.core.validators import validate_email
-                from django.core.exceptions import ValidationError as DjangoValidationError
-                
+                # Tenant-facing credentials and welcome messages are delayed until move-in payment activates the lease.
+                unit_details = ""
                 try:
-                    validate_email(email)
-                except DjangoValidationError:
-                    logger.warning(f"Invalid email format: {email}")
-                    email_valid = False
-                    email_sent = False
-                
-                # Send credentials email only if email is valid
-                if email_valid:
-                    try:
-                        email_sent = send_tenant_credentials_email(
-                            tenant_email=email,
-                            tenant_name=full_name,
-                            password=generated_password
-                        )
-                        if email_sent:
-                            logger.info(f"Credentials email sent successfully to {email}")
-                        else:
-                            logger.warning(f"Failed to send credentials email to {email}")
-                    except Exception as e:
-                        logger.exception(f"Error sending credentials email to {email}: {e}")
-                        email_sent = False
-                
-                # Create tenant welcome notification with unit details (prevent duplicates)
-                unit_details = ""  # Initialize outside try block
-                try:
-                    # Check if welcome notification already exists for this tenant
                     from rentals.models import Notification
-                    existing_notification = Notification.objects.filter(
-                        recipient_type='TENANT',
-                        user=instance.user,
-                        title="Welcome to REALESTATE360+"
-                    ).first()
-                    
-                    if not existing_notification:
-                        # Get tenant's lease information if available
-                        lease_info = ""
-                        try:
-                            from rentals.models import Lease
-                            lease = Lease.objects.filter(tenant=instance.user, is_active=True).first()
-                            if lease:
-                                unit_details = f"""
-Unit Details:
-- Unit Number: {lease.unit.number}
-- Unit Type: {lease.unit.get_unit_type_display()}
-- Floor Level: {lease.unit.floor_level}
-- Size: {lease.unit.size_sqm} sqm
-- Monthly Rent: ₱{lease.monthly_rent:,.2f}
-- Lease Start Date: {lease.start_date}
-"""
-                        except Exception as lease_error:
-                            logger.warning(f"Could not fetch lease details for tenant notification: {lease_error}")
-                        
-                        # Create tenant welcome notification
-                        welcome_message = f"""Welcome to REALESTATE360+!
-
-Your tenant account has been successfully created.
-
-{unit_details}
-You can now access your tenant portal to:
-- View your billing statements
-- Make payments online
-- Request maintenance services
-- Access announcements and updates
-
-Monthly Rent Reminder: Your rent is due on the {_ordinal(lease.due_day) if lease else '5th'} of each month.
-
-Please keep your login credentials secure and do not share them with others."""
-                        
-                        Notification.create_tenant_notification(
-                            title="Welcome to REALESTATE360+",
-                            message=welcome_message,
-                            notification_type='SYSTEM',
-                            tenant_user=instance.user,
-                            related_unit=lease.unit if lease else None
-                        )
-                    else:
-                        logger.info(f"Welcome notification already exists for tenant {instance.user.email}")
-                    
                     # Create admin confirmation notification (prevent duplicates)
                     admin_title = f"New Tenant Added - {instance.first_name} {instance.last_name}"
                     existing_admin_notification = Notification.objects.filter(
@@ -253,9 +170,9 @@ Please keep your login credentials secure and do not share them with others."""
 Tenant Name: {instance.first_name} {instance.last_name}
 Email: {email}
 {unit_details}
-Status: Account created and credentials sent
+Status: Account created; credentials will be sent after move-in payment is confirmed
 
-Email notification: {'Sent successfully' if email_sent else 'Failed to send - contact support'}"""
+Email notification: Delayed until lease activation"""
                         
                         Notification.create_admin_notification(
                             title=admin_title,
@@ -703,6 +620,13 @@ class UnitForm(forms.ModelForm):
             'description': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Describe the unit features, layout, and highlights'}),
             'amenities': forms.Textarea(attrs={'rows': 2, 'placeholder': 'List amenities separated by commas (e.g., Air Conditioning, WiFi, Parking)'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["status"].choices = [
+            choice for choice in self.fields["status"].choices
+            if choice[0] != "RESERVED"
+        ]
 
 
 class UnitImageForm(forms.ModelForm):

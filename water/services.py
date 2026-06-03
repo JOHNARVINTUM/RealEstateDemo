@@ -8,11 +8,16 @@ import logging
 
 from django.db import transaction
 from django.core.exceptions import ValidationError
+from django.db.models import Q, Sum
 
 from billing.models import MonthlyBill
-from .models import WaterRate, WaterReading, WaterComputationLog
+from .models import WaterBillingSettings, WaterRate, WaterReading, WaterComputationLog
 
 logger = logging.getLogger(__name__)
+
+
+def quantize_money(value) -> Decimal:
+    return Decimal(value or 0).quantize(Decimal("0.01"))
 
 
 def get_active_rate_for_date(target_date: date) -> WaterRate:
@@ -37,7 +42,48 @@ def get_active_rate_for_date(target_date: date) -> WaterRate:
     return rate
 
 
-def compute_water_reading(water_reading: WaterReading) -> Decimal:
+def get_water_billing_settings_for_month(target_date: date) -> WaterBillingSettings:
+    settings, _ = WaterBillingSettings.objects.get_or_create(
+        reading_month=target_date,
+        defaults={
+            "shared_pump_total": Decimal("0.00"),
+            "vat_percent": Decimal("12.00"),
+        },
+    )
+    return settings
+
+
+def previous_unpaid_water_balance(lease, reading_month: date) -> Decimal:
+    total = Decimal("0.00")
+    bills = MonthlyBill.objects.filter(
+        lease=lease,
+        billing_month__lt=reading_month,
+    ).filter(Q(status="UNPAID") | Q(status="PARTIALLY_PAID"))
+    for bill in bills:
+        total += bill.water_balance
+    return quantize_money(total)
+
+
+def total_consumption_for_month(reading_month: date, pending_readings=None) -> Decimal:
+    total = Decimal("0.00")
+    if pending_readings:
+        for reading in pending_readings:
+            total += Decimal(reading.consumption or 0)
+
+    existing_total = WaterReading.objects.filter(
+        reading_month=reading_month
+    ).aggregate(total=Sum("consumption"))["total"] or Decimal("0.00")
+    return quantize_money(total + existing_total)
+
+
+def compute_water_reading(
+    water_reading: WaterReading,
+    *,
+    total_month_consumption: Decimal | None = None,
+    shared_pump_total: Decimal | None = None,
+    vat_percent: Decimal | None = None,
+    previous_unpaid_water_amount: Decimal | None = None,
+) -> Decimal:
     """
     Compute water consumption and amount for a reading.
     Updates the reading object in-place but does NOT save.
@@ -66,15 +112,48 @@ def compute_water_reading(water_reading: WaterReading) -> Decimal:
             )
         water_reading.consumption = consumption.quantize(Decimal("0.01"))
     
-    # Calculate amount
-    water_reading.computed_amount = (
+    settings = get_water_billing_settings_for_month(water_reading.reading_month)
+    if shared_pump_total is None:
+        shared_pump_total = settings.shared_pump_total
+    if vat_percent is None:
+        vat_percent = settings.vat_percent
+    if previous_unpaid_water_amount is None:
+        previous_unpaid_water_amount = previous_unpaid_water_balance(
+            water_reading.lease,
+            water_reading.reading_month,
+        )
+    if total_month_consumption is None:
+        total_month_consumption = total_consumption_for_month(water_reading.reading_month)
+
+    water_reading.base_water_amount = quantize_money(
         water_reading.consumption * water_reading.rate_used
-    ).quantize(Decimal("0.01"))
+    )
+    if total_month_consumption > 0 and shared_pump_total > 0:
+        water_reading.shared_pump_amount = quantize_money(
+            (water_reading.consumption / total_month_consumption) * shared_pump_total
+        )
+    else:
+        water_reading.shared_pump_amount = Decimal("0.00")
+
+    water_reading.vat_percent = quantize_money(vat_percent)
+    vat_base = water_reading.base_water_amount + water_reading.shared_pump_amount
+    water_reading.vat_amount = quantize_money(vat_base * (water_reading.vat_percent / Decimal("100.00")))
+    water_reading.previous_unpaid_water_amount = quantize_money(previous_unpaid_water_amount)
+    water_reading.computed_amount = quantize_money(
+        water_reading.base_water_amount
+        + water_reading.shared_pump_amount
+        + water_reading.vat_amount
+        + water_reading.previous_unpaid_water_amount
+    )
     
     logger.info(
         f"Computed water for {water_reading}: "
         f"consumption={water_reading.consumption}, "
         f"rate={water_reading.rate_used}, "
+        f"base={water_reading.base_water_amount}, "
+        f"pump={water_reading.shared_pump_amount}, "
+        f"vat={water_reading.vat_amount}, "
+        f"previous_unpaid_water={water_reading.previous_unpaid_water_amount}, "
         f"amount={water_reading.computed_amount}"
     )
     

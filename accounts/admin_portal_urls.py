@@ -56,6 +56,7 @@ from .admin_payment_views import (
 )
 from .admin_notification_views import (
     admin_notifications,
+    admin_delete_all_read_notifications,
     admin_mark_notification_read,
     admin_mark_all_notifications_read,
     admin_delete_notification,
@@ -106,6 +107,7 @@ urlpatterns = [
     
     # Notifications
     path("notifications/", admin_notifications, name="admin_notifications"),
+    path("notifications/delete-read/", admin_delete_all_read_notifications, name="admin_delete_all_read_notifications"),
     path("notifications/<int:notification_id>/read/", admin_mark_notification_read, name="admin_mark_notification_read"),
     path("notifications/mark-all-read/", admin_mark_all_notifications_read, name="admin_mark_all_notifications_read"),
     path("notifications/<int:notification_id>/delete/", admin_delete_notification, name="admin_delete_notification"),

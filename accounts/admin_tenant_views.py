@@ -8,6 +8,7 @@ from django.db.models import Count, Exists, OuterRef, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
 from django.views.decorators.http import require_GET
 
@@ -167,6 +168,12 @@ def admin_tenant_detail(request, tenant_id: int):
     bill_history = MonthlyBill.objects.filter(lease_id__in=lease_ids).select_related("lease__unit").order_by("-billing_month")[:24]
 
     manual_payments = ManualPayment.objects.filter(user=tenant.user).order_by("-created_at")[:20]
+    next_url = request.GET.get("next", "")
+    back_url = (
+        next_url
+        if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()})
+        else reverse("admin_tenants")
+    )
 
     return render(
         request,
@@ -177,6 +184,7 @@ def admin_tenant_detail(request, tenant_id: int):
             "attachments": attachments,
             "bill_history": bill_history,
             "manual_payments": manual_payments,
+            "back_url": back_url,
         },
     )
 

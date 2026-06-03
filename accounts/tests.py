@@ -1,7 +1,9 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.test import TestCase
+from django.urls import reverse
+from django.utils import timezone
 
 from accounts.models import User
 from accounts.admin_portal_forms import LeaseForm
@@ -89,6 +91,107 @@ class AdminPaymentTypeEditTests(TestCase):
         self.assertEqual(page_payment.affected_months, "Sep 2026")
 
 
+class AdminNotificationBehaviorTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            email="admin-notify@example.com",
+            username="adminnotify",
+            password="password123",
+        )
+        self.tenant = User.objects.create_user(
+            email="notify-tenant@example.com",
+            username="notifytenant",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        TenantProfile.objects.create(
+            user=self.tenant,
+            first_name="Notify",
+            last_name="Tenant",
+            password_change_required=False,
+            created_by=None,
+        )
+
+    def test_delete_all_read_notifications_keeps_unread(self):
+        read_notification = Notification.objects.create(
+            title="Read",
+            message="Done",
+            notification_type="SYSTEM",
+            recipient_type="ADMIN",
+            is_read=True,
+            read_at=timezone.now(),
+        )
+        unread_notification = Notification.objects.create(
+            title="Unread",
+            message="Pending",
+            notification_type="SYSTEM",
+            recipient_type="ADMIN",
+            is_read=False,
+        )
+        self.client.force_login(self.admin)
+
+        response = self.client.post(reverse("admin_delete_all_read_notifications"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(Notification.objects.filter(pk=read_notification.pk).exists())
+        self.assertTrue(Notification.objects.filter(pk=unread_notification.pk).exists())
+
+    def test_old_read_notifications_are_purged_on_admin_notification_page(self):
+        old_read = Notification.objects.create(
+            title="Old Read",
+            message="Old",
+            notification_type="SYSTEM",
+            recipient_type="ADMIN",
+            is_read=True,
+            read_at=timezone.now() - timedelta(days=2),
+        )
+        self.client.force_login(self.admin)
+
+        response = self.client.get(reverse("admin_notifications"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Notification.objects.filter(pk=old_read.pk).exists())
+
+    def test_payment_notifications_show_view_for_approved_and_approve_for_pending(self):
+        approved_payment = ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="PAY-APPROVED-1",
+            payment_method="PAYMONGO",
+            payment_type="full",
+            amount=Decimal("1000.00"),
+            status="APPROVED",
+        )
+        pending_payment = ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="PAY-PENDING-1",
+            payment_method="GCASH",
+            payment_type="full",
+            amount=Decimal("1000.00"),
+            status="PENDING",
+        )
+        Notification.objects.create(
+            title="Approved PayMongo",
+            message=f"Reference: {approved_payment.reference_code}. Paid.",
+            notification_type="PAYMENT",
+            recipient_type="ADMIN",
+            related_tenant=self.tenant,
+        )
+        Notification.objects.create(
+            title="Pending GCash",
+            message=f"Reference: {pending_payment.reference_code}. Please review.",
+            notification_type="PAYMENT",
+            recipient_type="ADMIN",
+            related_tenant=self.tenant,
+        )
+        self.client.force_login(self.admin)
+
+        response = self.client.get(reverse("admin_notifications"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "View Payment")
+        self.assertContains(response, "Approve Payment")
+
+
 class AdminTenantAndUnitSearchTests(TestCase):
     def setUp(self):
         self.admin = User.objects.create_superuser(
@@ -134,6 +237,17 @@ class AdminTenantAndUnitSearchTests(TestCase):
         tenant_ids = [tenant.id for tenant in response.context["page_obj"]]
         self.assertIn(self.tenant_john.tenantprofile.id, tenant_ids)
         self.assertNotIn(self.tenant_mary.tenantprofile.id, tenant_ids)
+
+    def test_admin_tenant_detail_back_url_preserves_search_state(self):
+        self.client.force_login(self.admin)
+        next_url = "/admin-portal/tenants/?q=John+C&lease=active&page=2"
+
+        response = self.client.get(
+            f"/admin-portal/tenants/{self.tenant_john.tenantprofile.id}/?next=%2Fadmin-portal%2Ftenants%2F%3Fq%3DJohn%2BC%26lease%3Dactive%26page%3D2"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["back_url"], next_url)
 
     def test_admin_units_search_no_longer_raises_q_error(self):
         Unit.objects.create(number="700", monthly_rent=Decimal("10000.00"), status="AVAILABLE")

@@ -1,12 +1,16 @@
 from django.contrib import messages
 from functools import lru_cache
+import re
+
 from django.db import connection
+from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
 from maintenance.models import MaintenanceRequest
+from payments.models import ManualPayment
 from rentals.models import Notification
 
 from .admin_portal_views import admin_required, admin_password_verified, render_admin_password_confirm
@@ -23,6 +27,20 @@ def notification_has_read_at_column() -> bool:
 def resolve_notification_target_url(notification):
     """Return the best action URL for a notification when one can be resolved safely."""
     if notification.notification_type == "PAYMENT":
+        reference_match = re.search(r"Reference:\s*([A-Za-z0-9_-]+)", notification.message or "")
+        payment = None
+        if reference_match:
+            payment = ManualPayment.objects.filter(
+                reference_code=reference_match.group(1)
+            ).order_by("-created_at").first()
+        if not payment and notification.related_tenant:
+            payment = ManualPayment.objects.filter(
+                user=notification.related_tenant
+            ).order_by("-created_at").first()
+        if payment:
+            notification.target_label = "View Payment" if payment.status == "APPROVED" or payment.payment_method == "PAYMONGO" else "Approve Payment"
+            return reverse("admin_payment_detail", args=[payment.id])
+        notification.target_label = "Approve Payment"
         return f"{reverse('admin_payments')}?status=PENDING"
 
     if notification.notification_type != "MAINTENANCE" or not notification.related_tenant:
@@ -50,9 +68,21 @@ def resolve_notification_target_url(notification):
     return reverse("admin_maintenance")
 
 
+def purge_read_admin_notifications():
+    if not notification_has_read_at_column():
+        return 0
+    cutoff = timezone.now() - timezone.timedelta(days=1)
+    return Notification.objects.filter(
+        recipient_type__in=["ADMIN", "SPECIFIC_USER"],
+        is_read=True,
+        read_at__lt=cutoff,
+    ).delete()[0]
+
+
 @admin_required
 def admin_notifications(request):
     """Admin portal: view admin notifications only."""
+    purge_read_admin_notifications()
     base_notifications = Notification.objects.filter(
         recipient_type__in=["ADMIN", "SPECIFIC_USER"]
     ).select_related("related_tenant__tenantprofile", "related_unit")
@@ -67,6 +97,7 @@ def admin_notifications(request):
     notifications = notifications.order_by("-created_at")
     notification_list = list(notifications)
     for notification in notification_list:
+        notification.target_label = None
         notification.target_url = resolve_notification_target_url(notification)
     unread_count = base_notifications.filter(is_read=False).count()
 
@@ -144,6 +175,20 @@ def admin_mark_all_notifications_read(request):
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return JsonResponse({"success": True})
 
+    return redirect("admin_notifications")
+
+
+@admin_required
+def admin_delete_all_read_notifications(request):
+    """Delete all read admin notifications."""
+    if request.method != "POST":
+        return redirect("admin_notifications")
+
+    deleted_count, _ = Notification.objects.filter(
+        recipient_type__in=["ADMIN", "SPECIFIC_USER"],
+        is_read=True,
+    ).delete()
+    messages.success(request, f"Deleted {deleted_count} read notification{'s' if deleted_count != 1 else ''}.")
     return redirect("admin_notifications")
 
 

@@ -6,7 +6,7 @@ from django.db import transaction
 from django.db.models import Count, Q, Avg, Max, F
 from django.core.mail import send_mail
 from django.conf import settings
-from rentals.models import TenantRiskClassification, Lease, CalendarEvent
+from rentals.models import TenantRiskClassification, Lease, CalendarEvent, Notification
 from billing.models import MonthlyBill
 from payments.models import ManualPayment
 import logging
@@ -978,6 +978,44 @@ class LeaseActivationService:
             bill_ids=bill_ids,
             tenant_note=f"Move-in payment via {payment_method}",
         )
+
+    @staticmethod
+    def _send_activation_welcome(lease):
+        try:
+            profile = lease.tenant.tenantprofile
+            tenant_name = profile.full_name
+            password = generate_tenant_password(profile.first_name, profile.last_name)
+            lease.tenant.set_password(password)
+            lease.tenant.save(update_fields=["password"])
+            profile.password_change_required = True
+            profile.send_credentials = True
+            profile.has_seen_unit_welcome = False
+            profile.save(update_fields=["password_change_required", "send_credentials", "has_seen_unit_welcome"])
+
+            email_sent = send_tenant_credentials_email(
+                tenant_email=lease.tenant.email,
+                tenant_name=tenant_name,
+                password=password,
+            )
+            if not email_sent:
+                logger.warning("Activation credentials email failed for tenant %s", lease.tenant.email)
+
+            Notification.create_tenant_notification(
+                title=f"Welcome to Unit {lease.unit.number}",
+                message=(
+                    "Your move-in payment has been confirmed and your lease is now active.\n\n"
+                    f"Unit: {lease.unit.number}\n"
+                    f"Monthly Rent: PHP {lease.monthly_rent:,.2f}\n"
+                    f"Lease Start: {lease.start_date}\n"
+                    f"Rent Due Day: Every {lease.due_day} of the month\n\n"
+                    "Your tenant portal access has been sent to your email."
+                ),
+                notification_type="SYSTEM",
+                tenant_user=lease.tenant,
+                related_unit=lease.unit,
+            )
+        except Exception as exc:
+            logger.exception("Failed to send activation welcome for lease %s: %s", lease.id, exc)
     
     @staticmethod
     def activate_lease_after_payment(
@@ -1037,6 +1075,7 @@ class LeaseActivationService:
                     first_bill=first_bill,
                     existing_payment=existing_payment,
                 )
+                LeaseActivationService._send_activation_welcome(lease)
                 
                 logger.info(
                     f"Lease {lease_id} activated successfully. "

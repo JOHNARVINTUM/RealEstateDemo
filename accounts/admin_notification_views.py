@@ -34,8 +34,14 @@ def resolve_notification_target_url(notification):
                 reference_code=reference_match.group(1)
             ).order_by("-created_at").first()
         if not payment and notification.related_tenant:
+            payment_filters = {"user": notification.related_tenant}
+            if notification.title == "Cash Payment Scheduled":
+                payment_filters.update({
+                    "payment_method": "CASH",
+                    "status": "PENDING",
+                })
             payment = ManualPayment.objects.filter(
-                user=notification.related_tenant
+                **payment_filters
             ).order_by("-created_at").first()
         if payment:
             notification.target_label = "View Payment" if payment.status == "APPROVED" or payment.payment_method == "PAYMONGO" else "Approve Payment"

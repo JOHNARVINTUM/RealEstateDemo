@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import User
+from accounts.admin_notification_views import resolve_notification_target_url
 from accounts.admin_portal_forms import LeaseForm
 from billing.models import MonthlyBill
 from maintenance.models import MaintenanceRequest
@@ -90,6 +91,30 @@ class AdminPaymentTypeEditTests(TestCase):
         page_payment = response.context["page_obj"][0]
         self.assertEqual(page_payment.tenant_display_name, "Tenant Person")
         self.assertEqual(page_payment.affected_months, "Sep 2026")
+
+    def test_pending_cash_payment_detail_keeps_requested_amount_when_bill_now_paid(self):
+        self.bill.status = "PAID"
+        self.bill.rent_paid = self.bill.base_rent
+        self.bill.parking_paid = self.bill.parking_fee
+        self.bill.save(update_fields=["status", "rent_paid", "parking_paid"])
+        pending_cash_payment = ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="REF-F2F-PENDING",
+            bill_ids=str(self.bill.id),
+            payment_type="rent_only",
+            payment_method="CASH",
+            amount=Decimal("10350.00"),
+            status="PENDING",
+        )
+        self.client.force_login(self.admin)
+
+        response = self.client.get(f"/admin-portal/payments/{pending_cash_payment.id}/detail/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["bills"][0]["rent"], Decimal("10000.00"))
+        self.assertEqual(response.context["bills"][0]["parking"], Decimal("350.00"))
+        self.assertEqual(response.context["bills"][0]["total"], Decimal("10350.00"))
+        self.assertContains(response, "₱10,350.00")
 
 
 class AdminWaterSaveBehaviorTests(TestCase):
@@ -307,6 +332,39 @@ class AdminNotificationBehaviorTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "View Payment")
         self.assertContains(response, "Approve Payment")
+
+    def test_cash_schedule_notification_without_reference_prefers_pending_cash_payment(self):
+        cash_payment = ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="REF-F2F-CASH",
+            payment_method="CASH",
+            payment_type="rent_only",
+            amount=Decimal("9000.00"),
+            status="PENDING",
+        )
+        ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="REF-PM-NEWER",
+            payment_method="PAYMONGO",
+            payment_type="rent_only",
+            amount=Decimal("9000.00"),
+            status="APPROVED",
+        )
+        notification = Notification.objects.create(
+            title="Cash Payment Scheduled",
+            message=(
+                f"{self.tenant.email} requested F2F cash payment of ₱9000.0 "
+                "on Jun 04, 2026 at 01:00 PM. Please confirm availability."
+            ),
+            notification_type="PAYMENT",
+            recipient_type="ADMIN",
+            related_tenant=self.tenant,
+        )
+
+        target_url = resolve_notification_target_url(notification)
+
+        self.assertEqual(target_url, reverse("admin_payment_detail", args=[cash_payment.id]))
+        self.assertEqual(notification.target_label, "Approve Payment")
 
 
 class AdminForecastingRevenueTests(TestCase):

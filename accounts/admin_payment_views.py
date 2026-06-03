@@ -1,4 +1,5 @@
 import logging
+from decimal import Decimal
 
 from django.contrib import messages
 from django.core.paginator import Paginator
@@ -24,6 +25,40 @@ def _tenant_display_name(user):
         if full_name:
             return full_name
     return user.email
+
+
+def _payment_record_fallback_amounts(payment, bill, remaining_amount):
+    remaining_amount = Decimal(remaining_amount or 0)
+    if remaining_amount <= 0:
+        return Decimal("0.00"), Decimal("0.00"), Decimal("0.00"), Decimal("0.00")
+
+    pay_rent = pay_water = pay_parking = pay_penalty = Decimal("0.00")
+
+    def take(amount):
+        nonlocal remaining_amount
+        amount = min(Decimal(amount or 0), remaining_amount)
+        remaining_amount -= amount
+        return amount
+
+    if payment.payment_type == "rent_only":
+        pay_rent = take(bill.base_rent)
+        pay_parking = take(bill.parking_fee)
+        pay_penalty = take(bill.interest)
+    elif payment.payment_type == "water_only":
+        pay_water = take(bill.water_amount)
+    else:
+        pay_rent = take(bill.base_rent)
+        pay_water = take(bill.water_amount)
+        pay_parking = take(bill.parking_fee)
+        pay_penalty = take(bill.interest)
+
+    if pay_rent + pay_water + pay_parking + pay_penalty == 0:
+        if payment.payment_type == "water_only":
+            pay_water = remaining_amount
+        else:
+            pay_rent = remaining_amount
+
+    return pay_rent, pay_water, pay_parking, pay_penalty
 
 
 @admin_required
@@ -337,6 +372,7 @@ def admin_payment_detail(request, payment_id: int):
         bill.id: bill
         for bill in MonthlyBill.objects.select_related("lease", "lease__unit").filter(pk__in=bill_ids)
     }
+    remaining_payment_amount = Decimal(payment.amount or 0)
 
     for bill_id in bill_ids:
         bill = bills_by_id.get(bill_id)
@@ -374,6 +410,14 @@ def admin_payment_detail(request, payment_id: int):
             pay_penalty = bill.interest
 
         pay_total = pay_rent + pay_water + pay_parking + pay_penalty
+        if pay_total == 0 and remaining_payment_amount > 0:
+            pay_rent, pay_water, pay_parking, pay_penalty = _payment_record_fallback_amounts(
+                payment,
+                bill,
+                remaining_payment_amount,
+            )
+            pay_total = pay_rent + pay_water + pay_parking + pay_penalty
+        remaining_payment_amount = max(remaining_payment_amount - pay_total, Decimal("0.00"))
 
         bills.append({
             "id": bill.id,

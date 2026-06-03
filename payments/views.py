@@ -169,7 +169,10 @@ def f2f_cash_payment(request):
                 schedule_info += f" at {parsed_time.strftime('%I:%M %p')}"
             Notification.create_notification(
                 title="Cash Payment Scheduled",
-                message=f"{request.user.email} requested F2F cash payment of ₱{amount_to_pay} {schedule_info}. Please confirm availability.",
+                message=(
+                    f"{request.user.email} requested F2F cash payment of \u20b1{amount_to_pay} {schedule_info}. "
+                    f"Reference: {payment.reference_code}. Please confirm availability."
+                ),
                 notification_type='PAYMENT',
                 recipient_type='ADMIN',
                 related_tenant=request.user

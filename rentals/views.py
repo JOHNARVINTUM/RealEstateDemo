@@ -198,10 +198,7 @@ def _dashboard_billing_context(user, lease, today):
     summary = _bill_balance_summary(all_bills)
     actual_balance_candidate = summary["actual_balance_candidate"]
     actual_balance_index = summary["actual_balance_index"]
-    actual_balance = (
-        get_or_update_monthly_bill(lease, actual_balance_candidate.billing_month)
-        if actual_balance_candidate else None
-    )
+    actual_balance = actual_balance_candidate
 
     today_start = month_start(today)
     context["total_balance_due"] = summary["total_balance_due"]
@@ -289,10 +286,7 @@ def _filtered_bills_for_statement(lease, billing_month_filter):
     filtered_bills = list(
         bills_query.filter(status__in=["UNPAID", "PARTIALLY_PAID"]).order_by("billing_month")
     )
-    return [
-        get_or_update_monthly_bill(lease, bill.billing_month)
-        for bill in filtered_bills
-    ]
+    return filtered_bills
 
 
 def _selected_contract_bill(lease, billing_month_filter):
@@ -310,9 +304,7 @@ def _selected_contract_bill(lease, billing_month_filter):
         billing_month__month=selected_month.month,
     ).select_related("source_water_reading").first()
 
-    if bill:
-        return get_or_update_monthly_bill(lease, bill.billing_month)
-    return None
+    return bill
 
 
 def _bill_display_status(bill, today):
@@ -453,17 +445,41 @@ def _water_only_locked(existing_bills):
     )
 
 
+def _bill_has_rent_due(bill):
+    return (bill.rent_balance + bill.parking_balance + bill.interest) > 0
+
+
+def _bill_has_water_due(bill):
+    return bill.water_balance > 0
+
+
 def _full_bill_available(all_bills):
-    return any(
-        (bill.rent_balance + bill.parking_balance) > 0 and bill.water_balance > 0
-        for bill in all_bills
+    return any(_bill_has_rent_due(bill) and _bill_has_water_due(bill) for bill in all_bills)
+
+
+def _automatic_payment_type(all_bills):
+    oldest_due_bill = next(
+        (bill for bill in all_bills if bill.total_balance > 0),
+        None,
     )
+    if not oldest_due_bill:
+        return "rent_only"
+
+    rent_due = _bill_has_rent_due(oldest_due_bill)
+    water_due = _bill_has_water_due(oldest_due_bill)
+    if rent_due and water_due:
+        return "full"
+    if water_due:
+        return "water_only"
+    return "rent_only"
 
 
-def _selected_payment_type(request, water_only_locked, full_bill_available):
+def _selected_payment_type(request, water_only_locked, full_bill_available, all_bills):
     requested_payment_type = request.GET.get("payment_type", "").strip()
     if water_only_locked:
         return "water_only"
+    if not requested_payment_type:
+        return _automatic_payment_type(all_bills)
     if requested_payment_type == "water_only":
         return "water_only"
     if requested_payment_type == "full" and full_bill_available:
@@ -473,9 +489,9 @@ def _selected_payment_type(request, water_only_locked, full_bill_available):
 
 def _bills_for_payment_type(all_bills, payment_type, months_to_pay, today_start):
     if payment_type == "rent_only":
-        bills_to_process = [bill for bill in all_bills if bill.rent_balance > 0][:months_to_pay]
+        bills_to_process = [bill for bill in all_bills if _bill_has_rent_due(bill)][:months_to_pay]
         return bills_to_process or [
-            bill for bill in all_bills if bill.rent_balance > 0 or bill.status == "UPCOMING"
+            bill for bill in all_bills if _bill_has_rent_due(bill) or bill.status == "UPCOMING"
         ][:months_to_pay]
 
     if payment_type == "water_only":
@@ -499,7 +515,7 @@ def _payment_amounts_for_bill(bill, payment_type):
         pay_rent = bill.rent_balance
         pay_water = Decimal("0.00")
         pay_parking = bill.parking_balance
-        pay_penalty = Decimal("0.00")
+        pay_penalty = bill.interest
         display_rent = float(pay_rent)
         display_water = 0
         display_parking = float(pay_parking)
@@ -533,7 +549,7 @@ def _payment_amounts_for_bill(bill, payment_type):
 
 def _payment_row_total(amounts, payment_type):
     if payment_type == "rent_only":
-        return amounts["pay_rent"] + amounts["pay_parking"]
+        return amounts["pay_rent"] + amounts["pay_parking"] + amounts["pay_penalty"]
     if payment_type == "water_only":
         return amounts["pay_water"]
     return (
@@ -547,7 +563,6 @@ def _payment_row_total(amounts, payment_type):
 def _payment_preview_rows(lease, bills_to_process, payment_type):
     preview_rows = []
     for bill in bills_to_process:
-        bill = get_or_update_monthly_bill(lease, bill.billing_month)
         amounts = _payment_amounts_for_bill(bill, payment_type)
         pay_total = _payment_row_total(amounts, payment_type)
 
@@ -583,19 +598,16 @@ def _payment_totals(preview_rows, payment_type):
 
 def _payment_preview_context(request, lease, months_to_pay):
     reconcile_approved_payments_for_tenant(request.user)
-    ensure_bills_since_move_in(lease)
-
-    existing_bills = list(MonthlyBill.objects.filter(lease=lease).order_by("billing_month"))
-    water_only_locked = _water_only_locked(existing_bills)
 
     today = date.today()
     today_start = month_start(today)
     ensure_bills_up_to(lease, add_months(today_start, months_to_pay + 1))
 
     all_bills = list(MonthlyBill.objects.filter(lease=lease).order_by("billing_month"))
+    water_only_locked = _water_only_locked(all_bills)
     full_bill_available = _full_bill_available(all_bills)
     can_pay_full_bill = full_bill_available and not water_only_locked
-    payment_type = _selected_payment_type(request, water_only_locked, full_bill_available)
+    payment_type = _selected_payment_type(request, water_only_locked, full_bill_available, all_bills)
     bills_to_process = _bills_for_payment_type(all_bills, payment_type, months_to_pay, today_start)
     preview_rows = _payment_preview_rows(lease, bills_to_process, payment_type)
     totals = _payment_totals(preview_rows, payment_type)

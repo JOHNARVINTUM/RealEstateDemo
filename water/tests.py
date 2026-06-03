@@ -7,7 +7,7 @@ from accounts.models import User
 from billing.models import MonthlyBill
 from rentals.models import Lease, Unit
 from water.models import WaterBillingSettings, WaterRate, WaterReading
-from water.services import compute_water_reading
+from water.services import compute_water_reading, create_or_update_monthly_bill_from_reading
 
 
 class WaterComputationTests(TestCase):
@@ -104,3 +104,44 @@ class WaterComputationTests(TestCase):
         self.assertEqual(reading_b.vat_amount, Decimal("120.00"))
         self.assertEqual(reading_b.previous_unpaid_water_amount, Decimal("0.00"))
         self.assertEqual(reading_b.computed_amount, Decimal("1120.00"))
+
+    def test_rent_paid_bill_can_receive_unpaid_water_charge(self):
+        bill = MonthlyBill.objects.create(
+            lease=self.lease_a,
+            billing_month=date(2026, 6, 1),
+            base_rent=Decimal("10000.00"),
+            rent_paid=Decimal("10000.00"),
+            parking_fee=Decimal("350.00"),
+            parking_paid=Decimal("350.00"),
+            water_amount=Decimal("0.00"),
+            water_paid=Decimal("0.00"),
+            total_due=Decimal("10350.00"),
+            status="PAID",
+        )
+        reading = WaterReading.objects.create(
+            lease=self.lease_a,
+            reading_month=date(2026, 6, 1),
+            previous_reading=Decimal("0.00"),
+            current_reading=Decimal("10.00"),
+        )
+        compute_water_reading(
+            reading,
+            total_month_consumption=Decimal("10.00"),
+            shared_pump_total=Decimal("0.00"),
+            vat_percent=Decimal("12.00"),
+        )
+        reading.save()
+
+        updated_bill, created = create_or_update_monthly_bill_from_reading(
+            reading,
+            force_update=True,
+        )
+        bill.refresh_from_db()
+
+        self.assertFalse(created)
+        self.assertEqual(updated_bill.id, bill.id)
+        self.assertEqual(bill.water_amount, Decimal("112.00"))
+        self.assertEqual(bill.water_paid, Decimal("0.00"))
+        self.assertEqual(bill.rent_paid, Decimal("10000.00"))
+        self.assertEqual(bill.parking_paid, Decimal("350.00"))
+        self.assertEqual(bill.status, "PARTIALLY_PAID")

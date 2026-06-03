@@ -63,6 +63,7 @@ from .admin_notification_views import (
 )
 from .admin_portal_views_water import (
     admin_water,
+    admin_water_export_csv,
     admin_water_process,
     admin_water_rate,
     admin_water_recompute,
@@ -86,6 +87,7 @@ urlpatterns = [
     
     # Water Management
     path("water/", admin_water, name="admin_water"),
+    path("water/export/", admin_water_export_csv, name="admin_water_export_csv"),
     path("water/process/", admin_water_process, name="admin_water_process"),
     path("water/rate/", admin_water_rate, name="admin_water_rate"),
     path("water/recompute/", admin_water_recompute, name="admin_water_recompute"),

@@ -1,7 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 
-from django.db.models import Sum, F, ExpressionWrapper, DecimalField
+from django.db.models import Sum, Q
+from django.db.models.functions import TruncMonth
 from django.shortcuts import render
 from django.utils import timezone
 
@@ -141,23 +142,32 @@ def admin_forecasting(request):
         return labels
 
     revenue_series, hist_labels = [], []
+    history_start = _month_date(24)
+    history_end = (current_month_start + timedelta(days=32)).replace(day=1)
+    monthly_collected_totals = {
+        (row["month_bucket"].year, row["month_bucket"].month): float(
+            (row["rent"] or 0)
+            + (row["water"] or 0)
+            + (row["parking"] or 0)
+            + (row["interest"] or 0)
+        )
+        for row in MonthlyBill.objects.filter(
+            billing_month__gte=history_start,
+            billing_month__lt=history_end,
+        )
+        .annotate(month_bucket=TruncMonth("billing_month"))
+        .values("month_bucket")
+        .annotate(
+            rent=Sum("rent_paid"),
+            water=Sum("water_paid"),
+            parking=Sum("parking_paid"),
+            interest=Sum("interest", filter=Q(status="PAID")),
+        )
+    }
 
     for i in range(24, -1, -1):
         md = _month_date(i)
-        rev = float(
-            MonthlyBill.objects.filter(
-                billing_month__year=md.year,
-                billing_month__month=md.month,
-            ).aggregate(
-                total=Sum(
-                    ExpressionWrapper(
-                        F("base_rent") + F("water_amount") + F("interest"),
-                        output_field=DecimalField(),
-                    )
-                )
-            )["total"]
-            or 0
-        )
+        rev = monthly_collected_totals.get((md.year, md.month), 0)
         revenue_series.append(rev)
         hist_labels.append(md.strftime("%b %Y"))
 

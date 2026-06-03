@@ -82,7 +82,7 @@
         <span class="text-base font-black text-violet-600 uppercase tracking-widest">Predictive Analytics</span>
       </div>
       <h1 class="text-3xl md:text-5xl font-black text-slate-900 mt-1">Forecasting</h1>
-      <p class="text-slate-600 mt-3 text-xl font-medium leading-relaxed">Revenue forecast using the last 2 years of historical billing data.</p>
+      <p class="text-slate-600 mt-3 text-xl font-medium leading-relaxed">Revenue forecast using the last 2 years of actual collected revenue.</p>
     </div>
     <div class="flex items-center gap-4 flex-wrap">
       <div class="flex items-center gap-2 px-5 py-3 bg-violet-50 border border-violet-200 rounded-xl">
@@ -246,7 +246,7 @@
     <div id="aboutContent" class="hidden space-y-6 mt-8">
       <p class="text-lg text-slate-300 leading-relaxed font-medium">
         Revenue forecasting uses <strong>SARIMA</strong> when enough history is available, with a 3-month moving average as a fallback.
-        Accuracy metrics are computed by backtesting on the last 3 months of real billing data.
+        Accuracy metrics are computed by backtesting on the last 3 months of actual collected revenue.
       </p>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-2">
         <div class="bg-white/5 border border-white/10 rounded-xl p-5">
@@ -262,7 +262,7 @@
           <p class="text-sm text-slate-400 font-medium leading-relaxed">Mean Absolute Percentage Error. <span class="text-emerald-400 font-black">Under 5%</span> is good, <span class="text-amber-400 font-black">under 15%</span> is acceptable, and anything higher is high error.</p>
         </div>
       </div>
-      <p class="text-xs text-slate-500 font-black uppercase tracking-widest pt-4">Revenue uses SARIMA when enough history is available, with a moving-average fallback.</p>
+      <p class="text-xs text-slate-500 font-black uppercase tracking-widest pt-4">Revenue uses collected rent, water, parking, and paid late fees with a moving-average fallback.</p>
     </div>
   </div>
 

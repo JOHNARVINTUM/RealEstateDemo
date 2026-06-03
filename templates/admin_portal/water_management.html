@@ -206,7 +206,8 @@
                   <th class="px-5 py-3 text-xs font-bold text-slate-700">Current Reading (m³)</th>
                   <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Usage</th>
                   <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Rate</th>
-                  <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Shared Pump</th>
+                  <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Shared Pump Rate</th>
+                  <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Shared Pump Price</th>
                   <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Price</th>
                   <th class="px-5 py-3 text-xs font-bold text-slate-700 text-center">Status</th>
                   <th class="px-5 py-3 text-xs font-bold text-slate-700">Reference</th>
@@ -247,7 +248,7 @@
                            step="0.01"
                            min="0"
                            placeholder="0.00"
-                           {% if row.bill_paid %}readonly{% endif %}
+                           {% if row.has_reading or row.bill_paid %}readonly{% endif %}
                            data-previous="{{ row.previous_reading }}"
                            data-rate="{{ rate }}"
                            data-shared-pump="{{ shared_pump_total }}"
@@ -263,26 +264,32 @@
                   </td>
 
                   <td class="px-5 py-3.5 text-right font-mono font-bold text-slate-700">
-                    ₱{{ row.rate_used|floatformat:2 }}
+                    &#8369;{{ row.rate_used|floatformat:2 }}
                   </td>
 
                   <td class="px-5 py-3.5 text-right font-mono font-bold text-slate-800">
                     <span class="pump-display" id="pump_{{ row.lease_id }}">
-                      {% if row.has_reading %}₱{{ row.shared_pump_amount|floatformat:2|intcomma }}{% else %}-{% endif %}
+                      {% if row.has_reading %}{{ row.usage_share_percent|floatformat:2 }}%{% else %}-{% endif %}
+                    </span>
+                  </td>
+
+                  <td class="px-5 py-3.5 text-right font-mono font-bold text-slate-800">
+                    <span class="pump-price-display" id="pump_price_{{ row.lease_id }}">
+                      {% if row.has_reading %}&#8369;{{ row.shared_pump_amount|floatformat:2|intcomma }}{% else %}-{% endif %}
                     </span>
                   </td>
 
                   <!-- Calculated Financial Projected String Hook Column -->
                   <td class="px-5 py-3.5 text-right">
                     <strong class="amount-display text-slate-900 font-black" id="amount_{{ row.lease_id }}">
-                      {% if row.has_reading %}₱{{ row.amount|intcomma }}{% else %}-{% endif %}
+                      {% if row.has_reading %}&#8369;{{ row.amount|intcomma }}{% else %}-{% endif %}
                     </strong>
                   </td>
 
                   <!-- Inline Badge Status Column -->
                   <td class="px-5 py-3.5 text-center">
                     {% if row.bill_paid %}
-                      <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-extrabold text-[10px] uppercase block select-none">Settled</span>
+                      <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-extrabold text-[10px] uppercase block select-none">Water Paid</span>
                     {% elif row.has_reading %}
                       <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-900 font-bold text-[10px] uppercase block select-none">Completed</span>
                     {% else %}
@@ -297,7 +304,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                  <td colspan="9" class="py-12 text-center bg-white">
+                  <td colspan="10" class="py-12 text-center bg-white">
                     <strong class="text-xs text-slate-600 block">No target unit bindings configured for this timestamp scope.</strong>
                   </td>
                 </tr>
@@ -323,9 +330,14 @@
             <span class="text-xs text-slate-600 font-medium text-center sm:text-left leading-relaxed">
               Consumptions scale automatically relative to the currently active valuation baseline factor.
             </span>
-            <button type="submit" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white font-extrabold px-6 py-2.5 rounded-lg text-sm transition-colors text-center shadow-xs shrink-0" {% if not current_rate %}disabled{% endif %}>
-              Save & Create Bills
-            </button>
+            <div class="w-full sm:w-auto flex flex-col sm:flex-row gap-2">
+              <a href="{% url 'admin_water_export_csv' %}?month={{ month }}&year={{ year }}&search={{ search|urlencode }}" data-skip-loader download class="w-full sm:w-auto bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 font-extrabold px-6 py-2.5 rounded-lg text-sm transition-colors text-center shadow-xs shrink-0">
+                Export CSV
+              </a>
+              <button type="submit" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white font-extrabold px-6 py-2.5 rounded-lg text-sm transition-colors text-center shadow-xs shrink-0" {% if not current_rate %}disabled{% endif %}>
+                Save & Create Bills
+              </button>
+            </div>
           </div>
 
         </form>
@@ -378,40 +390,28 @@
 
   function recalculateWaterPreview() {
     const inputs = Array.from(document.querySelectorAll('.reading-input'));
-    const usages = new Map();
-    let totalUsage = 0;
 
     inputs.forEach(input => {
+      if (input.readOnly) return;
+
       const current = parseFloat(input.value) || 0;
       const previous = parseFloat(input.dataset.previous) || 0;
-      const leaseId = input.name.replace('reading_', '');
-      const usage = input.value !== '' ? Math.max(0, current - previous) : 0;
-      usages.set(leaseId, usage);
-      totalUsage += usage;
-    });
-
-    inputs.forEach(input => {
-      const rate = parseFloat(input.dataset.rate) || 0;
-      const sharedPumpTotal = parseFloat(input.dataset.sharedPump) || 0;
-      const vatPercent = parseFloat(input.dataset.vatPercent) || 0;
       const leaseId = input.name.replace('reading_', '');
       const row = input.closest('tr');
 
       if (input.value !== '') {
-        const usage = usages.get(leaseId) || 0;
-        const base = usage * rate;
-        const sharedPump = totalUsage > 0 ? (usage / totalUsage) * sharedPumpTotal : 0;
-        const vat = (base + sharedPump) * (vatPercent / 100);
-        const amount = base + sharedPump + vat;
+        const usage = Math.max(0, current - previous);
 
         document.getElementById('usage_' + leaseId).textContent = usage.toFixed(2);
-        document.getElementById('pump_' + leaseId).textContent = '₱' + sharedPump.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-        document.getElementById('amount_' + leaseId).textContent = '₱' + amount.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('pump_' + leaseId).textContent = '% on save';
+        document.getElementById('pump_price_' + leaseId).textContent = 'On save';
+        document.getElementById('amount_' + leaseId).textContent = 'On save';
         row.classList.add('bg-emerald-50/40');
         row.classList.remove('bg-white');
       } else {
         document.getElementById('usage_' + leaseId).textContent = '-';
         document.getElementById('pump_' + leaseId).textContent = '-';
+        document.getElementById('pump_price_' + leaseId).textContent = '-';
         document.getElementById('amount_' + leaseId).textContent = '-';
         row.classList.remove('bg-emerald-50/40');
         row.classList.add('bg-white');

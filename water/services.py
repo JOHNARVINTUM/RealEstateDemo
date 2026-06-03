@@ -20,6 +20,30 @@ def quantize_money(value) -> Decimal:
     return Decimal(value or 0).quantize(Decimal("0.01"))
 
 
+def is_water_bill_locked(bill: MonthlyBill | None) -> bool:
+    return bool(bill and bill.water_paid > 0)
+
+
+def refresh_bill_status_from_component_payments(bill: MonthlyBill) -> None:
+    remaining_balance = (
+        max(bill.base_rent - bill.rent_paid, Decimal("0.00"))
+        + max(bill.water_amount - bill.water_paid, Decimal("0.00"))
+        + max(bill.parking_fee - bill.parking_paid, Decimal("0.00"))
+        + bill.interest
+    ).quantize(Decimal("0.01"))
+    has_any_payment = bill.rent_paid > 0 or bill.water_paid > 0 or bill.parking_paid > 0
+
+    if remaining_balance == 0 and has_any_payment:
+        bill.status = "PAID"
+        bill.paid_at = bill.paid_at or bill.rent_paid_at or bill.water_paid_at
+    elif has_any_payment:
+        bill.status = "PARTIALLY_PAID"
+        bill.paid_at = None
+    else:
+        bill.status = "UNPAID"
+        bill.paid_at = None
+
+
 def get_active_rate_for_date(target_date: date) -> WaterRate:
     """
     Get the active water rate for a specific date.
@@ -179,7 +203,7 @@ def create_or_update_monthly_bill_from_reading(
         (monthly_bill, created): The bill and whether it was created new
         
     Raises:
-        ValidationError: If bill exists and is PAID (cannot modify)
+        ValidationError: If bill exists and water was already paid (cannot modify water)
     """
     # Ensure reading is computed
     if water_reading.computed_amount == 0 and not water_reading.is_first_reading:
@@ -188,6 +212,7 @@ def create_or_update_monthly_bill_from_reading(
     lease = water_reading.lease
     billing_month = water_reading.reading_month
     water_amount = water_reading.computed_amount
+    parking_fee = lease.parking_fee
     
     # Use database-level locking to prevent race conditions
     bill, created = MonthlyBill.objects.select_for_update().get_or_create(
@@ -198,7 +223,8 @@ def create_or_update_monthly_bill_from_reading(
             'base_rent': lease.monthly_rent or 0,
             'water_amount': water_amount,
             'interest': 0,  # Will be computed by billing services if late
-            'total_due': (lease.monthly_rent or 0) + water_amount,
+            'parking_fee': parking_fee,
+            'total_due': (lease.monthly_rent or 0) + water_amount + parking_fee,
             'status': 'UNPAID',
             'bill_type': 'RENT',
             'water_computed_from_system': True,
@@ -207,10 +233,10 @@ def create_or_update_monthly_bill_from_reading(
     )
     
     if not created:
-        # Bill already exists - check if we can update
-        if bill.status == 'PAID':
+        # Bill already exists - check if we can update the water portion.
+        if is_water_bill_locked(bill):
             raise ValidationError(
-                f"MonthlyBill #{bill.id} is already PAID. "
+                f"MonthlyBill #{bill.id} already has a paid water amount. "
                 "Cannot modify water amount. "
                 "If correction is needed, contact system admin."
             )
@@ -223,10 +249,18 @@ def create_or_update_monthly_bill_from_reading(
         # This ensures water_amount is always transferred from WaterReading
         old_water = bill.water_amount
         bill.water_amount = water_amount
-        bill.total_due = bill.base_rent + water_amount + bill.interest
+        bill.total_due = bill.base_rent + water_amount + bill.parking_fee + bill.interest
         bill.water_computed_from_system = True
         bill.source_water_reading = water_reading
-        bill.save()
+        refresh_bill_status_from_component_payments(bill)
+        bill.save(update_fields=[
+            "water_amount",
+            "total_due",
+            "water_computed_from_system",
+            "source_water_reading",
+            "status",
+            "paid_at",
+        ])
         
         logger.info(
             f"Updated MonthlyBill #{bill.id}: "
@@ -256,9 +290,9 @@ def _calculate_due_date(lease, billing_month: date) -> date:
 def validate_reading_can_be_modified(water_reading: WaterReading) -> bool:
     """
     Check if a WaterReading can still be modified.
-    Returns False if linked bill is PAID.
+    Returns False if linked bill already has paid water.
     """
-    return not water_reading.generated_monthly_bills.filter(status='PAID').exists()
+    return not water_reading.generated_monthly_bills.filter(water_paid__gt=0).exists()
 
 
 def get_or_create_reading(

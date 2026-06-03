@@ -11,6 +11,7 @@ from billing.models import MonthlyBill
 from maintenance.models import MaintenanceRequest
 from payments.models import ManualPayment
 from rentals.models import ArchivedTenant, Lease, Notification, TenantProfile, Unit
+from water.models import WaterRate, WaterReading
 
 
 class AdminPaymentTypeEditTests(TestCase):
@@ -89,6 +90,122 @@ class AdminPaymentTypeEditTests(TestCase):
         page_payment = response.context["page_obj"][0]
         self.assertEqual(page_payment.tenant_display_name, "Tenant Person")
         self.assertEqual(page_payment.affected_months, "Sep 2026")
+
+
+class AdminWaterSaveBehaviorTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            email="water-admin@example.com",
+            username="wateradmin",
+            password="password123",
+        )
+        self.tenant = User.objects.create_user(
+            email="water-tenant@example.com",
+            username="watertenant",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        TenantProfile.objects.create(
+            user=self.tenant,
+            first_name="Water",
+            last_name="Tenant",
+            password_change_required=False,
+            created_by=None,
+        )
+        self.unit = Unit.objects.create(number="W-101", status="OCCUPIED")
+        self.lease = Lease.objects.create(
+            tenant=self.tenant,
+            unit=self.unit,
+            monthly_rent=Decimal("10000.00"),
+            due_day=5,
+            start_date=date(2026, 1, 1),
+            status=Lease.STATUS_ACTIVE,
+            is_active=True,
+        )
+        WaterRate.objects.create(
+            effective_date=date(2026, 6, 1),
+            rate_per_cu_m=Decimal("45.00"),
+        )
+        self.reading = WaterReading.objects.create(
+            lease=self.lease,
+            reading_month=date(2026, 6, 1),
+            previous_reading=Decimal("0.00"),
+            current_reading=Decimal("10.00"),
+            consumption=Decimal("10.00"),
+            rate_used=Decimal("45.00"),
+            computed_amount=Decimal("450.00"),
+        )
+        self.bill = MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=date(2026, 6, 1),
+            base_rent=Decimal("10000.00"),
+            rent_paid=Decimal("10000.00"),
+            water_amount=Decimal("450.00"),
+            water_paid=Decimal("0.00"),
+            total_due=Decimal("10450.00"),
+            status="PARTIALLY_PAID",
+            source_water_reading=self.reading,
+        )
+
+    def test_water_save_ignores_completed_readings(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.post(
+            "/admin-portal/water/process/",
+            {
+                "month": "6",
+                "year": "2026",
+                "lease_ids": [str(self.lease.id)],
+                f"reading_{self.lease.id}": "10.00",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(WaterReading.objects.filter(lease=self.lease, reading_month=date(2026, 6, 1)).count(), 1)
+        self.bill.refresh_from_db()
+        self.assertEqual(self.bill.water_amount, Decimal("450.00"))
+        self.assertEqual(self.bill.status, "PARTIALLY_PAID")
+
+    def test_water_filter_keeps_shared_pump_percentage_denominator_global(self):
+        other_tenant = User.objects.create_user(
+            email="water-other@example.com",
+            username="waterother",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        TenantProfile.objects.create(
+            user=other_tenant,
+            first_name="Other",
+            last_name="Tenant",
+            password_change_required=False,
+            created_by=None,
+        )
+        other_unit = Unit.objects.create(number="W-102", status="OCCUPIED")
+        other_lease = Lease.objects.create(
+            tenant=other_tenant,
+            unit=other_unit,
+            monthly_rent=Decimal("10000.00"),
+            due_day=5,
+            start_date=date(2026, 1, 1),
+            status=Lease.STATUS_ACTIVE,
+            is_active=True,
+        )
+        WaterReading.objects.create(
+            lease=other_lease,
+            reading_month=date(2026, 6, 1),
+            previous_reading=Decimal("0.00"),
+            current_reading=Decimal("30.00"),
+            consumption=Decimal("30.00"),
+            rate_used=Decimal("45.00"),
+            computed_amount=Decimal("1350.00"),
+        )
+        self.client.force_login(self.admin)
+
+        response = self.client.get("/admin-portal/water/?month=6&year=2026&search=W-101")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "25.00%")
+        self.assertNotContains(response, "100.00%")
 
 
 class AdminNotificationBehaviorTests(TestCase):
@@ -190,6 +307,61 @@ class AdminNotificationBehaviorTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "View Payment")
         self.assertContains(response, "Approve Payment")
+
+
+class AdminForecastingRevenueTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            email="forecast-admin@example.com",
+            username="forecastadmin",
+            password="password123",
+        )
+        self.tenant = User.objects.create_user(
+            email="forecast-tenant@example.com",
+            username="forecasttenant",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        TenantProfile.objects.create(
+            user=self.tenant,
+            first_name="Forecast",
+            last_name="Tenant",
+            password_change_required=False,
+            created_by=None,
+        )
+        self.unit = Unit.objects.create(number="F-101", status="OCCUPIED")
+        self.lease = Lease.objects.create(
+            tenant=self.tenant,
+            unit=self.unit,
+            monthly_rent=Decimal("300000.00"),
+            due_day=5,
+            start_date=date(2026, 1, 1),
+            status=Lease.STATUS_ACTIVE,
+            is_active=True,
+        )
+
+    def test_forecasting_actual_revenue_uses_collected_amount_not_billed_amount(self):
+        target_month = timezone.now().date().replace(day=1)
+        MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=target_month,
+            due_date=target_month.replace(day=5),
+            base_rent=Decimal("300000.00"),
+            water_amount=Decimal("0.00"),
+            parking_fee=Decimal("0.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("300000.00"),
+            rent_paid=Decimal("114000.00"),
+            status="PARTIALLY_PAID",
+        )
+        self.client.force_login(self.admin)
+
+        response = self.client.get(reverse("admin_forecasting"))
+
+        self.assertEqual(response.status_code, 200)
+        target_label = target_month.strftime("%b %Y")
+        month_index = response.context["hist_labels"].index(target_label)
+        self.assertEqual(response.context["hist_revenue"][month_index], 114000.0)
 
 
 class AdminTenantAndUnitSearchTests(TestCase):

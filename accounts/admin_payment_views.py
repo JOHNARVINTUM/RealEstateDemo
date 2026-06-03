@@ -361,7 +361,7 @@ def admin_payment_detail(request, payment_id: int):
             pay_rent = bill.base_rent if is_settled_payment else bill.rent_balance
             pay_water = 0
             pay_parking = bill.parking_fee if is_settled_payment else bill.parking_balance
-            pay_penalty = 0
+            pay_penalty = bill.interest
         elif payment.payment_type == "water_only":
             pay_rent = 0
             pay_water = bill.water_amount if is_settled_payment else bill.water_balance

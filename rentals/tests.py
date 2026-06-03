@@ -115,7 +115,7 @@ class TenantViewWorkflowTests(TestCase):
             rent_paid=Decimal("10000.00"),
             parking_paid=Decimal("350.00"),
             interest=Decimal("0.00"),
-            total_due=Decimal("11150.00"),
+            total_due=Decimal("10660.50"),
             status="PARTIALLY_PAID",
         )
 
@@ -178,12 +178,13 @@ class TenantViewWorkflowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["payment_type"], "rent_only")
-        self.assertEqual(response.context["total_amount"], 10350.0)
+        self.assertEqual(response.context["total_amount"], 10660.5)
         self.assertEqual(response.context["total_rent"], 10000.0)
         self.assertEqual(response.context["total_parking"], 350.0)
+        self.assertEqual(response.context["total_penalty"], 310.5)
         self.assertEqual(response.context["preview_rows"][0]["bill_id"], bill.id)
 
-    def test_advance_payment_defaults_to_rent_only(self):
+    def test_advance_payment_defaults_to_full_when_rent_and_water_are_due(self):
         lease = self.create_active_lease()
         bill = MonthlyBill.objects.create(
             lease=lease,
@@ -195,13 +196,36 @@ class TenantViewWorkflowTests(TestCase):
             interest=Decimal("0.00"),
             total_due=Decimal("11150.00"),
             status="UNPAID",
+            water_computed_from_system=True,
+        )
+
+        response = self.client.get("/tenant/pay/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["payment_type"], "full")
+        self.assertEqual(response.context["total_amount"], 11460.5)
+        self.assertEqual(response.context["preview_rows"][0]["bill_id"], bill.id)
+
+    def test_advance_payment_defaults_to_rent_only_when_only_rent_is_due(self):
+        lease = self.create_active_lease()
+        bill = MonthlyBill.objects.create(
+            lease=lease,
+            billing_month=date(2026, 1, 1),
+            due_date=date(2026, 1, 5),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("0.00"),
+            parking_fee=Decimal("350.00"),
+            interest=Decimal("310.50"),
+            total_due=Decimal("10660.50"),
+            status="UNPAID",
         )
 
         response = self.client.get("/tenant/pay/")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["payment_type"], "rent_only")
-        self.assertEqual(response.context["total_amount"], 10350.0)
+        self.assertEqual(response.context["total_amount"], 10660.5)
+        self.assertEqual(response.context["total_penalty"], 310.5)
         self.assertEqual(response.context["preview_rows"][0]["bill_id"], bill.id)
 
     def test_advance_payment_ignores_full_and_stays_rent_only(self):
@@ -214,7 +238,7 @@ class TenantViewWorkflowTests(TestCase):
             water_amount=Decimal("0.00"),
             parking_fee=Decimal("350.00"),
             interest=Decimal("0.00"),
-            total_due=Decimal("10350.00"),
+            total_due=Decimal("10660.50"),
             status="UNPAID",
         )
 
@@ -222,7 +246,7 @@ class TenantViewWorkflowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["payment_type"], "rent_only")
-        self.assertEqual(response.context["total_amount"], 10350.0)
+        self.assertEqual(response.context["total_amount"], 10660.5)
         self.assertEqual(response.context["preview_rows"][0]["bill_id"], bill.id)
 
     def test_payment_preview_allows_full_when_rent_and_water_are_posted(self):
@@ -246,6 +270,7 @@ class TenantViewWorkflowTests(TestCase):
             interest=Decimal("0.00"),
             total_due=Decimal("11150.00"),
             status="UNPAID",
+            water_computed_from_system=True,
         )
 
         response = self.client.get("/tenant/pay/?payment_type=full")
@@ -296,7 +321,7 @@ class TenantViewWorkflowTests(TestCase):
             base_rent=Decimal("10000.00"),
             parking_fee=Decimal("350.00"),
             interest=Decimal("0.00"),
-            total_due=Decimal("10350.00"),
+            total_due=Decimal("10660.50"),
             status="UNPAID",
         )
 
@@ -304,7 +329,7 @@ class TenantViewWorkflowTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertIn("/payments/gcash/manual/", response["Location"])
-        self.assertIn("amount=10350.0", response["Location"])
+        self.assertIn("amount=10660.5", response["Location"])
         self.assertIn(f"bill_ids={bill.id}", response["Location"])
         self.assertIn("payment_type=rent_only", response["Location"])
 

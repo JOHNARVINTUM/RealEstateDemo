@@ -1,5 +1,6 @@
 from datetime import date
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.core.exceptions import ValidationError
 from django.test import TestCase
@@ -10,12 +11,13 @@ from billing.services import (
     approve_manual_payment,
     compute_weekly_interest,
     ensure_bills_since_move_in,
+    ensure_bills_up_to,
     parse_bill_ids,
     reconcile_approved_payments_for_tenant,
 )
 from payments.models import ManualPayment
 from rentals.models import Lease, Notification, Unit
-from water.models import WaterBill
+from water.models import WaterBill, WaterBillingSettings, WaterRate, WaterReading
 
 
 class BillingWorkflowTests(TestCase):
@@ -74,6 +76,13 @@ class BillingWorkflowTests(TestCase):
         self.assertEqual(len(bills), 3)
         self.assertEqual(bills[0].due_date, date(2026, 1, 31))
         self.assertEqual(bills[1].water_amount, Decimal("50.00"))
+
+    def test_ensure_bills_up_to_uses_bulk_path_instead_of_per_month_updates(self):
+        with patch("billing.services.get_or_update_monthly_bill") as mocked_get_or_update:
+            ensure_bills_up_to(self.lease, date(2026, 12, 1), today=date(2026, 6, 1))
+
+        self.assertFalse(mocked_get_or_update.called)
+        self.assertEqual(MonthlyBill.objects.filter(lease=self.lease).count(), 12)
 
     def test_approve_manual_payment_rejects_bills_outside_payment_owner(self):
         tenant_bill = MonthlyBill.objects.create(
@@ -197,6 +206,112 @@ class BillingWorkflowTests(TestCase):
         self.assertEqual(bill.total_balance, Decimal("1200.00"))
         self.assertEqual(bill.status, "PARTIALLY_PAID")
 
+    def test_rent_only_payment_includes_interest_and_leaves_water(self):
+        bill = MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=date(2026, 2, 1),
+            due_date=date(2026, 2, 28),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("1200.00"),
+            parking_fee=Decimal("500.00"),
+            interest=Decimal("315.00"),
+            total_due=Decimal("12015.00"),
+            status="UNPAID",
+        )
+        payment = ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="REF-RENT-PARKING-INTEREST",
+            bill_ids=str(bill.id),
+            payment_type="rent_only",
+            amount=Decimal("10815.00"),
+            status="PENDING",
+        )
+
+        approve_manual_payment(payment)
+
+        bill.refresh_from_db()
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, "APPROVED")
+        self.assertEqual(bill.rent_paid, Decimal("10000.00"))
+        self.assertEqual(bill.parking_paid, Decimal("500.00"))
+        self.assertEqual(bill.interest, Decimal("0.00"))
+        self.assertEqual(bill.total_due, Decimal("11700.00"))
+        self.assertEqual(bill.water_paid, Decimal("0.00"))
+        self.assertEqual(bill.water_balance, Decimal("1200.00"))
+        self.assertEqual(bill.total_balance, Decimal("1200.00"))
+        self.assertEqual(bill.status, "PARTIALLY_PAID")
+
+    def test_water_payment_refreshes_future_unpaid_carryover(self):
+        WaterRate.objects.create(
+            effective_date=date(2026, 5, 1),
+            rate_per_cu_m=Decimal("45.00"),
+        )
+        WaterBillingSettings.objects.create(
+            reading_month=date(2026, 6, 1),
+            shared_pump_total=Decimal("1110.08"),
+            vat_percent=Decimal("12.00"),
+        )
+        may_reading = WaterReading.objects.create(
+            lease=self.lease,
+            reading_month=date(2026, 5, 1),
+            previous_reading=Decimal("1795.33"),
+            current_reading=Decimal("1848.87"),
+            consumption=Decimal("53.54"),
+            rate_used=Decimal("45.00"),
+            computed_amount=Decimal("2409.30"),
+        )
+        june_reading = WaterReading.objects.create(
+            lease=self.lease,
+            reading_month=date(2026, 6, 1),
+            previous_reading=Decimal("1848.87"),
+            current_reading=Decimal("1900.87"),
+            consumption=Decimal("52.00"),
+            rate_used=Decimal("45.00"),
+            base_water_amount=Decimal("2340.00"),
+            shared_pump_amount=Decimal("1110.08"),
+            vat_percent=Decimal("12.00"),
+            vat_amount=Decimal("414.01"),
+            previous_unpaid_water_amount=Decimal("2409.30"),
+            computed_amount=Decimal("6273.39"),
+        )
+        may_bill = MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=date(2026, 5, 1),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("2409.30"),
+            total_due=Decimal("12409.30"),
+            status="UNPAID",
+            source_water_reading=may_reading,
+        )
+        june_bill = MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=date(2026, 6, 1),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("6273.39"),
+            total_due=Decimal("16273.39"),
+            status="UNPAID",
+            source_water_reading=june_reading,
+        )
+        payment = ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="REF-WATER-MAY",
+            bill_ids=str(may_bill.id),
+            payment_type="water_only",
+            amount=Decimal("2409.30"),
+            status="PENDING",
+        )
+
+        approve_manual_payment(payment)
+
+        may_bill.refresh_from_db()
+        june_bill.refresh_from_db()
+        june_reading.refresh_from_db()
+        self.assertEqual(may_bill.water_paid, Decimal("2409.30"))
+        self.assertEqual(june_reading.previous_unpaid_water_amount, Decimal("0.00"))
+        self.assertEqual(june_reading.computed_amount, Decimal("3864.09"))
+        self.assertEqual(june_bill.water_amount, Decimal("3864.09"))
+        self.assertEqual(june_bill.status, "UNPAID")
+
     def test_penalty_starts_only_after_two_weeks_late(self):
         interest, is_late, weeks_late = compute_weekly_interest(
             Decimal("10000.00"),
@@ -288,6 +403,37 @@ class BillingWorkflowTests(TestCase):
         self.assertEqual(bill.total_balance, Decimal("900.00"))
         self.assertEqual(bill.status, "PARTIALLY_PAID")
         self.assertEqual(bill.payment_reference, payment.reference_code)
+
+    def test_reconcile_does_not_reapply_old_water_payment_after_water_bill_edit(self):
+        bill = MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=date(2026, 6, 1),
+            due_date=date(2026, 6, 30),
+            base_rent=Decimal("0.00"),
+            water_amount=Decimal("150.00"),
+            water_paid=Decimal("100.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("150.00"),
+            status="PARTIALLY_PAID",
+            payment_reference="REF-WATER-OLD",
+        )
+        payment = ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="REF-WATER-OLD",
+            bill_ids=str(bill.id),
+            payment_type="water_only",
+            amount=Decimal("100.00"),
+            status="APPROVED",
+        )
+
+        reconcile_approved_payments_for_tenant(self.tenant)
+
+        bill.refresh_from_db()
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, "APPROVED")
+        self.assertEqual(bill.water_paid, Decimal("100.00"))
+        self.assertEqual(bill.water_balance, Decimal("50.00"))
+        self.assertEqual(bill.status, "PARTIALLY_PAID")
 
 
 class LeaseActivationTimezoneTests(TestCase):

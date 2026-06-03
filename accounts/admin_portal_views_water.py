@@ -1,9 +1,11 @@
 """
 Water management views for admin portal
 """
+import csv
 from datetime import date, datetime
 from decimal import Decimal
 from calendar import monthrange
+from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.db import transaction
@@ -16,10 +18,41 @@ from water.services import (
     compute_water_reading,
     create_or_update_monthly_bill_from_reading,
     get_water_billing_settings_for_month,
+    is_water_bill_locked,
     previous_unpaid_water_balance,
 )
 from billing.models import MonthlyBill
 from rentals.models import Lease
+
+
+def _active_water_leases(reading_date):
+    return Lease.objects.filter(
+        Q(end_date__isnull=True) | Q(end_date__gte=reading_date),
+        status=Lease.STATUS_ACTIVE,
+        is_active=True,
+        start_date__lte=reading_date
+    ).select_related('tenant', 'unit').order_by('unit__number')
+
+
+def _water_search_filter(queryset, search):
+    if not search:
+        return queryset
+    return queryset.filter(
+        Q(unit__number__icontains=search) |
+        Q(tenant__first_name__icontains=search) |
+        Q(tenant__last_name__icontains=search) |
+        Q(tenant__email__icontains=search)
+    )
+
+
+def _total_month_usage_for_leases(lease_ids, reading_date):
+    return sum(
+        WaterReading.objects.filter(
+            lease_id__in=lease_ids,
+            reading_month=reading_date,
+        ).values_list('consumption', flat=True),
+        Decimal("0.00"),
+    )
 
 
 @admin_required
@@ -47,21 +80,12 @@ def admin_water(request):
         pass
     
     # Get active leases (no end_date or end_date >= reading month)
-    active_leases = Lease.objects.filter(
-        Q(end_date__isnull=True) | Q(end_date__gte=reading_date),
-        status=Lease.STATUS_ACTIVE,
-        is_active=True,
-        start_date__lte=reading_date
-    ).select_related('tenant', 'unit').order_by('unit__number')
+    active_leases_qs = _active_water_leases(reading_date)
+    all_active_lease_ids = list(active_leases_qs.values_list('id', flat=True))
+    active_leases = active_leases_qs
     
     # Apply search filter if provided
-    if search:
-        active_leases = active_leases.filter(
-            Q(unit__number__icontains=search) |
-            Q(tenant__first_name__icontains=search) |
-            Q(tenant__last_name__icontains=search) |
-            Q(tenant__email__icontains=search)
-        )
+    active_leases = _water_search_filter(active_leases, search)
     
     # Get previous month's date for auto-fill
     if month == 1:
@@ -92,7 +116,6 @@ def admin_water(request):
         for bill in MonthlyBill.objects.filter(
             lease_id__in=lease_ids,
             billing_month=reading_date,
-            source_water_reading__isnull=False,
         )
     }
     previous_unpaid_water = {lease_id: Decimal("0.00") for lease_id in lease_ids}
@@ -102,6 +125,8 @@ def admin_water(request):
     ).filter(Q(status="UNPAID") | Q(status="PARTIALLY_PAID"))
     for bill in previous_unpaid_bills:
         previous_unpaid_water[ bill.lease_id ] += bill.water_balance
+
+    total_month_usage = _total_month_usage_for_leases(all_active_lease_ids, reading_date)
 
     # Build readings data
     readings_data = []
@@ -124,6 +149,11 @@ def admin_water(request):
         current_reading = existing.current_reading if existing else None
         usage = existing.consumption if existing else 0
         amount = existing.computed_amount if existing else 0
+        usage_share_percent = (
+            (usage / total_month_usage * Decimal("100.00")).quantize(Decimal("0.01"))
+            if existing and total_month_usage > 0
+            else Decimal("0.00")
+        )
         
         # Check if this is first billing (lease started in previous month)
         # First billing = lease started in previous month AND no previous water reading exists
@@ -147,6 +177,7 @@ def admin_water(request):
             'current_reading': current_reading,
             'has_reading': has_reading,
             'usage': usage,
+            'usage_share_percent': usage_share_percent,
             'amount': amount,
             'base_water_amount': existing.base_water_amount if existing else 0,
             'shared_pump_amount': existing.shared_pump_amount if existing else 0,
@@ -155,7 +186,7 @@ def admin_water(request):
             'previous_unpaid_water_amount': existing.previous_unpaid_water_amount if existing else previous_unpaid_water.get(lease.id, Decimal("0.00")),
             'rate_used': existing.rate_used if existing else (Decimal(str(rate)) if rate else Decimal("0.00")),
             'reference': existing_bill.payment_reference if existing_bill else "",
-            'bill_paid': existing_bill.status == 'PAID' if existing_bill else False,
+            'bill_paid': is_water_bill_locked(existing_bill),
             'bill_status': existing_bill.status if existing_bill else "",
             'is_first_billing': is_first_billing,
             'lease_start': lease.start_date,
@@ -187,6 +218,91 @@ def admin_water(request):
 
 
 @admin_required
+def admin_water_export_csv(request):
+    today = date.today()
+    month = int(request.GET.get('month', today.month))
+    year = int(request.GET.get('year', today.year))
+    search = request.GET.get('search', '').strip().lower()
+    reading_date = date(year, month, 1)
+
+    active_leases_qs = _active_water_leases(reading_date)
+    all_active_lease_ids = list(active_leases_qs.values_list('id', flat=True))
+    total_month_usage = _total_month_usage_for_leases(all_active_lease_ids, reading_date)
+    active_leases = list(_water_search_filter(active_leases_qs, search))
+    lease_ids = [lease.id for lease in active_leases]
+
+    current_readings = {
+        reading.lease_id: reading
+        for reading in WaterReading.objects.filter(
+            lease_id__in=lease_ids,
+            reading_month=reading_date,
+        )
+    }
+    bill_statuses = {
+        bill.lease_id: bill
+        for bill in MonthlyBill.objects.filter(
+            lease_id__in=lease_ids,
+            billing_month=reading_date,
+        )
+    }
+
+    filename = f"water_billing_{year}_{month:02d}.csv"
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    writer = csv.writer(response)
+    writer.writerow([
+        "Billing Month",
+        "Unit",
+        "Tenant",
+        "Last Reading (m3)",
+        "Current Reading (m3)",
+        "Usage (m3)",
+        "Rate",
+        "Shared Pump Rate (%)",
+        "Shared Pump Price",
+        "Base Water Amount",
+        "VAT Percent",
+        "VAT Amount",
+        "Previous Unpaid Water",
+        "Final Water Price",
+        "Status",
+        "Reference",
+    ])
+
+    for lease in active_leases:
+        reading = current_readings.get(lease.id)
+        bill = bill_statuses.get(lease.id)
+        usage = reading.consumption if reading else Decimal("0.00")
+        usage_share_percent = (
+            (usage / total_month_usage * Decimal("100.00")).quantize(Decimal("0.01"))
+            if reading and total_month_usage > 0
+            else Decimal("0.00")
+        )
+        tenant_name = lease.tenant.get_full_name() or lease.tenant.username or lease.tenant.email
+        status = "Water Paid" if is_water_bill_locked(bill) else ("Completed" if reading else "Pending")
+        writer.writerow([
+            reading_date.strftime("%B %Y"),
+            lease.unit.number,
+            tenant_name,
+            reading.previous_reading if reading else "",
+            reading.current_reading if reading else "",
+            usage if reading else "",
+            reading.rate_used if reading else "",
+            usage_share_percent if reading else "",
+            reading.shared_pump_amount if reading else "",
+            reading.base_water_amount if reading else "",
+            reading.vat_percent if reading else "",
+            reading.vat_amount if reading else "",
+            reading.previous_unpaid_water_amount if reading else "",
+            reading.computed_amount if reading else "",
+            status,
+            bill.payment_reference if bill else "",
+        ])
+
+    return response
+
+
+@admin_required
 @require_http_methods(["POST"])
 def admin_water_process(request):
     """Process bulk water readings"""
@@ -211,67 +327,47 @@ def admin_water_process(request):
     updated_count = 0
     skipped_count = 0
     error_count = 0
-    touched_reading_ids = set()
-    
-    with transaction.atomic():
-        billing_settings = get_water_billing_settings_for_month(reading_date)
-        for lease_id in lease_ids:
-            prefix = f'reading_{lease_id}'
-            current_reading = request.POST.get(prefix, '').strip()
-            
-            if not current_reading:
+    touched_reading_ids = []
+    billing_settings = get_water_billing_settings_for_month(reading_date)
+
+    for lease_id in lease_ids:
+        prefix = f'reading_{lease_id}'
+        current_reading = request.POST.get(prefix, '').strip()
+
+        if not current_reading:
+            continue
+
+        try:
+            current_reading = Decimal(current_reading)
+            lease = Lease.objects.get(pk=lease_id, status=Lease.STATUS_ACTIVE, is_active=True)
+
+            existing_bill = MonthlyBill.objects.filter(
+                lease=lease,
+                billing_month=reading_date,
+            ).first()
+            if is_water_bill_locked(existing_bill):
+                skipped_count += 1
                 continue
-            
-            try:
-                current_reading = Decimal(current_reading)
-                lease = Lease.objects.get(pk=lease_id, status=Lease.STATUS_ACTIVE, is_active=True)
-                
-                # Get previous reading for validation
-                if month == 1:
-                    prev_year = year - 1
-                    prev_month = 12
-                else:
-                    prev_year = year
-                    prev_month = month - 1
-                prev_date = date(prev_year, prev_month, 1)
-                
+
+            if WaterReading.objects.filter(lease=lease, reading_month=reading_date).exists():
+                skipped_count += 1
+                continue
+
+            with transaction.atomic():
                 prev_reading = WaterReading.objects.filter(
                     lease=lease,
                     reading_month__lt=reading_date,
                 ).order_by('-reading_month', '-id').first()
                 previous_reading = prev_reading.current_reading if prev_reading else Decimal('0')
-                
-                # Skip if bill is paid
-                existing_bill = MonthlyBill.objects.filter(
-                    lease=lease,
-                    billing_month=reading_date,
-                    source_water_reading__isnull=False,
-                    status='PAID'
-                ).first()
-                
-                if existing_bill:
-                    skipped_count += 1
-                    continue
-                
-                # Create or update WaterReading
-                reading, created = WaterReading.objects.update_or_create(
+
+                reading = WaterReading(
                     lease=lease,
                     reading_month=reading_date,
-                    defaults={
-                        'previous_reading': previous_reading,
-                        'current_reading': current_reading,
-                        'is_first_reading': not prev_reading,
-                        'read_by': request.user,
-                    }
+                    previous_reading=previous_reading,
+                    current_reading=current_reading,
+                    is_first_reading=not prev_reading,
+                    read_by=request.user,
                 )
-                
-                # Force update reading values even if existed
-                reading.previous_reading = previous_reading
-                reading.current_reading = current_reading
-                reading.is_first_reading = not prev_reading
-                reading.read_by = request.user
-
-                # Initial compute stores usage so month totals can be allocated correctly.
                 compute_water_reading(
                     reading,
                     total_month_consumption=Decimal("0.00"),
@@ -280,30 +376,21 @@ def admin_water_process(request):
                     previous_unpaid_water_amount=previous_unpaid_water_balance(lease, reading_date),
                 )
                 reading.save()
-                touched_reading_ids.add(reading.id)
-                    
-            except Lease.DoesNotExist:
-                messages.error(request, f"Lease {lease_id} not found")
-                error_count += 1
-            except Exception as e:
-                messages.error(request, f"Error processing lease {lease_id}: {e}")
-                error_count += 1
+                touched_reading_ids.append(reading.id)
 
-        month_readings = list(
-            WaterReading.objects.select_related('lease__unit').filter(reading_month=reading_date)
-        )
+        except Lease.DoesNotExist:
+            messages.error(request, f"Lease {lease_id} not found")
+            error_count += 1
+        except Exception as e:
+            messages.error(request, f"Error processing lease {lease_id}: {e}")
+            error_count += 1
+
+    if touched_reading_ids:
+        month_readings = list(WaterReading.objects.filter(reading_month=reading_date))
         total_month_consumption = sum((reading.consumption for reading in month_readings), Decimal("0.00"))
-        paid_reading_ids = set(
-            MonthlyBill.objects.filter(
-                billing_month=reading_date,
-                source_water_reading_id__in=[reading.id for reading in month_readings],
-                status='PAID',
-            ).values_list('source_water_reading_id', flat=True)
-        )
+        touched_readings = WaterReading.objects.select_related('lease__unit').filter(id__in=touched_reading_ids)
 
-        for reading in month_readings:
-            if reading.id in paid_reading_ids:
-                continue
+        for reading in touched_readings:
             try:
                 compute_water_reading(
                     reading,
@@ -314,16 +401,15 @@ def admin_water_process(request):
                 )
                 reading.save()
 
-                if reading.id in touched_reading_ids:
-                    bill, bill_created = create_or_update_monthly_bill_from_reading(
-                        reading,
-                        computed_by=request.user,
-                        force_update=True
-                    )
-                    if bill_created:
-                        created_count += 1
-                    else:
-                        updated_count += 1
+                bill, bill_created = create_or_update_monthly_bill_from_reading(
+                    reading,
+                    computed_by=request.user,
+                    force_update=True
+                )
+                if bill_created:
+                    created_count += 1
+                else:
+                    updated_count += 1
             except Exception as e:
                 messages.warning(request, f"Unit {reading.lease.unit.number}: {e}")
                 error_count += 1
@@ -417,15 +503,13 @@ def admin_water_recompute(request):
     
     for reading in readings:
         try:
-            # Check if bill is paid - skip if so
+            # Skip only when the water portion has already been paid.
             existing_bill = MonthlyBill.objects.filter(
                 lease=reading.lease,
                 billing_month=reading_date,
-                source_water_reading__isnull=False,
-                status='PAID'
             ).first()
             
-            if existing_bill:
+            if is_water_bill_locked(existing_bill):
                 skipped_count += 1
                 continue
             

@@ -3,6 +3,7 @@ from decimal import Decimal
 import calendar
 
 from django.db import transaction
+from django.db.models import Sum
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
@@ -208,6 +209,131 @@ def _create_monthly_bill(lease, billing_month, due_date, base_rent, water_amount
     )
 
 
+def _monthly_bill_values(lease, billing_month: date, today: date, water_amount: Decimal | None = None):
+    billing_month = month_start(billing_month)
+    due_date = due_date_for_month(billing_month.year, billing_month.month, lease.due_day)
+    base_rent = normalized_monthly_rent(lease)
+    parking_fee = Decimal(getattr(lease, 'parking_fee', 0)).quantize(Decimal("0.01"))
+    interest_base = (base_rent + parking_fee).quantize(Decimal("0.01"))
+    interest, is_late, weeks_late = compute_weekly_interest(interest_base, due_date, today)
+    water_amount = Decimal(water_amount or 0).quantize(Decimal("0.01"))
+    total_due = (base_rent + water_amount + parking_fee + interest).quantize(Decimal("0.01"))
+    return {
+        "due_date": due_date,
+        "base_rent": base_rent,
+        "water_amount": water_amount,
+        "parking_fee": parking_fee,
+        "interest": interest,
+        "total_due": total_due,
+        "is_late": is_late,
+        "weeks_late": weeks_late,
+    }
+
+
+def _legacy_water_totals_by_month(unit, start: date, end: date) -> dict[tuple[int, int], Decimal]:
+    totals = {}
+    water_bills = WaterBill.objects.filter(
+        unit=unit,
+        period_start__gte=start,
+        period_start__lt=add_months(end, 1),
+        status="POSTED",
+    ).values(
+        "period_start",
+        "prev_reading",
+        "curr_reading",
+        "rate_per_cu_m",
+    ).annotate(
+        charges_total=Sum("charges__amount"),
+    )
+    for water_bill in water_bills:
+        month = water_bill["period_start"]
+        consumption = max(
+            Decimal(water_bill["curr_reading"] or 0) - Decimal(water_bill["prev_reading"] or 0),
+            Decimal("0.00"),
+        )
+        consumption_amount = consumption * Decimal(water_bill["rate_per_cu_m"] or 0)
+        charges_total = Decimal(water_bill["charges_total"] or 0)
+        month_key = (month.year, month.month)
+        totals[month_key] = (consumption_amount + charges_total).quantize(Decimal("0.01"))
+    return totals
+
+
+def _ensure_bills_for_range(lease, end_month: date, today: date, *, apply_move_in: bool = False):
+    if lease is None:
+        return
+    if not _lease_is_billable_today(lease, today):
+        return
+
+    start = month_start(lease.start_date)
+    end = month_start(end_month)
+    if end < start:
+        return
+
+    months = list(months_between(start, end))
+    existing_by_month = {}
+    for bill in MonthlyBill.objects.filter(
+        lease=lease,
+        billing_month__gte=start,
+        billing_month__lt=add_months(end, 1),
+    ).order_by("billing_month", "id"):
+        month_key = (bill.billing_month.year, bill.billing_month.month)
+        if month_key not in existing_by_month or _bill_has_activity(bill):
+            existing_by_month[month_key] = bill
+
+    legacy_water_by_month = _legacy_water_totals_by_month(lease.unit, start, end)
+    bills_to_create = []
+    bills_to_update = []
+
+    for billing_month in months:
+        month_key = (billing_month.year, billing_month.month)
+        bill = existing_by_month.get(month_key)
+        values = _monthly_bill_values(
+            lease,
+            billing_month,
+            today,
+            water_amount=(bill.water_amount if bill and bill.water_computed_from_system else legacy_water_by_month.get(month_key, Decimal("0.00"))),
+        )
+        if bill is None:
+            bills_to_create.append(MonthlyBill(
+                lease=lease,
+                billing_month=billing_month,
+                due_date=values["due_date"],
+                base_rent=values["base_rent"],
+                water_amount=values["water_amount"],
+                parking_fee=values["parking_fee"],
+                interest=values["interest"],
+                total_due=values["total_due"],
+                status="UNPAID",
+                bill_type="RENT",
+            ))
+            continue
+
+        if bill.status == "PAID":
+            continue
+
+        changed = _apply_monthly_bill_changes(
+            bill,
+            due_date=values["due_date"],
+            base_rent=values["base_rent"],
+            water_amount=values["water_amount"],
+            parking_fee=values["parking_fee"],
+            interest=values["interest"],
+        )
+        if changed:
+            bills_to_update.append(bill)
+
+    if bills_to_create:
+        MonthlyBill.objects.bulk_create(bills_to_create, ignore_conflicts=True)
+    if bills_to_update:
+        MonthlyBill.objects.bulk_update(
+            bills_to_update,
+            ["due_date", "base_rent", "water_amount", "parking_fee", "interest", "total_due"],
+        )
+
+    if apply_move_in:
+        _apply_approved_move_in_payment_if_needed(lease, start)
+
+
 def get_or_update_monthly_bill(lease, billing_month: date, today: date | None = None) -> MonthlyBill:
     """
     Creates/updates MonthlyBill totals for the month.
@@ -269,16 +395,10 @@ def ensure_bills_since_move_in(lease, today: date | None = None):
         return
     if today is None:
         today = date.today()
-    if not _lease_is_billable_today(lease, today):
-        return
+    _ensure_bills_for_range(lease, month_start(today), today, apply_move_in=True)
 
-    start = month_start(lease.start_date)
-    end = month_start(today)
 
-    for m in months_between(start, end):
-        get_or_update_monthly_bill(lease, m, today=today)
-
-    # Mark first month's bill as settled for rent + parking if move-in payment was approved.
+def _apply_approved_move_in_payment_if_needed(lease, start: date):
     first_bill = MonthlyBill.objects.filter(lease=lease, billing_month=start).first()
     if first_bill and first_bill.status != "PAID":
         from payments.models import ManualPayment
@@ -339,7 +459,6 @@ def ensure_bills_up_to(lease, end_month: date, today: date | None = None):
     if not _lease_is_billable_today(lease, today):
         return
 
-    start = month_start(lease.start_date)
     end = month_start(end_month)
 
     # Keep future generation bounded, but align it with the largest UI option.
@@ -349,8 +468,7 @@ def ensure_bills_up_to(lease, end_month: date, today: date | None = None):
     if end > max_date:
         end = max_date
 
-    for m in months_between(start, end):
-        get_or_update_monthly_bill(lease, m, today=today)
+    _ensure_bills_for_range(lease, end, today, apply_move_in=True)
 
 
 def badge_for_bill(bill: MonthlyBill, today: date | None = None) -> str:
@@ -399,22 +517,25 @@ def serialize_bill_ids(bill_ids: list[int]) -> str:
 def _is_payment_applied_to_bill(bill: MonthlyBill, payment) -> bool:
     payment_type = getattr(payment, "payment_type", "full")
     payment_reference = getattr(payment, "reference_code", "")
+    payment_amount = Decimal(getattr(payment, "amount", 0) or 0).quantize(Decimal("0.01"))
 
     if payment_type == "rent_only":
         return (
-            bill.payment_reference == payment_reference
-            and bill.rent_paid >= bill.base_rent
+            bill.rent_paid >= bill.base_rent
             and bill.parking_paid >= bill.parking_fee
         )
     if payment_type == "water_only":
-        return (
-            bill.payment_reference == payment_reference
-            and bill.water_paid >= bill.water_amount
-        )
-    return (
-        bill.payment_reference == payment_reference
-        and bill.status == "PAID"
-    )
+        if bill.water_paid <= 0:
+            return False
+        if bill.payment_reference == payment_reference:
+            return True
+        return payment_amount > 0 and bill.water_paid >= payment_amount
+
+    if bill.payment_reference == payment_reference and (
+        bill.rent_paid > 0 or bill.water_paid > 0 or bill.parking_paid > 0
+    ):
+        return True
+    return bill.status == "PAID" and bill.total_balance == 0
 
 
 def _payment_is_move_in(payment) -> bool:
@@ -467,7 +588,7 @@ def _expected_amount_for_payment_type(bills, payment_type: str) -> Decimal:
     expected_amount = Decimal("0.00")
     for bill in bills:
         if payment_type == "rent_only":
-            expected_amount += bill.rent_balance + bill.parking_balance
+            expected_amount += bill.rent_balance + bill.parking_balance + bill.interest
         elif payment_type == "water_only":
             expected_amount += bill.water_balance
         else:
@@ -489,6 +610,8 @@ def _apply_payment_to_bill(bill, payment, payment_type: str, approved_at):
         bill.parking_paid = max(bill.parking_paid, bill.parking_fee)
         bill.rent_paid_at = approved_at
         bill.payment_reference = payment.reference_code
+        bill.interest = Decimal("0.00")
+        bill.total_due = (bill.base_rent + bill.water_amount + bill.parking_fee).quantize(Decimal("0.01"))
     elif payment_type == "water_only":
         bill.water_paid = max(bill.water_paid, bill.water_amount)
         bill.water_paid_at = approved_at
@@ -519,7 +642,7 @@ def _apply_payment_to_bill(bill, payment, payment_type: str, approved_at):
         "rent_paid", "water_paid", "parking_paid", "rent_paid_at", "water_paid_at",
         "status", "paid_at", "payment_reference"
     ]
-    if payment_type == "full":
+    if payment_type in {"full", "rent_only"}:
         update_fields += ["interest", "total_due"]
     bill.save(update_fields=update_fields)
 
@@ -593,14 +716,70 @@ def _apply_payment_to_bills(bills, payment, payment_type: str, approved_at, logg
         logger.info(f"Bill {bill.id} updated successfully: status={bill.status}, balance={bill.total_balance}")
 
 
-@transaction.atomic
+def _refresh_future_water_carryovers(bills, payment_type: str, logger):
+    if payment_type not in {"full", "water_only"}:
+        return
+
+    from water.models import WaterReading
+    from water.services import (
+        compute_water_reading,
+        create_or_update_monthly_bill_from_reading,
+        get_water_billing_settings_for_month,
+        previous_unpaid_water_balance,
+    )
+
+    paid_water_bills = [bill for bill in bills if bill.water_paid > 0]
+    for paid_bill in paid_water_bills:
+        future_readings = WaterReading.objects.select_related("lease__unit").filter(
+            lease=paid_bill.lease,
+            reading_month__gt=paid_bill.billing_month,
+        ).order_by("reading_month")
+
+        for reading in future_readings:
+            linked_bill = MonthlyBill.objects.filter(source_water_reading=reading).first()
+            if linked_bill and linked_bill.water_paid > 0:
+                continue
+
+            billing_settings = get_water_billing_settings_for_month(reading.reading_month)
+            month_readings = WaterReading.objects.filter(reading_month=reading.reading_month)
+            total_month_consumption = sum((row.consumption for row in month_readings), Decimal("0.00"))
+            compute_water_reading(
+                reading,
+                total_month_consumption=total_month_consumption,
+                shared_pump_total=billing_settings.shared_pump_total,
+                vat_percent=billing_settings.vat_percent,
+                previous_unpaid_water_amount=previous_unpaid_water_balance(reading.lease, reading.reading_month),
+            )
+            reading.save()
+            create_or_update_monthly_bill_from_reading(reading, force_update=True)
+            logger.info(
+                "Refreshed future water carry-over for bill %s reading %s: amount=%s",
+                paid_bill.id,
+                reading.id,
+                reading.computed_amount,
+            )
+
+
 def reconcile_approved_payments_for_tenant(user):
     from payments.models import ManualPayment
 
-    approved_payments = ManualPayment.objects.select_for_update().filter(
+    approved_payments = ManualPayment.objects.filter(
         user=user,
         status="APPROVED",
-    ).exclude(payment_type="move_in").order_by("created_at")
+    ).exclude(
+        payment_type="move_in",
+    ).exclude(
+        bill_ids="",
+    ).only(
+        "id",
+        "user_id",
+        "status",
+        "payment_type",
+        "reference_code",
+        "amount",
+        "bill_ids",
+        "created_at",
+    ).order_by("created_at")
 
     for payment in approved_payments:
         bill_ids = parse_bill_ids(payment.bill_ids)
@@ -691,6 +870,7 @@ def approve_manual_payment(payment):
     method_display = _payment_method_display(payment)
     _notify_payment_approved(payment, method_display, was_previously_approved, logger)
     _apply_payment_to_bills(bills, payment, payment_type, approved_at, logger)
+    _refresh_future_water_carryovers(bills, payment_type, logger)
 
     try:
         _generate_next_month_bill_if_needed(bills, approved_at)

@@ -214,5 +214,5 @@ PAYMONGO_WEBHOOK_SECRET = os.environ.get("PAYMONGO_WEBHOOK_SECRET", "")
 
 # Email via Resend HTTP API (Railway blocks all SMTP ports)
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'REALESTATE360+ <noreply@realestate360.site>')
+DEFAULT_FROM_EMAIL = 'REALESTATE360+ <noreply@realestate360.site>'
 

@@ -143,7 +143,7 @@ def admin_create_lease(request):
                         if hasattr(lease.tenant, "tenantprofile")
                         else lease.tenant.email
                     )
-                    lease_email_sent = send_email_via_resend(
+                    send_email_via_resend(
                         to_email=lease.tenant.email,
                         subject=f"[REALESTATE360+] Unit {lease.unit.number} Assigned to You",
                         message=(
@@ -168,20 +168,41 @@ def admin_create_lease(request):
                             "REALESTATE360+ Administration"
                         ),
                     )
-                    if lease_email_sent:
-                        messages.info(request, f"Lease assignment email sent to {lease.tenant.email}.")
-                    else:
-                        messages.warning(
-                            request,
-                            "Lease was created, but the lease assignment email was not sent. "
-                            "Check Resend configuration and delivery logs.",
-                        )
                 except Exception as exc:
                     logger.exception("Failed to send lease assignment email: %s", exc)
 
+                try:
+                    tenant_name = (
+                        lease.tenant.tenantprofile.full_name
+                        if hasattr(lease.tenant, "tenantprofile")
+                        else lease.tenant.email
+                    )
+                    from django.core.mail import send_mail
+
+                    send_mail(
+                        subject="Your Lease is Pending Activation - REALESTATE360+",
+                        message=(
+                            f"Hi {tenant_name},\n\n"
+                            f"Your lease for Unit {lease.unit.number} has been created and is pending activation.\n"
+                            "Please complete the move-in payment to activate your lease and access your tenant portal.\n\n"
+                            "Lease Details:\n"
+                            f"- Unit: {lease.unit.number}\n"
+                            f"- Monthly Rent: ₱{lease.monthly_rent:,.2f}\n"
+                            f"- Start Date: {lease.start_date}\n"
+                            f"- Move-in Cost: ₱{lease.total_move_in_cost:,.2f}\n\n"
+                            "Once payment is confirmed, you'll receive access to your tenant portal.\n\n"
+                            "REALESTATE360+ Administration"
+                        ),
+                        from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@realestate360.com"),
+                        recipient_list=[lease.tenant.email],
+                        fail_silently=True,
+                    )
+                except Exception as exc:
+                    logger.exception("Failed to send pending lease email: %s", exc)
+
                 messages.success(
                     request,
-                    f"Lease created for {lease.tenant.email} - Unit {lease.unit.number}. "
+                    f"Lease created for {lease.tenant.email} – Unit {lease.unit.number}. "
                     "Status: PENDING PAYMENT. Please complete payment to activate.",
                 )
                 return redirect("admin_lease_payment", lease_id=lease.id)

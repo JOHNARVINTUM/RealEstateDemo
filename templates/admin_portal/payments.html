@@ -123,11 +123,8 @@
   </div>
 
   <div class="space-y-6">
-    {% if is_f2f_schedule_view %}
-      {% include "admin_portal/payment_list_table.html" with section_title="F2F Schedule" section_description="Pending cash appointments waiting for confirmation." payments=cash_schedule_payments %}
-    {% else %}
-      {% include "admin_portal/payment_list_table.html" with section_title="All Payments" section_description="All payment submissions matching the current filters." payments=other_payments %}
-    {% endif %}
+    {% include "admin_portal/payment_list_table.html" with section_title="F2F Schedule" section_description="Pending cash appointments waiting for confirmation." payments=cash_schedule_payments %}
+    {% include "admin_portal/payment_list_table.html" with section_title="Other Payments" section_description="GCash and PayMongo records." payments=other_payments %}
   </div>
 
   {% comment %}

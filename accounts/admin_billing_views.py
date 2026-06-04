@@ -12,7 +12,7 @@ from django.utils import timezone
 from django.db.models import Count, Q
 
 from billing.models import MonthlyBill
-from billing.services import create_and_send_invoice_for_paid_bill, set_bill_status
+from billing.services import set_bill_status
 
 from .admin_portal_views import admin_required, admin_password_verified, render_admin_password_confirm
 
@@ -21,9 +21,7 @@ from .admin_portal_views import admin_required, admin_password_verified, render_
 def admin_mark_bill_paid(request, bill_id: int):
     bill = get_object_or_404(MonthlyBill, pk=bill_id)
     if request.method == "POST":
-        paid_at = dj_timezone.now()
-        bill = set_bill_status(bill, status="PAID", paid_at=paid_at)
-        create_and_send_invoice_for_paid_bill(bill, paid_at=paid_at)
+        set_bill_status(bill, status="PAID", paid_at=dj_timezone.now())
         return redirect("admin_billing")
     return render(request, "admin_portal/confirm.html", {
         "title": "Mark Bill Paid",

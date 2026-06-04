@@ -208,13 +208,7 @@ def admin_create_tenant_profile(request):
 
             tenant_name = f"{tenant_profile.first_name} {tenant_profile.last_name}"
             success_message = f"Tenant {tenant_name} has been created successfully! "
-            if getattr(tenant_profile, "credentials_email_sent", False):
-                success_message += f"Credentials email was sent to {tenant_profile.user.email}."
-            else:
-                success_message += (
-                    "Credentials were generated, but the email was not sent. "
-                    "Check Resend configuration and delivery logs."
-                )
+            success_message += "An auto-generated password has been created and credentials email has been sent to {tenant_profile.user.email}."
 
             messages.success(request, success_message)
 

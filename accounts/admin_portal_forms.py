@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from rentals.models import TenantProfile, Lease, Unit, UnitImage, TenantAttachment
-from rentals.services import generate_tenant_password, send_tenant_credentials_email
+from rentals.services import generate_tenant_password
 from announcements.models import Announcement
 from billing.models import MonthlyBill
 
@@ -152,6 +152,7 @@ class TenantProfileForm(forms.ModelForm):
                         uploaded_by=uploaded_by
                     )
                 
+                # Tenant-facing credentials and welcome messages are delayed until move-in payment activates the lease.
                 unit_details = ""
                 try:
                     from rentals.models import Notification
@@ -169,9 +170,9 @@ class TenantProfileForm(forms.ModelForm):
 Tenant Name: {instance.first_name} {instance.last_name}
 Email: {email}
 {unit_details}
-Status: Account created; credentials email is sent immediately
+Status: Account created; credentials will be sent after move-in payment is confirmed
 
-Email notification: Sent during tenant creation"""
+Email notification: Delayed until lease activation"""
                         
                         Notification.create_admin_notification(
                             title=admin_title,
@@ -184,15 +185,7 @@ Email notification: Sent during tenant creation"""
                     
                 except Exception as e:
                     logger.exception("Failed to create notifications: %s", e)
-
-        tenant_name = f"{first_name} {last_name}".strip() or email
-        email_sent = send_tenant_credentials_email(
-            tenant_email=email,
-            tenant_name=tenant_name,
-            password=generated_password,
-        )
-        instance.credentials_email_sent = email_sent
-
+            
         return instance
 
 
@@ -569,21 +562,9 @@ class LeaseForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Only tenants without active or pending leases can be assigned a new lease.
+        # only allow selecting users with tenant role
         try:
-            unavailable_tenant_ids = Lease.objects.filter(
-                status__in=[Lease.STATUS_ACTIVE, Lease.STATUS_PENDING_PAYMENT]
-            ).values_list("tenant_id", flat=True)
-            tenant_queryset = User.objects.filter(role="TENANT").exclude(id__in=unavailable_tenant_ids)
-            if self.instance and self.instance.pk and self.instance.tenant_id:
-                tenant_queryset = (
-                    tenant_queryset | User.objects.filter(pk=self.instance.tenant_id)
-                ).distinct()
-            self.fields["tenant"].queryset = tenant_queryset.select_related("tenantprofile").order_by(
-                "tenantprofile__first_name",
-                "tenantprofile__last_name",
-                "email",
-            )
+            self.fields["tenant"].queryset = User.objects.filter(role="TENANT")
         except Exception as e:
             logger.exception("Failed to set tenant queryset: %s", e)
         

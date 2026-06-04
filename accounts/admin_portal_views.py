@@ -694,11 +694,7 @@ def admin_update_tenant_risks(request):
             updated_count = TenantRiskService.update_all_tenant_risks()
             messages.success(request, f'Successfully updated risk classifications for {updated_count} tenants.')
         except Exception as e:
-            logger.exception("Tenant risk refresh failed: %s", e)
-            messages.warning(
-                request,
-                "Risk refresh could not fully complete. The rule-based fallback remains available; check server logs for details.",
-            )
+            messages.error(request, f'Error updating risk classifications: {e}')
     
     return redirect('admin_tenant_risk')
 

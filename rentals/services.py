@@ -4,6 +4,7 @@ from decimal import Decimal
 from dataclasses import dataclass
 from django.db import transaction
 from django.db.models import Count, Q, Avg, Max, F
+from django.core.mail import send_mail
 from django.conf import settings
 from rentals.models import TenantRiskClassification, Lease, CalendarEvent, Notification
 from billing.models import MonthlyBill
@@ -91,24 +92,17 @@ def repair_historical_move_in_payment(payment):
     return True, "Historical move-in payment repaired successfully."
 
 
-def is_resend_configured():
-    return bool(getattr(settings, "RESEND_API_KEY", ""))
-
-
 def send_email_via_resend(to_email, subject, message):
     """
     Reusable helper to send email via Resend HTTP API.
     Returns True on success, False on failure (never raises).
     """
-    if not is_resend_configured():
-        logger.warning("Resend is not configured; skipped email to %s: %s", to_email, subject)
-        return False
-
     try:
         import resend
-        resend.api_key = settings.RESEND_API_KEY
+        import os
+        resend.api_key = os.environ.get('RESEND_API_KEY', '')
         resend.Emails.send({
-            'from': getattr(settings, "DEFAULT_FROM_EMAIL", "REALESTATE360+ <noreply@realestate360.site>"),
+            'from': 'REALESTATE360+ <noreply@realestate360.site>',
             'to': [to_email],
             'subject': subject,
             'text': message,
@@ -456,11 +450,8 @@ class TenantRiskService:
         updated_count = 0
         
         for tenant in tenants:
-            try:
-                if TenantRiskService.update_tenant_risk_classification(tenant):
-                    updated_count += 1
-            except Exception as exc:
-                logger.exception("Failed to update tenant risk for %s: %s", tenant.email, exc)
+            if TenantRiskService.update_tenant_risk_classification(tenant):
+                updated_count += 1
         
         logger.info(f"Updated risk classifications for {updated_count} tenants")
         return updated_count
@@ -551,12 +542,20 @@ Best regards,
 REALESTATE360+ Team
 """
     
-    email_sent = send_email_via_resend(tenant_email, subject, message)
-    if email_sent:
+    try:
+        import resend
+        resend.api_key = settings.RESEND_API_KEY
+        resend.Emails.send({
+            'from': 'REALESTATE360+ <noreply@realestate360.site>',
+            'to': [tenant_email],
+            'subject': subject,
+            'text': message,
+        })
         logger.info(f"Credentials email sent successfully to {tenant_email}")
-    else:
-        logger.warning(f"Credentials email was not sent to {tenant_email}")
-    return email_sent
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send credentials email to {tenant_email}: {str(e)}")
+        return False
 
 
 @dataclass(frozen=True)
@@ -985,25 +984,21 @@ class LeaseActivationService:
         try:
             profile = lease.tenant.tenantprofile
             tenant_name = profile.full_name
+            password = generate_tenant_password(profile.first_name, profile.last_name)
+            lease.tenant.set_password(password)
+            lease.tenant.save(update_fields=["password"])
+            profile.password_change_required = True
+            profile.send_credentials = True
             profile.has_seen_unit_welcome = False
-            profile.save(update_fields=["has_seen_unit_welcome"])
+            profile.save(update_fields=["password_change_required", "send_credentials", "has_seen_unit_welcome"])
 
-            email_sent = send_email_via_resend(
-                to_email=lease.tenant.email,
-                subject=f"[REALESTATE360+] Lease Activated for Unit {lease.unit.number}",
-                message=(
-                    f"Dear {tenant_name},\n\n"
-                    "Your move-in payment has been confirmed and your lease is now active.\n\n"
-                    f"Unit: {lease.unit.number}\n"
-                    f"Monthly Rent: PHP {lease.monthly_rent:,.2f}\n"
-                    f"Lease Start: {lease.start_date}\n"
-                    f"Rent Due Day: Every {lease.due_day} of the month\n\n"
-                    "Please use the tenant account credentials previously sent to your email to access your portal.\n\n"
-                    "REALESTATE360+ Administration"
-                ),
+            email_sent = send_tenant_credentials_email(
+                tenant_email=lease.tenant.email,
+                tenant_name=tenant_name,
+                password=password,
             )
             if not email_sent:
-                logger.warning("Activation confirmation email failed for tenant %s", lease.tenant.email)
+                logger.warning("Activation credentials email failed for tenant %s", lease.tenant.email)
 
             Notification.create_tenant_notification(
                 title=f"Welcome to Unit {lease.unit.number}",
@@ -1013,7 +1008,7 @@ class LeaseActivationService:
                     f"Monthly Rent: PHP {lease.monthly_rent:,.2f}\n"
                     f"Lease Start: {lease.start_date}\n"
                     f"Rent Due Day: Every {lease.due_day} of the month\n\n"
-                    "Your tenant portal is ready. Use the credentials previously sent to your email."
+                    "Your tenant portal access has been sent to your email."
                 ),
                 notification_type="SYSTEM",
                 tenant_user=lease.tenant,
@@ -1072,7 +1067,7 @@ class LeaseActivationService:
                         activated_at,
                     )
 
-                payment_record = LeaseActivationService._record_move_in_payment(
+                LeaseActivationService._record_move_in_payment(
                     lease=lease,
                     payment_method=payment_method,
                     payment_reference=payment_reference,
@@ -1080,31 +1075,6 @@ class LeaseActivationService:
                     first_bill=first_bill,
                     existing_payment=existing_payment,
                 )
-                if payment_record and first_bill:
-                    from billing.services import create_and_send_invoice_for_payment
-
-                    move_in_line = {
-                        "bill_id": first_bill.id,
-                        "billing_month": first_bill.billing_month.strftime("%B %Y"),
-                        "unit": getattr(lease.unit, "number", ""),
-                        "rent_charge": f"{lease.monthly_rent.quantize(Decimal('0.01'))}",
-                        "water_charge": "0.00",
-                        "parking_charge": f"{lease.parking_fee.quantize(Decimal('0.01'))}",
-                        "security_deposit": f"{lease.security_deposit.quantize(Decimal('0.01'))}",
-                        "contract_deposit": f"{lease.contract_deposit.quantize(Decimal('0.01'))}",
-                        "late_fee": "0.00",
-                        "total_due_before_payment": f"{Decimal(amount or 0).quantize(Decimal('0.01'))}",
-                        "amount_paid": f"{Decimal(amount or 0).quantize(Decimal('0.01'))}",
-                        "status_before_payment": "PENDING_PAYMENT",
-                    }
-                    create_and_send_invoice_for_payment(
-                        payment_record,
-                        [first_bill],
-                        "move_in",
-                        activated_at or timezone.now(),
-                        lines=[move_in_line],
-                        logger=logger,
-                    )
                 LeaseActivationService._send_activation_welcome(lease)
                 
                 logger.info(

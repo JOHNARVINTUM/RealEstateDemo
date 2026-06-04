@@ -69,6 +69,28 @@ def admin_approve_payment(request, payment_id: int):
             approve_manual_payment(p)
             messages.success(request, f"Payment {p.reference_code} approved successfully.")
 
+            try:
+                from rentals.services import send_email_via_resend
+                tenant_name = _tenant_display_name(p.user)
+                payment_type_label = {'full': 'Full Payment', 'rent_only': 'Rent Only', 'water_only': 'Water Only'}.get(p.payment_type, 'Payment')
+                send_email_via_resend(
+                    to_email=p.user.email,
+                    subject="[REALESTATE360+] Payment Approved – Receipt Confirmation",
+                    message=(
+                        f"Dear {tenant_name},\n\n"
+                        f"Your payment has been approved and recorded.\n\n"
+                        f"  Reference No.: {p.reference_code}\n"
+                        f"  Payment Type:  {payment_type_label}\n"
+                        f"  Amount:        PHP {p.amount:,.2f}\n"
+                        f"  Method:        {p.get_payment_method_display() if hasattr(p, 'get_payment_method_display') else p.payment_method}\n"
+                        f"  Status:        APPROVED\n\n"
+                        f"Your billing statement has been updated. You can view your payment history in your tenant portal.\n\n"
+                        f"Thank you for your payment!\n\n"
+                        f"REALESTATE360+ Administration"
+                    )
+                )
+            except Exception as e:
+                logger.exception(f"Failed to send payment confirmation email: {e}")
 
         except Exception as e:
             messages.error(request, f"Error approving payment: {e}")
@@ -139,7 +161,7 @@ def admin_confirm_schedule(request, payment_id: int):
 
             Notification.create_tenant_notification(
                 title="Cash Payment Appointment Confirmed",
-                message=f"Your face-to-face cash payment appointment has been confirmed.\n\nAmount: â‚±{p.amount:,.2f}\nScheduled: {schedule_info}\n\nPlease bring the exact amount. See you then!",
+                message=f"Your face-to-face cash payment appointment has been confirmed.\n\nAmount: ₱{p.amount:,.2f}\nScheduled: {schedule_info}\n\nPlease bring the exact amount. See you then!",
                 notification_type='PAYMENT',
                 tenant_user=p.user
             )
@@ -155,7 +177,7 @@ def admin_confirm_schedule(request, payment_id: int):
 
     return render(request, "admin_portal/confirm.html", {
         "title": "Confirm F2F Schedule",
-        "message": f"Confirm cash payment appointment for {p.user.email}?\n\nAmount: â‚±{p.amount:,.2f}\nScheduled: {schedule_info}\n\nTenant will be notified that the appointment is confirmed.",
+        "message": f"Confirm cash payment appointment for {p.user.email}?\n\nAmount: ₱{p.amount:,.2f}\nScheduled: {schedule_info}\n\nTenant will be notified that the appointment is confirmed.",
         "post_url": reverse("admin_confirm_schedule", args=[p.id]),
         "back_url": reverse("admin_payments"),
     })
@@ -253,17 +275,22 @@ def admin_payments(request):
                     parts.append('Parking')
                 p.bill_components = ', '.join(parts) if parts else 'Rent'
                 months = sorted({bill.billing_month for bill in bills})
-                p.affected_months = ", ".join(month.strftime("%b %Y") for month in months) if months else "â€”"
+                p.affected_months = ", ".join(month.strftime("%b %Y") for month in months) if months else "—"
             else:
-                p.bill_components = 'â€”'
-                p.affected_months = 'â€”'
+                p.bill_components = '—'
+                p.affected_months = '—'
         except Exception:
-            p.bill_components = 'â€”'
-            p.affected_months = 'â€”'
+            p.bill_components = '—'
+            p.affected_months = '—'
 
-    is_f2f_schedule_view = method == "CASH" and status == "PENDING"
-    cash_schedule_payments = page_payments if is_f2f_schedule_view else []
-    other_payments = [] if is_f2f_schedule_view else page_payments
+    cash_schedule_payments = [
+        p for p in page_payments
+        if p.payment_method == "CASH" and p.status == "PENDING"
+    ]
+    other_payments = [
+        p for p in page_payments
+        if not (p.payment_method == "CASH" and p.status == "PENDING")
+    ]
 
     return render(request, "admin_portal/payments.html", {
         "page_obj": page_obj,
@@ -272,7 +299,6 @@ def admin_payments(request):
         "q": q,
         "status": status,
         "method": method,
-        "is_f2f_schedule_view": is_f2f_schedule_view,
         "pending_count": pending_count,
         "approved_count": approved_count,
         "rejected_count": rejected_count,

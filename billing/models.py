@@ -140,3 +140,34 @@ class MonthlyBill(models.Model):
             return "DUE"
         return "OVERDUE"
 
+
+class BillingInvoice(models.Model):
+    invoice_number = models.CharField(max_length=40, unique=True)
+    tenant = models.ForeignKey("accounts.User", on_delete=models.CASCADE, related_name="billing_invoices")
+    payment = models.OneToOneField(
+        "payments.ManualPayment",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="invoice",
+    )
+    bill_ids = models.CharField(max_length=255, blank=True, default="")
+    reference_code = models.CharField(max_length=80, blank=True, default="")
+    payment_method = models.CharField(max_length=30, blank=True, default="")
+    payment_type = models.CharField(max_length=30, blank=True, default="")
+    amount_paid = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    snapshot = models.JSONField(default=dict, blank=True)
+    email_sent = models.BooleanField(default=False)
+    emailed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+        indexes = [
+            models.Index(fields=["tenant", "created_at"], name="invoice_tenant_created_idx"),
+            models.Index(fields=["reference_code"], name="invoice_ref_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.invoice_number} - {self.tenant.email}"
+

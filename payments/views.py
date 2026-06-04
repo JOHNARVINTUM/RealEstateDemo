@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, time, timedelta
 from decimal import Decimal
 import logging
 
@@ -31,6 +31,39 @@ from .paymongo_workflow import (
     render_paymongo_tenant_success,
 )
 from rentals.models import Notification
+
+
+OFFICE_START_TIME = time(9, 0)
+OFFICE_END_TIME = time(17, 0)
+OFFICE_SLOT_MINUTES = 30
+
+
+def _f2f_time_slots():
+    slots = []
+    current = datetime.combine(datetime.today(), OFFICE_START_TIME)
+    end = datetime.combine(datetime.today(), OFFICE_END_TIME)
+    while current <= end:
+        slots.append(current.time())
+        current += timedelta(minutes=OFFICE_SLOT_MINUTES)
+    return slots
+
+
+def _f2f_cash_context(**overrides):
+    context = {
+        "office_time_slots": _f2f_time_slots(),
+        "office_hours_label": "Monday to Friday, 9:00 AM - 5:00 PM",
+        "back_url": reverse("tenant_pay_advance"),
+    }
+    context.update(overrides)
+    return context
+
+
+def _is_office_schedule(preferred_date, preferred_time):
+    if preferred_date and preferred_date.weekday() >= 5:
+        return False, "Please choose a weekday schedule. Office cash payments are available Monday to Friday only."
+    if preferred_time and preferred_time not in _f2f_time_slots():
+        return False, "Please choose a time within office hours: Monday to Friday, 9:00 AM - 5:00 PM."
+    return True, ""
 
 
 @login_required
@@ -120,15 +153,15 @@ def f2f_cash_payment(request):
 
         # Validate required fields
         if not preferred_date:
-            return render(request, "payments/f2f_cash.html", {
-                "error": "Please select a preferred date for the cash payment.",
-                "amount_to_pay": amount_to_pay,
-                "bill_ids": bill_ids,
-                "payment_type": payment_type,
-                "preferred_date": preferred_date,
-                "preferred_time": preferred_time,
-                "tenant_note": tenant_note,
-            })
+            return render(request, "payments/f2f_cash.html", _f2f_cash_context(
+                error="Please select a preferred date for the cash payment.",
+                amount_to_pay=amount_to_pay,
+                bill_ids=bill_ids,
+                payment_type=payment_type,
+                preferred_date=preferred_date,
+                preferred_time=preferred_time,
+                tenant_note=tenant_note,
+            ))
 
         # Parse date and time
         parsed_date = None
@@ -139,15 +172,27 @@ def f2f_cash_payment(request):
             if preferred_time:
                 parsed_time = datetime.strptime(preferred_time, "%H:%M").time()
         except ValueError:
-            return render(request, "payments/f2f_cash.html", {
-                "error": "Invalid date or time format.",
-                "amount_to_pay": amount_to_pay,
-                "bill_ids": bill_ids,
-                "payment_type": payment_type,
-                "preferred_date": preferred_date,
-                "preferred_time": preferred_time,
-                "tenant_note": tenant_note,
-            })
+            return render(request, "payments/f2f_cash.html", _f2f_cash_context(
+                error="Invalid date or time format.",
+                amount_to_pay=amount_to_pay,
+                bill_ids=bill_ids,
+                payment_type=payment_type,
+                preferred_date=preferred_date,
+                preferred_time=preferred_time,
+                tenant_note=tenant_note,
+            ))
+
+        is_valid_schedule, schedule_error = _is_office_schedule(parsed_date, parsed_time)
+        if not is_valid_schedule:
+            return render(request, "payments/f2f_cash.html", _f2f_cash_context(
+                error=schedule_error,
+                amount_to_pay=amount_to_pay,
+                bill_ids=bill_ids,
+                payment_type=payment_type,
+                preferred_date=preferred_date,
+                preferred_time=preferred_time,
+                tenant_note=tenant_note,
+            ))
 
         payment, duplicate_reason = create_f2f_cash_payment_request(
             user=request.user,
@@ -189,11 +234,11 @@ def f2f_cash_payment(request):
     bill_ids = request.GET.get("bill_ids", "")
     payment_type = request.GET.get("payment_type", "full")
 
-    return render(request, "payments/f2f_cash.html", {
-        "amount_to_pay": amount_to_pay,
-        "bill_ids": bill_ids,
-        "payment_type": payment_type,
-    })
+    return render(request, "payments/f2f_cash.html", _f2f_cash_context(
+        amount_to_pay=amount_to_pay,
+        bill_ids=bill_ids,
+        payment_type=payment_type,
+    ))
 
 
 # ─────────────────────────────────────────────────────────────────────────────

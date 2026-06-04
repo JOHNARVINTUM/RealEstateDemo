@@ -11,6 +11,7 @@ from billing.models import MonthlyBill
 from payments.models import ManualPayment
 from rentals.models import Lease, TenantProfile, Unit
 from rentals.services import (
+    LeaseActivationService,
     LeaseSchedulingService,
     TenantRiskService,
     _assemble_tenant_password,
@@ -595,3 +596,40 @@ class TenantPasswordTests(TestCase):
         self.assertEqual(profile.first_name, "John")
         self.assertEqual(profile.last_name, "Doe")
         self.assertEqual(profile.contact_no, "09171234567")
+
+    def test_activation_welcome_does_not_reset_password_or_resend_credentials(self):
+        tenant = User.objects.create_user(
+            email="activation.tenant@example.com",
+            username="activationtenant",
+            password="original-password",
+            role=User.Role.TENANT,
+        )
+        profile = TenantProfile.objects.create(
+            user=tenant,
+            first_name="Activation",
+            last_name="Tenant",
+            has_seen_unit_welcome=True,
+        )
+        unit = Unit.objects.create(number="ACT-1", monthly_rent=Decimal("12000.00"), status="OCCUPIED")
+        lease = Lease.objects.create(
+            tenant=tenant,
+            unit=unit,
+            monthly_rent=Decimal("12000.00"),
+            due_day=5,
+            start_date=date(2026, 6, 1),
+            status=Lease.STATUS_ACTIVE,
+            is_active=True,
+        )
+        original_password_hash = tenant.password
+
+        with patch("rentals.services.send_tenant_credentials_email") as credentials_email, patch(
+            "rentals.services.send_email_via_resend", return_value=True
+        ) as activation_email:
+            LeaseActivationService._send_activation_welcome(lease)
+
+        tenant.refresh_from_db()
+        profile.refresh_from_db()
+        self.assertEqual(tenant.password, original_password_hash)
+        self.assertFalse(profile.has_seen_unit_welcome)
+        credentials_email.assert_not_called()
+        activation_email.assert_called_once()

@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from accounts.models import User
-from billing.models import MonthlyBill
+from billing.models import BillingInvoice, MonthlyBill
 from billing.services import (
     approve_manual_payment,
     compute_weekly_interest,
@@ -150,6 +150,43 @@ class BillingWorkflowTests(TestCase):
         self.assertEqual(tenant_bill.payment_reference, "REF-123")
         self.assertIsNotNone(tenant_bill.paid_at)
         self.assertEqual(parse_bill_ids(payment.bill_ids), [tenant_bill.id])
+        self.assertEqual(BillingInvoice.objects.filter(payment=payment).count(), 1)
+
+    def test_approve_rent_payment_creates_invoice_email_with_interest_snapshot(self):
+        bill = MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=date(2026, 6, 1),
+            due_date=date(2026, 6, 30),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("500.00"),
+            parking_fee=Decimal("0.00"),
+            interest=Decimal("300.00"),
+            total_due=Decimal("10800.00"),
+            status="UNPAID",
+        )
+        payment = ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="REF-INV-1",
+            bill_ids=str(bill.id),
+            payment_type="rent_only",
+            payment_method="GCASH",
+            amount=Decimal("10300.00"),
+        )
+
+        with patch("rentals.services.send_email_via_resend", return_value=True) as send_email:
+            approve_manual_payment(payment)
+
+        invoice = BillingInvoice.objects.get(payment=payment)
+        bill.refresh_from_db()
+
+        self.assertTrue(invoice.email_sent)
+        self.assertEqual(invoice.reference_code, "REF-INV-1")
+        self.assertEqual(invoice.amount_paid, Decimal("10300.00"))
+        self.assertEqual(invoice.snapshot["lines"][0]["rent_charge"], "10000.00")
+        self.assertEqual(invoice.snapshot["lines"][0]["late_fee"], "300.00")
+        self.assertEqual(invoice.snapshot["lines"][0]["amount_paid"], "10300.00")
+        self.assertEqual(bill.interest, Decimal("0.00"))
+        send_email.assert_called_once()
 
     def test_deleting_bill_removes_payment_history_reference(self):
         bill = MonthlyBill.objects.create(

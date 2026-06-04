@@ -7,11 +7,25 @@ from django.db.models import Sum
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
-from billing.models import MonthlyBill
+from billing.models import BillingInvoice, MonthlyBill
 from water.models import WaterBill
 
 # 3% flat late interest (BASE RENT ONLY for now)
 WEEKLY_LATE_INTEREST_RATE = Decimal("0.03")
+
+
+def _money(value) -> str:
+    return f"{Decimal(value or 0).quantize(Decimal('0.01'))}"
+
+
+def _tenant_display_name(user) -> str:
+    try:
+        full_name = user.tenantprofile.full_name.strip()
+        if full_name:
+            return full_name
+    except Exception:
+        pass
+    return user.email
 
 
 def month_start(d: date) -> date:
@@ -565,6 +579,7 @@ def _approve_move_in_payment(payment, logger):
             payment_method=payment.payment_method,
             payment_reference=payment.reference_code,
             amount=payment.amount,
+            existing_payment=payment,
         )
         if not success:
             logger.error(f"Lease activation failed: {message}")
@@ -602,6 +617,210 @@ def _payment_method_display(payment) -> str:
     if payment.payment_method == "PAYMONGO":
         return "PayMongo"
     return "Face-to-Face Cash"
+
+
+def _payment_type_display(payment_type: str) -> str:
+    return {
+        "full": "Full Payment",
+        "rent_only": "Rent Only",
+        "water_only": "Water Only",
+        "move_in": "Move-in Payment",
+    }.get(payment_type, "Payment")
+
+
+def _invoice_number_for_payment(payment) -> str:
+    return f"INV-PAY-{payment.id:06d}"
+
+
+def _invoice_number_for_bill(bill) -> str:
+    return f"INV-BILL-{bill.id:06d}"
+
+
+def _build_invoice_line_for_bill(bill, payment_type: str):
+    if payment_type == "rent_only":
+        amount_paid = bill.rent_balance + bill.parking_balance + bill.interest
+    elif payment_type == "water_only":
+        amount_paid = bill.water_balance
+    else:
+        amount_paid = bill.total_balance
+
+    return {
+        "bill_id": bill.id,
+        "billing_month": bill.billing_month.strftime("%B %Y"),
+        "unit": getattr(bill.lease.unit, "number", ""),
+        "rent_charge": _money(bill.base_rent),
+        "water_charge": _money(bill.water_amount),
+        "parking_charge": _money(bill.parking_fee),
+        "late_fee": _money(bill.interest),
+        "total_due_before_payment": _money(bill.total_balance),
+        "amount_paid": _money(amount_paid),
+        "status_before_payment": bill.status,
+    }
+
+
+def _build_invoice_lines(bills, payment_type: str):
+    return [_build_invoice_line_for_bill(bill, payment_type) for bill in bills]
+
+
+def _invoice_lines_total(lines, key: str) -> Decimal:
+    return sum((Decimal(line.get(key, "0.00")) for line in lines), Decimal("0.00")).quantize(Decimal("0.01"))
+
+
+def _invoice_snapshot(*, tenant, payment, payment_type: str, method_display: str, lines, approved_at):
+    totals = {
+        "rent_charge": _money(_invoice_lines_total(lines, "rent_charge")),
+        "water_charge": _money(_invoice_lines_total(lines, "water_charge")),
+        "parking_charge": _money(_invoice_lines_total(lines, "parking_charge")),
+        "late_fee": _money(_invoice_lines_total(lines, "late_fee")),
+        "total_due_before_payment": _money(_invoice_lines_total(lines, "total_due_before_payment")),
+        "amount_paid": _money(_invoice_lines_total(lines, "amount_paid")),
+    }
+    return {
+        "tenant_name": _tenant_display_name(tenant),
+        "tenant_email": tenant.email,
+        "reference_code": getattr(payment, "reference_code", "") if payment else "",
+        "payment_method": method_display,
+        "payment_type": _payment_type_display(payment_type),
+        "paid_at": approved_at.isoformat() if approved_at else "",
+        "lines": lines,
+        "totals": totals,
+    }
+
+
+def _render_invoice_email(invoice: BillingInvoice) -> str:
+    snapshot = invoice.snapshot or {}
+    lines = snapshot.get("lines", [])
+    totals = snapshot.get("totals", {})
+    body = [
+        f"Dear {snapshot.get('tenant_name') or invoice.tenant.email},",
+        "",
+        "Your payment has been marked as PAID. Below is your invoice computation.",
+        "",
+        f"Invoice No.: {invoice.invoice_number}",
+        f"Reference No.: {invoice.reference_code or '-'}",
+        f"Payment Method: {snapshot.get('payment_method') or invoice.payment_method}",
+        f"Payment Type: {snapshot.get('payment_type') or invoice.payment_type}",
+        f"Amount Paid: PHP {invoice.amount_paid:,.2f}",
+        "",
+        "Bill Computation:",
+    ]
+    for line in lines:
+        body.extend([
+            f"- {line.get('billing_month')} | Unit {line.get('unit')}",
+            f"  Rent: PHP {Decimal(line.get('rent_charge', '0.00')):,.2f}",
+            f"  Water: PHP {Decimal(line.get('water_charge', '0.00')):,.2f}",
+            f"  Parking: PHP {Decimal(line.get('parking_charge', '0.00')):,.2f}",
+            f"  Security Deposit: PHP {Decimal(line.get('security_deposit', '0.00')):,.2f}",
+            f"  Contract Deposit: PHP {Decimal(line.get('contract_deposit', '0.00')):,.2f}",
+            f"  Late Fee: PHP {Decimal(line.get('late_fee', '0.00')):,.2f}",
+            f"  Total Before Payment: PHP {Decimal(line.get('total_due_before_payment', '0.00')):,.2f}",
+            f"  Paid This Transaction: PHP {Decimal(line.get('amount_paid', '0.00')):,.2f}",
+        ])
+    body.extend([
+        "",
+        "Totals:",
+        f"Rent: PHP {Decimal(totals.get('rent_charge', '0.00')):,.2f}",
+        f"Water: PHP {Decimal(totals.get('water_charge', '0.00')):,.2f}",
+        f"Parking: PHP {Decimal(totals.get('parking_charge', '0.00')):,.2f}",
+        f"Late Fee: PHP {Decimal(totals.get('late_fee', '0.00')):,.2f}",
+        f"Total Before Payment: PHP {Decimal(totals.get('total_due_before_payment', '0.00')):,.2f}",
+        f"Amount Paid: PHP {Decimal(totals.get('amount_paid', '0.00')):,.2f}",
+        "",
+        "Thank you for your payment.",
+        "",
+        "REALESTATE360+ Administration",
+    ])
+    return "\n".join(body)
+
+
+def _send_invoice_email(invoice: BillingInvoice, logger):
+    if invoice.email_sent:
+        return
+
+    try:
+        from rentals.services import send_email_via_resend
+
+        sent = send_email_via_resend(
+            to_email=invoice.tenant.email,
+            subject=f"[REALESTATE360+] Invoice {invoice.invoice_number}",
+            message=_render_invoice_email(invoice),
+        )
+        if sent:
+            invoice.email_sent = True
+            invoice.emailed_at = timezone.now()
+            invoice.save(update_fields=["email_sent", "emailed_at"])
+        else:
+            logger.warning("Invoice email was not sent for invoice %s", invoice.invoice_number)
+    except Exception as exc:
+        logger.exception("Failed to send invoice email %s: %s", invoice.invoice_number, exc)
+
+
+def create_and_send_invoice_for_payment(payment, bills, payment_type: str, approved_at, lines=None, logger=None):
+    import logging
+
+    logger = logger or logging.getLogger(__name__)
+    if getattr(payment, "invoice", None):
+        return payment.invoice
+
+    lines = lines or _build_invoice_lines(bills, payment_type)
+    method_display = _payment_method_display(payment)
+    snapshot = _invoice_snapshot(
+        tenant=payment.user,
+        payment=payment,
+        payment_type=payment_type,
+        method_display=method_display,
+        lines=lines,
+        approved_at=approved_at,
+    )
+    invoice, created = BillingInvoice.objects.get_or_create(
+        payment=payment,
+        defaults={
+            "invoice_number": _invoice_number_for_payment(payment),
+            "tenant": payment.user,
+            "bill_ids": payment.bill_ids,
+            "reference_code": payment.reference_code,
+            "payment_method": method_display,
+            "payment_type": _payment_type_display(payment_type),
+            "amount_paid": Decimal(payment.amount or 0).quantize(Decimal("0.01")),
+            "snapshot": snapshot,
+        },
+    )
+    if created:
+        _send_invoice_email(invoice, logger)
+    return invoice
+
+
+def create_and_send_invoice_for_paid_bill(bill, *, paid_at=None, logger=None):
+    import logging
+
+    logger = logger or logging.getLogger(__name__)
+    if BillingInvoice.objects.filter(payment__isnull=True, bill_ids=str(bill.id)).exists():
+        return BillingInvoice.objects.filter(payment__isnull=True, bill_ids=str(bill.id)).first()
+
+    paid_time = paid_at or bill.paid_at or timezone.now()
+    line = _build_invoice_line_for_bill(bill, "full")
+    line["status_before_payment"] = "MANUALLY_MARKED_PAID"
+    line["amount_paid"] = _money(bill.base_rent + bill.water_amount + bill.parking_fee + bill.interest)
+    snapshot = _invoice_snapshot(
+        tenant=bill.lease.tenant,
+        payment=None,
+        payment_type="full",
+        method_display="Admin Marked Paid",
+        lines=[line],
+        approved_at=paid_time,
+    )
+    invoice = BillingInvoice.objects.create(
+        invoice_number=_invoice_number_for_bill(bill),
+        tenant=bill.lease.tenant,
+        bill_ids=str(bill.id),
+        reference_code=bill.payment_reference,
+        payment_method="Admin Marked Paid",
+        payment_type="Full Payment",
+        amount_paid=Decimal(line["amount_paid"]),
+        snapshot=snapshot,
+    )
+    _send_invoice_email(invoice, logger)
+    return invoice
 
 
 def _apply_payment_to_bill(bill, payment, payment_type: str, approved_at):
@@ -865,12 +1084,14 @@ def approve_manual_payment(payment):
             f"{payment_type.replace('_', ' ')} balance of ₱{expected_amount:,.2f}."
         )
 
+    invoice_lines = _build_invoice_lines(bills, payment_type)
     _approve_payment_record(payment, was_previously_approved)
 
     method_display = _payment_method_display(payment)
     _notify_payment_approved(payment, method_display, was_previously_approved, logger)
     _apply_payment_to_bills(bills, payment, payment_type, approved_at, logger)
     _refresh_future_water_carryovers(bills, payment_type, logger)
+    create_and_send_invoice_for_payment(payment, bills, payment_type, approved_at, lines=invoice_lines, logger=logger)
 
     try:
         _generate_next_month_bill_if_needed(bills, approved_at)

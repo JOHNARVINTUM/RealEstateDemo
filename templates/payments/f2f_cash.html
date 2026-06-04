@@ -8,6 +8,10 @@
   <!-- Page Header -->
   <div class="mb-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 border-b-2 border-slate-100 pb-8">
     <div>
+      <a href="{{ back_url }}" class="inline-flex items-center gap-2 mb-5 px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl font-black text-sm transition-all shadow-sm">
+        <span aria-hidden="true">&larr;</span>
+        Back
+      </a>
       <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">Pay in Cash</h1>
       <p class="text-lg text-slate-500 font-bold mt-2">Pick a date and time to visit the office and pay in person.</p>
     </div>
@@ -106,6 +110,7 @@
                  value="{{ preferred_date }}"
                  min="{% now 'Y-m-d' %}"
                  class="w-full border-2 border-slate-100 rounded-2xl px-6 py-4 text-xl font-black text-slate-900 bg-white focus:border-slate-900 transition-all shadow-sm">
+          <p class="text-sm text-slate-400 mt-3 font-bold italic">* Office appointments are available {{ office_hours_label }}.</p>
         </div>
 
         <!-- Time -->
@@ -113,10 +118,16 @@
           <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-4">
             Time <span class="text-slate-400 font-bold">(Optional)</span>
           </label>
-          <input type="time" name="preferred_time"
-                 value="{{ preferred_time }}"
-                 class="w-full border-2 border-slate-100 rounded-2xl px-6 py-4 text-xl font-black text-slate-900 bg-white focus:border-slate-900 transition-all shadow-sm">
-          <p class="text-sm text-slate-400 mt-3 font-bold italic">* Leave empty if you can come anytime.</p>
+          <select name="preferred_time"
+                  class="w-full border-2 border-slate-100 rounded-2xl px-6 py-4 text-xl font-black text-slate-900 bg-white focus:border-slate-900 transition-all shadow-sm">
+            <option value="">Any office-hour slot</option>
+            {% for slot in office_time_slots %}
+              <option value="{{ slot|time:'H:i' }}" {% if preferred_time == slot|time:'H:i' %}selected{% endif %}>
+                {{ slot|time:"g:i A" }}
+              </option>
+            {% endfor %}
+          </select>
+          <p class="text-sm text-slate-400 mt-3 font-bold italic">* Non-office hours are unavailable.</p>
         </div>
 
         <!-- Notes -->
@@ -144,5 +155,22 @@
     </div>
 
   </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const dateInput = document.querySelector('input[name="preferred_date"]');
+      if (!dateInput) return;
+      dateInput.addEventListener("change", function () {
+        const selected = new Date(`${dateInput.value}T00:00:00`);
+        const day = selected.getDay();
+        if (day === 0 || day === 6) {
+          dateInput.setCustomValidity("Office cash payments are available Monday to Friday only.");
+          dateInput.reportValidity();
+        } else {
+          dateInput.setCustomValidity("");
+        }
+      });
+    });
+  </script>
 
 {% endblock %}

@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.test import TestCase
 from django.urls import reverse
@@ -7,7 +8,7 @@ from django.utils import timezone
 
 from accounts.models import User
 from accounts.admin_notification_views import resolve_notification_target_url
-from accounts.admin_portal_forms import LeaseForm
+from accounts.admin_portal_forms import LeaseForm, TenantProfileForm
 from billing.models import MonthlyBill
 from maintenance.models import MaintenanceRequest
 from payments.models import ManualPayment
@@ -91,6 +92,45 @@ class AdminPaymentTypeEditTests(TestCase):
         page_payment = response.context["page_obj"][0]
         self.assertEqual(page_payment.tenant_display_name, "Tenant Person")
         self.assertEqual(page_payment.affected_months, "Sep 2026")
+
+    def test_admin_payments_all_view_includes_pending_f2f_cash_records(self):
+        ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="REF-F2F-PENDING-1",
+            bill_ids=str(self.bill.id),
+            payment_type="rent_only",
+            payment_method="CASH",
+            amount=Decimal("10350.00"),
+            status="PENDING",
+            preferred_date=date(2026, 6, 5),
+        )
+        ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="REF-F2F-PENDING-2",
+            bill_ids=str(self.bill.id),
+            payment_type="rent_only",
+            payment_method="CASH",
+            amount=Decimal("10350.00"),
+            status="PENDING",
+            preferred_date=date(2026, 6, 8),
+            schedule_confirmed=True,
+        )
+        self.client.force_login(self.admin)
+
+        all_response = self.client.get("/admin-portal/payments/")
+        f2f_response = self.client.get("/admin-portal/payments/?status=PENDING&method=CASH")
+
+        self.assertEqual(all_response.status_code, 200)
+        self.assertEqual(f2f_response.status_code, 200)
+        self.assertEqual(all_response.context["page_obj"].paginator.count, 3)
+        self.assertEqual(len(all_response.context["other_payments"]), 3)
+        self.assertFalse(all_response.context["is_f2f_schedule_view"])
+        self.assertEqual(f2f_response.context["page_obj"].paginator.count, 2)
+        self.assertEqual(len(f2f_response.context["cash_schedule_payments"]), 2)
+        self.assertTrue(f2f_response.context["is_f2f_schedule_view"])
+        self.assertContains(f2f_response, "Manage in View")
+        self.assertNotContains(f2f_response, "Mark Paid")
+        self.assertNotContains(f2f_response, "Confirm</span>")
 
     def test_pending_cash_payment_detail_keeps_requested_amount_when_bill_now_paid(self):
         self.bill.status = "PAID"
@@ -622,6 +662,89 @@ class AdminTenantAndUnitSearchTests(TestCase):
 
         self.assertFalse(form.is_valid())
         self.assertIn("unit", form.errors)
+
+    def test_new_lease_form_excludes_tenants_with_active_or_pending_leases(self):
+        available_tenant = User.objects.create_user(
+            email="available.tenant@example.com",
+            username="availabletenant",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        active_tenant = User.objects.create_user(
+            email="active.tenant@example.com",
+            username="activetenant",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        pending_tenant = User.objects.create_user(
+            email="pending.tenant@example.com",
+            username="pendingtenant",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        for tenant, first in [
+            (available_tenant, "Available"),
+            (active_tenant, "Active"),
+            (pending_tenant, "Pending"),
+        ]:
+            TenantProfile.objects.create(user=tenant, first_name=first, last_name="Tenant")
+
+        active_unit = Unit.objects.create(number="707", monthly_rent=Decimal("10000.00"), status="OCCUPIED")
+        pending_unit = Unit.objects.create(number="708", monthly_rent=Decimal("10000.00"), status="AVAILABLE")
+        Lease.objects.create(
+            tenant=active_tenant,
+            unit=active_unit,
+            monthly_rent=Decimal("10000.00"),
+            due_day=5,
+            start_date=date(2026, 6, 1),
+            status=Lease.STATUS_ACTIVE,
+            is_active=True,
+        )
+        Lease.objects.create(
+            tenant=pending_tenant,
+            unit=pending_unit,
+            monthly_rent=Decimal("10000.00"),
+            due_day=5,
+            start_date=date(2026, 6, 1),
+            status=Lease.STATUS_PENDING_PAYMENT,
+            is_active=False,
+        )
+
+        form = LeaseForm()
+        tenant_ids = set(form.fields["tenant"].queryset.values_list("id", flat=True))
+
+        self.assertIn(available_tenant.id, tenant_ids)
+        self.assertNotIn(active_tenant.id, tenant_ids)
+        self.assertNotIn(pending_tenant.id, tenant_ids)
+
+
+class TenantCreationEmailTests(TestCase):
+    def test_tenant_form_sends_credentials_immediately_after_creation(self):
+        admin = User.objects.create_superuser(
+            email="admin-create-tenant@example.com",
+            username="admincreatetenant",
+            password="password123",
+        )
+        form = TenantProfileForm(
+            data={
+                "email": "instant.tenant@example.com",
+                "first_name": "Instant",
+                "last_name": "Tenant",
+                "contact_no": "09170000000",
+            }
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        with patch("accounts.admin_portal_forms.send_tenant_credentials_email", return_value=True) as send_email:
+            profile = form.save(uploaded_by=admin)
+
+        send_email.assert_called_once_with(
+            tenant_email="instant.tenant@example.com",
+            tenant_name="Instant Tenant",
+            password="ITenant",
+        )
+        self.assertTrue(profile.credentials_email_sent)
+        self.assertTrue(profile.user.check_password("ITenant"))
 
 
 class AdminCashMoveInNotificationTests(TestCase):

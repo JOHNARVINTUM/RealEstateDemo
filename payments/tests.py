@@ -2,6 +2,7 @@ from datetime import date
 from decimal import Decimal
 
 from django.test import TestCase
+from django.urls import reverse
 from unittest.mock import patch
 
 from accounts.models import User
@@ -134,3 +135,38 @@ class MoveInPaymentNotificationTests(TestCase):
         self.assertIn("John Constantine", kwargs["message"])
         self.assertNotIn("john.constantine@example.com", kwargs["message"])
         self.assertNotIn("stamaria@admin.com", kwargs["message"])
+
+
+class F2FCashScheduleTests(TestCase):
+    def setUp(self):
+        self.tenant = User.objects.create_user(
+            email="cash.tenant@example.com",
+            username="cashtenant",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+
+    def test_f2f_cash_rejects_weekend_and_outside_office_hours(self):
+        self.client.force_login(self.tenant)
+        url = reverse("f2f_cash_payment")
+
+        weekend_response = self.client.post(url, {
+            "amount": "1000.00",
+            "bill_ids": "1",
+            "payment_type": "rent_only",
+            "preferred_date": "2026-06-06",
+            "preferred_time": "10:00",
+        })
+        out_of_hours_response = self.client.post(url, {
+            "amount": "1000.00",
+            "bill_ids": "1",
+            "payment_type": "rent_only",
+            "preferred_date": "2026-06-05",
+            "preferred_time": "18:00",
+        })
+
+        self.assertEqual(weekend_response.status_code, 200)
+        self.assertContains(weekend_response, "Monday to Friday")
+        self.assertEqual(out_of_hours_response.status_code, 200)
+        self.assertContains(out_of_hours_response, "office hours")
+        self.assertEqual(ManualPayment.objects.filter(payment_method="CASH").count(), 0)

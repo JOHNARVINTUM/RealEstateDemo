@@ -3,6 +3,7 @@ import logging
 
 from django.db.models import Sum, Q
 from django.db.models.functions import TruncMonth
+from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
 
@@ -18,7 +19,40 @@ logger = logging.getLogger(__name__)
 @admin_required
 def admin_forecasting(request):
     today = timezone.now().date()
+    selected_year, year_choices = _forecasting_year_options(request, today)
 
+    return render(
+        request,
+        "admin_portal/forecasting.html",
+        {
+            "selected_year": selected_year,
+            "year_choices": year_choices,
+            "unread_count": Notification.objects.filter(is_read=False).count(),
+        },
+    )
+
+
+@admin_required
+def admin_forecasting_data(request):
+    context = _build_forecasting_context(request)
+    payload = {
+        "hist_labels": context["hist_labels"],
+        "hist_revenue": context["hist_revenue"],
+        "forecast_labels": context["forecast_labels"],
+        "revenue_forecast": context["revenue_forecast"],
+        "rev_sarima_fc": context["rev_sarima_fc"],
+        "rev_sarima_lower": context["rev_sarima_lower"],
+        "rev_sarima_upper": context["rev_sarima_upper"],
+        "revenue_sarima_metrics": context["revenue_sarima_metrics"],
+        "sarima_available": context["sarima_available"],
+        "selected_year": context["selected_year"],
+        "year_choices": context["year_choices"],
+        "revenue_insight": context["revenue_insight"],
+    }
+    return JsonResponse(payload)
+
+
+def _forecasting_year_options(request, today):
     selected_year = request.GET.get("year", "")
     try:
         selected_year = int(selected_year)
@@ -29,6 +63,13 @@ def admin_forecasting(request):
     max_year = today.year
     selected_year = max(min_year, min(max_year, selected_year))
     year_choices = list(range(min_year, max_year + 1))
+    return selected_year, year_choices
+
+
+def _build_forecasting_context(request):
+    today = timezone.now().date()
+
+    selected_year, year_choices = _forecasting_year_options(request, today)
 
     if selected_year < today.year:
         current_month_start = datetime(selected_year, 12, 1).date()
@@ -217,25 +258,20 @@ def admin_forecasting(request):
             "next month based on historical patterns."
         )
 
-    return render(
-        request,
-        "admin_portal/forecasting.html",
-        {
-            "hist_labels": hist_labels_last12,
-            "hist_revenue": hist_revenue_last12,
-            "forecast_labels": forecast_labels,
-            "revenue_forecast": revenue_forecast,
-            "rev_sarima_fc": rev_sarima_fc,
-            "rev_sarima_lower": rev_sarima_lower,
-            "rev_sarima_upper": rev_sarima_upper,
-            "revenue_sarima_metrics": revenue_sarima_metrics,
-            "sarima_available": rev_sarima_fc is not None,
-            "selected_year": selected_year,
-            "year_choices": year_choices,
-            "revenue_insight": revenue_insight,
-            "unread_count": Notification.objects.filter(is_read=False).count(),
-        },
-    )
+    return {
+        "hist_labels": hist_labels_last12,
+        "hist_revenue": hist_revenue_last12,
+        "forecast_labels": forecast_labels,
+        "revenue_forecast": revenue_forecast,
+        "rev_sarima_fc": rev_sarima_fc,
+        "rev_sarima_lower": rev_sarima_lower,
+        "rev_sarima_upper": rev_sarima_upper,
+        "revenue_sarima_metrics": revenue_sarima_metrics,
+        "sarima_available": rev_sarima_fc is not None,
+        "selected_year": selected_year,
+        "year_choices": year_choices,
+        "revenue_insight": revenue_insight,
+    }
 
 
 @admin_required

@@ -361,8 +361,6 @@
                 <td class="px-5 py-3 text-center">
                   {% if bill.status == "PAID" %}
                     <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">PAID</span>
-                  {% elif bill.status == "PARTIALLY_PAID" %}
-                    <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-50 text-amber-700 border border-amber-200">PARTIAL</span>
                   {% else %}
                     <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-50 text-rose-700 border border-rose-200">UNPAID</span>
                   {% endif %}

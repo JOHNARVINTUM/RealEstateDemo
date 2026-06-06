@@ -267,7 +267,13 @@
                 {% else %}<span class="text-rose-600">Pending</span>{% endif %}
               </td>
               <td class="py-6 px-6 font-black text-slate-900 tracking-wider text-base">{{ t.reference }}</td>
-              <td class="py-6 px-6 text-slate-500 font-bold">{{ t.months_paid }} Month{{ t.months_paid|pluralize }}</td>
+              <td class="py-6 px-6 text-slate-500 font-bold">
+                {% if t.bill_months_label %}
+                  {{ t.bill_months_label }}
+                {% else %}
+                  {{ t.months_paid }} Month{{ t.months_paid|pluralize }}
+                {% endif %}
+              </td>
               <td class="py-6 px-6 font-black text-slate-900 last:rounded-r-2xl text-xl">₱{{ t.total_amount|floatformat:2|intcomma }}</td>
             </tr>
           {% empty %}

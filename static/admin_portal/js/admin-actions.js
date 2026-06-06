@@ -6,21 +6,68 @@ document.addEventListener('DOMContentLoaded', function () {
   const confirmBtn   = modal.querySelector('.confirm-yes');
   const cancelBtn    = modal.querySelector('.confirm-no');
   const overlay      = modal.querySelector('.modal-overlay');
+  const progressBar  = modal.querySelector('.confirm-loading-progress span');
 
   let pendingAction = null;
+  let progressTimer = null;
+  let progressValue = 0;
+
+  function setProgress(value) {
+    if (!progressBar) return;
+    progressValue = Math.max(0, Math.min(100, value));
+    progressBar.style.width = progressValue + '%';
+  }
+
+  function stopProgress() {
+    if (progressTimer) {
+      window.clearInterval(progressTimer);
+      progressTimer = null;
+    }
+  }
+
+  function startProgress() {
+    stopProgress();
+    setProgress(8);
+    window.setTimeout(function () {
+      setProgress(28);
+    }, 40);
+    progressTimer = window.setInterval(function () {
+      const remaining = 92 - progressValue;
+      const increment = Math.max(1, remaining * 0.18);
+      setProgress(Math.min(92, progressValue + increment));
+    }, 360);
+  }
+
+  function setLoadingState() {
+    modal.classList.add('is-loading');
+    confirmBtn.disabled = true;
+    cancelBtn.disabled = true;
+    if (overlay) overlay.style.pointerEvents = 'none';
+    startProgress();
+  }
 
   function showModal(message, action) {
     modalMessage.textContent = message || 'Are you sure?';
     pendingAction = action;
+    modal.classList.remove('is-loading');
+    confirmBtn.disabled = false;
+    cancelBtn.disabled = false;
+    if (overlay) overlay.style.pointerEvents = '';
+    stopProgress();
+    setProgress(8);
     modal.classList.add('open');
     document.body.style.overflow = 'hidden';
     confirmBtn.focus();
   }
 
   function hideModal() {
+    if (modal.classList.contains('is-loading')) return;
     modal.classList.remove('open');
+    modal.classList.remove('is-loading');
     document.body.style.overflow = '';
     pendingAction = null;
+    stopProgress();
+    setProgress(8);
   }
 
   // Attach to forms with confirm-action class
@@ -41,10 +88,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
   confirmBtn.addEventListener('click', function () {
     if (!pendingAction) { hideModal(); return; }
+    setLoadingState();
     if (pendingAction.type === 'form') {
-      pendingAction.target.submit();
+      window.setTimeout(function () {
+        setProgress(100);
+        pendingAction.target.submit();
+      }, 180);
     } else if (pendingAction.type === 'link') {
-      window.location.href = pendingAction.target.href;
+      window.setTimeout(function () {
+        setProgress(100);
+        window.location.href = pendingAction.target.href;
+      }, 180);
     }
   });
 
@@ -55,7 +109,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // ESC to close
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && modal.classList.contains('open')) hideModal();
+    if (e.key === 'Escape' && modal.classList.contains('open') && !modal.classList.contains('is-loading')) hideModal();
   });
 
   // Sidebar Toggle logic

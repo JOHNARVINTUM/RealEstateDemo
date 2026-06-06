@@ -1,80 +1,42 @@
 {% extends "admin_portal/base.html" %}
-{% load humanize %}
+{% load static %}
 {% block title %}Forecasting | Core Administration{% endblock %}
 
 {% block extra_head %}
-<script>
-  window.MathJax = {
-    tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']] },
-    options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] },
-    startup: { typeset: false }
-  };
-</script>
-<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 <style>
-  .metric-badge {
-    position: relative;
-    cursor: help;
+  .forecast-loading-card {
+    min-height: 16rem;
+    border: 1px solid #dbe3ef;
+    border-radius: 0.75rem;
+    background: #ffffff;
+    padding: 1.5rem;
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
   }
-  .metric-badge.tooltip-pinned {
-    z-index: 110;
+
+  .forecast-progress {
+    height: 0.5rem;
+    overflow: hidden;
+    border-radius: 9999px;
+    background: #f1f5f9;
   }
-  /* tooltip card — hidden until JS shows it */
-  .metric-tooltip {
+
+  .forecast-progress span {
+    display: block;
+    width: 10%;
+    height: 100%;
+    border-radius: inherit;
+    background: #2563eb;
+    transition: width 0.35s ease;
+  }
+
+  .forecast-panel[hidden] {
     display: none;
-    position: absolute;
-    bottom: calc(100% + 12px);
-    left: 50%;
-    transform: translateX(-50%);
-    width: 290px;
-    background: #0f172a;
-    color: #f8fafc;
-    border-radius: 12px;
-    padding: 14px 16px;
-    font-size: 13px;
-    line-height: 1.65;
-    z-index: 100;
-    pointer-events: none;
-    box-shadow: 0 12px 32px rgba(0,0,0,0.35);
-  }
-  .metric-tooltip::after {
-    content: '';
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    border: 7px solid transparent;
-    border-top-color: #0f172a;
-  }
-  .metric-tooltip.visible {
-    display: block;
-  }
-  .metric-tooltip strong {
-    display: block;
-    font-size: 14px;
-    margin-bottom: 6px;
-    color: #e2e8f0;
-  }
-  .metric-tooltip .math-block {
-    background: rgba(255,255,255,0.08);
-    border-radius: 6px;
-    padding: 6px 8px;
-    margin: 6px 0;
-    text-align: center;
-    font-size: 14px;
-  }
-  .metric-tooltip .note {
-    font-size: 12px;
-    color: #94a3b8;
-    margin-top: 4px;
   }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="max-w-7xl mx-auto font-sans text-slate-900 space-y-10 py-6 sm:py-8 px-2 sm:px-4 lg:px-6 pb-12">
-
-  <!-- Header -->
   <header class="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
     <div>
       <div class="flex items-center gap-2 mb-1">
@@ -102,101 +64,83 @@
     </div>
   </header>
 
-  <!-- Forecast Summary Cards -->
-  <section class="grid grid-cols-1 gap-6">
-
-    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm border-l-8 border-l-slate-800">
-      <span class="text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest block mb-2">Next Month Revenue</span>
-      {% if rev_sarima_fc %}
-      <div class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">₱{{ rev_sarima_fc.0|floatformat:0|intcomma }}</div>
-      <div class="text-sm font-bold text-slate-400 uppercase mt-2 block">SARIMA forecast</div>
-      <div class="text-xs font-bold text-slate-400 mt-1">(CI ₱{{ rev_sarima_lower.0|floatformat:0|intcomma }}–₱{{ rev_sarima_upper.0|floatformat:0|intcomma }})</div>
-      {% else %}
-      <div class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">₱{{ revenue_forecast.0|floatformat:0|intcomma }}</div>
-      <div class="text-sm font-bold text-slate-400 uppercase mt-2 block">Forecast</div>
-      {% endif %}
-    </div>
-
+  <section id="forecastLoading" class="forecast-loading-card" aria-live="polite">
+    <p class="text-xs font-black text-slate-500 uppercase tracking-widest">Loading...</p>
+    <h2 class="text-2xl font-black text-slate-900 mt-5">Preparing forecast</h2>
+    <p class="text-sm font-bold text-slate-600 mt-3 max-w-md leading-6">The page is available now while revenue history, SARIMA metrics, and chart data load separately.</p>
+    <div class="forecast-progress mt-8" aria-hidden="true"><span id="forecastProgressBar"></span></div>
   </section>
 
-  <!-- Plain-English Insights -->
-  <section class="grid grid-cols-1 gap-6">
-    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5">
-      <div class="flex items-center gap-2 mb-2">
-        <svg class="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
-        <span class="text-sm font-black text-slate-700 uppercase tracking-wider">Revenue Insight</span>
+  <section id="forecastError" class="forecast-panel bg-rose-50 border border-rose-200 rounded-2xl p-6" hidden>
+    <h2 class="text-xl font-black text-rose-900">Forecast unavailable</h2>
+    <p class="text-sm font-bold text-rose-700 mt-2">The forecast data could not be loaded. Refresh the page and try again.</p>
+  </section>
+
+  <section id="forecastContent" class="forecast-panel space-y-10" hidden>
+    <section class="grid grid-cols-1 gap-6">
+      <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm border-l-8 border-l-slate-800">
+        <span class="text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest block mb-2">Next Month Revenue</span>
+        <div id="nextRevenueValue" class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">-</div>
+        <div id="nextRevenueLabel" class="text-sm font-bold text-slate-400 uppercase mt-2 block">Forecast</div>
+        <div id="nextRevenueCi" class="text-xs font-bold text-slate-400 mt-1"></div>
       </div>
-      <p class="text-sm font-medium text-slate-600 leading-relaxed">{{ revenue_insight }}</p>
-    </div>
-  </section>
+    </section>
 
-  <!-- Model Comparison Table -->
-  {% if sarima_available %}
-  <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-    <div class="px-8 py-6 border-b border-slate-100 flex items-center gap-3 flex-wrap">
-      <span class="inline-block w-3 h-3 rounded-full bg-indigo-500"></span>
-      <h2 class="text-2xl font-black text-slate-900">Model Comparison</h2>
-      <span class="text-sm font-bold text-slate-400 bg-slate-100 px-3 py-1 rounded-lg ml-2">Backtested on last 3 months</span>
-      <div class="metric-badge ml-auto flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-2 cursor-help">
-        <span class="text-xs sm:text-sm font-black text-indigo-700">SARIMA(0,1,1)(0,1,1)<sub>12</sub></span>
-        <div class="metric-tooltip" style="width:340px">
-          <strong>SARIMA Model Equation</strong>
-          <div class="math-block">\[ \Phi_P(B^s)\,\phi_p(B)\,\Delta^d\Delta_s^D\, y_t = \Theta_Q(B^s)\,\theta_q(B)\,\varepsilon_t \]</div>
-          <span class="note">Seasonal ARIMA — captures both trend (d=1) and seasonal (D=1, s=12) patterns via differencing. Orders used: (p=0,d=1,q=1)(P=0,D=1,Q=1,s=12).</span>
+    <section class="grid grid-cols-1 gap-6">
+      <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5">
+        <div class="flex items-center gap-2 mb-2">
+          <svg class="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+          <span class="text-sm font-black text-slate-700 uppercase tracking-wider">Revenue Insight</span>
         </div>
+        <p id="revenueInsight" class="text-sm font-medium text-slate-600 leading-relaxed"></p>
+      </div>
+    </section>
+
+    <div id="metricsPanel" class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div class="px-8 py-6 border-b border-slate-100 flex items-center gap-3 flex-wrap">
+        <span class="inline-block w-3 h-3 rounded-full bg-indigo-500"></span>
+        <h2 class="text-2xl font-black text-slate-900">Model Comparison</h2>
+        <span class="text-sm font-bold text-slate-400 bg-slate-100 px-3 py-1 rounded-lg ml-2">Backtested on last 3 months</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-base">
+          <thead class="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th class="text-left px-8 py-5 text-xs font-black text-slate-500 uppercase tracking-widest w-48">Metric</th>
+              <th class="text-center px-8 py-5 text-xs font-black text-indigo-700 uppercase tracking-widest">SARIMA</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            <tr class="hover:bg-slate-50">
+              <td class="px-8 py-6 font-black text-slate-900">Revenue RMSE</td>
+              <td id="metricRmse" class="px-8 py-6 text-center font-black text-indigo-700">-</td>
+            </tr>
+            <tr class="hover:bg-slate-50">
+              <td class="px-8 py-6 font-black text-slate-900">Revenue MAE</td>
+              <td id="metricMae" class="px-8 py-6 text-center font-black text-indigo-700">-</td>
+            </tr>
+            <tr class="hover:bg-slate-50">
+              <td class="px-8 py-6 font-black text-slate-900">Revenue MAPE</td>
+              <td id="metricMape" class="px-8 py-6 text-center font-black text-indigo-700">-</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-base">
-        <thead class="bg-slate-50 border-b border-slate-200">
-          <tr>
-            <th class="text-left px-8 py-5 text-xs font-black text-slate-500 uppercase tracking-widest w-48">Metric</th>
-            <th class="text-center px-8 py-5 text-xs font-black text-indigo-700 uppercase tracking-widest">SARIMA</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-100">
 
-          {% with sm=revenue_sarima_metrics %}
-          <tr class="hover:bg-slate-50">
-            <td class="px-8 py-6 font-black text-slate-900">Revenue RMSE</td>
-            <td class="px-8 py-6 text-center font-black text-indigo-700">{% if sm.rmse %}₱{{ sm.rmse|floatformat:0|intcomma }}{% else %}—{% endif %}</td>
-          </tr>
-          <tr class="hover:bg-slate-50">
-            <td class="px-8 py-6 font-black text-slate-900">Revenue MAE</td>
-            <td class="px-8 py-6 text-center font-black text-indigo-700">{% if sm.mae %}₱{{ sm.mae|floatformat:0|intcomma }}{% else %}—{% endif %}</td>
-          </tr>
-          <tr class="hover:bg-slate-50">
-            <td class="px-8 py-6 font-black text-slate-900">Revenue MAPE</td>
-            <td class="px-8 py-6 text-center">
-              <span class="font-bold {% if sm.mape < 5 %}text-emerald-700{% elif sm.mape < 15 %}text-amber-700{% else %}text-red-700{% endif %}">{% if sm.mape %}{{ sm.mape|floatformat:1 }}%{% else %}—{% endif %}</span>
-            </td>
-          </tr>
-          {% endwith %}
-
-        </tbody>
-      </table>
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mt-8 mb-6">
+      <h2 class="text-2xl font-black text-slate-900">Forecast Visualizations</h2>
+      <div class="flex items-center gap-3">
+        <label for="forecastTimeFilter" class="text-sm font-bold text-slate-600 uppercase tracking-widest">Timeframe:</label>
+        <select id="forecastTimeFilter" class="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 shadow-sm cursor-pointer">
+          <option value="24" selected>Last 24 Months</option>
+          <option value="12">Last 12 Months</option>
+          <option value="6">Last 6 Months</option>
+          <option value="3">Last 3 Months</option>
+        </select>
+      </div>
     </div>
-  </div>
-  {% endif %}
 
-  <!-- Charts Header & Filter -->
-  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mt-8 mb-6">
-    <h2 class="text-2xl font-black text-slate-900">Forecast Visualizations</h2>
-    <div class="flex items-center gap-3">
-      <label for="forecastTimeFilter" class="text-sm font-bold text-slate-600 uppercase tracking-widest">Timeframe:</label>
-      <select id="forecastTimeFilter" class="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 shadow-sm cursor-pointer">
-        <option value="24" selected>Last 24 Months</option>
-        <option value="12">Last 12 Months</option>
-        <option value="6">Last 6 Months</option>
-        <option value="3">Last 3 Months</option>
-      </select>
-    </div>
-  </div>
-
-  <!-- Charts -->
-  <div class="space-y-8">
-
-    <!-- Revenue Forecast Chart -->
     <div class="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
       <div class="mb-4 pb-3 border-b border-slate-100">
         <h2 class="text-2xl font-black text-slate-900 tracking-tight">Revenue Forecast</h2>
@@ -205,363 +149,198 @@
       <div class="h-[400px] w-full">
         <canvas id="revenueForecastChart"></canvas>
       </div>
-      <div class="mt-6 pt-6 border-t border-slate-100 flex flex-wrap gap-4 items-center">
-        {% if sarima_available %}
-          <div class="metric-badge flex items-center gap-2.5 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 cursor-help">
-            <span class="text-xs font-black text-indigo-500 uppercase tracking-widest">RMSE</span>
-            <span class="text-lg font-black text-indigo-900">{% if revenue_sarima_metrics.rmse %}₱{{ revenue_sarima_metrics.rmse|floatformat:0 }}{% else %}—{% endif %}</span>
-            <div class="metric-tooltip"><strong>Root Mean Square Error</strong><span class="note">How far off the SARIMA forecast is on average. Lower is better.</span></div>
-          </div>
-          <div class="metric-badge flex items-center gap-2.5 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 cursor-help">
-            <span class="text-xs font-black text-indigo-500 uppercase tracking-widest">MAE</span>
-            <span class="text-lg font-black text-indigo-900">{% if revenue_sarima_metrics.mae %}₱{{ revenue_sarima_metrics.mae|floatformat:0 }}{% else %}—{% endif %}</span>
-            <div class="metric-tooltip"><strong>Mean Absolute Error</strong><span class="note">Average peso error per month. Lower is better.</span></div>
-          </div>
-          <div class="metric-badge flex items-center gap-2.5 {% if revenue_sarima_metrics.mape %}{% if revenue_sarima_metrics.mape < 5 %}bg-emerald-50 border-emerald-200{% elif revenue_sarima_metrics.mape < 15 %}bg-amber-50 border-amber-200{% else %}bg-red-50 border-red-200{% endif %}{% else %}bg-indigo-50 border-indigo-200{% endif %} border rounded-xl px-4 py-3 cursor-help">
-            <span class="text-xs font-black text-indigo-500 uppercase tracking-widest">MAPE</span>
-            <span class="text-lg font-black {% if revenue_sarima_metrics.mape %}{% if revenue_sarima_metrics.mape < 5 %}text-emerald-700{% elif revenue_sarima_metrics.mape < 15 %}text-amber-700{% else %}text-red-700{% endif %}{% else %}text-indigo-900{% endif %}">{% if revenue_sarima_metrics.mape %}{{ revenue_sarima_metrics.mape|floatformat:1 }}%{% else %}—{% endif %}</span>
-            <div class="metric-tooltip"><strong>Mean Absolute % Error</strong><span class="note">&lt;5% excellent &nbsp;•&nbsp; &lt;15% acceptable &nbsp;•&nbsp; ≥15% high error</span></div>
-          </div>
-        {% endif %}
-        <div class="ml-auto flex items-center gap-1.5 text-xs text-slate-400 font-semibold">
-          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          Backtested on last 3 months
-        </div>
-      </div>
     </div>
-
-  </div>
-
-  <!-- Method Note -->
-  <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-xl text-white">
-    <button id="aboutToggle" class="w-full flex justify-between items-center group text-left" type="button">
-      <div>
-        <h3 class="text-xl font-black text-white">About This Forecast</h3>
-        <p class="text-sm text-slate-400 mt-1 font-bold uppercase tracking-wide">Hover or click to learn more about the math</p>
-      </div>
-      <svg id="aboutChevron" class="w-6 h-6 text-slate-400 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
-      </svg>
-    </button>
-    <div id="aboutContent" class="hidden space-y-6 mt-8">
-      <p class="text-lg text-slate-300 leading-relaxed font-medium">
-        Revenue forecasting uses <strong>SARIMA</strong> when enough history is available, with a 3-month moving average as a fallback.
-        Accuracy metrics are computed by backtesting on the last 3 months of actual collected revenue.
-      </p>
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-2">
-        <div class="bg-white/5 border border-white/10 rounded-xl p-5">
-          <span class="text-sm font-black text-indigo-400 uppercase tracking-widest block mb-2">RMSE</span>
-          <p class="text-sm text-slate-400 font-medium leading-relaxed">Root Mean Square Error. Penalizes large errors more heavily — lower is better.</p>
-        </div>
-        <div class="bg-white/5 border border-white/10 rounded-xl p-5">
-          <span class="text-sm font-black text-emerald-400 uppercase tracking-widest block mb-2">MAE</span>
-          <p class="text-sm text-slate-400 font-medium leading-relaxed">Mean Absolute Error. Average prediction error in the same unit as the data — lower is better.</p>
-        </div>
-        <div class="bg-white/5 border border-white/10 rounded-xl p-5">
-          <span class="text-sm font-black text-amber-400 uppercase tracking-widest block mb-2">MAPE</span>
-          <p class="text-sm text-slate-400 font-medium leading-relaxed">Mean Absolute Percentage Error. <span class="text-emerald-400 font-black">Under 5%</span> is good, <span class="text-amber-400 font-black">under 15%</span> is acceptable, and anything higher is high error.</p>
-        </div>
-      </div>
-      <p class="text-xs text-slate-500 font-black uppercase tracking-widest pt-4">Revenue uses collected rent, water, parking, and paid late fees with a moving-average fallback.</p>
-    </div>
-  </div>
-
+  </section>
 </div>
 
-<!-- Data -->
-{{ hist_labels|json_script:"hist_labels" }}
-{{ hist_revenue|json_script:"hist_revenue" }}
-{{ forecast_labels|json_script:"forecast_labels" }}
-{{ revenue_forecast|json_script:"revenue_forecast" }}
-{{ rev_sarima_fc|json_script:"rev_sarima_fc" }}
-{{ rev_sarima_lower|json_script:"rev_sarima_lower" }}
-{{ rev_sarima_upper|json_script:"rev_sarima_upper" }}
-
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-  const rawHistLabels     = JSON.parse(document.getElementById('hist_labels').textContent);
-  const rawHistRevenue    = JSON.parse(document.getElementById('hist_revenue').textContent);
-  const fcLabels       = JSON.parse(document.getElementById('forecast_labels').textContent);
-  const fcRevenue      = JSON.parse(document.getElementById('revenue_forecast').textContent);
+(function () {
+  var dataUrl = "{% url 'admin_forecasting_data' %}?year={{ selected_year }}";
+  var loading = document.getElementById("forecastLoading");
+  var content = document.getElementById("forecastContent");
+  var errorPanel = document.getElementById("forecastError");
+  var progressBar = document.getElementById("forecastProgressBar");
+  var progress = 10;
+  var progressTimer = window.setInterval(function () {
+    progress = Math.min(92, progress + Math.max(1, (92 - progress) * 0.18));
+    if (progressBar) progressBar.style.width = progress + "%";
+  }, 360);
+  var chart = null;
+  var forecastData = null;
 
-  const sarFcRev   = JSON.parse(document.getElementById('rev_sarima_fc').textContent);
-  const sarLowRev  = JSON.parse(document.getElementById('rev_sarima_lower').textContent);
-  const sarUpRev   = JSON.parse(document.getElementById('rev_sarima_upper').textContent);
+  function peso(value) {
+    var amount = Number(value || 0);
+    return "PHP " + amount.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  }
 
-  let activeCharts = {};
+  function percent(value) {
+    if (value === null || value === undefined || value === "") return "-";
+    return Number(value).toFixed(1) + "%";
+  }
+
+  function finishProgress() {
+    window.clearInterval(progressTimer);
+    if (progressBar) progressBar.style.width = "100%";
+  }
+
+  function showContent() {
+    finishProgress();
+    window.setTimeout(function () {
+      loading.hidden = true;
+      content.hidden = false;
+    }, 180);
+  }
+
+  function showError() {
+    finishProgress();
+    loading.hidden = true;
+    errorPanel.hidden = false;
+  }
+
+  function renderSummary(data) {
+    var sarima = data.rev_sarima_fc && data.rev_sarima_fc.length;
+    var next = sarima ? data.rev_sarima_fc[0] : data.revenue_forecast[0];
+    document.getElementById("nextRevenueValue").textContent = peso(next);
+    document.getElementById("nextRevenueLabel").textContent = sarima ? "SARIMA forecast" : "Forecast";
+    document.getElementById("nextRevenueCi").textContent = sarima
+      ? "CI " + peso(data.rev_sarima_lower[0]) + " - " + peso(data.rev_sarima_upper[0])
+      : "";
+    document.getElementById("revenueInsight").textContent = data.revenue_insight || "";
+
+    var metrics = data.revenue_sarima_metrics || {};
+    document.getElementById("metricRmse").textContent = metrics.rmse ? peso(metrics.rmse) : "-";
+    document.getElementById("metricMae").textContent = metrics.mae ? peso(metrics.mae) : "-";
+    document.getElementById("metricMape").textContent = metrics.mape ? percent(metrics.mape) : "-";
+  }
 
   function nullPad(arr, totalLen) {
-    const pad = totalLen - arr.length;
-    return [...Array(pad).fill(null), ...arr];
+    var pad = totalLen - arr.length;
+    return Array(pad).fill(null).concat(arr);
   }
 
-  function baseOpts(yFormatter) {
-    return {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
-      plugins: {
-        legend: {
-          display: true,
-          position: 'top',
-          align: 'end',
-          labels: {
-            usePointStyle: true,
-            padding: 16,
-            font: { family: "'Outfit', sans-serif", size: 13, weight: '700' },
-            color: '#1e293b'
-          }
-        },
-        tooltip: {
-          backgroundColor: '#0f172a',
-          titleColor: '#f8fafc',
-          bodyColor: '#e2e8f0',
-          borderColor: '#334155',
-          borderWidth: 1,
-          padding: 12,
-          boxPadding: 6,
-          titleFont: { size: 13, weight: 'bold' },
-          bodyFont: { size: 13 },
-          usePointStyle: true,
-          filter: (item) => item.parsed.y !== null,
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          grid: { color: '#f1f5f9', drawBorder: false },
-          ticks: {
-            font: { family: "'Outfit', sans-serif", size: 12, weight: '600' },
-            color: '#475569',
-            callback: yFormatter
-          }
-        },
-        x: {
-          grid: { display: false },
-          ticks: { font: { family: "'Outfit', sans-serif", size: 11, weight: '600' }, color: '#475569', maxRotation: 45 }
-        }
-      }
-    };
-  }
+  function renderChart(months) {
+    if (!forecastData || !window.Chart) return;
+    var rawHistLabels = forecastData.hist_labels || [];
+    var rawHistRevenue = forecastData.hist_revenue || [];
+    var fcLabels = forecastData.forecast_labels || [];
+    var fcRevenue = forecastData.revenue_forecast || [];
+    var sarFcRev = forecastData.rev_sarima_fc || [];
+    var sarLowRev = forecastData.rev_sarima_lower || [];
+    var sarUpRev = forecastData.rev_sarima_upper || [];
 
-  function buildChart(canvasId, histData, maData, sarimaData, sarimaLow, sarimaUp, histColor, maColor, sarimaColor, histLabel, maLabel, yFormatter, currentAllLabels) {
-    const ctx = document.getElementById(canvasId);
-    if (!ctx) return;
-    
-    if (activeCharts[canvasId]) {
-      activeCharts[canvasId].destroy();
-    }
-
-    const totalLen = currentAllLabels.length;
-    const histPadded   = [...histData, ...Array(maData.length).fill(null)];
-    const maPadded     = nullPad(maData, totalLen);
-    const datasets = [
+    var filterIdx = Math.max(0, rawHistLabels.length - parseInt(months || "24", 10));
+    var histLabels = rawHistLabels.slice(filterIdx);
+    var histRevenue = rawHistRevenue.slice(filterIdx);
+    var labels = histLabels.concat(fcLabels);
+    var histPadded = histRevenue.concat(Array(fcRevenue.length).fill(null));
+    var maPadded = nullPad(fcRevenue, labels.length);
+    var datasets = [
       {
-        label: histLabel,
+        label: "Actual Revenue",
         data: histPadded,
-        borderColor: histColor,
-        backgroundColor: histColor.replace(')', ', 0.07)').replace('rgb', 'rgba'),
+        borderColor: "#1e293b",
+        backgroundColor: "rgba(30, 41, 59, 0.07)",
         borderWidth: 3,
-        pointBackgroundColor: '#fff',
-        pointBorderColor: histColor,
-        pointBorderWidth: 2,
         pointRadius: 4,
-        pointHoverRadius: 6,
         tension: 0.25,
-        fill: true,
-        spanGaps: false,
-        order: 3,
+        fill: true
       },
       {
-        label: maLabel,
+        label: sarFcRev.length ? "Moving Avg Fallback" : "Moving Avg Forecast",
         data: maPadded,
-        borderColor: sarimaData && sarimaData.length ? 'rgba(148,163,184,0.55)' : maColor,
-        backgroundColor: 'transparent',
-        borderWidth: sarimaData && sarimaData.length ? 1.5 : 2,
+        borderColor: sarFcRev.length ? "rgba(148, 163, 184, 0.65)" : "#6366f1",
         borderDash: [5, 5],
-        pointBackgroundColor: sarimaData && sarimaData.length ? 'rgba(148,163,184,0.55)' : maColor,
-        pointBorderColor: '#fff',
-        pointBorderWidth: 1,
-        pointRadius: sarimaData && sarimaData.length ? 3 : 5,
-        pointHoverRadius: 5,
-        tension: 0.25,
-        fill: false,
-        spanGaps: false,
-        order: 2,
+        borderWidth: 2,
+        pointRadius: 4,
+        tension: 0.25
       }
     ];
 
-    if (sarimaData && sarimaData.length) {
-      const sarimaPadded = nullPad(sarimaData, totalLen);
-      const sarUpPadded  = nullPad(sarimaUp, totalLen);
-      const sarLowPadded = nullPad(sarimaLow, totalLen);
+    if (sarFcRev.length) {
       datasets.push({
-        label: 'SARIMA Upper CI',
-        data: sarUpPadded,
-        borderColor: 'transparent',
-        backgroundColor: sarimaColor.replace(')', ', 0.12)').replace('rgb', 'rgba'),
-        borderWidth: 0,
-        pointRadius: 0,
-        fill: '+1',
-        spanGaps: false,
-        order: 0,
-      });
-      datasets.push({
-        label: 'SARIMA Forecast',
-        data: sarimaPadded,
-        borderColor: sarimaColor,
-        backgroundColor: 'transparent',
-        borderWidth: 2.5,
+        label: "SARIMA Forecast",
+        data: nullPad(sarFcRev, labels.length),
+        borderColor: "#f59e0b",
         borderDash: [3, 3],
-        pointBackgroundColor: sarimaColor,
-        pointBorderColor: '#fff',
-        pointBorderWidth: 2,
+        borderWidth: 2.5,
         pointRadius: 5,
-        pointHoverRadius: 7,
-        tension: 0.25,
-        fill: false,
-        spanGaps: false,
-        order: 1,
+        tension: 0.25
       });
       datasets.push({
-        label: 'SARIMA Lower CI',
-        data: sarLowPadded,
-        borderColor: 'transparent',
-        backgroundColor: sarimaColor.replace(')', ', 0.12)').replace('rgb', 'rgba'),
-        borderWidth: 0,
+        label: "SARIMA Upper CI",
+        data: nullPad(sarUpRev, labels.length),
+        borderColor: "transparent",
+        backgroundColor: "rgba(245, 158, 11, 0.12)",
         pointRadius: 0,
-        fill: false,
-        spanGaps: false,
-        order: 0,
+        fill: "+1"
+      });
+      datasets.push({
+        label: "SARIMA Lower CI",
+        data: nullPad(sarLowRev, labels.length),
+        borderColor: "transparent",
+        pointRadius: 0
       });
     }
 
-    const opts = baseOpts(yFormatter);
-    opts.plugins.legend.labels.filter = (item) => !item.text.includes('CI');
-    activeCharts[canvasId] = new Chart(ctx, { type: 'line', data: { labels: currentAllLabels, datasets }, options: opts });
-  }
-
-  function renderCharts(months) {
-    let filterIdx = 0;
-    let subtitleText = "Last 24 months + 3-month forecast (dashed)";
-    if (months && months !== 'all') {
-      filterIdx = Math.max(0, rawHistLabels.length - parseInt(months, 10));
-      subtitleText = `Last ${months} months + 3-month forecast (dashed)`;
-    }
-
-    // Update all subtitles to reflect the current filter
-    document.querySelectorAll('.chart-subtitle').forEach(el => {
-      el.textContent = subtitleText;
-    });
-    
-    const histLabels = rawHistLabels.slice(filterIdx);
-    const histRevenue = rawHistRevenue.slice(filterIdx);
-    
-    const currentAllLabels = [...histLabels, ...fcLabels];
-
-    buildChart(
-      'revenueForecastChart',
-      histRevenue, fcRevenue, sarFcRev, sarLowRev, sarUpRev,
-      '#1e293b', '#6366f1', '#f59e0b',
-      'Actual Revenue', 'Mov Avg Forecast',
-      v => v >= 1000 ? '₱' + (v/1000).toFixed(0) + 'k' : '₱' + v,
-      currentAllLabels
-    );
-  }
-
-  // Initial render
-  renderCharts(24);
-
-  // Filter event listener
-  const timeFilter = document.getElementById('forecastTimeFilter');
-  if (timeFilter) {
-    timeFilter.addEventListener('change', function(e) {
-      renderCharts(e.target.value);
-    });
-  }
-});
-</script>
-
-<script>
-(function () {
-  function initTooltips() {
-    if (window.MathJax && MathJax.startup && MathJax.startup.promise) {
-      MathJax.startup.promise.then(function () {
-        var blocks = document.querySelectorAll('.metric-tooltip .math-block');
-        if (blocks.length) MathJax.typesetPromise(Array.from(blocks));
-      });
-    }
-
-    function closeAllExcept(currentBadge) {
-      document.querySelectorAll('.metric-badge').forEach(function (otherBadge) {
-        if (otherBadge === currentBadge) return;
-        var otherTip = otherBadge.querySelector('.metric-tooltip');
-        if (otherTip) otherTip.classList.remove('visible');
-        otherBadge.classList.remove('tooltip-pinned');
-      });
-    }
-
-    document.querySelectorAll('.metric-badge').forEach(function (badge) {
-      var tip = badge.querySelector('.metric-tooltip');
-      if (!tip) return;
-
-      badge.addEventListener('mouseenter', function () {
-        closeAllExcept(badge);
-        tip.classList.add('visible');
-      });
-      badge.addEventListener('mouseleave', function () {
-        if (!badge.classList.contains('tooltip-pinned')) {
-          tip.classList.remove('visible');
+    if (chart) chart.destroy();
+    chart = new Chart(document.getElementById("revenueForecastChart"), {
+      type: "line",
+      data: { labels: labels, datasets: datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: {
+            position: "top",
+            align: "end",
+            labels: {
+              filter: function (item) { return !item.text.includes("CI"); },
+              usePointStyle: true,
+              font: { family: "'Outfit', sans-serif", size: 13, weight: "700" },
+              color: "#1e293b"
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: "#f1f5f9" },
+            ticks: {
+              color: "#475569",
+              callback: function (value) {
+                return value >= 1000 ? "PHP " + (value / 1000).toFixed(0) + "k" : "PHP " + value;
+              }
+            }
+          },
+          x: {
+            grid: { display: false },
+            ticks: { color: "#475569", maxRotation: 45 }
+          }
         }
-      });
-      badge.addEventListener('click', function (event) {
-        event.stopPropagation();
-        var pinned = badge.classList.contains('tooltip-pinned');
-        closeAllExcept(badge);
-        if (pinned) {
-          badge.classList.remove('tooltip-pinned');
-          tip.classList.remove('visible');
-        } else {
-          badge.classList.add('tooltip-pinned');
-          tip.classList.add('visible');
-        }
-      });
-    });
-
-    document.addEventListener('click', function () {
-      closeAllExcept(null);
+      }
     });
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initTooltips);
-  } else {
-    initTooltips();
-  }
-})();
+  fetch(dataUrl, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+    .then(function (response) {
+      if (!response.ok) throw new Error("Forecast request failed");
+      return response.json();
+    })
+    .then(function (data) {
+      forecastData = data;
+      renderSummary(data);
+      showContent();
+      window.setTimeout(function () { renderChart("24"); }, 0);
+    })
+    .catch(showError);
 
-(function () {
-  function initAboutToggle() {
-    var btn     = document.getElementById('aboutToggle');
-    var content = document.getElementById('aboutContent');
-    var chevron = document.getElementById('aboutChevron');
-    var parent  = btn && btn.closest('div');
-    if (!btn || !content || !chevron) return;
-
-    function open()  { content.classList.remove('hidden'); chevron.style.transform = 'rotate(180deg)'; }
-    function close() { content.classList.add('hidden');    chevron.style.transform = 'rotate(0deg)'; }
-    function toggle(){ content.classList.contains('hidden') ? open() : close(); }
-
-    btn.addEventListener('click', toggle);
-    parent.addEventListener('mouseenter', open);
-    parent.addEventListener('mouseleave', close);
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initAboutToggle);
-  } else {
-    initAboutToggle();
-  }
+  document.addEventListener("change", function (event) {
+    if (event.target && event.target.id === "forecastTimeFilter") {
+      renderChart(event.target.value);
+    }
+  });
 })();
 </script>
 {% endblock %}

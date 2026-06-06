@@ -138,10 +138,20 @@ class TenantRiskService:
         return bill.billing_month.replace(day=1) > today.replace(day=1)
 
     @staticmethod
+    def _current_month_start():
+        return timezone.now().date().replace(day=1)
+
+    @staticmethod
     def _bill_paid_on_time(bill):
         if bill.status != 'PAID' or not bill.paid_at or not bill.due_date:
             return False
         return (bill.paid_at.date() - bill.due_date).days <= 0
+
+    @staticmethod
+    def _bill_paid_late(bill):
+        if bill.status != 'PAID' or not bill.paid_at or not bill.due_date:
+            return False
+        return bill.paid_at.date() > bill.due_date
 
     @staticmethod
     def _timeliness_score_from_percentage(on_time_percentage):
@@ -249,9 +259,11 @@ class TenantRiskService:
         try:
             # Get bills from last 12 months
             twelve_months_ago = timezone.now() - timedelta(days=365)
+            current_month = TenantRiskService._current_month_start()
             all_bills = MonthlyBill.objects.filter(
                 lease__tenant=tenant,
-                billing_month__gte=twelve_months_ago
+                billing_month__gte=twelve_months_ago,
+                billing_month__lte=current_month,
             )
             
             if all_bills.count() == 0:
@@ -299,7 +311,8 @@ class TenantRiskService:
             overdue_bills = MonthlyBill.objects.filter(
                 lease__tenant=tenant,
                 status='UNPAID',
-                due_date__lt=timezone.now().date()
+                due_date__lt=timezone.now().date(),
+                billing_month__lte=current_month,
             )
             
             total_unpaid = unpaid_current + overdue_bills.count()
@@ -390,15 +403,21 @@ class TenantRiskService:
             risk_score = TenantRiskService.calculate_tenant_risk_score(tenant)
             
             # Get additional risk factors
-            late_payments = MonthlyBill.objects.filter(
+            paid_bills_for_late_count = MonthlyBill.objects.filter(
                 lease__tenant=tenant,
                 status='PAID',
-                paid_at__gt=F('due_date')
-            ).count()
+                billing_month__lte=TenantRiskService._current_month_start(),
+            ).only("status", "paid_at", "due_date")
+            late_payments = sum(
+                1
+                for bill in paid_bills_for_late_count
+                if TenantRiskService._bill_paid_late(bill)
+            )
             
             unpaid_bills = MonthlyBill.objects.filter(
                 lease__tenant=tenant,
-                status='UNPAID'
+                status='UNPAID',
+                billing_month__lte=TenantRiskService._current_month_start(),
             ).count()
             
             last_payment = MonthlyBill.objects.filter(

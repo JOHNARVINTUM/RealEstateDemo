@@ -4,8 +4,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(248, 250, 252, 0.78);
-  backdrop-filter: blur(10px);
+  background: rgba(248, 250, 252, 0.72);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -20,28 +19,47 @@
 }
 
 .ux-page-loader-card {
+  width: min(13.25rem, calc(100vw - 2rem));
+  min-height: 12rem;
   display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.25rem;
-  border-radius: 1.5rem;
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  box-shadow: 0 20px 50px -20px rgba(15, 23, 42, 0.3);
+  flex-direction: column;
+  justify-content: center;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  border: 1px solid #dbe3ef;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+  padding: 1.5rem;
 }
 
-.ux-page-loader-spinner {
-  width: 1.5rem;
-  height: 1.5rem;
+.ux-page-loader-title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1.15;
+}
+
+.ux-page-loader-progress {
+  height: 0.5rem;
+  margin-top: 1.5rem;
+  overflow: hidden;
   border-radius: 9999px;
-  border: 3px solid #cbd5e1;
-  border-top-color: #0f172a;
-  animation: uxPageLoaderSpin 0.75s linear infinite;
+  background: #f1f5f9;
 }
 
-@keyframes uxPageLoaderSpin {
-  to {
-    transform: rotate(360deg);
+.ux-page-loader-progress span {
+  display: block;
+  width: 8%;
+  height: 100%;
+  border-radius: inherit;
+  background: #2563eb;
+  transition: width 0.35s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ux-page-loader-progress span {
+    transition: none;
   }
 }
 

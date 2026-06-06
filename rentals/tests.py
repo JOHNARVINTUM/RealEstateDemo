@@ -362,6 +362,7 @@ class TenantViewWorkflowTests(TestCase):
         self.assertEqual(len(response.context["transactions"]), 1)
         self.assertEqual(response.context["transactions"][0]["reference"], "REF-HISTORY")
         self.assertEqual(response.context["transactions"][0]["months_paid"], 1)
+        self.assertEqual(response.context["transactions"][0]["bill_months_label"], "January 2026")
 
     def test_tenant_billing_monthly_status_rows_show_paid_and_unpaid_months(self):
         lease = self.create_active_lease()
@@ -505,7 +506,7 @@ class LeaseSchedulePreviewTests(TestCase):
 
 
 class TenantRiskTimelinessTests(TestCase):
-    def test_payment_timeliness_ignores_future_bills(self):
+    def _create_lease_with_tenant(self):
         tenant = User.objects.create_user(
             email="risk@example.com",
             username="risk",
@@ -522,6 +523,10 @@ class TenantRiskTimelinessTests(TestCase):
             status=Lease.STATUS_ACTIVE,
             is_active=True,
         )
+        return tenant, lease
+
+    def test_payment_timeliness_ignores_future_bills(self):
+        tenant, lease = self._create_lease_with_tenant()
         MonthlyBill.objects.create(
             lease=lease,
             billing_month=date(2026, 3, 1),
@@ -550,6 +555,77 @@ class TenantRiskTimelinessTests(TestCase):
             score = TenantRiskService._calculate_payment_timeliness(tenant)
 
         self.assertEqual(score, 100)
+
+    def test_payment_consistency_ignores_future_unpaid_bills(self):
+        tenant, lease = self._create_lease_with_tenant()
+        MonthlyBill.objects.create(
+            lease=lease,
+            billing_month=date(2026, 5, 1),
+            due_date=date(2026, 5, 5),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("0.00"),
+            parking_fee=Decimal("0.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("10000.00"),
+            status="PAID",
+            paid_at=datetime(2026, 5, 5, 10, 0, tzinfo=zoneinfo.ZoneInfo("UTC")),
+        )
+        MonthlyBill.objects.create(
+            lease=lease,
+            billing_month=date(2026, 9, 1),
+            due_date=date(2026, 9, 5),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("0.00"),
+            parking_fee=Decimal("0.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("10000.00"),
+            status="UNPAID",
+        )
+
+        with patch("rentals.services.timezone.now", return_value=datetime(2026, 6, 2, 12, 0, tzinfo=zoneinfo.ZoneInfo("UTC"))):
+            score = TenantRiskService._calculate_payment_consistency(tenant)
+
+        self.assertEqual(score, 100)
+
+    def test_current_payment_status_ignores_future_unpaid_bills(self):
+        tenant, lease = self._create_lease_with_tenant()
+        MonthlyBill.objects.create(
+            lease=lease,
+            billing_month=date(2026, 10, 1),
+            due_date=date(2026, 10, 5),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("0.00"),
+            parking_fee=Decimal("0.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("10000.00"),
+            status="UNPAID",
+        )
+
+        with patch("rentals.services.timezone.now", return_value=datetime(2026, 6, 2, 12, 0, tzinfo=zoneinfo.ZoneInfo("UTC"))):
+            score = TenantRiskService._calculate_current_payment_status(tenant)
+
+        self.assertEqual(score, 70)
+
+    def test_late_payment_count_does_not_flag_same_due_date_payment(self):
+        tenant, lease = self._create_lease_with_tenant()
+        MonthlyBill.objects.create(
+            lease=lease,
+            billing_month=date(2026, 6, 1),
+            due_date=date(2026, 6, 5),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("0.00"),
+            parking_fee=Decimal("0.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("10000.00"),
+            status="PAID",
+            paid_at=datetime(2026, 6, 5, 23, 59, tzinfo=zoneinfo.ZoneInfo("UTC")),
+        )
+
+        with patch("rentals.services.timezone.now", return_value=datetime(2026, 6, 6, 12, 0, tzinfo=zoneinfo.ZoneInfo("UTC"))):
+            risk = TenantRiskService.update_tenant_risk_classification(tenant)
+
+        self.assertIsNotNone(risk)
+        self.assertEqual(risk.late_payment_count, 0)
 
 
 class TenantPasswordTests(TestCase):

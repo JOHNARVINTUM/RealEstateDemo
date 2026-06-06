@@ -120,7 +120,10 @@ def build_training_dataset(min_history_months=2):
     rows = []
     labels = []
     meta = []
-    bills = MonthlyBill.objects.select_related("lease", "lease__tenant", "lease__unit").order_by("billing_month")
+    current_month = timezone.now().date().replace(day=1)
+    bills = MonthlyBill.objects.select_related(
+        "lease", "lease__tenant", "lease__unit"
+    ).filter(billing_month__lte=current_month).order_by("billing_month")
     for bill in bills:
         lease = bill.lease
         prior_count = MonthlyBill.objects.filter(lease=lease, billing_month__lt=bill.billing_month).count()
@@ -142,7 +145,11 @@ def build_prediction_features_for_tenant(tenant):
     lease = Lease.objects.filter(tenant=tenant, is_active=True).select_related("unit").first()
     if not lease:
         return None
-    latest_bill = MonthlyBill.objects.filter(lease=lease).order_by("-billing_month").first()
+    current_month = timezone.now().date().replace(day=1)
+    latest_bill = MonthlyBill.objects.filter(
+        lease=lease,
+        billing_month__lte=current_month,
+    ).order_by("-billing_month").first()
     if latest_bill:
         row = build_features_for_bill(lease, latest_bill)
         row["monthly_rent"] = float(latest_bill.base_rent or lease.monthly_rent or 0)

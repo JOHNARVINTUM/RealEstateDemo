@@ -30,7 +30,7 @@ from .admin_tenant_views import (
     admin_delete_attachment,
 )
 from .admin_maintenance_views import admin_maintenance, admin_update_maintenance
-from .admin_forecasting_views import admin_forecasting, admin_billed_this_month
+from .admin_forecasting_views import admin_forecasting, admin_forecasting_data, admin_billed_this_month
 from .admin_lease_views import (
     admin_create_lease,
     admin_lease_payment,
@@ -139,6 +139,7 @@ urlpatterns = [
 
     # Forecasting
     path("forecasting/", admin_forecasting, name="admin_forecasting"),
+    path("forecasting/data/", admin_forecasting_data, name="admin_forecasting_data"),
 
     # Billed This Month Breakdown
     path("billing/billed-this-month/", admin_billed_this_month, name="admin_billed_this_month"),

@@ -1,9 +1,8 @@
 <div class="ux-page-loader" data-ux-loader aria-hidden="true">
   <div class="ux-page-loader-card" role="status" aria-live="polite">
-    <span class="ux-page-loader-spinner" aria-hidden="true"></span>
-    <div>
-      <p class="text-sm font-black text-slate-900 uppercase tracking-widest">Loading</p>
-      <p class="text-sm font-bold text-slate-500">{{ loader_message|default:"Opening your next page..." }}</p>
+    <p class="ux-page-loader-title">{{ loader_message|default:"Loading..." }}</p>
+    <div class="ux-page-loader-progress" aria-hidden="true">
+      <span></span>
     </div>
   </div>
 </div>

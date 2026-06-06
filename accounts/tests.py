@@ -454,12 +454,86 @@ class AdminForecastingRevenueTests(TestCase):
         )
         self.client.force_login(self.admin)
 
-        response = self.client.get(reverse("admin_forecasting"))
+        response = self.client.get(reverse("admin_forecasting_data"))
 
         self.assertEqual(response.status_code, 200)
         target_label = target_month.strftime("%b %Y")
-        month_index = response.context["hist_labels"].index(target_label)
-        self.assertEqual(response.context["hist_revenue"][month_index], 114000.0)
+        payload = response.json()
+        month_index = payload["hist_labels"].index(target_label)
+        self.assertEqual(payload["hist_revenue"][month_index], 114000.0)
+
+
+class AdminTenantPaymentHistoryTests(TestCase):
+    def test_tenant_detail_payment_history_excludes_future_unpaid_bills_but_keeps_paid_future(self):
+        admin = User.objects.create_superuser(
+            email="history-admin@example.com",
+            username="historyadmin",
+            password="password123",
+        )
+        tenant_user = User.objects.create_user(
+            email="history-tenant@example.com",
+            username="historytenant",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        tenant = TenantProfile.objects.create(
+            user=tenant_user,
+            first_name="History",
+            last_name="Tenant",
+            password_change_required=False,
+            created_by=None,
+        )
+        unit = Unit.objects.create(number="H-101", status="OCCUPIED")
+        lease = Lease.objects.create(
+            tenant=tenant_user,
+            unit=unit,
+            monthly_rent=Decimal("10000.00"),
+            due_day=5,
+            start_date=date(2026, 1, 1),
+            status=Lease.STATUS_ACTIVE,
+            is_active=True,
+        )
+        MonthlyBill.objects.create(
+            lease=lease,
+            billing_month=timezone.localdate().replace(day=1),
+            due_date=timezone.localdate().replace(day=5),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("0.00"),
+            parking_fee=Decimal("0.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("10000.00"),
+            status="PAID",
+        )
+        MonthlyBill.objects.create(
+            lease=lease,
+            billing_month=date(2026, 11, 1),
+            due_date=date(2026, 11, 5),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("0.00"),
+            parking_fee=Decimal("0.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("10000.00"),
+            status="UNPAID",
+        )
+        MonthlyBill.objects.create(
+            lease=lease,
+            billing_month=date(2026, 7, 1),
+            due_date=date(2026, 7, 5),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("0.00"),
+            parking_fee=Decimal("0.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("10000.00"),
+            status="PAID",
+        )
+        self.client.force_login(admin)
+
+        response = self.client.get(reverse("admin_tenant_detail", args=[tenant.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, timezone.localdate().replace(day=1).strftime("%b %Y"))
+        self.assertContains(response, "Jul 2026")
+        self.assertNotContains(response, "Nov 2026")
 
 
 class AdminTenantAndUnitSearchTests(TestCase):

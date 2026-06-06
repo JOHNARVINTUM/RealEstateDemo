@@ -2,8 +2,8 @@
 {% load static %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/ux-system.css' %}">
-<link rel="stylesheet" href="{% static 'admin_portal/css/admin.css' %}">
+<link rel="stylesheet" href="{% static 'css/ux-system.css' %}?v={% now 'U' %}">
+<link rel="stylesheet" href="{% static 'admin_portal/css/admin.css' %}?v={% now 'U' %}">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Inter:wght@400;500;700;800&family=MuseoModerno:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
   /* Premium & Accessible Tenant Portal Styling */

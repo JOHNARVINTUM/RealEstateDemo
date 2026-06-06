@@ -1133,6 +1133,54 @@ button.link {
   padding: 0 2rem 2.5rem;
 }
 
+#confirmModal .confirm-loading {
+  display: none;
+  padding: 0 2rem 2.5rem;
+}
+
+#confirmModal .confirm-loading-label {
+  padding: 0 !important;
+  margin: 0 0 1rem !important;
+  color: #0f172a !important;
+  text-align: left !important;
+  font-size: 1rem !important;
+  font-weight: 800 !important;
+  line-height: 1.2 !important;
+}
+
+#confirmModal .confirm-loading-progress {
+  height: 0.5rem;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: #f1f5f9;
+}
+
+#confirmModal .confirm-loading-progress span {
+  display: block;
+  width: 8%;
+  height: 100%;
+  border-radius: inherit;
+  background: #2563eb;
+  transition: width 0.35s ease;
+}
+
+#confirmModal.is-loading .confirm-loading {
+  display: block;
+}
+
+#confirmModal.is-loading .actions {
+  display: none;
+}
+
+#confirmModal.is-loading .modal-icon {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+#confirmModal.is-loading .confirm-message {
+  padding-bottom: 1.5rem;
+}
+
 #confirmModal .modal .btn {
   width: 100% !important;
   margin: 0 !important;

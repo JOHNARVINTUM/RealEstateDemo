@@ -365,10 +365,16 @@ def _approved_payment_transactions(user):
         total_amount = payment.amount if payment.amount and payment.amount > 0 else sum(
             (bill.total_due or Decimal("0.00")) for bill in bills_paid
         )
+        bill_month_labels = [
+            bill.billing_month.strftime("%B %Y")
+            for bill in sorted(bills_paid, key=lambda item: item.billing_month)
+        ]
         transactions.append({
             "paid_at": payment.created_at,
             "reference": payment.reference_code,
             "months_paid": len(bills_paid),
+            "bill_months": bill_month_labels,
+            "bill_months_label": ", ".join(bill_month_labels),
             "total_amount": total_amount,
         })
     return transactions

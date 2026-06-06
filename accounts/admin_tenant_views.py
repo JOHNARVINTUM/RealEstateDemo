@@ -165,7 +165,12 @@ def admin_tenant_detail(request, tenant_id: int):
     tenant.has_records = tenant_has_records(tenant)
 
     lease_ids = [lease.id for lease in leases]
-    bill_history = MonthlyBill.objects.filter(lease_id__in=lease_ids).select_related("lease__unit").order_by("-billing_month")[:24]
+    current_month = timezone.localdate().replace(day=1)
+    bill_history = MonthlyBill.objects.filter(
+        lease_id__in=lease_ids,
+    ).filter(
+        Q(billing_month__lte=current_month) | Q(status="PAID")
+    ).select_related("lease__unit").order_by("-billing_month")[:24]
 
     manual_payments = ManualPayment.objects.filter(user=tenant.user).order_by("-created_at")[:20]
     next_url = request.GET.get("next", "")

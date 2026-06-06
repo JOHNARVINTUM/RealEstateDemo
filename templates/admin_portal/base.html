@@ -25,7 +25,7 @@
     }
   </script>
   <link rel="stylesheet" href="{% static 'admin_portal/css/admin.css' %}?v={% now 'U' %}">
-  <link rel="stylesheet" href="{% static 'css/ux-system.css' %}">
+  <link rel="stylesheet" href="{% static 'css/ux-system.css' %}?v={% now 'U' %}">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 
   {% block extra_head %}{% endblock %}
@@ -76,6 +76,12 @@
         <h3 id="confirmTitle">Confirm action</h3>
       </div>
       <p class="confirm-message">Are you sure?</p>
+      <div class="confirm-loading" aria-hidden="true">
+        <p class="confirm-loading-label">Loading...</p>
+        <div class="confirm-loading-progress">
+          <span></span>
+        </div>
+      </div>
       <div class="actions">
         <button class="btn confirm-yes" type="button">Confirm</button>
         <button class="btn confirm-no" type="button">Cancel</button>

@@ -1,0 +1,86 @@
+{% load static %}
+<div class="lp-wrapper">
+  
+  <!-- Navigation -->
+  <nav class="lp-nav">
+    <a href="/" class="lp-logo">
+      <img src="{% static 'img/logo.svg' %}" alt="RealEstate360+ Logo">
+      RealEstate360+
+    </a>
+    <div class="lp-nav-links">
+      <a href="#about" class="lp-nav-item">About</a>
+      <a href="{% url 'login' %}" class="lp-btn-login">Login</a>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="lp-hero">
+    <div class="lp-hero-content">
+      <h1>Quality Living at <br><span>Sta. Maria Apartments</span></h1>
+      <p>Among the cheapest in Mandaluyong, we offer quality property developments that you can truly call home.</p>
+      <a href="#about" class="lp-btn-primary">Explore Our Town</a>
+    </div>
+  </section>
+
+  <!-- About Section -->
+  <section id="about" class="lp-section lp-section-bg">
+    <div class="lp-container">
+      <div class="lp-about-grid">
+        <div class="lp-about-text">
+          <span class="lp-section-subtitle">About Us</span>
+          <h2 class="lp-section-title">Your Trusted Real Estate Partner</h2>
+          <p>Sta. Maria is a small to medium-scale real estate business focused on providing affordable yet high-quality living spaces in Mandaluyong.</p>
+          <p>We currently own and manage three apartment complexes, ensuring excellent property developments with exciting plans for future site expansions to serve our growing community.</p>
+        </div>
+        <div>
+          <img src="{% static 'img/accounts/apt_building_1.jpg' %}" alt="Sta. Maria Apartments" class="lp-about-img">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Call to Action -->
+  <section class="lp-section-bg" style="padding: 20px 0;">
+    <div class="lp-container">
+      <div class="lp-cta">
+        <h2>Ready to Find Your Home Here?</h2>
+        <p>Join the RealEstate360+ platform to explore properties, manage leases, and become part of our thriving Sta. Maria community.</p>
+        <a href="{% url 'login' %}" class="lp-btn-cta">Sign In to Your Account</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="lp-footer">
+    <div class="lp-container">
+      <div class="lp-footer-grid">
+        <div>
+          <a href="/" class="lp-logo" style="color: white; margin-bottom: 20px; display: inline-flex;">
+            <img src="{% static 'img/logo.svg' %}" alt="Logo" style="filter: brightness(0) invert(1);">
+            RealEstate360+
+          </a>
+          <p>Your trusted real estate partner in Mandaluyong. Providing quality, affordable apartment living.</p>
+        </div>
+        <div>
+          <h4>Quick Links</h4>
+          <ul class="lp-footer-links">
+            <li><a href="#about">About Sta. Maria</a></li>
+            <li><a href="{% url 'login' %}">Login Portal</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Contact Us</h4>
+          <ul class="lp-footer-links">
+            <li>Mandaluyong City, Metro Manila</li>
+            <li>contact@realestate360.com</li>
+            <li>+63 (123) 456-7890</li>
+          </ul>
+        </div>
+      </div>
+      <div class="lp-footer-bottom">
+        &copy; {% now "Y" %} RealEstate360+. All rights reserved.
+      </div>
+    </div>
+  </footer>
+
+</div>

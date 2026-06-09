@@ -7,7 +7,12 @@
       <img src="{% static 'img/logo.svg' %}" alt="RealEstate360+ Logo">
       RealEstate360+
     </a>
-    <div class="lp-nav-links">
+    <div class="lp-mobile-menu-btn" id="mobileMenuBtn">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+    <div class="lp-nav-links" id="navLinks">
       <a href="#about" class="lp-nav-item">About</a>
       <a href="{% url 'login' %}" class="lp-btn-login">Login</a>
     </div>
@@ -84,3 +89,17 @@
   </footer>
 
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const navLinks = document.getElementById('navLinks');
+    
+    if (mobileMenuBtn && navLinks) {
+      mobileMenuBtn.addEventListener('click', function() {
+        this.classList.toggle('active');
+        navLinks.classList.toggle('active');
+      });
+    }
+  });
+</script>

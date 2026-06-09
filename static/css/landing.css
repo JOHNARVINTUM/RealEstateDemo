@@ -25,6 +25,9 @@
   padding: 0;
   overflow-x: hidden;
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 .lp-wrapper h1, .lp-wrapper h2, .lp-wrapper h3, .lp-wrapper h4, .lp-wrapper h5, .lp-wrapper h6 {
@@ -331,6 +334,7 @@
   background-color: var(--lp-primary);
   color: var(--lp-text-light);
   padding: 64px 0 24px;
+  margin-top: auto;
 }
 
 .lp-footer-grid {
@@ -380,6 +384,26 @@
   opacity: 0.6;
 }
 
+/* Mobile Menu Button - Hidden by default */
+.lp-mobile-menu-btn {
+  display: none;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 30px;
+  height: 21px;
+  cursor: pointer;
+  z-index: 1001;
+}
+
+.lp-mobile-menu-btn span {
+  display: block;
+  height: 3px;
+  width: 100%;
+  background-color: var(--lp-primary);
+  border-radius: 3px;
+  transition: var(--lp-transition);
+}
+
 /* Animations */
 @keyframes lp-fade-up {
   0% {
@@ -403,23 +427,255 @@
   .lp-hero h1 {
     font-size: 3rem;
   }
+  .lp-section {
+    padding: 80px 0;
+  }
 }
 
 @media (max-width: 768px) {
   .lp-nav {
     padding: 16px 24px;
   }
+  
+  .lp-mobile-menu-btn {
+    display: flex;
+  }
+
+  .lp-mobile-menu-btn.active span:nth-child(1) {
+    transform: translateY(9px) rotate(45deg);
+  }
+  .lp-mobile-menu-btn.active span:nth-child(2) {
+    opacity: 0;
+  }
+  .lp-mobile-menu-btn.active span:nth-child(3) {
+    transform: translateY(-9px) rotate(-45deg);
+  }
+
   .lp-nav-links {
-    display: none; /* simple mobile nav */
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(10px);
+    flex-direction: column;
+    padding: 24px;
+    gap: 20px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    transform: translateY(-100%);
+    opacity: 0;
+    visibility: hidden;
+    transition: var(--lp-transition);
+    z-index: -1;
   }
+
+  .lp-nav-links.active {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+  }
+
   .lp-hero h1 {
-    font-size: 2.5rem;
+    font-size: 2.25rem;
+    margin-bottom: 16px;
   }
+  
+  .lp-hero p {
+    font-size: 1rem;
+    margin-bottom: 32px;
+  }
+
+  .lp-section {
+    padding: 60px 0;
+  }
+
+  .lp-section-title {
+    font-size: 2rem;
+  }
+
   .lp-footer-grid {
     grid-template-columns: 1fr;
     gap: 32px;
   }
+  
+  .lp-cta {
+    margin: 40px 16px;
+    padding: 60px 20px;
+    border-radius: 24px;
+  }
+
   .lp-cta h2 {
     font-size: 2rem;
+  }
+
+  .lp-cta p {
+    font-size: 1.125rem;
+  }
+
+  .lp-btn-cta, .lp-btn-primary {
+    width: auto;
+    display: inline-block;
+    padding: 14px 32px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Container adjustments for iPhone SE (375px) */
+  .lp-container {
+    padding: 0 16px;
+  }
+
+  /* Navigation Bar */
+  .lp-nav {
+    padding: 12px 16px;
+  }
+  
+  .lp-logo {
+    font-size: 20px;
+    gap: 8px;
+  }
+  
+  .lp-logo img {
+    height: 32px;
+  }
+
+  .lp-mobile-menu-btn {
+    width: 26px;
+    height: 18px;
+  }
+  
+  .lp-mobile-menu-btn span {
+    height: 2px;
+  }
+
+  .lp-mobile-menu-btn.active span:nth-child(1) {
+    transform: translateY(8px) rotate(45deg);
+  }
+
+  .lp-mobile-menu-btn.active span:nth-child(3) {
+    transform: translateY(-8px) rotate(-45deg);
+  }
+
+  /* Hero Section */
+  .lp-hero {
+    padding-top: 60px;
+    min-height: 100vh; /* Better fit for 667px height */
+  }
+
+  .lp-hero-content {
+    padding: 0 16px;
+  }
+
+  .lp-hero h1 {
+    font-size: 1.8rem;
+    margin-bottom: 12px;
+  }
+
+  .lp-hero p {
+    font-size: 0.9rem;
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+
+  .lp-btn-primary {
+    width: auto;
+    display: inline-block;
+    padding: 12px 28px;
+    font-size: 0.95rem;
+  }
+
+  /* About Section */
+  .lp-section {
+    padding: 40px 0;
+  }
+
+  .lp-about-grid {
+    gap: 24px;
+  }
+
+  .lp-section-title {
+    font-size: 1.6rem;
+    margin-bottom: 12px;
+  }
+
+  .lp-about-text p {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+
+  .lp-about-img {
+    border-radius: 12px;
+  }
+
+  /* Call to Action (CTA) Section */
+  .lp-cta {
+    margin: 0 0 32px 0; /* Removed top margin to balance space */
+    padding: 40px 16px;
+    border-radius: 16px;
+  }
+
+  .lp-cta h2 {
+    font-size: 1.6rem;
+    margin-bottom: 16px;
+  }
+
+  .lp-cta p {
+    font-size: 0.95rem;
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+
+  .lp-btn-cta {
+    width: auto;
+    display: inline-block;
+    padding: 12px 24px;
+    font-size: 0.95rem;
+  }
+
+  /* Footer Section */
+  .lp-footer {
+    height: auto;
+    padding: 24px 0 calc(16px + env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+
+  .lp-footer-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  /* Hide the description paragraph to save space */
+  .lp-footer-grid > div:first-child p {
+    display: none;
+  }
+
+  .lp-footer-grid > div:first-child {
+    grid-column: span 2;
+    margin-bottom: 0;
+  }
+
+  .lp-footer h4 {
+    font-size: 0.85rem;
+    margin-bottom: 4px;
+  }
+
+  .lp-footer p, .lp-footer-links li {
+    font-size: 0.75rem;
+    margin-bottom: 2px;
+  }
+
+  .lp-logo[style] {
+    margin-bottom: 4px !important;
+  }
+  
+  .lp-footer-bottom {
+    padding-top: 8px;
+    font-size: 0.7rem;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    margin-top: 16px;
   }
 }

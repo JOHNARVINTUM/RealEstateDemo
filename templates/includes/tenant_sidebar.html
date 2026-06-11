@@ -21,10 +21,12 @@
   </div>
 
   <!-- Nav -->
-  <nav class="px-4 py-8 space-y-2 flex-1 overflow-x-hidden" aria-label="Tenant navigation">
+  <nav class="px-4 py-8 space-y-2 flex-1 tenant-nav-list" aria-label="Tenant navigation">
 
     <a href="{% url 'tenant_dashboard' %}"
-       class="nav-item flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-base transition-all overflow-hidden whitespace-nowrap
+       title="Home"
+       aria-label="Home"
+       class="nav-item flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-base transition-all whitespace-nowrap
               {% if request.resolver_match.url_name == 'tenant_dashboard' %}
                 active
               {% else %}
@@ -35,10 +37,13 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
       </svg>
       <span class="nav-text transition-all duration-300">Home</span>
+      <span class="tenant-nav-tooltip" aria-hidden="true">Home</span>
     </a>
 
     <a href="{% url 'tenant_notifications' %}"
-       class="nav-item flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-base transition-all overflow-hidden whitespace-nowrap
+       title="Notifications"
+       aria-label="Notifications"
+       class="nav-item flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-base transition-all whitespace-nowrap
               {% if request.resolver_match.url_name == 'tenant_notifications' %}
                 active
               {% else %}
@@ -54,10 +59,13 @@
         {% endif %}
       </div>
       <span class="nav-text transition-all duration-300">Notifications</span>
+      <span class="tenant-nav-tooltip" aria-hidden="true">Notifications</span>
     </a>
 
     <a href="{% url 'tenant_billing' %}"
-       class="nav-item flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-base transition-all overflow-hidden whitespace-nowrap
+       title="Bills"
+       aria-label="Bills"
+       class="nav-item flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-base transition-all whitespace-nowrap
               {% if request.resolver_match.url_name == 'tenant_billing' %}
                 active
               {% else %}
@@ -68,10 +76,13 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
       </svg>
       <span class="nav-text transition-all duration-300">Bills</span>
+      <span class="tenant-nav-tooltip" aria-hidden="true">Bills</span>
     </a>
 
     <a href="{% url 'tenant_pay_advance' %}"
-       class="nav-item flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-base transition-all overflow-hidden whitespace-nowrap
+       title="Make a Payment"
+       aria-label="Make a Payment"
+       class="nav-item flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-base transition-all whitespace-nowrap
               {% if request.resolver_match.url_name == 'tenant_pay_advance' or request.resolver_match.url_name == 'manual_gcash' %}
                 active
               {% else %}
@@ -82,10 +93,13 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
       </svg>
       <span class="nav-text transition-all duration-300">Make a Payment</span>
+      <span class="tenant-nav-tooltip" aria-hidden="true">Make a Payment</span>
     </a>
 
     <a href="{% url 'maintenance_list' %}"
-       class="nav-item flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-base transition-all overflow-hidden whitespace-nowrap
+       title="My Repairs"
+       aria-label="My Repairs"
+       class="nav-item flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-base transition-all whitespace-nowrap
               {% if request.resolver_match.url_name == 'maintenance_list' %}
                 active
               {% else %}
@@ -97,10 +111,13 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
       <span class="nav-text transition-all duration-300">My Repairs</span>
+      <span class="tenant-nav-tooltip" aria-hidden="true">My Repairs</span>
     </a>
 
     <a href="{% url 'report_issue' %}"
-       class="nav-item flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-base transition-all overflow-hidden whitespace-nowrap
+       title="Report a Problem"
+       aria-label="Report a Problem"
+       class="nav-item flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-base transition-all whitespace-nowrap
               {% if request.resolver_match.url_name == 'report_issue' %}
                 active
               {% else %}
@@ -111,10 +128,13 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
       </svg>
       <span class="nav-text transition-all duration-300">Report a Problem</span>
+      <span class="tenant-nav-tooltip" aria-hidden="true">Report a Problem</span>
     </a>
 
     <a href="{% url 'account_profile' %}"
-       class="nav-item flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-base transition-all overflow-hidden whitespace-nowrap
+       title="Profile"
+       aria-label="Profile"
+       class="nav-item flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-base transition-all whitespace-nowrap
               {% if request.resolver_match.url_name == 'account_profile' %}
                 active
               {% else %}
@@ -124,17 +144,19 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 7.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a7.5 7.5 0 0115 0" />
       </svg>
       <span class="nav-text transition-all duration-300">Profile</span>
+      <span class="tenant-nav-tooltip" aria-hidden="true">Profile</span>
     </a>
 
   </nav>
 
   <!-- Toggle Button -->
-  <div class="px-4 pb-4 overflow-hidden">
-    <button id="tenantSidebarToggle" class="w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-base text-slate-500 hover:bg-slate-800 hover:text-white transition-all overflow-hidden whitespace-nowrap">
+  <div class="px-4 pb-4">
+    <button id="tenantSidebarToggle" title="Hide Sidebar" aria-label="Toggle sidebar" class="nav-item w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-base text-slate-500 hover:bg-slate-800 hover:text-white transition-all whitespace-nowrap">
       <svg class="w-6 h-6 shrink-0 transition-transform duration-300" id="tenantToggleIcon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
         <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
       </svg>
       <span class="nav-text transition-all duration-300">Hide Sidebar</span>
+      <span class="tenant-nav-tooltip" aria-hidden="true">Expand Sidebar</span>
     </button>
   </div>
 
@@ -143,11 +165,14 @@
     <form method="post" action="{% url 'logout' %}">
       {% csrf_token %}
       <button type="submit"
-              class="w-full text-left flex items-center gap-4 px-6 py-4 rounded-2xl text-slate-500 hover:bg-rose-500 hover:text-white transition-all font-black text-base overflow-hidden whitespace-nowrap">
+              title="Sign Out"
+              aria-label="Sign Out"
+              class="nav-item w-full text-left flex items-center gap-4 px-6 py-4 rounded-2xl text-slate-500 hover:bg-rose-500 hover:text-white transition-all font-black text-base whitespace-nowrap">
         <svg class="w-6 h-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
         </svg>
         <span class="nav-text transition-all duration-300">Sign Out</span>
+        <span class="tenant-nav-tooltip" aria-hidden="true">Sign Out</span>
       </button>
     </form>
   </div>

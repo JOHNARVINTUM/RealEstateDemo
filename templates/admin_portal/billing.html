@@ -6,9 +6,21 @@
 <div class="billing-ledger-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6 py-4 sm:py-6 overflow-x-hidden w-full max-w-full">
   
   <!-- Studio Top Title Block -->
-  <header class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
-    <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">Rent & Bills</h1>
-    <p class="text-sm text-slate-700 mt-1 leading-relaxed">See who has paid rent, check for late payments, and manage bills.</p>
+  <header class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">Rent & Bills</h1>
+      <p class="text-sm text-slate-700 mt-1 leading-relaxed">See who has paid rent, check for late payments, and manage bills.</p>
+    </div>
+    <div class="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+      <a href="{% url 'admin_cleanup_duplicate_bills' %}"
+         class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 text-sm font-black transition-colors">
+        Clean Duplicates
+      </a>
+      <a href="{% url 'admin_repair_late_fees' %}"
+         class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-sm font-black transition-colors">
+        Repair Late Fees
+      </a>
+    </div>
   </header>
 
   <!-- Summary Metric Overview Cards -->

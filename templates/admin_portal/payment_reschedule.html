@@ -1,0 +1,77 @@
+{% extends "admin_portal/base.html" %}
+{% load humanize %}
+{% block title %}Reschedule Cash Appointment | Real Estate Administration{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto font-sans text-slate-900 pb-12 px-4 py-6">
+  <div class="mb-8">
+    <a href="{{ back_url }}" class="w-fit px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-colors shadow-xs mb-4">
+      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+      </svg>
+      Back to Payment Detail
+    </a>
+    <p class="text-xs font-black uppercase tracking-wide text-amber-700">F2F Cash Appointment</p>
+    <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 mt-1">Reschedule Appointment</h1>
+    <p class="text-sm text-slate-600 mt-1">Choose the admin-approved office schedule and send the update to the tenant.</p>
+  </div>
+
+  <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+    <div class="bg-slate-50 border-b border-slate-200 px-6 py-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 class="font-bold text-slate-900">{{ tenant_display_name }}</h2>
+          <p class="text-xs text-slate-500 mt-0.5">{{ payment.reference_code }} · ₱{{ payment.amount|floatformat:2|intcomma }}</p>
+        </div>
+        <span class="w-fit inline-block px-3 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200 text-xs font-extrabold uppercase">
+          {{ payment.status }}
+        </span>
+      </div>
+    </div>
+
+    <form method="post" class="p-6 space-y-6" data-loading-form>
+      {% csrf_token %}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label for="preferred_date" class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Appointment Date</label>
+          <input id="preferred_date" type="date" name="preferred_date" required
+                 value="{{ selected_date|date:'Y-m-d' }}"
+                 class="w-full px-4 py-3 border border-slate-300 rounded-lg bg-white text-slate-900 font-medium focus:ring-2 focus:ring-slate-500 outline-none">
+          <p class="mt-2 text-xs text-slate-500 font-medium">Weekdays only.</p>
+        </div>
+
+        <div>
+          <label for="preferred_time" class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Available Admin Time</label>
+          <select id="preferred_time" name="preferred_time" required
+                  class="w-full px-4 py-3 border border-slate-300 rounded-lg bg-white text-slate-900 font-medium focus:ring-2 focus:ring-slate-500 outline-none">
+            {% for slot in office_time_slots %}
+              <option value="{{ slot|time:'H:i' }}" {% if selected_time == slot|time:'H:i' %}selected{% endif %}>
+                {{ slot|time:"g:i A" }}
+              </option>
+            {% endfor %}
+          </select>
+          <p class="mt-2 text-xs text-slate-500 font-medium">{{ office_hours_label }}.</p>
+        </div>
+      </div>
+
+      <div>
+        <label for="schedule_admin_note" class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Admin Note</label>
+        <textarea id="schedule_admin_note" name="schedule_admin_note" rows="5"
+                  placeholder="Optional message to explain the schedule change."
+                  class="w-full px-4 py-3 border border-slate-300 rounded-lg bg-white text-slate-900 font-medium focus:ring-2 focus:ring-slate-500 outline-none resize-y">{{ schedule_admin_note }}</textarea>
+        <p class="mt-2 text-xs text-slate-500 font-medium">This note will be included in the tenant notification and email.</p>
+      </div>
+
+      <div class="flex flex-col sm:flex-row sm:items-center gap-3 pt-2">
+        <button type="submit" data-loading-button data-loading-text="Rescheduling..."
+                class="px-4 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold text-sm transition-colors">
+          <span class="button-label">Save Reschedule</span>
+        </button>
+        <a href="{{ back_url }}" class="px-4 py-3 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg font-bold text-sm transition-colors text-center">
+          Cancel
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

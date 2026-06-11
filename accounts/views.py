@@ -1,8 +1,15 @@
 import logging
+import mimetypes
 from django.contrib.auth.views import LoginView, PasswordChangeView
 from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import PasswordChangeForm
+from django.http import FileResponse, Http404
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.contrib import messages
+
+from rentals.models import Lease, TenantAttachment, TenantProfile
 
 logger = logging.getLogger(__name__)
 
@@ -101,3 +108,99 @@ class TenantPasswordChangeView(PasswordChangeView):
             "Please correct the errors below and try again."
         )
         return super().form_invalid(form)
+
+
+def _is_admin_user(user):
+    return getattr(user, "role", "") == "ADMIN" or user.is_superuser or user.is_staff
+
+
+def _styled_password_form(user, data=None):
+    form = PasswordChangeForm(user=user, data=data)
+    input_class = (
+        "w-full rounded-2xl border-2 border-slate-200 bg-white px-4 py-3 "
+        "text-base font-bold text-slate-900 outline-none transition "
+        "focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+    )
+    for field in form.fields.values():
+        field.widget.attrs.update({"class": input_class})
+    return form
+
+
+@login_required
+def account_profile(request):
+    user = request.user
+    tenant_profile = TenantProfile.objects.filter(user=user).first()
+    active_lease = (
+        Lease.objects.select_related("unit")
+        .filter(tenant=user, status=Lease.STATUS_ACTIVE)
+        .order_by("-start_date", "-id")
+        .first()
+    )
+    latest_lease = active_lease or (
+        Lease.objects.select_related("unit")
+        .filter(tenant=user)
+        .order_by("-start_date", "-id")
+        .first()
+    )
+    attachments = (
+        TenantAttachment.objects.select_related("uploaded_by")
+        .filter(tenant=user)
+        .order_by("-uploaded_at")
+        if tenant_profile
+        else TenantAttachment.objects.none()
+    )
+
+    if request.method == "POST":
+        password_form = _styled_password_form(user, request.POST)
+        if password_form.is_valid():
+            password_form.save()
+            update_session_auth_hash(request, user)
+            messages.success(request, "Your password has been updated successfully.")
+            return redirect("account_profile")
+        messages.error(request, "Please correct the password fields and try again.")
+    else:
+        password_form = _styled_password_form(user)
+
+    display_name = (
+        tenant_profile.full_name
+        if tenant_profile
+        else (user.get_full_name() or user.username or user.email)
+    )
+    role_label = user.get_role_display() if hasattr(user, "get_role_display") else getattr(user, "role", "User")
+    template_name = "accounts/profile_admin.html" if _is_admin_user(user) else "accounts/profile_tenant.html"
+
+    return render(
+        request,
+        template_name,
+        {
+            "display_name": display_name,
+            "tenant_profile": tenant_profile,
+            "latest_lease": latest_lease,
+            "active_lease": active_lease,
+            "attachments": attachments,
+            "password_form": password_form,
+            "role_label": role_label,
+        },
+    )
+
+
+@login_required
+def account_profile_attachment(request, attachment_id: int):
+    attachment = get_object_or_404(
+        TenantAttachment.objects.select_related("tenant"),
+        pk=attachment_id,
+    )
+    if not _is_admin_user(request.user) and attachment.tenant_id != request.user.id:
+        raise Http404("Attachment not found.")
+    if not attachment.file:
+        raise Http404("Attachment file is not available.")
+
+    content_type = mimetypes.guess_type(attachment.filename)[0] or "application/octet-stream"
+    try:
+        attachment.file.open("rb")
+    except (FileNotFoundError, OSError):
+        raise Http404("Attachment file is not available.")
+
+    response = FileResponse(attachment.file, content_type=content_type)
+    response["Content-Disposition"] = f'inline; filename="{attachment.filename}"'
+    return response

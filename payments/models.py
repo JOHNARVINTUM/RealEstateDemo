@@ -52,6 +52,7 @@ class ManualPayment(models.Model):
 
     # Schedule confirmation for F2F payments
     schedule_confirmed = models.BooleanField(default=False, help_text="Admin has confirmed the F2F appointment time")
+    schedule_admin_note = models.TextField(blank=True, default="", help_text="Latest admin note for F2F schedule changes")
 
     # PayMongo Checkout fields
     checkout_session_id = models.CharField(max_length=100, blank=True, default="")

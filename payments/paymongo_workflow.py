@@ -232,10 +232,23 @@ def resolve_payment_display_name(payment):
 
 def get_pending_paymongo_payment(request_user, session_id):
     if session_id and session_id != "{checkout_session_id}":
-        return ManualPayment.objects.filter(
+        payment = ManualPayment.objects.filter(
             checkout_session_id=session_id,
-            user=request_user,
         ).first()
+        if not payment:
+            return None
+        metadata = _payment_metadata(payment)
+        generated_by_admin = metadata.get("generated_by_admin")
+        request_user_is_admin = (
+            getattr(request_user, "role", "") == "ADMIN"
+            or getattr(request_user, "is_staff", False)
+            or getattr(request_user, "is_superuser", False)
+        )
+        if payment.user_id == request_user.id:
+            return payment
+        if request_user_is_admin and generated_by_admin == str(request_user.id):
+            return payment
+        return None
 
     return ManualPayment.objects.filter(
         user=request_user,

@@ -101,6 +101,15 @@
         </div>
       </div>
       {% endif %}
+
+      {% if payment.payment_method == "CASH" and payment.schedule_admin_note %}
+      <div class="mt-6 pt-6 border-t border-slate-100">
+        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">Latest Admin Schedule Note</span>
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <p class="text-slate-800">{{ payment.schedule_admin_note }}</p>
+        </div>
+      </div>
+      {% endif %}
       
       {% if payment.tenant_note %}
       <div class="mt-6 pt-6 border-t border-slate-100">
@@ -202,6 +211,12 @@
           </button>
         </form>
       {% else %}
+        <a href="{% url 'admin_reschedule_cash_payment' payment.id %}" class="px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-200 rounded-lg font-bold text-sm transition-colors flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10m-7 4h4m-9 6h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          Reschedule
+        </a>
         {% if not payment.schedule_confirmed %}
           <form method="post" action="{% url 'admin_confirm_schedule' payment.id %}" class="inline-block" data-loading-form>
             {% csrf_token %}

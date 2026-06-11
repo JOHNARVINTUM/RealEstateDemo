@@ -8,7 +8,11 @@ from unittest.mock import patch
 from accounts.models import User
 from billing.models import MonthlyBill
 from payments.models import ManualPayment
-from payments.paymongo_workflow import resolve_payment_tenant_user, auto_approve_paymongo_payment
+from payments.paymongo_workflow import (
+    auto_approve_paymongo_payment,
+    get_pending_paymongo_payment,
+    resolve_payment_tenant_user,
+)
 from payments.services import should_relabel_full_payment_as_rent_only
 from rentals.models import Lease, TenantProfile, Unit
 
@@ -135,6 +139,54 @@ class MoveInPaymentNotificationTests(TestCase):
         self.assertIn("John Constantine", kwargs["message"])
         self.assertNotIn("john.constantine@example.com", kwargs["message"])
         self.assertNotIn("stamaria@admin.com", kwargs["message"])
+
+    def test_admin_generated_paymongo_checkout_is_owned_by_tenant(self):
+        self.client.force_login(self.admin)
+        self.lease.status = Lease.STATUS_PENDING_PAYMENT
+        self.lease.is_active = False
+        self.lease.save(update_fields=["status", "is_active"])
+
+        with patch("payments.views.create_paymongo_checkout_session_or_error") as checkout_mock:
+            checkout_mock.return_value = (
+                {
+                    "checkout_session_id": "cs_test_admin_movein",
+                    "checkout_url": "https://checkout.test/session",
+                },
+                None,
+            )
+            response = self.client.get(
+                reverse("admin_paymongo_checkout"),
+                {
+                    "amount": "30725.00",
+                    "lease_id": str(self.lease.id),
+                    "tenant_id": str(self.tenant.id),
+                },
+            )
+
+        self.assertEqual(response.status_code, 302)
+        payment = ManualPayment.objects.get(checkout_session_id="cs_test_admin_movein")
+        self.assertEqual(payment.user, self.tenant)
+        self.assertEqual(payment.metadata["generated_by_admin"], str(self.admin.id))
+        self.assertEqual(payment.metadata["tenant_id"], str(self.tenant.id))
+        self.assertEqual(payment.metadata["lease_id"], str(self.lease.id))
+
+    def test_admin_can_resolve_tenant_owned_checkout_by_session_id(self):
+        payment = ManualPayment.objects.create(
+            user=self.tenant,
+            payment_type="move_in",
+            payment_method="PAYMONGO",
+            amount=Decimal("30725.00"),
+            reference_code="REF-PM-ADMIN",
+            status="PENDING",
+            checkout_session_id="cs_test_admin_lookup",
+            metadata={
+                "generated_by_admin": str(self.admin.id),
+                "tenant_id": str(self.tenant.id),
+                "lease_id": str(self.lease.id),
+            },
+        )
+
+        self.assertEqual(get_pending_paymongo_payment(self.admin, "cs_test_admin_lookup"), payment)
 
 
 class F2FCashScheduleTests(TestCase):

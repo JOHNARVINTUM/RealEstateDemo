@@ -1,0 +1,87 @@
+{% extends "admin_portal/base.html" %}
+{% load humanize %}
+{% block title %}Repair Late Fees | Real Estate Administration{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto font-sans text-slate-900 pb-12 px-4 py-6">
+  <div class="mb-6">
+    <a href="{{ back_url }}" class="w-fit px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-colors shadow-xs mb-4">
+      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+      </svg>
+      Back to Billing
+    </a>
+    <p class="text-xs font-black uppercase tracking-wide text-amber-700">Penalty Repair</p>
+    <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 mt-1">Repair Inflated Late Fees</h1>
+    <p class="text-sm text-slate-600 mt-1">
+      This corrects old unpaid or partially paid bills where late fees exceeded the current flat 3% rule. Paid bills and invoices are not changed.
+    </p>
+  </div>
+
+  <section class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+      <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Bills to repair</span>
+      <p class="text-3xl font-black text-slate-900 mt-1">{{ preview.repaired_count }}</p>
+    </div>
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+      <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Skipped</span>
+      <p class="text-3xl font-black text-slate-900 mt-1">{{ preview.skipped_count }}</p>
+    </div>
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-emerald-600">
+      <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total reduction</span>
+      <p class="text-3xl font-black text-emerald-700 mt-1">₱{{ preview.total_reduction|floatformat:2|intcomma }}</p>
+    </div>
+  </section>
+
+  <section class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+    <div class="bg-slate-50 border-b border-slate-200 px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div>
+        <h2 class="font-black text-slate-900">Preview</h2>
+        <p class="text-xs text-slate-600 mt-0.5">Only rows where current late fee is higher than the corrected flat penalty are listed.</p>
+      </div>
+      {% if preview.repaired_count > 0 %}
+      <form method="post" action="{{ post_url }}">
+        {% csrf_token %}
+        <button type="submit" data-loading-button data-loading-text="Repairing..." class="px-4 py-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-black transition-colors">
+          <span class="button-label">Apply Repair</span>
+        </button>
+      </form>
+      {% endif %}
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse min-w-[900px]">
+        <thead>
+          <tr class="bg-slate-50 border-b border-slate-200">
+            <th class="px-5 py-3 text-xs font-bold text-slate-700">Tenant</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700">Unit</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700">Month</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Old Late Fee</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Correct Late Fee</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Reduction</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+          {% for row in preview.repaired %}
+            <tr>
+              <td class="px-5 py-4 font-bold text-slate-900">{{ row.tenant_email }}</td>
+              <td class="px-5 py-4 font-bold text-slate-700">{{ row.unit|default:"-" }}</td>
+              <td class="px-5 py-4 font-bold text-slate-700">{{ row.billing_month|date:"M Y" }}</td>
+              <td class="px-5 py-4 text-right font-black text-rose-700">₱{{ row.old_interest|floatformat:2|intcomma }}</td>
+              <td class="px-5 py-4 text-right font-black text-emerald-700">₱{{ row.new_interest|floatformat:2|intcomma }}</td>
+              <td class="px-5 py-4 text-right font-black text-slate-900">₱{{ row.reduction|floatformat:2|intcomma }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6" class="py-14 text-center">
+                <strong class="text-sm text-slate-800 block">No inflated unpaid late fees found.</strong>
+                <p class="text-xs text-slate-600 mt-1">Current unpaid bills already match the flat 3% rule.</p>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

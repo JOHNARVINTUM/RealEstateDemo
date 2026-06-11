@@ -1,0 +1,117 @@
+{% extends "admin_portal/base.html" %}
+{% load humanize %}
+{% block title %}Outstanding Balance Warning | Real Estate Administration{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto font-sans text-slate-900 pb-12 px-4 py-6">
+  <div class="mb-6">
+    <a href="{{ back_url }}" class="w-fit px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-colors shadow-xs mb-4">
+      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+      </svg>
+      Cancel
+    </a>
+    <p class="text-xs font-black uppercase tracking-wide text-rose-700">Outstanding Balance</p>
+    <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 mt-1">Older unpaid bills were found</h1>
+    <p class="text-sm text-slate-600 mt-1">
+      This tenant still has unpaid balances from previous months up to the present billing cycle. Settle the older balances individually in the chart, settle everything now, or cancel.
+    </p>
+  </div>
+
+  <section class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mb-6">
+    <div class="bg-slate-50 border-b border-slate-200 px-6 py-4">
+      <h2 class="font-black text-slate-900">Selected Bill</h2>
+      <p class="text-xs text-slate-500 mt-0.5">
+        {{ bill.lease.tenant.email }} · Unit {{ bill.lease.unit.number }}
+      </p>
+    </div>
+    <div class="p-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div>
+        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Month</span>
+        <span class="font-black text-slate-900">{{ bill.billing_month|date:"M Y" }}</span>
+      </div>
+      <div>
+        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Due Date</span>
+        <span class="font-black text-slate-900">{{ bill.due_date|date:"M d, Y"|default:"-" }}</span>
+      </div>
+      <div>
+        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Selected Balance</span>
+        <span class="font-black text-rose-700">₱{{ selected_balance|floatformat:2|intcomma }}</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mb-6">
+    <div class="bg-rose-50 border-b border-rose-100 px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+      <div>
+        <h2 class="font-black text-slate-900">Unpaid Months to Present</h2>
+        <p class="text-xs text-slate-600 mt-0.5">These are unpaid or partially paid months before the selected bill's settlement.</p>
+      </div>
+      <span class="w-fit px-3 py-1 rounded-full bg-white border border-rose-200 text-rose-700 text-xs font-black">
+        Total ₱{{ prior_total|floatformat:2|intcomma }}
+      </span>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse min-w-[760px]">
+        <thead>
+          <tr class="bg-slate-50 border-b border-slate-200">
+            <th class="px-5 py-3 text-xs font-bold text-slate-700">Month</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Rent</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Water</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Parking</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Late Fee</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Balance</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+          {% for row in prior_bills %}
+            <tr>
+              <td class="px-5 py-4 font-black text-slate-900">{{ row.month }}</td>
+              <td class="px-5 py-4 text-right font-bold text-slate-700">₱{{ row.rent|floatformat:2|intcomma }}</td>
+              <td class="px-5 py-4 text-right font-bold text-slate-700">₱{{ row.water|floatformat:2|intcomma }}</td>
+              <td class="px-5 py-4 text-right font-bold text-slate-700">₱{{ row.parking|floatformat:2|intcomma }}</td>
+              <td class="px-5 py-4 text-right font-bold {% if row.late_fee > 0 %}text-rose-700{% else %}text-slate-700{% endif %}">₱{{ row.late_fee|floatformat:2|intcomma }}</td>
+              <td class="px-5 py-4 text-right font-black text-rose-700">₱{{ row.balance|floatformat:2|intcomma }}</td>
+              <td class="px-5 py-4 text-right">
+                <form method="post" action="{{ post_url }}" class="inline-block">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="settle_bill">
+                  <input type="hidden" name="target_bill_id" value="{{ row.bill.id }}">
+                  <button type="submit" data-loading-button data-loading-text="Settling..." class="px-3 py-1.5 rounded bg-slate-100 hover:bg-emerald-600 hover:text-white text-slate-800 text-xs font-black transition-colors">
+                    <span class="button-label">Settle</span>
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="bg-white border border-slate-200 rounded-xl shadow-sm p-5">
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div>
+        <h2 class="font-black text-slate-900">Settlement Choice</h2>
+        <p class="text-xs text-slate-600 mt-1">
+          Settle all will mark every listed unpaid month and the selected {{ bill.billing_month|date:"M Y" }} bill as paid.
+        </p>
+      </div>
+      <div class="flex flex-col sm:flex-row gap-2">
+        <form method="post" action="{{ post_url }}">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="settle_all">
+          <button type="submit" data-loading-button data-loading-text="Settling all..." class="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-black transition-colors">
+            <span class="button-label">Settle All · ₱{{ settle_all_total|floatformat:2|intcomma }}</span>
+          </button>
+        </form>
+        <a href="{{ back_url }}" class="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-black transition-colors text-center">
+          Cancel
+        </a>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}

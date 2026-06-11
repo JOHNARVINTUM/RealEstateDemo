@@ -1,9 +1,11 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
-from .views import RoleBasedLoginView, TenantPasswordChangeView
+from .views import RoleBasedLoginView, TenantPasswordChangeView, account_profile, account_profile_attachment
 
 urlpatterns = [
     path("", RoleBasedLoginView.as_view(), name="login"),
+    path("profile/", account_profile, name="account_profile"),
+    path("profile/attachments/<int:attachment_id>/view/", account_profile_attachment, name="account_profile_attachment"),
     path("logout/", auth_views.LogoutView.as_view(next_page="login"), name="logout"),
     # Password change for tenants (first-login enforcement)
     path(

@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from django.contrib import messages
@@ -7,12 +8,14 @@ from django.db import transaction
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 
 from billing.models import MonthlyBill
 from billing.services import approve_manual_payment, reject_manual_payment
 from payments.models import ManualPayment
-from rentals.models import Lease
-from rentals.services import repair_historical_move_in_payment
+from payments.scheduling import OFFICE_HOURS_LABEL, f2f_time_slots, is_office_schedule
+from rentals.models import Lease, Notification
+from rentals.services import repair_historical_move_in_payment, send_email_via_resend
 
 from .admin_portal_views import admin_required, admin_password_verified, render_admin_password_confirm
 
@@ -25,6 +28,157 @@ def _tenant_display_name(user):
         if full_name:
             return full_name
     return user.email
+
+
+def _admin_payment_queryset():
+    return ManualPayment.objects.select_related("user", "user__tenantprofile").filter(
+        user__role="TENANT",
+        user__is_staff=False,
+        user__is_superuser=False,
+    )
+
+
+def _decorate_admin_payment_rows(payment_rows):
+    page_user_ids = {payment.user_id for payment in payment_rows}
+    tenant_leases = (
+        Lease.objects.filter(tenant_id__in=page_user_ids)
+        .select_related("unit")
+        .order_by("tenant_id", "-start_date")
+    )
+    latest_lease_by_user_id = {}
+    for tenant_lease in tenant_leases:
+        latest_lease_by_user_id.setdefault(tenant_lease.tenant_id, tenant_lease)
+
+    page_bill_ids = set()
+    payment_bill_ids = {}
+    for payment in payment_rows:
+        bid_list = [int(x.strip()) for x in payment.bill_ids.split(',') if x.strip().isdigit()]
+        payment_bill_ids[payment.id] = bid_list
+        page_bill_ids.update(bid_list)
+
+    bills_by_id = {}
+    if page_bill_ids:
+        bills_by_id = {
+            bill.id: bill
+            for bill in MonthlyBill.objects.filter(pk__in=page_bill_ids).only(
+                "id",
+                "billing_month",
+                "base_rent",
+                "water_amount",
+                "parking_fee",
+            )
+        }
+
+    for p in payment_rows:
+        tenant_lease = latest_lease_by_user_id.get(p.user_id)
+        p.unit_number = tenant_lease.unit.number if tenant_lease and tenant_lease.unit else None
+        p.tenant_display_name = _tenant_display_name(p.user)
+        p.bill_type_label = p.get_payment_type_display() if hasattr(p, 'get_payment_type_display') else p.payment_type
+        try:
+            bid_list = payment_bill_ids.get(p.id, [])
+            if bid_list:
+                bills = [bills_by_id[bill_id] for bill_id in bid_list if bill_id in bills_by_id]
+                parts = []
+                has_rent = any(b.base_rent > 0 for b in bills)
+                has_water = any(b.water_amount > 0 for b in bills)
+                has_parking = any(b.parking_fee > 0 for b in bills)
+                if has_rent:
+                    parts.append('Rent')
+                if has_water:
+                    parts.append('Water')
+                if has_parking:
+                    parts.append('Parking')
+                p.bill_components = ', '.join(parts) if parts else 'Rent'
+                months = sorted({bill.billing_month for bill in bills})
+                p.affected_months = ", ".join(month.strftime("%b %Y") for month in months) if months else "-"
+            else:
+                p.bill_components = '-'
+                p.affected_months = '-'
+        except Exception:
+            p.bill_components = '-'
+            p.affected_months = '-'
+
+    return payment_rows
+
+
+def _parse_calendar_date(value, fallback):
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        return fallback
+
+
+def _parse_reschedule_time(value):
+    try:
+        return datetime.strptime(value, "%H:%M").time()
+    except (TypeError, ValueError):
+        return None
+
+
+def _format_schedule(date_value, time_value):
+    if not date_value:
+        return "No date selected"
+    schedule = date_value.strftime("%B %d, %Y")
+    if time_value:
+        schedule += f" at {time_value.strftime('%I:%M %p')}"
+    return schedule
+
+
+def _build_cash_calendar_context(request, calendar_url):
+    today = timezone.localdate()
+    week_anchor = _parse_calendar_date(request.GET.get("week"), today)
+    week_start = week_anchor - timedelta(days=week_anchor.weekday())
+    week_end = week_start + timedelta(days=6)
+
+    default_selected_day = today if week_start <= today <= week_end else week_start
+    selected_day = _parse_calendar_date(request.GET.get("day"), default_selected_day)
+    if selected_day < week_start or selected_day > week_end:
+        selected_day = default_selected_day
+
+    payments = list(
+        _admin_payment_queryset()
+        .filter(
+            payment_method="CASH",
+            preferred_date__gte=week_start,
+            preferred_date__lte=week_end,
+        )
+        .exclude(status="REJECTED")
+        .order_by("preferred_date", "preferred_time", "created_at")
+    )
+    _decorate_admin_payment_rows(payments)
+
+    payments_by_day = {week_start + timedelta(days=offset): [] for offset in range(7)}
+    for payment in payments:
+        if payment.preferred_date in payments_by_day:
+            payments_by_day[payment.preferred_date].append(payment)
+
+    calendar_days = []
+    for offset in range(7):
+        day = week_start + timedelta(days=offset)
+        day_payments = payments_by_day[day]
+        calendar_days.append({
+            "date": day,
+            "payments": day_payments,
+            "count": len(day_payments),
+            "total_amount": sum((payment.amount for payment in day_payments), Decimal("0.00")),
+            "is_today": day == today,
+            "is_selected": day == selected_day,
+        })
+
+    calendar_query_prefix = f"{calendar_url}&" if "?" in calendar_url else f"{calendar_url}?"
+
+    return {
+        "calendar_days": calendar_days,
+        "selected_day": selected_day,
+        "selected_payments": payments_by_day.get(selected_day, []),
+        "week_start": week_start,
+        "week_end": week_end,
+        "previous_week": week_start - timedelta(days=7),
+        "next_week": week_start + timedelta(days=7),
+        "week_total_count": len(payments),
+        "week_total_amount": sum((payment.amount for payment in payments), Decimal("0.00")),
+        "calendar_query_prefix": calendar_query_prefix,
+    }
 
 
 def _payment_record_fallback_amounts(payment, bill, remaining_amount):
@@ -167,7 +321,7 @@ def admin_payments(request):
     status = request.GET.get("status", "").strip()
     method = request.GET.get("method", "").strip()
 
-    payments = ManualPayment.objects.select_related("user", "user__tenantprofile")
+    payments = _admin_payment_queryset()
     if status in ("PENDING", "APPROVED", "REJECTED"):
         payments = payments.filter(status=status)
     if method == "GCASH":
@@ -265,7 +419,7 @@ def admin_payments(request):
     cash_schedule_payments = page_payments if is_f2f_schedule_view else []
     other_payments = [] if is_f2f_schedule_view else page_payments
 
-    return render(request, "admin_portal/payments.html", {
+    context = {
         "page_obj": page_obj,
         "cash_schedule_payments": cash_schedule_payments,
         "other_payments": other_payments,
@@ -277,7 +431,22 @@ def admin_payments(request):
         "approved_count": approved_count,
         "rejected_count": rejected_count,
         "cash_schedule_count": cash_schedule_count,
-    })
+    }
+    if is_f2f_schedule_view:
+        context.update(
+            _build_cash_calendar_context(
+                request,
+                f"{reverse('admin_payments')}?status=PENDING&method=CASH",
+            )
+        )
+
+    return render(request, "admin_portal/payments.html", context)
+
+
+@admin_required
+def admin_payment_calendar(request):
+    context = _build_cash_calendar_context(request, reverse("admin_payment_calendar"))
+    return render(request, "admin_portal/payment_calendar.html", context)
 
 
 @admin_required
@@ -430,3 +599,103 @@ def admin_payment_detail(request, payment_id: int):
     }
 
     return render(request, "admin_portal/payment_detail.html", context)
+
+
+@admin_required
+def admin_reschedule_cash_payment(request, payment_id: int):
+    payment = get_object_or_404(_admin_payment_queryset(), pk=payment_id)
+    if payment.payment_method != "CASH":
+        messages.error(request, "Only face-to-face cash appointments can be rescheduled.")
+        return redirect("admin_payment_detail", payment_id=payment.id)
+    if payment.status != "PENDING":
+        messages.error(request, "Only pending cash appointments can be rescheduled.")
+        return redirect("admin_payment_detail", payment_id=payment.id)
+
+    current_date = payment.preferred_date
+    current_time = payment.preferred_time
+    current_note = payment.schedule_admin_note or ""
+
+    if request.method == "POST":
+        preferred_date = (request.POST.get("preferred_date") or "").strip()
+        preferred_time = (request.POST.get("preferred_time") or "").strip()
+        admin_note = (request.POST.get("schedule_admin_note") or "").strip()
+
+        parsed_date = _parse_calendar_date(preferred_date, None)
+        parsed_time = _parse_reschedule_time(preferred_time)
+
+        if not parsed_date:
+            messages.error(request, "Please choose a valid reschedule date.")
+        elif not parsed_time:
+            messages.error(request, "Please choose an available office-hour time.")
+        else:
+            is_valid_schedule, schedule_error = is_office_schedule(parsed_date, parsed_time)
+            if not is_valid_schedule:
+                messages.error(request, schedule_error)
+            else:
+                old_schedule = _format_schedule(current_date, current_time)
+                new_schedule = _format_schedule(parsed_date, parsed_time)
+
+                payment.preferred_date = parsed_date
+                payment.preferred_time = parsed_time
+                payment.schedule_admin_note = admin_note
+                payment.schedule_confirmed = True
+                payment.save(
+                    update_fields=[
+                        "preferred_date",
+                        "preferred_time",
+                        "schedule_admin_note",
+                        "schedule_confirmed",
+                    ]
+                )
+
+                notification_message = (
+                    "Your face-to-face cash payment appointment has been rescheduled.\n\n"
+                    f"Previous schedule: {old_schedule}\n"
+                    f"New schedule: {new_schedule}\n"
+                    f"Amount: PHP {payment.amount:,.2f}\n"
+                    f"Reference: {payment.reference_code or '-'}"
+                )
+                if admin_note:
+                    notification_message += f"\n\nAdmin note: {admin_note}"
+
+                try:
+                    Notification.create_tenant_notification(
+                        title="Cash Payment Appointment Rescheduled",
+                        message=notification_message,
+                        notification_type="PAYMENT",
+                        tenant_user=payment.user,
+                    )
+                except Exception as exc:
+                    logger.exception("Failed to create cash reschedule notification for payment %s: %s", payment.id, exc)
+                    messages.warning(request, "Schedule was updated, but tenant notification could not be created.")
+
+                email_sent = send_email_via_resend(
+                    payment.user.email,
+                    "[REALESTATE360+] Cash Payment Appointment Rescheduled",
+                    (
+                        f"Hello {_tenant_display_name(payment.user)},\n\n"
+                        f"{notification_message}\n\n"
+                        "Please check your tenant portal for the updated appointment details.\n\n"
+                        "REALESTATE360+ Administration"
+                    ),
+                )
+                if email_sent:
+                    messages.success(request, "Cash appointment rescheduled. Tenant notification and email were sent.")
+                else:
+                    messages.warning(request, "Cash appointment rescheduled, but the email was not sent. Check Resend configuration/logs.")
+                return redirect("admin_payment_detail", payment_id=payment.id)
+
+        current_date = parsed_date or current_date
+        current_time = parsed_time or current_time
+        current_note = admin_note
+
+    return render(request, "admin_portal/payment_reschedule.html", {
+        "payment": payment,
+        "tenant_display_name": _tenant_display_name(payment.user),
+        "office_time_slots": f2f_time_slots(),
+        "office_hours_label": OFFICE_HOURS_LABEL,
+        "selected_date": current_date,
+        "selected_time": current_time.strftime("%H:%M") if current_time else "",
+        "schedule_admin_note": current_note,
+        "back_url": reverse("admin_payment_detail", args=[payment.id]),
+    })

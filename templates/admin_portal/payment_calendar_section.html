@@ -1,0 +1,123 @@
+{% load humanize %}
+<section class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+  <div class="px-5 py-4 border-b border-slate-200 bg-slate-50 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+    <div>
+      <p class="text-[10px] font-black uppercase tracking-wide text-amber-700">Weekly calendar</p>
+      <h2 class="text-sm font-black text-slate-900 tracking-tight mt-0.5">
+        {{ week_start|date:"M d" }} to {{ week_end|date:"M d, Y" }}
+      </h2>
+      <p class="text-[10px] text-slate-600 font-medium mt-0.5">
+        {{ week_total_count }} appointment{{ week_total_count|pluralize }} scheduled for face-to-face cash payment.
+      </p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <a href="{{ calendar_query_prefix }}week={{ previous_week|date:'Y-m-d' }}"
+         class="px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs font-black text-slate-700 hover:bg-slate-50 transition-colors">
+        Previous
+      </a>
+      <a href="{{ calendar_query_prefix }}week={{ next_week|date:'Y-m-d' }}"
+         class="px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs font-black text-slate-700 hover:bg-slate-50 transition-colors">
+        Next
+      </a>
+    </div>
+  </div>
+
+  <div class="p-5">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3" aria-label="Cash schedule week">
+      {% for day in calendar_days %}
+        <a href="{{ calendar_query_prefix }}week={{ week_start|date:'Y-m-d' }}&day={{ day.date|date:'Y-m-d' }}"
+           class="block border rounded-xl p-4 min-h-[150px] transition-colors {% if day.is_selected %}bg-slate-900 border-slate-900 text-white{% else %}bg-white border-slate-200 hover:border-slate-400 text-slate-900{% endif %}">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <p class="text-[10px] font-black uppercase tracking-wide {% if day.is_selected %}text-slate-300{% else %}text-slate-500{% endif %}">
+                {{ day.date|date:"D" }}
+              </p>
+              <h3 class="text-xl font-black mt-1">{{ day.date|date:"d" }}</h3>
+            </div>
+            {% if day.is_today %}
+              <span class="text-[10px] font-black rounded-full px-2 py-1 {% if day.is_selected %}bg-white text-slate-900{% else %}bg-blue-50 border border-blue-200 text-blue-800{% endif %}">
+                Today
+              </span>
+            {% endif %}
+          </div>
+
+          <div class="mt-5">
+            <p class="text-xs font-black">{{ day.count }} appointment{{ day.count|pluralize }}</p>
+            <p class="text-[11px] font-bold mt-1 {% if day.is_selected %}text-slate-300{% else %}text-slate-500{% endif %}">
+              ₱{{ day.total_amount|floatformat:2|intcomma }}
+            </p>
+          </div>
+
+          <div class="mt-4 space-y-2">
+            {% for payment in day.payments|slice:":2" %}
+              <div class="text-[11px] font-bold truncate {% if day.is_selected %}text-slate-200{% else %}text-slate-700{% endif %}">
+                {% if payment.preferred_time %}{{ payment.preferred_time|time:"g:i A" }} · {% endif %}{{ payment.tenant_display_name }}
+              </div>
+            {% empty %}
+              <div class="text-[11px] font-bold {% if day.is_selected %}text-slate-400{% else %}text-slate-400{% endif %}">No schedule</div>
+            {% endfor %}
+            {% if day.count > 2 %}
+              <div class="text-[10px] font-black {% if day.is_selected %}text-slate-300{% else %}text-slate-500{% endif %}">+{{ day.count|add:"-2" }} more</div>
+            {% endif %}
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+  <div class="px-5 py-4 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+    <div>
+      <h2 class="text-sm font-black text-slate-900 tracking-tight">{{ selected_day|date:"F d, Y" }}</h2>
+      <p class="text-[10px] text-slate-600 font-medium mt-0.5">Click View to open the same full payment detail used by the F2F list.</p>
+    </div>
+    <span class="text-xs font-black text-slate-700 bg-white border border-slate-200 rounded-full px-3 py-1">
+      {{ selected_payments|length }} appointment{{ selected_payments|length|pluralize }}
+    </span>
+  </div>
+
+  <div class="divide-y divide-slate-200">
+    {% for payment in selected_payments %}
+      <div class="p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div class="flex items-start gap-3 min-w-0">
+          <div class="w-10 h-10 rounded bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-900 font-black text-sm shrink-0">
+            {{ payment.tenant_display_name|default:payment.user.email|first|upper }}
+          </div>
+          <div class="min-w-0">
+            <h3 class="text-sm font-black text-slate-900 truncate">{{ payment.tenant_display_name|default:payment.user.email }}</h3>
+            <p class="text-xs font-bold text-slate-500 mt-0.5">
+              {% if payment.unit_number %}Unit {{ payment.unit_number }} · {% endif %}
+              {% if payment.preferred_time %}{{ payment.preferred_time|time:"g:i A" }}{% else %}No time selected{% endif %}
+            </p>
+            <p class="text-[11px] font-bold text-slate-500 mt-1">
+              {{ payment.reference_code|default:"No reference" }} · {{ payment.bill_components }} · {{ payment.affected_months }}
+            </p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 lg:justify-end">
+          <span class="px-3 py-1.5 rounded bg-slate-50 border border-slate-200 text-xs font-black text-slate-900">
+            ₱{{ payment.amount|floatformat:2|intcomma }}
+          </span>
+          {% if payment.status == "APPROVED" %}
+            <span class="px-3 py-1.5 rounded bg-emerald-50 border border-emerald-200 text-xs font-black text-emerald-800">Paid</span>
+          {% elif payment.status == "PENDING" and payment.schedule_confirmed %}
+            <span class="px-3 py-1.5 rounded bg-blue-50 border border-blue-200 text-xs font-black text-blue-800">Confirmed</span>
+          {% else %}
+            <span class="px-3 py-1.5 rounded bg-amber-50 border border-amber-200 text-xs font-black text-amber-800">Checking</span>
+          {% endif %}
+          <a href="{% url 'admin_payment_detail' payment.id %}"
+             class="px-3 py-1.5 rounded bg-slate-900 text-white text-xs font-black hover:bg-slate-800 transition-colors">
+            View
+          </a>
+        </div>
+      </div>
+    {% empty %}
+      <div class="py-16 text-center">
+        <strong class="text-xs text-slate-600 block">No F2F cash payments scheduled.</strong>
+        <p class="text-xs text-slate-500 mt-0.5">Select another day or move to a different week.</p>
+      </div>
+    {% endfor %}
+  </div>
+</section>

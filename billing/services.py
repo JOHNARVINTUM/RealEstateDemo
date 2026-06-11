@@ -79,6 +79,73 @@ def compute_weekly_interest(charge_base: Decimal, due_date: date, today: date) -
     return interest, True, 2
 
 
+def expected_flat_late_interest_for_bill(bill: MonthlyBill, today: date | None = None) -> Decimal:
+    today = today or timezone.localdate()
+    if not bill.due_date:
+        return Decimal("0.00")
+    charge_base = (Decimal(bill.base_rent or 0) + Decimal(bill.parking_fee or 0)).quantize(Decimal("0.01"))
+    interest, _, _ = compute_weekly_interest(charge_base, bill.due_date, today)
+    return interest
+
+
+def repair_inflated_unpaid_late_fees(*, today: date | None = None, dry_run: bool = False):
+    """
+    Correct legacy compounded late fees to the current flat 3% rule.
+
+    Safety rules:
+    - paid bills are never touched
+    - only UNPAID / PARTIALLY_PAID bills are considered
+    - only reduces interest when the stored value is higher than the expected flat value
+    """
+    today = today or timezone.localdate()
+    current_month = today.replace(day=1)
+    queryset = MonthlyBill.objects.filter(
+        status__in=("UNPAID", "PARTIALLY_PAID"),
+        billing_month__lte=current_month,
+    ).select_related("lease", "lease__tenant", "lease__unit")
+
+    repaired = []
+    skipped = 0
+    total_reduction = Decimal("0.00")
+
+    for bill in queryset:
+        old_interest = Decimal(bill.interest or 0).quantize(Decimal("0.01"))
+        expected_interest = expected_flat_late_interest_for_bill(bill, today=today)
+        if old_interest <= expected_interest:
+            skipped += 1
+            continue
+
+        reduction = (old_interest - expected_interest).quantize(Decimal("0.01"))
+        repaired.append({
+            "bill_id": bill.id,
+            "tenant_email": bill.lease.tenant.email if bill.lease and bill.lease.tenant else "",
+            "unit": bill.lease.unit.number if bill.lease and bill.lease.unit else "",
+            "billing_month": bill.billing_month,
+            "old_interest": old_interest,
+            "new_interest": expected_interest,
+            "reduction": reduction,
+        })
+        total_reduction += reduction
+
+        if not dry_run:
+            bill.interest = expected_interest
+            bill.total_due = (
+                Decimal(bill.base_rent or 0)
+                + Decimal(bill.water_amount or 0)
+                + Decimal(bill.parking_fee or 0)
+                + expected_interest
+            ).quantize(Decimal("0.01"))
+            bill.save(update_fields=["interest", "total_due"])
+
+    return {
+        "repaired_count": len(repaired),
+        "skipped_count": skipped,
+        "total_reduction": total_reduction.quantize(Decimal("0.01")),
+        "repaired": repaired,
+        "dry_run": dry_run,
+    }
+
+
 def get_water_amount_for_month(unit, billing_month: date) -> Decimal:
     """
     Pull the POSTED water bill for that month (if any).
@@ -170,6 +237,54 @@ def cleanup_duplicate_monthly_bills_for_lease(lease) -> int:
                 removed += 1
 
     return removed
+
+
+def duplicate_monthly_bill_cleanup_preview():
+    rows = []
+    total_candidates = 0
+    grouped = {}
+    bills = MonthlyBill.objects.select_related("lease", "lease__tenant", "lease__unit").order_by(
+        "lease_id",
+        "billing_month",
+        "id",
+    )
+    for bill in bills:
+        grouped.setdefault((bill.lease_id, bill.billing_month.year, bill.billing_month.month), []).append(bill)
+
+    for (_, _, _), month_bills in grouped.items():
+        if len(month_bills) <= 1:
+            continue
+
+        keeper = _preferred_monthly_bill(month_bills)
+        candidates = [bill for bill in month_bills if bill.pk != keeper.pk and _is_safe_duplicate_candidate(bill)]
+        if not candidates:
+            continue
+
+        total_candidates += len(candidates)
+        for candidate in candidates:
+            rows.append({
+                "bill_id": candidate.id,
+                "tenant_email": candidate.lease.tenant.email if candidate.lease and candidate.lease.tenant else "",
+                "unit": candidate.lease.unit.number if candidate.lease and candidate.lease.unit else "",
+                "billing_month": candidate.billing_month,
+                "status": candidate.status,
+                "balance": candidate.total_balance,
+                "keeper_id": keeper.id,
+                "keeper_status": keeper.status,
+            })
+
+    return {
+        "duplicate_count": total_candidates,
+        "duplicates": rows,
+    }
+
+
+def cleanup_duplicate_monthly_bills() -> int:
+    preview = duplicate_monthly_bill_cleanup_preview()
+    candidate_ids = [row["bill_id"] for row in preview["duplicates"]]
+    if candidate_ids:
+        MonthlyBill.objects.filter(pk__in=candidate_ids).delete()
+    return len(candidate_ids)
 
 
 def _resolve_monthly_bill_water_amount(lease, billing_month: date, same_month_bills) -> Decimal:
@@ -715,16 +830,9 @@ def _render_invoice_email(invoice: BillingInvoice) -> str:
             f"  Late Fee: PHP {Decimal(line.get('late_fee', '0.00')):,.2f}",
             f"  Total Before Payment: PHP {Decimal(line.get('total_due_before_payment', '0.00')):,.2f}",
             f"  Paid This Transaction: PHP {Decimal(line.get('amount_paid', '0.00')):,.2f}",
+            "  Status: PAID",
         ])
     body.extend([
-        "",
-        "Totals:",
-        f"Rent: PHP {Decimal(totals.get('rent_charge', '0.00')):,.2f}",
-        f"Water: PHP {Decimal(totals.get('water_charge', '0.00')):,.2f}",
-        f"Parking: PHP {Decimal(totals.get('parking_charge', '0.00')):,.2f}",
-        f"Late Fee: PHP {Decimal(totals.get('late_fee', '0.00')):,.2f}",
-        f"Total Before Payment: PHP {Decimal(totals.get('total_due_before_payment', '0.00')):,.2f}",
-        f"Amount Paid: PHP {Decimal(totals.get('amount_paid', '0.00')):,.2f}",
         "",
         "Thank you for your payment.",
         "",

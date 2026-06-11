@@ -39,7 +39,9 @@ from .admin_lease_views import (
 )
 from .admin_billing_views import (
     admin_billing,
+    admin_cleanup_duplicate_bills,
     admin_billing_export_csv,
+    admin_repair_late_fees,
     admin_send_bill_warning,
     admin_mark_bill_paid,
     admin_mark_bill_unpaid,
@@ -47,7 +49,9 @@ from .admin_billing_views import (
 )
 from .admin_payment_views import (
     admin_payments,
+    admin_payment_calendar,
     admin_payment_detail,
+    admin_reschedule_cash_payment,
     admin_approve_payment,
     admin_repair_move_in_payment,
     admin_reject_payment,
@@ -79,7 +83,9 @@ urlpatterns = [
     path("attachments/<int:attachment_id>/view/", admin_view_attachment, name="admin_view_attachment"),
     path("attachments/<int:attachment_id>/delete/", admin_delete_attachment, name="admin_delete_attachment"),
     path("billing/", admin_billing, name="admin_billing"),
+    path("billing/cleanup-duplicates/", admin_cleanup_duplicate_bills, name="admin_cleanup_duplicate_bills"),
     path("billing/export/", admin_billing_export_csv, name="admin_billing_export_csv"),
+    path("billing/repair-late-fees/", admin_repair_late_fees, name="admin_repair_late_fees"),
     path("billing/<int:bill_id>/send-warning/", admin_send_bill_warning, name="admin_send_bill_warning"),
     path("billing/mark_paid/<int:bill_id>/", admin_mark_bill_paid, name="admin_mark_bill_paid"),
     path("billing/mark_unpaid/<int:bill_id>/", admin_mark_bill_unpaid, name="admin_mark_bill_unpaid"),
@@ -93,7 +99,9 @@ urlpatterns = [
     path("water/recompute/", admin_water_recompute, name="admin_water_recompute"),
     
     path("payments/", admin_payments, name="admin_payments"),
+    path("payments/calendar/", admin_payment_calendar, name="admin_payment_calendar"),
     path("payments/<int:payment_id>/detail/", admin_payment_detail, name="admin_payment_detail"),
+    path("payments/<int:payment_id>/reschedule/", admin_reschedule_cash_payment, name="admin_reschedule_cash_payment"),
     path("payments/<int:payment_id>/approve/", admin_approve_payment, name="admin_approve_payment"),
     path("payments/<int:payment_id>/repair-move-in/", admin_repair_move_in_payment, name="admin_repair_move_in_payment"),
     path("payments/<int:payment_id>/reject/", admin_reject_payment, name="admin_reject_payment"),

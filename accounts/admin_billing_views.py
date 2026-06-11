@@ -1,6 +1,6 @@
 from datetime import date
+from decimal import Decimal
 
-from django.conf import settings
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db import transaction
@@ -12,19 +12,132 @@ from django.utils import timezone
 from django.db.models import Count, Q
 
 from billing.models import MonthlyBill
-from billing.services import create_and_send_invoice_for_paid_bill, set_bill_status
+from billing.services import (
+    cleanup_duplicate_monthly_bills,
+    create_and_send_invoice_for_paid_bill,
+    duplicate_monthly_bill_cleanup_preview,
+    repair_inflated_unpaid_late_fees,
+    set_bill_status,
+)
+from rentals import services as rental_services
 
 from .admin_portal_views import admin_required, admin_password_verified, render_admin_password_confirm
 
 
+def _bill_balance_amount(bill):
+    if bill.total_balance > 0:
+        return bill.total_balance
+    if bill.status != "PAID":
+        return bill.total_due
+    return Decimal("0.00")
+
+
+def _settle_bill_and_invoice(bill, paid_at):
+    bill = set_bill_status(bill, status="PAID", paid_at=paid_at)
+    create_and_send_invoice_for_paid_bill(bill, paid_at=paid_at)
+    return bill
+
+
+def _prior_unpaid_bills_for_settlement(bill):
+    current_month = date.today().replace(day=1)
+    candidates = (
+        MonthlyBill.objects.select_related("lease", "lease__tenant", "lease__tenant__tenantprofile", "lease__unit")
+        .filter(
+            lease=bill.lease,
+            status__in=("UNPAID", "PARTIALLY_PAID"),
+            billing_month__lt=current_month,
+        )
+        .exclude(pk=bill.pk)
+        .order_by("billing_month", "id")
+    )
+    return [
+        candidate
+        for candidate in candidates
+        if _bill_balance_amount(candidate) > 0 and not _is_unpaid_duplicate_shell(candidate)
+    ]
+
+
+def _is_unpaid_duplicate_shell(bill):
+    if not (
+        bill.status == "UNPAID"
+        and bill.rent_paid == 0
+        and bill.water_paid == 0
+        and bill.parking_paid == 0
+    ):
+        return False
+    return MonthlyBill.objects.filter(
+        lease=bill.lease,
+        billing_month__year=bill.billing_month.year,
+        billing_month__month=bill.billing_month.month,
+        status__in=("PAID", "PARTIALLY_PAID"),
+    ).exclude(pk=bill.pk).exists()
+
+
+def _bill_computation_rows(bills):
+    rows = []
+    for bill in bills:
+        rows.append({
+            "bill": bill,
+            "month": bill.billing_month.strftime("%b %Y"),
+            "rent": bill.rent_balance,
+            "water": bill.water_balance,
+            "parking": bill.parking_balance,
+            "late_fee": bill.interest,
+            "balance": _bill_balance_amount(bill),
+        })
+    return rows
+
+
+def _settlement_warning_context(bill, prior_unpaid_bills):
+    selected_balance = _bill_balance_amount(bill)
+    rows = _bill_computation_rows(prior_unpaid_bills)
+    prior_total = sum((row["balance"] for row in rows), Decimal("0.00"))
+    return {
+        "bill": bill,
+        "prior_bills": rows,
+        "prior_total": prior_total,
+        "selected_balance": selected_balance,
+        "settle_all_total": selected_balance + prior_total,
+        "post_url": reverse("admin_mark_bill_paid", args=[bill.id]),
+        "back_url": reverse("admin_billing"),
+    }
+
+
 @admin_required
 def admin_mark_bill_paid(request, bill_id: int):
-    bill = get_object_or_404(MonthlyBill, pk=bill_id)
+    bill = get_object_or_404(
+        MonthlyBill.objects.select_related("lease", "lease__tenant", "lease__tenant__tenantprofile", "lease__unit"),
+        pk=bill_id,
+    )
+    prior_unpaid_bills = _prior_unpaid_bills_for_settlement(bill)
     if request.method == "POST":
+        action = request.POST.get("action", "")
         paid_at = dj_timezone.now()
-        bill = set_bill_status(bill, status="PAID", paid_at=paid_at)
-        create_and_send_invoice_for_paid_bill(bill, paid_at=paid_at)
+
+        if prior_unpaid_bills and action not in ("settle_all", "settle_bill"):
+            return render(request, "admin_portal/billing_settle_warning.html", _settlement_warning_context(bill, prior_unpaid_bills))
+
+        if action == "settle_bill":
+            target_bill = get_object_or_404(
+                MonthlyBill.objects.select_related("lease", "lease__tenant", "lease__unit"),
+                pk=request.POST.get("target_bill_id"),
+                lease=bill.lease,
+            )
+            _settle_bill_and_invoice(target_bill, paid_at)
+            messages.success(request, f"{target_bill.billing_month.strftime('%B %Y')} was marked as paid.")
+            return redirect("admin_mark_bill_paid", bill_id=bill.id)
+
+        if action == "settle_all":
+            for prior_bill in prior_unpaid_bills:
+                _settle_bill_and_invoice(prior_bill, paid_at)
+            _settle_bill_and_invoice(bill, paid_at)
+            messages.success(request, f"Settled {len(prior_unpaid_bills) + 1} bill(s) for this tenant.")
+            return redirect("admin_billing")
+
+        _settle_bill_and_invoice(bill, paid_at)
         return redirect("admin_billing")
+    if prior_unpaid_bills:
+        return render(request, "admin_portal/billing_settle_warning.html", _settlement_warning_context(bill, prior_unpaid_bills))
     return render(request, "admin_portal/confirm.html", {
         "title": "Mark Bill Paid",
         "message": f"Mark bill {bill.id} as PAID?",
@@ -43,6 +156,42 @@ def admin_mark_bill_unpaid(request, bill_id: int):
         "title": "Mark Bill Unpaid",
         "message": f"Mark bill {bill.id} as UNPAID?",
         "post_url": reverse("admin_mark_bill_unpaid", args=[bill.id]),
+        "back_url": reverse("admin_billing"),
+    })
+
+
+@admin_required
+def admin_repair_late_fees(request):
+    preview = repair_inflated_unpaid_late_fees(dry_run=True)
+    if request.method == "POST":
+        result = repair_inflated_unpaid_late_fees(dry_run=False)
+        messages.success(
+            request,
+            (
+                f"Repaired {result['repaired_count']} unpaid bill late fee(s). "
+                f"Total reduction: PHP {result['total_reduction']:,.2f}."
+            ),
+        )
+        return redirect("admin_billing")
+
+    return render(request, "admin_portal/billing_repair_late_fees.html", {
+        "preview": preview,
+        "post_url": reverse("admin_repair_late_fees"),
+        "back_url": reverse("admin_billing"),
+    })
+
+
+@admin_required
+def admin_cleanup_duplicate_bills(request):
+    preview = duplicate_monthly_bill_cleanup_preview()
+    if request.method == "POST":
+        removed_count = cleanup_duplicate_monthly_bills()
+        messages.success(request, f"Removed {removed_count} duplicate unpaid billing record(s).")
+        return redirect("admin_billing")
+
+    return render(request, "admin_portal/billing_cleanup_duplicates.html", {
+        "preview": preview,
+        "post_url": reverse("admin_cleanup_duplicate_bills"),
         "back_url": reverse("admin_billing"),
     })
 
@@ -270,14 +419,9 @@ def admin_send_bill_warning(request, bill_id: int):
     )
 
     try:
-        import resend
-        resend.api_key = settings.RESEND_API_KEY
-        resend.Emails.send({
-            'from': 'REALESTATE360+ <noreply@realestate360.site>',
-            'to': [tenant.email],
-            'subject': subject,
-            'text': message,
-        })
+        sent = rental_services.send_email_via_resend(tenant.email, subject, message)
+        if not sent:
+            raise RuntimeError("Resend is not configured or rejected the email.")
         messages.success(request, f"Warning email sent to {tenant.email} for {billing_month}.")
     except Exception as e:
         messages.error(request, f"Failed to send email: {e}")

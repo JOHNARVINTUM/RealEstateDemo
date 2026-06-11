@@ -13,7 +13,9 @@ from billing.services import (
     ensure_bills_since_move_in,
     ensure_bills_up_to,
     parse_bill_ids,
+    repair_inflated_unpaid_late_fees,
     reconcile_approved_payments_for_tenant,
+    _render_invoice_email,
 )
 from payments.models import ManualPayment
 from rentals.models import Lease, Notification, Unit
@@ -186,6 +188,10 @@ class BillingWorkflowTests(TestCase):
         self.assertEqual(invoice.snapshot["lines"][0]["late_fee"], "300.00")
         self.assertEqual(invoice.snapshot["lines"][0]["amount_paid"], "10300.00")
         self.assertEqual(bill.interest, Decimal("0.00"))
+        email_body = _render_invoice_email(invoice)
+        self.assertIn("Paid This Transaction: PHP 10,300.00", email_body)
+        self.assertIn("Status: PAID", email_body)
+        self.assertNotIn("Totals:", email_body)
         send_email.assert_called_once()
 
     def test_deleting_bill_removes_payment_history_reference(self):
@@ -381,6 +387,39 @@ class BillingWorkflowTests(TestCase):
         self.assertTrue(is_late)
         self.assertEqual(weeks_late, 2)
         self.assertEqual(interest, Decimal("300.00"))
+
+    def test_repair_inflated_unpaid_late_fees_uses_flat_three_percent_rule(self):
+        inflated_bill = MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=date(2026, 1, 1),
+            due_date=date(2026, 1, 5),
+            base_rent=Decimal("24585.00"),
+            water_amount=Decimal("0.00"),
+            parking_fee=Decimal("0.00"),
+            interest=Decimal("106944.75"),
+            total_due=Decimal("131529.75"),
+            status="UNPAID",
+        )
+        paid_bill = MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=date(2026, 2, 1),
+            due_date=date(2026, 2, 5),
+            base_rent=Decimal("24585.00"),
+            water_amount=Decimal("0.00"),
+            parking_fee=Decimal("0.00"),
+            interest=Decimal("106944.75"),
+            total_due=Decimal("131529.75"),
+            status="PAID",
+        )
+
+        result = repair_inflated_unpaid_late_fees(today=date(2026, 6, 11))
+
+        inflated_bill.refresh_from_db()
+        paid_bill.refresh_from_db()
+        self.assertEqual(result["repaired_count"], 1)
+        self.assertEqual(inflated_bill.interest, Decimal("737.55"))
+        self.assertEqual(inflated_bill.total_due, Decimal("25322.55"))
+        self.assertEqual(paid_bill.interest, Decimal("106944.75"))
 
     def test_late_penalty_uses_rent_and_parking_base(self):
         bill = MonthlyBill.objects.create(

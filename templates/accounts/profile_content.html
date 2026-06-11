@@ -1,0 +1,167 @@
+<section class="max-w-7xl mx-auto space-y-6 pb-12">
+  <header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div>
+      <span class="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[11px] font-black uppercase tracking-widest text-blue-700">Account Profile</span>
+      <h1 class="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">{{ display_name }}</h1>
+      <p class="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-600">Manage your account information, uploaded documents, and password from one workspace.</p>
+    </div>
+    <div class="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+      <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Signed in as</p>
+      <p class="mt-1 text-sm font-black text-slate-900">{{ request.user.email }}</p>
+    </div>
+  </header>
+
+  <div class="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+    <div class="space-y-6">
+      <article class="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div class="border-b border-slate-100 px-6 py-5">
+          <h2 class="text-xl font-black text-slate-950">Basic Information</h2>
+          <p class="mt-1 text-sm font-semibold text-slate-500">Core identity and account access details.</p>
+        </div>
+        <div class="grid gap-4 p-6 sm:grid-cols-2">
+          <div class="rounded-2xl bg-slate-50 p-4">
+            <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Full Name</p>
+            <p class="mt-1 text-base font-black text-slate-900">{{ display_name }}</p>
+          </div>
+          <div class="rounded-2xl bg-slate-50 p-4">
+            <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Email</p>
+            <p class="mt-1 break-words text-base font-black text-slate-900">{{ request.user.email }}</p>
+          </div>
+          <div class="rounded-2xl bg-slate-50 p-4">
+            <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Contact Number</p>
+            <p class="mt-1 text-base font-black text-slate-900">{% if tenant_profile and tenant_profile.contact_no %}{{ tenant_profile.contact_no }}{% else %}Not provided{% endif %}</p>
+          </div>
+          <div class="rounded-2xl bg-slate-50 p-4">
+            <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Account Type</p>
+            <p class="mt-1 text-base font-black text-slate-900">{{ role_label }}</p>
+          </div>
+          <div class="rounded-2xl bg-slate-50 p-4">
+            <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Username</p>
+            <p class="mt-1 text-base font-black text-slate-900">{{ request.user.username|default:"Not set" }}</p>
+          </div>
+          <div class="rounded-2xl bg-slate-50 p-4">
+            <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Last Login</p>
+            <p class="mt-1 text-base font-black text-slate-900">{% if request.user.last_login %}{{ request.user.last_login|date:"M d, Y h:i A" }}{% else %}No login recorded{% endif %}</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div class="border-b border-slate-100 px-6 py-5">
+          <h2 class="text-xl font-black text-slate-950">Uploaded Files</h2>
+          <p class="mt-1 text-sm font-semibold text-slate-500">Contracts, valid IDs, and tenant documents connected to this account.</p>
+        </div>
+        <div class="p-6">
+          {% if attachments %}
+            <div class="grid gap-4 md:grid-cols-2">
+              {% for attachment in attachments %}
+                <article class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div class="aspect-video overflow-hidden rounded-xl border border-slate-200 bg-white flex items-center justify-center">
+                    {% if attachment.is_image %}
+                      <img src="{% url 'account_profile_attachment' attachment.id %}" alt="{{ attachment.filename }}" class="h-full w-full object-cover">
+                    {% elif attachment.is_pdf %}
+                      <div class="text-center">
+                        <span class="inline-flex rounded-xl bg-rose-50 px-4 py-2 text-sm font-black text-rose-700">PDF</span>
+                        <p class="mt-3 text-xs font-bold text-slate-500">Preview opens in a new tab</p>
+                      </div>
+                    {% else %}
+                      <div class="text-center">
+                        <span class="inline-flex rounded-xl bg-blue-50 px-4 py-2 text-sm font-black text-blue-700">Document</span>
+                        <p class="mt-3 text-xs font-bold text-slate-500">Preview opens in a new tab</p>
+                      </div>
+                    {% endif %}
+                  </div>
+                  <div class="mt-4 flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                      <p class="truncate text-sm font-black text-slate-900">{{ attachment.filename }}</p>
+                      <p class="mt-1 text-xs font-bold text-slate-500">{{ attachment.get_attachment_type_display }} · {{ attachment.get_file_size_display }}</p>
+                      {% if attachment.description %}
+                        <p class="mt-2 text-xs font-semibold leading-5 text-slate-600">{{ attachment.description }}</p>
+                      {% endif %}
+                    </div>
+                    <a href="{% url 'account_profile_attachment' attachment.id %}" target="_blank" rel="noopener" class="shrink-0 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-100">Open</a>
+                  </div>
+                  <p class="mt-3 text-[11px] font-bold uppercase tracking-widest text-slate-400">Uploaded {{ attachment.uploaded_at|date:"M d, Y" }}</p>
+                </article>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
+              <p class="text-base font-black text-slate-900">No uploaded files yet</p>
+              <p class="mt-2 text-sm font-semibold text-slate-500">Tenant contracts and IDs will appear here once uploaded by the admin team.</p>
+            </div>
+          {% endif %}
+        </div>
+      </article>
+    </div>
+
+    <div class="space-y-6">
+      <article class="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div class="border-b border-slate-100 px-6 py-5">
+          <h2 class="text-xl font-black text-slate-950">Lease Snapshot</h2>
+          <p class="mt-1 text-sm font-semibold text-slate-500">Current room and payment lifecycle state.</p>
+        </div>
+        <div class="p-6">
+          {% if latest_lease %}
+            <div class="rounded-2xl bg-slate-950 p-5 text-white">
+              <p class="text-[10px] font-black uppercase tracking-widest text-blue-200">Unit</p>
+              <p class="mt-1 text-3xl font-black">#{{ latest_lease.unit.number }}</p>
+              <div class="mt-5 grid grid-cols-2 gap-3">
+                <div class="rounded-2xl bg-white/10 p-3">
+                  <p class="text-[10px] font-black uppercase tracking-widest text-slate-300">Status</p>
+                  <p class="mt-1 text-sm font-black">{{ latest_lease.display_status }}</p>
+                </div>
+                <div class="rounded-2xl bg-white/10 p-3">
+                  <p class="text-[10px] font-black uppercase tracking-widest text-slate-300">Due Day</p>
+                  <p class="mt-1 text-sm font-black">Every {{ latest_lease.due_day }}</p>
+                </div>
+                <div class="rounded-2xl bg-white/10 p-3">
+                  <p class="text-[10px] font-black uppercase tracking-widest text-slate-300">Monthly Rent</p>
+                  <p class="mt-1 text-sm font-black">PHP {{ latest_lease.monthly_rent|floatformat:2 }}</p>
+                </div>
+                <div class="rounded-2xl bg-white/10 p-3">
+                  <p class="text-[10px] font-black uppercase tracking-widest text-slate-300">Start Date</p>
+                  <p class="mt-1 text-sm font-black">{{ latest_lease.start_date|date:"M d, Y" }}</p>
+                </div>
+              </div>
+            </div>
+          {% else %}
+            <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
+              <p class="text-base font-black text-slate-900">No lease connected</p>
+              <p class="mt-2 text-sm font-semibold text-slate-500">Lease details will appear after this account is assigned to a room.</p>
+            </div>
+          {% endif %}
+        </div>
+      </article>
+
+      <article class="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div class="border-b border-slate-100 px-6 py-5">
+          <h2 class="text-xl font-black text-slate-950">Change Password</h2>
+          <p class="mt-1 text-sm font-semibold text-slate-500">Use a new password that is not shared with other services.</p>
+        </div>
+        <form method="post" class="space-y-5 p-6">
+          {% csrf_token %}
+          {% for field in password_form %}
+            <div>
+              <label for="{{ field.id_for_label }}" class="mb-2 block text-sm font-black text-slate-800">{{ field.label }}</label>
+              {{ field }}
+              {% if field.errors %}
+                <div class="mt-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">
+                  {{ field.errors|striptags }}
+                </div>
+              {% endif %}
+            </div>
+          {% endfor %}
+          {% if password_form.non_field_errors %}
+            <div class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">
+              {{ password_form.non_field_errors|striptags }}
+            </div>
+          {% endif %}
+          <button type="submit" class="w-full rounded-2xl bg-slate-950 px-5 py-4 text-sm font-black text-white shadow-lg shadow-slate-200 transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100">
+            Update Password
+          </button>
+        </form>
+      </article>
+    </div>
+  </div>
+</section>

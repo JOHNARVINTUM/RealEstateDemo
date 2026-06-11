@@ -1,4 +1,5 @@
 from django.utils import timezone
+from html import escape
 from datetime import timedelta, date
 from decimal import Decimal
 from dataclasses import dataclass
@@ -95,6 +96,96 @@ def is_resend_configured():
     return bool(getattr(settings, "RESEND_API_KEY", ""))
 
 
+def _email_line_to_html(line):
+    stripped = (line or "").strip()
+    if not stripped:
+        return ""
+    if ":" in stripped and len(stripped.split(":", 1)[0]) <= 28:
+        label, value = stripped.split(":", 1)
+        value_html = escape(value.strip())
+        if label.strip().lower() == "status" and value.strip().upper() == "PAID":
+            value_html = (
+                '<span style="display:inline-block;padding:5px 11px;border-radius:999px;'
+                'border:1px solid #86efac;background:#dcfce7;color:#047857;'
+                'font-size:12px;font-weight:900;letter-spacing:.04em;">PAID</span>'
+            )
+        return (
+            '<tr>'
+            f'<td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;color:#64748b;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">{escape(label.strip())}</td>'
+            f'<td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;color:#0f172a;font-size:14px;font-weight:700;text-align:right;">{value_html}</td>'
+            '</tr>'
+        )
+    return f'<p style="margin:0 0 14px;color:#334155;font-size:15px;line-height:1.6;">{escape(stripped)}</p>'
+
+
+def render_realestate360_email_html(subject, message):
+    lines = (message or "").splitlines()
+    paragraphs = []
+    detail_rows = []
+    for line in lines:
+        html_line = _email_line_to_html(line)
+        if not html_line:
+            continue
+        if html_line.startswith("<tr>"):
+            detail_rows.append(html_line)
+        else:
+            paragraphs.append(html_line)
+
+    details_html = ""
+    if detail_rows:
+        details_html = (
+            '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" '
+            'style="border-collapse:collapse;margin:18px 0 20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">'
+            f"{''.join(detail_rows)}"
+            '</table>'
+        )
+
+    return f"""<!doctype html>
+<html>
+  <body style="margin:0;padding:0;background:#f3f6fb;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f3f6fb;padding:32px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;background:#ffffff;border:1px solid #dbe3ef;border-radius:18px;overflow:hidden;box-shadow:0 18px 45px rgba(15,23,42,.08);">
+            <tr>
+              <td style="padding:24px 28px;border-bottom:1px solid #e5e7eb;background:#ffffff;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td style="font-size:18px;font-weight:900;color:#0f172a;">RealEstate360+</td>
+                    <td align="right" style="font-size:11px;font-weight:800;color:#2563eb;text-transform:uppercase;letter-spacing:.08em;">Tenant Portal</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:30px 28px 10px;">
+                <div style="display:inline-block;padding:7px 10px;border-radius:999px;background:#dcfce7;color:#047857;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;">Official Notice</div>
+                <h1 style="margin:16px 0 10px;color:#0f172a;font-size:26px;line-height:1.15;font-weight:900;">{escape(subject)}</h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 28px 28px;">
+                {''.join(paragraphs)}
+                {details_html}
+                <div style="margin-top:24px;padding:16px 18px;border-radius:14px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;font-size:13px;line-height:1.5;font-weight:700;">
+                  Please sign in to your tenant portal for the latest account, billing, and appointment details.
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:20px 28px;background:#0f172a;color:#cbd5e1;">
+                <p style="margin:0;font-size:13px;font-weight:800;color:#ffffff;">RealEstate360+ Administration</p>
+                <p style="margin:6px 0 0;font-size:12px;line-height:1.5;color:#94a3b8;">This is an automated service email. Keep this message for your records.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>"""
+
+
 def send_email_via_resend(to_email, subject, message):
     """
     Reusable helper to send email via Resend HTTP API.
@@ -112,6 +203,7 @@ def send_email_via_resend(to_email, subject, message):
             'to': [to_email],
             'subject': subject,
             'text': message,
+            'html': render_realestate360_email_html(subject, message),
         })
         logger.info(f"Email sent to {to_email}: {subject}")
         return True

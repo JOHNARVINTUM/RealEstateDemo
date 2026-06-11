@@ -141,7 +141,6 @@
                   </form>
                 {% else %}
                   {% if p.payment_method == "CASH" %}
-                    <span class="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded text-slate-600 text-[10px] font-bold">Manage in View</span>
                   {% else %}
                     <form method="post" action="{% url 'admin_approve_payment' p.id %}" class="confirm-action inline-block" data-confirm="Confirm cash payment RECEIVED from {{ p.user.email }}?&#10;&#10;Amount: ₱{{ p.amount|floatformat:2|intcomma }}&#10;Scheduled: {{ p.preferred_date|date:'M d, Y' }} {{ p.preferred_time|time:'g:i A' }}&#10;Bills: {{ p.bill_ids }}">
                       {% csrf_token %}

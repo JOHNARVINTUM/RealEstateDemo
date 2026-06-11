@@ -1,0 +1,72 @@
+{% extends "admin_portal/base.html" %}
+{% load humanize %}
+{% block title %}Clean Duplicate Bills | Real Estate Administration{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto font-sans text-slate-900 pb-12 px-4 py-6">
+  <div class="mb-6">
+    <a href="{{ back_url }}" class="w-fit px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-colors shadow-xs mb-4">
+      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+      </svg>
+      Back to Billing
+    </a>
+    <p class="text-xs font-black uppercase tracking-wide text-blue-700">Data Cleanup</p>
+    <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 mt-1">Clean Duplicate Billing Records</h1>
+    <p class="text-sm text-slate-600 mt-1">
+      This removes only unpaid duplicate shell records for the same lease and calendar month. Paid and partially paid records are preserved.
+    </p>
+  </div>
+
+  <section class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+    <div class="bg-slate-50 border-b border-slate-200 px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div>
+        <h2 class="font-black text-slate-900">Preview</h2>
+        <p class="text-xs text-slate-600 mt-0.5">{{ preview.duplicate_count }} duplicate unpaid record{{ preview.duplicate_count|pluralize }} found.</p>
+      </div>
+      {% if preview.duplicate_count > 0 %}
+      <form method="post" action="{{ post_url }}">
+        {% csrf_token %}
+        <button type="submit" data-loading-button data-loading-text="Cleaning..." class="px-4 py-2.5 rounded-lg bg-blue-700 hover:bg-blue-800 text-white text-sm font-black transition-colors">
+          <span class="button-label">Remove Duplicates</span>
+        </button>
+      </form>
+      {% endif %}
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse min-w-[820px]">
+        <thead>
+          <tr class="bg-slate-50 border-b border-slate-200">
+            <th class="px-5 py-3 text-xs font-bold text-slate-700">Tenant</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700">Unit</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700">Month</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Duplicate Balance</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700">Kept Record</th>
+            <th class="px-5 py-3 text-xs font-bold text-slate-700">Removed Record</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+          {% for row in preview.duplicates %}
+            <tr>
+              <td class="px-5 py-4 font-bold text-slate-900">{{ row.tenant_email }}</td>
+              <td class="px-5 py-4 font-bold text-slate-700">{{ row.unit|default:"-" }}</td>
+              <td class="px-5 py-4 font-bold text-slate-700">{{ row.billing_month|date:"M Y" }}</td>
+              <td class="px-5 py-4 text-right font-black text-rose-700">₱{{ row.balance|floatformat:2|intcomma }}</td>
+              <td class="px-5 py-4 text-xs font-bold text-slate-600">#{{ row.keeper_id }} · {{ row.keeper_status }}</td>
+              <td class="px-5 py-4 text-xs font-bold text-slate-600">#{{ row.bill_id }} · {{ row.status }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6" class="py-14 text-center">
+                <strong class="text-sm text-slate-800 block">No duplicate unpaid billing records found.</strong>
+                <p class="text-xs text-slate-600 mt-1">The ledger is already clean under the current safety rules.</p>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

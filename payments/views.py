@@ -1,4 +1,4 @@
-from datetime import datetime, time, timedelta
+from datetime import datetime
 from decimal import Decimal
 import logging
 
@@ -30,40 +30,18 @@ from .paymongo_workflow import (
     upsert_pending_paymongo_checkout_payment,
     render_paymongo_tenant_success,
 )
-from rentals.models import Notification
-
-
-OFFICE_START_TIME = time(9, 0)
-OFFICE_END_TIME = time(17, 0)
-OFFICE_SLOT_MINUTES = 30
-
-
-def _f2f_time_slots():
-    slots = []
-    current = datetime.combine(datetime.today(), OFFICE_START_TIME)
-    end = datetime.combine(datetime.today(), OFFICE_END_TIME)
-    while current <= end:
-        slots.append(current.time())
-        current += timedelta(minutes=OFFICE_SLOT_MINUTES)
-    return slots
+from .scheduling import OFFICE_HOURS_LABEL, f2f_time_slots, is_office_schedule
+from rentals.models import Lease, Notification
 
 
 def _f2f_cash_context(**overrides):
     context = {
-        "office_time_slots": _f2f_time_slots(),
-        "office_hours_label": "Monday to Friday, 9:00 AM - 5:00 PM",
+        "office_time_slots": f2f_time_slots(),
+        "office_hours_label": OFFICE_HOURS_LABEL,
         "back_url": reverse("tenant_pay_advance"),
     }
     context.update(overrides)
     return context
-
-
-def _is_office_schedule(preferred_date, preferred_time):
-    if preferred_date and preferred_date.weekday() >= 5:
-        return False, "Please choose a weekday schedule. Office cash payments are available Monday to Friday only."
-    if preferred_time and preferred_time not in _f2f_time_slots():
-        return False, "Please choose a time within office hours: Monday to Friday, 9:00 AM - 5:00 PM."
-    return True, ""
 
 
 @login_required
@@ -182,7 +160,7 @@ def f2f_cash_payment(request):
                 tenant_note=tenant_note,
             ))
 
-        is_valid_schedule, schedule_error = _is_office_schedule(parsed_date, parsed_time)
+        is_valid_schedule, schedule_error = is_office_schedule(parsed_date, parsed_time)
         if not is_valid_schedule:
             return render(request, "payments/f2f_cash.html", _f2f_cash_context(
                 error=schedule_error,
@@ -369,6 +347,23 @@ def admin_paymongo_checkout_generate(request):
         messages.error(request, "Amount must be greater than zero")
         return redirect("admin_dashboard")
 
+    lease = None
+    if lease_id:
+        lease = Lease.objects.select_related("tenant").filter(pk=lease_id).first()
+    if not lease and tenant_id:
+        lease = (
+            Lease.objects.select_related("tenant")
+            .filter(tenant_id=tenant_id, status=Lease.STATUS_PENDING_PAYMENT)
+            .order_by("-created_at")
+            .first()
+        )
+
+    if not lease or not lease.tenant:
+        messages.error(request, "A tenant lease is required before generating a move-in checkout.")
+        return redirect("admin_dashboard")
+
+    tenant_user = lease.tenant
+
     base_url = request.build_absolute_uri("/")[:-1]
 
     # Set cancel URL to admin lease payment page if lease_id provided, else admin dashboard
@@ -378,14 +373,14 @@ def admin_paymongo_checkout_generate(request):
         cancel_url = base_url + reverse("admin_dashboard")
 
     metadata = build_paymongo_checkout_metadata(
-        user=request.user,
+        user=tenant_user,
         bill_ids="",
         payment_type="move_in",
         amount=amount,
         extra={
             "generated_by_admin": str(request.user.id),
-            "tenant_id": tenant_id or "",
-            "lease_id": lease_id or "",
+            "tenant_id": str(tenant_user.id),
+            "lease_id": str(lease.id),
         },
     )
 
@@ -403,7 +398,7 @@ def admin_paymongo_checkout_generate(request):
 
     # Create payment record with PENDING status
     payment = ManualPayment.objects.create(
-        user=request.user,
+        user=tenant_user,
         payment_type="move_in",
         payment_method="PAYMONGO",
         amount=amount,
@@ -415,7 +410,13 @@ def admin_paymongo_checkout_generate(request):
         metadata=metadata,
     )
 
-    logger.info(f"Admin {request.user.id} generated PayMongo checkout {payment.id} for amount {amount}")
+    logger.info(
+        "Admin %s generated PayMongo checkout %s for tenant %s amount %s",
+        request.user.id,
+        payment.id,
+        tenant_user.id,
+        amount,
+    )
 
     # Redirect to PayMongo for payment
     return redirect(result["checkout_url"])

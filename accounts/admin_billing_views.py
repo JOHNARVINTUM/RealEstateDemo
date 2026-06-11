@@ -16,6 +16,7 @@ from billing.services import (
     cleanup_duplicate_monthly_bills,
     create_and_send_invoice_for_paid_bill,
     duplicate_monthly_bill_cleanup_preview,
+    get_or_update_monthly_bill,
     repair_inflated_unpaid_late_fees,
     set_bill_status,
 )
@@ -30,6 +31,15 @@ def _bill_balance_amount(bill):
     if bill.status != "PAID":
         return bill.total_due
     return Decimal("0.00")
+
+
+def _refresh_bill_for_settlement_display(bill, today=None):
+    if bill.status == "PAID":
+        return bill
+    today = today or date.today()
+    if bill.billing_month.replace(day=1) > today.replace(day=1):
+        return bill
+    return get_or_update_monthly_bill(bill.lease, bill.billing_month, today=today)
 
 
 def _settle_bill_and_invoice(bill, paid_at):
@@ -50,11 +60,14 @@ def _prior_unpaid_bills_for_settlement(bill):
         .exclude(pk=bill.pk)
         .order_by("billing_month", "id")
     )
-    return [
-        candidate
-        for candidate in candidates
-        if _bill_balance_amount(candidate) > 0 and not _is_unpaid_duplicate_shell(candidate)
-    ]
+    bills = []
+    for candidate in candidates:
+        if _is_unpaid_duplicate_shell(candidate):
+            continue
+        refreshed = _refresh_bill_for_settlement_display(candidate)
+        if _bill_balance_amount(refreshed) > 0:
+            bills.append(refreshed)
+    return bills
 
 
 def _is_unpaid_duplicate_shell(bill):
@@ -109,6 +122,7 @@ def admin_mark_bill_paid(request, bill_id: int):
         MonthlyBill.objects.select_related("lease", "lease__tenant", "lease__tenant__tenantprofile", "lease__unit"),
         pk=bill_id,
     )
+    bill = _refresh_bill_for_settlement_display(bill)
     prior_unpaid_bills = _prior_unpaid_bills_for_settlement(bill)
     if request.method == "POST":
         action = request.POST.get("action", "")

@@ -625,6 +625,22 @@ class AdminBillingSettlementWarningTests(TestCase):
         self.assertEqual(self.current_bill.status, "UNPAID")
         self.assertEqual(self.old_bill.status, "UNPAID")
 
+    def test_settle_warning_refreshes_stale_prior_late_fee_before_display(self):
+        self.old_bill.interest = Decimal("0.00")
+        self.old_bill.total_due = Decimal("9800.00")
+        self.old_bill.save(update_fields=["interest", "total_due"])
+        self.client.force_login(self.admin)
+
+        response = self.client.post(reverse("admin_mark_bill_paid", args=[self.current_bill.id]))
+
+        self.old_bill.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "300.00")
+        self.assertContains(response, "10,300.00")
+        self.assertEqual(self.old_bill.interest, Decimal("300.00"))
+        self.assertEqual(self.old_bill.total_due, Decimal("10300.00"))
+        self.assertEqual(self.old_bill.status, "UNPAID")
+
     def test_settle_selected_action_is_not_allowed_when_prior_balance_exists(self):
         self.client.force_login(self.admin)
 

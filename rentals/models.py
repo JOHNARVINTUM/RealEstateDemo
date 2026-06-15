@@ -11,6 +11,11 @@ def get_supabase_storage():
     return SupabaseStorage()
 
 
+def get_user_files_storage():
+    from .storage import get_user_files_storage as storage_factory
+    return storage_factory()
+
+
 class Unit(models.Model):
     UNIT_TYPES = [
         ('STUDIO', 'Studio'),
@@ -401,7 +406,11 @@ class TenantAttachment(models.Model):
     
     tenant = models.ForeignKey('accounts.User', on_delete=models.CASCADE, limit_choices_to={'role': 'TENANT'})
     attachment_type = models.CharField(max_length=20, choices=ATTACHMENT_TYPES, default='OTHER')
-    file = models.FileField(upload_to='tenant_attachments/', help_text="Upload contract or valid ID")
+    file = models.FileField(
+        upload_to='tenant_attachments/',
+        storage=get_user_files_storage(),
+        help_text="Upload contract or valid ID",
+    )
     description = models.CharField(max_length=200, blank=True, help_text="Brief description of the attachment")
     uploaded_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, related_name='uploaded_attachments')
     uploaded_at = models.DateTimeField(auto_now_add=True)

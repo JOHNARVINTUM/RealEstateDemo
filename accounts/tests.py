@@ -53,17 +53,10 @@ class AccountProfileTests(TestCase):
         self.attachment = TenantAttachment.objects.create(
             tenant=self.tenant,
             attachment_type="VALID_ID",
-            file=SimpleUploadedFile("valid-id.txt", b"sample id", content_type="text/plain"),
+            file="tenant_attachments/valid-id.pdf",
             description="Government ID",
             uploaded_by=self.admin,
         )
-
-    def tearDown(self):
-        if self.attachment.file:
-            try:
-                self.attachment.file.delete(save=False)
-            except OSError:
-                pass
 
     def test_tenant_profile_page_shows_basic_info_lease_and_files(self):
         self.client.force_login(self.tenant)

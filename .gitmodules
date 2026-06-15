@@ -1,0 +1,3 @@
+[submodule ".codex/skills/open-design"]
+	path = .codex/skills/open-design
+	url = https://github.com/nexu-io/open-design

@@ -4,6 +4,7 @@ Uploads files to Supabase Storage instead of local filesystem.
 """
 import os
 import uuid
+import mimetypes
 from urllib.parse import urlparse
 from django.conf import settings
 from django.core.files.storage import Storage
@@ -17,6 +18,7 @@ class SupabaseStorage(Storage):
     - SUPABASE_URL=https://your-project.supabase.co
     - SUPABASE_KEY=your-service-role-key
     - SUPABASE_BUCKET=unit-images
+    - SUPABASE_USER_FILES_BUCKET=user-files
     """
     
     def __init__(self, bucket=None, **kwargs):
@@ -50,7 +52,9 @@ class SupabaseStorage(Storage):
         """Upload file to Supabase Storage."""
         # Generate unique filename to prevent collisions
         ext = os.path.splitext(name)[1]
-        unique_name = f"{uuid.uuid4().hex}{ext}"
+        folder = os.path.dirname(name).replace("\\", "/").strip("/")
+        unique_filename = f"{uuid.uuid4().hex}{ext}"
+        unique_name = f"{folder}/{unique_filename}" if folder else unique_filename
         
         # Read file content
         if hasattr(content, 'seek'):
@@ -59,11 +63,12 @@ class SupabaseStorage(Storage):
         
         # Upload to Supabase
         try:
+            content_type = getattr(content, 'content_type', None) or mimetypes.guess_type(name)[0] or 'application/octet-stream'
             result = self.client.storage.from_(self.bucket_name).upload(
                 path=unique_name,
                 file=file_bytes,
                 file_options={
-                    'content-type': getattr(content, 'content_type', 'application/octet-stream'),
+                    'content-type': content_type,
                     'upsert': 'false'
                 }
             )
@@ -74,11 +79,15 @@ class SupabaseStorage(Storage):
         except Exception as e:
             # If file exists, try with different UUID
             if "already exists" in str(e).lower():
-                unique_name = f"{uuid.uuid4().hex}{ext}"
+                unique_filename = f"{uuid.uuid4().hex}{ext}"
+                unique_name = f"{folder}/{unique_filename}" if folder else unique_filename
                 result = self.client.storage.from_(self.bucket_name).upload(
                     path=unique_name,
                     file=file_bytes,
-                    file_options={'upsert': 'false'}
+                    file_options={
+                        'content-type': content_type,
+                        'upsert': 'false'
+                    }
                 )
                 return unique_name
             raise
@@ -145,3 +154,8 @@ def upload_to_supabase(file_obj, bucket='unit-images', folder='units'):
     # Save and get URL
     saved_name = storage._save(filename, file_obj)
     return storage.url(saved_name)
+
+
+def get_user_files_storage():
+    """Storage backend for private tenant-uploaded files."""
+    return SupabaseStorage(bucket=os.environ.get('SUPABASE_USER_FILES_BUCKET', 'user-files'))

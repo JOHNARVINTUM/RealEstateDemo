@@ -58,12 +58,12 @@
           <!-- Status & Unit Info Badges -->
           <div class="absolute top-4 left-4 flex flex-wrap items-center gap-2">
             <span class="inline-block px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl
-              {% if pending_lease and not current_tenant %}bg-sky-600 text-white
-              {% elif unit.status == 'AVAILABLE' %}bg-emerald-600 text-white
-              {% elif unit.status == 'OCCUPIED' %}bg-blue-600 text-white
-              {% elif unit.status == 'MAINTENANCE' %}bg-amber-600 text-white
+              {% if display_status_label == 'Pending Payment' %}bg-sky-600 text-white
+              {% elif display_status_label == 'Available' %}bg-emerald-600 text-white
+              {% elif display_status_label == 'Occupied' %}bg-blue-600 text-white
+              {% elif display_status_label == 'Under Maintenance' %}bg-amber-600 text-white
               {% else %}bg-slate-800 text-white{% endif %}">
-              {% if pending_lease and not current_tenant %}Pending Payment{% else %}{{ unit.get_status_display }}{% endif %}
+              {{ display_status_label }}
             </span>
             
             <span class="inline-block px-4 py-2 bg-white/90 backdrop-blur-md text-slate-900 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl">

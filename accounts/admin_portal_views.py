@@ -320,10 +320,15 @@ def admin_units(request):
         to_attr='admin_display_leases',
     )
     
+    active_lease_exists = Lease.objects.filter(
+        unit_id=OuterRef('pk'),
+        status=Lease.STATUS_ACTIVE,
+        is_active=True,
+    )
+
     # Handle filter logic
     if status_filter == 'MAINTENANCE':
         # Show rooms marked maintenance plus inactive occupied rooms still tied to an active lease.
-        active_lease_exists = Lease.objects.filter(unit_id=OuterRef('pk'), is_active=True)
         units = Unit.objects.annotate(
             has_active_lease=Exists(active_lease_exists)
         ).filter(
@@ -331,9 +336,15 @@ def admin_units(request):
             Q(is_active=False, has_active_lease=True)
         ).prefetch_related(image_prefetch, active_lease_prefetch)
     else:
-        units = Unit.objects.filter(is_active=True).prefetch_related(image_prefetch, active_lease_prefetch)
+        units = Unit.objects.filter(is_active=True).annotate(
+            has_active_lease=Exists(active_lease_exists)
+        ).prefetch_related(image_prefetch, active_lease_prefetch)
         # Filter by status
-        if status_filter != 'all':
+        if status_filter == 'OCCUPIED':
+            units = units.filter(has_active_lease=True)
+        elif status_filter == 'AVAILABLE':
+            units = units.filter(has_active_lease=False).exclude(status='MAINTENANCE')
+        elif status_filter != 'all':
             units = units.filter(status=status_filter)
     
     # Search functionality
@@ -346,22 +357,21 @@ def admin_units(request):
     
     from django.core.paginator import Paginator
     
-    # Get statistics from all units in one aggregate query
-    unit_counts = Unit.objects.aggregate(
-        total_active=Count('id', filter=Q(is_active=True)),
-        available=Count('id', filter=Q(is_active=True, status='AVAILABLE')),
-        occupied=Count('id', filter=Q(is_active=True, status='OCCUPIED')),
-        maintenance=Count(
-            'id',
-            filter=Q(status='MAINTENANCE') | Q(is_active=False, lease__is_active=True),
-            distinct=True,
-        ),
+    active_unit_ids = Lease.objects.filter(
+        status=Lease.STATUS_ACTIVE,
+        is_active=True,
+    ).values("unit_id").distinct()
+    total_units_count = Unit.objects.filter(is_active=True).count()
+    occupied_units_count = active_unit_ids.count()
+    maintenance_units_count = Unit.objects.filter(
+        Q(status='MAINTENANCE') | Q(is_active=False, lease__is_active=True)
+    ).distinct().count()
+    available_units_count = (
+        Unit.objects.filter(is_active=True)
+        .exclude(id__in=active_unit_ids)
+        .exclude(status='MAINTENANCE')
+        .count()
     )
-    total_units_count = unit_counts['total_active']
-    available_units_count = unit_counts['available']
-    occupied_units_count = unit_counts['occupied']
-    # Being Fixed includes both MAINTENANCE status AND inactive units
-    maintenance_units_count = unit_counts['maintenance']
     
     # Pagination (6 per page)
     paginator = Paginator(units, 6)
@@ -396,6 +406,14 @@ def admin_units(request):
         unit.current_tenant = active_lease.tenant if active_lease else None
         unit.pending_lease = pending_lease
         unit.pending_tenant = pending_lease.tenant if pending_lease else None
+        if active_lease:
+            unit.display_status_label = "Occupied"
+        elif pending_lease:
+            unit.display_status_label = "Pending Payment"
+        elif unit.status == "MAINTENANCE" or not unit.is_active:
+            unit.display_status_label = "Under Maintenance"
+        else:
+            unit.display_status_label = "Available"
     
     return render(request, "admin_portal/units.html", {
         'page_obj': page_obj,
@@ -412,7 +430,13 @@ def admin_units(request):
 def admin_unit_detail(request, unit_id):
     """Admin portal: view unit details."""
     unit = get_object_or_404(_admin_visible_units(), id=unit_id)
-    current_tenant = unit.get_current_tenant()
+    active_lease = (
+        Lease.objects.filter(unit=unit, status=Lease.STATUS_ACTIVE, is_active=True)
+        .select_related('tenant__tenantprofile')
+        .order_by('-start_date', '-id')
+        .first()
+    )
+    current_tenant = active_lease.tenant if active_lease else None
     pending_lease = (
         Lease.objects.filter(unit=unit, status=Lease.STATUS_PENDING_PAYMENT)
         .select_related('tenant__tenantprofile')
@@ -420,12 +444,21 @@ def admin_unit_detail(request, unit_id):
         .first()
     )
     unit_images = unit.get_all_images()
+    if current_tenant:
+        display_status_label = "Occupied"
+    elif pending_lease:
+        display_status_label = "Pending Payment"
+    elif unit.status == "MAINTENANCE" or not unit.is_active:
+        display_status_label = "Under Maintenance"
+    else:
+        display_status_label = "Available"
     
     return render(request, "admin_portal/unit_detail.html", {
         'unit': unit,
         'current_tenant': current_tenant,
         'pending_lease': pending_lease,
         'pending_tenant': pending_lease.tenant if pending_lease else None,
+        'display_status_label': display_status_label,
         'unit_images': unit_images,
         'amenities_list': unit.get_amenities_list(),
     })
@@ -452,6 +485,7 @@ def admin_create_unit(request):
                         title=f"New Unit Created",
                         message=f"Unit {unit.number} ({unit.get_unit_type_display()}) has been created successfully!",
                         notification_type='UNIT',
+                        recipient_type="ADMIN",
                         related_unit=unit
                     )
                 except Exception as e:

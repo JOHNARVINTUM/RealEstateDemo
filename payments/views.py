@@ -11,6 +11,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_POST
 from django.contrib import messages
 
+from accounts.decorators import tenant_required
 from .models import ManualPayment
 from .paymongo import retrieve_checkout_session
 logger = logging.getLogger(__name__)
@@ -44,7 +45,7 @@ def _f2f_cash_context(**overrides):
     return context
 
 
-@login_required
+@tenant_required
 @require_http_methods(["GET", "POST"])
 def manual_gcash_payment(request):
     if request.method == "POST":
@@ -117,7 +118,7 @@ def manual_gcash_payment(request):
     })
 
 
-@login_required
+@tenant_required
 @require_http_methods(["GET", "POST"])
 def f2f_cash_payment(request):
     """Face-to-Face cash payment scheduling view."""
@@ -223,7 +224,7 @@ def f2f_cash_payment(request):
 # PayMongo Checkout Views
 # ─────────────────────────────────────────────────────────────────────────────
 
-@login_required
+@tenant_required
 @require_http_methods(["GET"])
 def paymongo_checkout(request):
     """

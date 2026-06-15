@@ -16,7 +16,7 @@ from django.views.decorators.http import require_GET
 from billing.models import MonthlyBill
 from maintenance.models import MaintenanceRequest
 from payments.models import ManualPayment
-from rentals.models import Lease, TenantAttachment, TenantProfile, Unit
+from rentals.models import Lease, Notification, TenantAttachment, TenantProfile, Unit
 
 from .admin_portal_forms import ComprehensiveTenantEditForm, TenantProfileForm
 from .admin_portal_views import admin_password_verified, admin_required, render_admin_password_confirm
@@ -256,6 +256,19 @@ def admin_create_tenant_profile(request):
 @admin_required
 def admin_edit_tenant(request, tenant_id: int):
     tenant = get_object_or_404(TenantProfile.objects.select_related("user"), pk=tenant_id)
+    attachments = list(
+        TenantAttachment.objects.filter(tenant=tenant.user)
+        .select_related("uploaded_by")
+        .order_by("-uploaded_at")
+    )
+    contract_attachment = next(
+        (attachment for attachment in attachments if attachment.attachment_type == "CONTRACT"),
+        None,
+    )
+    valid_id_attachment = next(
+        (attachment for attachment in attachments if attachment.attachment_type == "VALID_ID"),
+        None,
+    )
     form = ComprehensiveTenantEditForm(tenant, request.POST or None, request.FILES or None)
 
     if request.method == "POST" and form.is_valid():
@@ -274,13 +287,12 @@ def admin_edit_tenant(request, tenant_id: int):
                     changes_made.append("password")
 
                 if changes_made:
-                    from notifications.models import Notification
-
                     change_list = ", ".join(changes_made)
                     Notification.create_notification(
                         title="Tenant Account Updated",
                         message=f"Admin updated {updated_tenant.first_name} {updated_tenant.last_name}'s account: {change_list}",
                         notification_type="SYSTEM",
+                        recipient_type="ADMIN",
                         related_tenant=updated_tenant.user,
                     )
             except Exception as e:
@@ -299,6 +311,9 @@ def admin_edit_tenant(request, tenant_id: int):
             "title": "Edit Tenant",
             "form": form,
             "tenant": tenant,
+            "attachments": attachments,
+            "contract_attachment": contract_attachment,
+            "valid_id_attachment": valid_id_attachment,
             "back_url": reverse("admin_tenant_detail", args=[tenant.id]),
         },
     )
@@ -537,13 +552,16 @@ def admin_delete_attachment(request, attachment_id: int):
 
     if request.method == "POST":
         if not admin_password_verified(request):
+            error = None
+            if request.POST.get("admin_password"):
+                error = "Incorrect admin password. Attachment deletion was not completed."
             return render_admin_password_confirm(
                 request,
                 title="Delete Attachment",
                 message=f"Delete attachment '{attachment.filename}'? This cannot be undone.",
                 post_url=reverse("admin_delete_attachment", args=[attachment.id]),
                 back_url=reverse("admin_tenant_attachments", args=[tenant_id]),
-                error="Incorrect admin password. Attachment deletion was not completed.",
+                error=error,
             )
         if attachment.file:
             try:

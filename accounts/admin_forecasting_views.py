@@ -83,18 +83,6 @@ def _build_forecasting_context(request):
             y -= 1
         return datetime(y, m, 1).date()
 
-    def _moving_avg_forecast(series, window=3, steps=3):
-        if len(series) < window:
-            return [round(sum(series) / max(len(series), 1), 2)] * steps
-        tail = series[-window:]
-        forecasts = []
-        buf = list(tail)
-        for _ in range(steps):
-            val = round(sum(buf[-window:]) / window, 2)
-            forecasts.append(val)
-            buf.append(val)
-        return forecasts
-
     def _clean_series(series):
         s = list(series)
         while s and s[-1] == 0:
@@ -213,7 +201,6 @@ def _build_forecasting_context(request):
         hist_labels.append(md.strftime("%b %Y"))
 
     forecast_labels = _next_month_labels(3)
-    revenue_forecast = _moving_avg_forecast(revenue_series, window=3, steps=3)
 
     rev_sarima_fc, rev_sarima_lower, rev_sarima_upper = _sarima_forecast(
         revenue_series, order=(0, 1, 1), seasonal_order=(1, 1, 1, 12), steps=3
@@ -240,19 +227,25 @@ def _build_forecasting_context(request):
             return "down"
         return "stable"
 
-    rev_next = rev_sarima_fc[0] if rev_sarima_fc else revenue_forecast[0]
     rev_trend = _trend_direction(revenue_series)
-    if rev_trend == "up":
+    if not rev_sarima_fc:
+        revenue_insight = (
+            "SARIMA forecast is unavailable because there is not enough usable revenue history yet."
+        )
+    elif rev_trend == "up":
+        rev_next = rev_sarima_fc[0]
         revenue_insight = (
             f"Revenue is trending upward. Next month's forecast is ₱{rev_next:,.0f}, "
             "which is higher than recent months. Collection efforts are paying off."
         )
     elif rev_trend == "down":
+        rev_next = rev_sarima_fc[0]
         revenue_insight = (
             f"Revenue has been declining. Next month's estimate is ₱{rev_next:,.0f}. "
             "Consider following up on overdue payments."
         )
     else:
+        rev_next = rev_sarima_fc[0]
         revenue_insight = (
             f"Revenue is holding steady. Expect approximately ₱{rev_next:,.0f} "
             "next month based on historical patterns."
@@ -262,7 +255,7 @@ def _build_forecasting_context(request):
         "hist_labels": hist_labels_last12,
         "hist_revenue": hist_revenue_last12,
         "forecast_labels": forecast_labels,
-        "revenue_forecast": revenue_forecast,
+        "revenue_forecast": [],
         "rev_sarima_fc": rev_sarima_fc,
         "rev_sarima_lower": rev_sarima_lower,
         "rev_sarima_upper": rev_sarima_upper,

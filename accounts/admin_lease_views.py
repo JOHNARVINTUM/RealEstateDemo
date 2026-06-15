@@ -80,6 +80,7 @@ def admin_create_lease(request):
                             f"• First Rent Due: {lease.first_rent_due_date.strftime('%B %d, %Y')}"
                         ),
                         notification_type="LEASE",
+                        recipient_type="ADMIN",
                         related_tenant=lease.tenant,
                         related_unit=lease.unit,
                     )
@@ -111,11 +112,11 @@ def admin_create_lease(request):
                         "You can access your tenant portal to view bills, make payments, and request maintenance.\n\n"
                         "Welcome aboard! We're excited to have you as part of our community!"
                     )
-                    Notification.create_notification(
+                    Notification.create_tenant_notification(
                         title=f"Welcome to Your New Unit {lease.unit.number}!",
                         message=welcome_message,
                         notification_type="SYSTEM",
-                        related_tenant=lease.tenant,
+                        tenant_user=lease.tenant,
                         related_unit=lease.unit,
                     )
                 except Exception as exc:

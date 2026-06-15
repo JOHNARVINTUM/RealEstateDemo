@@ -16,6 +16,10 @@ from rentals.models import Notification
 from .admin_portal_views import admin_required, admin_password_verified, render_admin_password_confirm
 
 
+def _admin_notification_scope(user):
+    return Q(recipient_type="ADMIN") | Q(recipient_type="SPECIFIC_USER", user=user)
+
+
 @lru_cache(maxsize=1)
 def notification_has_read_at_column() -> bool:
     """Return True when the notifications table already has the read_at column."""
@@ -90,7 +94,7 @@ def admin_notifications(request):
     """Admin portal: view admin notifications only."""
     purge_read_admin_notifications()
     base_notifications = Notification.objects.filter(
-        recipient_type__in=["ADMIN", "SPECIFIC_USER"]
+        _admin_notification_scope(request.user)
     ).select_related("related_tenant__tenantprofile", "related_unit")
     notifications = base_notifications
 
@@ -152,7 +156,10 @@ def admin_notifications(request):
 @admin_required
 def admin_mark_notification_read(request, notification_id):
     """Admin portal: mark notification as read."""
-    notification = get_object_or_404(Notification, id=notification_id)
+    notification = get_object_or_404(
+        Notification.objects.filter(_admin_notification_scope(request.user)),
+        id=notification_id,
+    )
     notification.is_read = True
     if notification_has_read_at_column():
         notification.read_at = timezone.now()
@@ -170,7 +177,7 @@ def admin_mark_notification_read(request, notification_id):
 def admin_mark_all_notifications_read(request):
     """Admin portal: mark all notifications as read."""
     unread_notifications = Notification.objects.filter(
-        recipient_type__in=["ADMIN", "SPECIFIC_USER"],
+        _admin_notification_scope(request.user),
         is_read=False,
     )
     if notification_has_read_at_column():
@@ -191,7 +198,7 @@ def admin_delete_all_read_notifications(request):
         return redirect("admin_notifications")
 
     deleted_count, _ = Notification.objects.filter(
-        recipient_type__in=["ADMIN", "SPECIFIC_USER"],
+        _admin_notification_scope(request.user),
         is_read=True,
     ).delete()
     messages.success(request, f"Deleted {deleted_count} read notification{'s' if deleted_count != 1 else ''}.")
@@ -201,7 +208,10 @@ def admin_delete_all_read_notifications(request):
 @admin_required
 def admin_delete_notification(request, notification_id):
     """Admin portal: delete notification."""
-    notification = get_object_or_404(Notification, id=notification_id)
+    notification = get_object_or_404(
+        Notification.objects.filter(_admin_notification_scope(request.user)),
+        id=notification_id,
+    )
 
     if request.method == "POST":
         if not admin_password_verified(request):

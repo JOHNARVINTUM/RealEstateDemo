@@ -65,12 +65,9 @@
 
               <div class="mt-4 flex items-center justify-between gap-3">
                 <p class="text-[11px] font-bold uppercase tracking-widest text-slate-400">Uploaded {{ attachment.uploaded_at|date:"M d, Y" }}</p>
-                <form method="post" action="{% url 'admin_delete_attachment' attachment.id %}">
-                  {% csrf_token %}
-                  <button type="submit" class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-black text-rose-700 hover:bg-rose-100">
-                    Delete
-                  </button>
-                </form>
+                <a href="{% url 'admin_delete_attachment' attachment.id %}" class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-black text-rose-700 hover:bg-rose-100">
+                  Delete
+                </a>
               </div>
             </article>
           {% endfor %}

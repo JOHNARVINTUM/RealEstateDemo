@@ -25,6 +25,7 @@ from billing.services import (
 )
 from payments.models import ManualPayment
 from payments.views import manual_gcash_payment
+from accounts.decorators import tenant_required
 
 from .models import Lease, Notification, TenantProfile, Unit
 
@@ -700,7 +701,7 @@ def _payment_preview_context(request, lease, months_to_pay):
     }
 
 
-@login_required
+@tenant_required
 def tenant_dashboard(request):
     """
     Main landing page for tenants. Synchronizes all billing and displays
@@ -728,7 +729,7 @@ def tenant_dashboard(request):
     return render(request, "rentals/tenant_dashboard.html", context)
 
 
-@login_required
+@tenant_required
 def tenant_billing(request):
     """
     Detailed billing statement showing breakdown of rent, water utility, and penalties.
@@ -775,7 +776,7 @@ def tenant_billing(request):
     })
 
 
-@login_required
+@tenant_required
 def tenant_pay_advance(request):
     """
     View to handle the Make Payment page.
@@ -814,7 +815,7 @@ def tenant_pay_advance(request):
     return render(request, "billing/tenant_pay_advance.html", context)
 
 
-@login_required
+@tenant_required
 def mark_unit_welcome_seen(request):
     """Mark the unit welcome popup as seen for the current tenant"""
     if request.method == "POST":
@@ -835,7 +836,7 @@ def mark_unit_welcome_seen(request):
     return JsonResponse({"success": False, "message": "Method not allowed"})
 
 
-@login_required
+@tenant_required
 def tenant_notifications(request):
     """
     Display all notifications for the current tenant.
@@ -878,7 +879,7 @@ def notification_has_read_at_column() -> bool:
     return any(column.name == "read_at" for column in columns)
 
 
-@login_required
+@tenant_required
 def mark_notification_read(request, notification_id):
     """
     Mark a specific notification as read.
@@ -910,7 +911,7 @@ def mark_notification_read(request, notification_id):
         return redirect('tenant_notifications')
 
 
-@login_required
+@tenant_required
 def mark_all_notifications_read(request):
     """Mark all tenant notifications as read for the current user."""
     if request.method != "POST":

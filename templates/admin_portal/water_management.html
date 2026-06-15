@@ -69,13 +69,20 @@
     <div class="lg:col-span-4 space-y-6">
       
       <!-- Water Rate Settings Box -->
-      <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-4">
-        <div class="pb-3 border-b border-slate-100">
-          <h2 class="text-base font-extrabold text-slate-900 tracking-tight">Water Price</h2>
-          <p class="text-xs text-slate-600 mt-0.5">Set the price for water usage</p>
-        </div>
+      <details class="bg-white border border-slate-200 rounded-xl shadow-xs group">
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 p-6">
+          <div>
+            <h2 class="text-base font-extrabold text-slate-900 tracking-tight">Water Price</h2>
+            <p class="text-xs text-slate-600 mt-0.5">
+              Current: {% if current_rate %}&#8369;{{ current_rate }} / m3{% else %}Unassigned{% endif %}
+              · Pump &#8369;{{ shared_pump_total|default:'0.00' }} · VAT {{ vat_percent|default:'12.00' }}%
+            </p>
+          </div>
+          <span class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-700 group-open:hidden">Edit</span>
+          <span class="hidden rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-700 group-open:inline-block">Close</span>
+        </summary>
 
-        <form method="post" action="{% url 'admin_water_rate' %}" class="space-y-4">
+        <form method="post" action="{% url 'admin_water_rate' %}" class="space-y-4 border-t border-slate-100 p-6">
           {% csrf_token %}
           <input type="hidden" name="settings_month" value="{{ year }}-{{ month|stringformat:'02d' }}-01">
           <div>
@@ -116,7 +123,7 @@
             Save Price
           </button>
         </form>
-      </div>
+      </details>
 
       <!-- Scope Timeline Selection Box -->
       <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-4">

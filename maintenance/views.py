@@ -2,6 +2,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 import logging
 
+from accounts.decorators import tenant_required
 from rentals.models import Lease, Notification
 from .forms import MaintenanceRequestForm
 from .models import MaintenanceRequest
@@ -9,7 +10,7 @@ from .models import MaintenanceRequest
 logger = logging.getLogger(__name__)
 
 
-@login_required
+@tenant_required
 def report_issue(request):
     user = request.user
     lease = Lease.objects.filter(tenant=user, is_active=True).select_related("unit").first()
@@ -71,7 +72,7 @@ def report_issue(request):
     return render(request, "maintenance/report_issue.html", context)
 
 
-@login_required
+@tenant_required
 def maintenance_list(request):
     user = request.user
     qs = MaintenanceRequest.objects.filter(tenant=user).order_by("-created_at")

@@ -200,9 +200,8 @@
 
   function renderSummary(data) {
     var sarima = data.rev_sarima_fc && data.rev_sarima_fc.length;
-    var next = sarima ? data.rev_sarima_fc[0] : data.revenue_forecast[0];
-    document.getElementById("nextRevenueValue").textContent = peso(next);
-    document.getElementById("nextRevenueLabel").textContent = sarima ? "SARIMA forecast" : "Forecast";
+    document.getElementById("nextRevenueValue").textContent = sarima ? peso(data.rev_sarima_fc[0]) : "Unavailable";
+    document.getElementById("nextRevenueLabel").textContent = sarima ? "SARIMA forecast" : "SARIMA unavailable";
     document.getElementById("nextRevenueCi").textContent = sarima
       ? "CI " + peso(data.rev_sarima_lower[0]) + " - " + peso(data.rev_sarima_upper[0])
       : "";
@@ -224,7 +223,6 @@
     var rawHistLabels = forecastData.hist_labels || [];
     var rawHistRevenue = forecastData.hist_revenue || [];
     var fcLabels = forecastData.forecast_labels || [];
-    var fcRevenue = forecastData.revenue_forecast || [];
     var sarFcRev = forecastData.rev_sarima_fc || [];
     var sarLowRev = forecastData.rev_sarima_lower || [];
     var sarUpRev = forecastData.rev_sarima_upper || [];
@@ -233,8 +231,7 @@
     var histLabels = rawHistLabels.slice(filterIdx);
     var histRevenue = rawHistRevenue.slice(filterIdx);
     var labels = histLabels.concat(fcLabels);
-    var histPadded = histRevenue.concat(Array(fcRevenue.length).fill(null));
-    var maPadded = nullPad(fcRevenue, labels.length);
+    var histPadded = histRevenue.concat(Array(fcLabels.length).fill(null));
     var datasets = [
       {
         label: "Actual Revenue",
@@ -245,15 +242,6 @@
         pointRadius: 4,
         tension: 0.25,
         fill: true
-      },
-      {
-        label: sarFcRev.length ? "Moving Avg Fallback" : "Moving Avg Forecast",
-        data: maPadded,
-        borderColor: sarFcRev.length ? "rgba(148, 163, 184, 0.65)" : "#6366f1",
-        borderDash: [5, 5],
-        borderWidth: 2,
-        pointRadius: 4,
-        tension: 0.25
       }
     ];
 

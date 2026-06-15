@@ -951,6 +951,59 @@ class AdminNotificationBehaviorTests(TestCase):
         self.assertEqual(target_url, reverse("admin_payment_detail", args=[cash_payment.id]))
         self.assertEqual(notification.target_label, "Approve Payment")
 
+    def test_admin_notifications_exclude_tenant_specific_notifications(self):
+        Notification.create_tenant_notification(
+            title="Welcome to Your New Unit 102!",
+            message="Tenant-only welcome details.",
+            notification_type="SYSTEM",
+            tenant_user=self.tenant,
+        )
+        Notification.objects.create(
+            title="New Lease Created",
+            message="Admin lease audit.",
+            notification_type="LEASE",
+            recipient_type="ADMIN",
+            related_tenant=self.tenant,
+        )
+        self.client.force_login(self.admin)
+
+        response = self.client.get(reverse("admin_notifications"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "New Lease Created")
+        self.assertNotContains(response, "Welcome to Your New Unit 102!")
+
+
+class TenantPortalBoundaryTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            email="boundary-admin@example.com",
+            username="boundaryadmin",
+            password="password123",
+            role=User.Role.ADMIN,
+        )
+
+    def test_admin_is_redirected_away_from_tenant_dashboard(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.get(reverse("tenant_dashboard"))
+
+        self.assertRedirects(response, reverse("admin_dashboard"))
+
+    def test_admin_is_redirected_away_from_tenant_maintenance(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.get(reverse("maintenance_list"))
+
+        self.assertRedirects(response, reverse("admin_dashboard"))
+
+    def test_admin_is_redirected_away_from_tenant_payment_checkout(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.get(reverse("paymongo_checkout"))
+
+        self.assertRedirects(response, reverse("admin_dashboard"))
+
 
 class AdminForecastingRevenueTests(TestCase):
     def setUp(self):

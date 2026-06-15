@@ -3,7 +3,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from rentals.models import TenantProfile, Lease, Unit, UnitImage, TenantAttachment
+from rentals.models import TenantProfile, Lease, Unit, UnitImage, TenantAttachment, validate_tenant_attachment_upload
 from rentals.services import generate_tenant_password, send_tenant_credentials_email
 from announcements.models import Announcement
 from billing.models import MonthlyBill
@@ -29,7 +29,7 @@ class TenantProfileForm(forms.ModelForm):
     contract_file = forms.FileField(
         required=False,
         label="Contract Document",
-        help_text="Upload contract document (PDF, JPG, PNG - max 10MB)"
+        help_text="Accepted formats: PDF contracts, PNG, JPG/JPEG, HEIC/HEIF iPhone photos. Max 10MB."
     )
     contract_description = forms.CharField(
         required=False,
@@ -40,7 +40,7 @@ class TenantProfileForm(forms.ModelForm):
     valid_id_file = forms.FileField(
         required=False,
         label="Valid ID",
-        help_text="Upload valid ID (PDF, JPG, PNG - max 10MB)"
+        help_text="Accepted formats: PNG, JPG/JPEG, HEIC/HEIF iPhone photos, or PDF. Max 10MB."
     )
     valid_id_description = forms.CharField(
         required=False,
@@ -55,31 +55,11 @@ class TenantProfileForm(forms.ModelForm):
 
     def clean_contract_file(self):
         contract_file = self.cleaned_data.get('contract_file')
-        if contract_file:
-            # Check file size (max 10MB)
-            if contract_file.size > 10 * 1024 * 1024:
-                raise ValidationError("Contract file size must be less than 10MB.")
-            
-            # Check file type
-            valid_extensions = ['.pdf', '.jpg', '.jpeg', '.png']
-            file_extension = contract_file.name.split('.')[-1].lower()
-            if f'.{file_extension}' not in valid_extensions:
-                raise ValidationError("Invalid file type. Please upload PDF, JPG, or PNG files.")
-        return contract_file
+        return validate_tenant_attachment_upload(contract_file, label="Contract file")
     
     def clean_valid_id_file(self):
         valid_id_file = self.cleaned_data.get('valid_id_file')
-        if valid_id_file:
-            # Check file size (max 10MB)
-            if valid_id_file.size > 10 * 1024 * 1024:
-                raise ValidationError("Valid ID file size must be less than 10MB.")
-            
-            # Check file type
-            valid_extensions = ['.pdf', '.jpg', '.jpeg', '.png']
-            file_extension = valid_id_file.name.split('.')[-1].lower()
-            if f'.{file_extension}' not in valid_extensions:
-                raise ValidationError("Invalid file type. Please upload PDF, JPG, or PNG files.")
-        return valid_id_file
+        return validate_tenant_attachment_upload(valid_id_file, label="Valid ID file")
 
     def clean(self):
         cleaned = super().clean()
@@ -257,7 +237,7 @@ class ComprehensiveTenantEditForm(forms.Form):
     contract_file = forms.FileField(
         required=False,
         label="Contract Document",
-        help_text="Upload contract document (PDF, JPG, PNG - max 10MB)"
+        help_text="Accepted formats: PDF contracts, PNG, JPG/JPEG, HEIC/HEIF iPhone photos. Max 10MB."
     )
     contract_description = forms.CharField(
         required=False,
@@ -268,7 +248,7 @@ class ComprehensiveTenantEditForm(forms.Form):
     valid_id_file = forms.FileField(
         required=False,
         label="Valid ID",
-        help_text="Upload valid ID (PDF, JPG, PNG - max 10MB)"
+        help_text="Accepted formats: PNG, JPG/JPEG, HEIC/HEIF iPhone photos, or PDF. Max 10MB."
     )
     valid_id_description = forms.CharField(
         required=False,
@@ -313,31 +293,11 @@ class ComprehensiveTenantEditForm(forms.Form):
     
     def clean_contract_file(self):
         contract_file = self.cleaned_data.get('contract_file')
-        if contract_file:
-            # Check file size (max 10MB)
-            if contract_file.size > 10 * 1024 * 1024:
-                raise ValidationError("Contract file size must be less than 10MB.")
-            
-            # Check file type
-            valid_extensions = ['.pdf', '.jpg', '.jpeg', '.png']
-            file_extension = contract_file.name.split('.')[-1].lower()
-            if f'.{file_extension}' not in valid_extensions:
-                raise ValidationError("Invalid file type. Please upload PDF, JPG, or PNG files.")
-        return contract_file
+        return validate_tenant_attachment_upload(contract_file, label="Contract file")
     
     def clean_valid_id_file(self):
         valid_id_file = self.cleaned_data.get('valid_id_file')
-        if valid_id_file:
-            # Check file size (max 10MB)
-            if valid_id_file.size > 10 * 1024 * 1024:
-                raise ValidationError("Valid ID file size must be less than 10MB.")
-            
-            # Check file type
-            valid_extensions = ['.pdf', '.jpg', '.jpeg', '.png']
-            file_extension = valid_id_file.name.split('.')[-1].lower()
-            if f'.{file_extension}' not in valid_extensions:
-                raise ValidationError("Invalid file type. Please upload PDF, JPG, or PNG files.")
-        return valid_id_file
+        return validate_tenant_attachment_upload(valid_id_file, label="Valid ID file")
 
     def clean(self):
         cleaned_data = super().clean()

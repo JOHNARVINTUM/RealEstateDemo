@@ -35,6 +35,10 @@ def _admin_payment_queryset():
         user__role="TENANT",
         user__is_staff=False,
         user__is_superuser=False,
+    ).exclude(
+        payment_method="PAYMONGO",
+        status="PENDING",
+        paymongo_payment_id="",
     )
 
 

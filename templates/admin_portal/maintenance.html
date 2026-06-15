@@ -141,7 +141,7 @@
   <!-- Table Card -->
   <div id="maintenance-table" class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
     <div class="overflow-x-auto custom-scrollbar">
-      <table class="w-full text-left border-collapse min-w-[1000px]">
+      <table class="w-full text-left border-collapse min-w-[1120px]">
         <thead>
           <tr class="bg-slate-50 border-b border-slate-200">
             <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Tenant & Unit</th>
@@ -149,6 +149,7 @@
             <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-center">Priority Level</th>
             <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-center">NLP Suggest</th>
             <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-center">Status</th>
+            <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Requested Visit</th>
             <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Problem</th>
             <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Solution</th>
             <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-right">Action</th>
@@ -240,6 +241,23 @@
               </span>
             </td>
 
+            <!-- Requested Visit -->
+            <td class="px-6 py-5">
+              {% if r.admin_scheduled_at %}
+                <div class="text-sm">
+                  <span class="text-slate-900 font-black block">{{ r.admin_scheduled_at|date:"M d, Y" }}</span>
+                  <span class="text-[11px] text-slate-500 block font-bold mt-0.5">{{ r.admin_scheduled_at|date:"h:i A" }} &bull; {{ r.get_schedule_decision_display }}</span>
+                </div>
+              {% elif r.requested_schedule_at %}
+                <div class="text-sm">
+                  <span class="text-slate-900 font-black block">{{ r.requested_schedule_at|date:"M d, Y" }}</span>
+                  <span class="text-[11px] text-amber-600 block font-bold mt-0.5">{{ r.requested_schedule_at|date:"h:i A" }} &bull; Pending review</span>
+                </div>
+              {% else %}
+                <span class="text-sm text-slate-400 italic font-bold">No preference</span>
+              {% endif %}
+            </td>
+
             <!-- Problem -->
             <td class="px-6 py-5">
               <div class="text-sm text-slate-700 leading-relaxed font-bold max-w-sm">
@@ -263,14 +281,14 @@
             <td class="px-6 py-5 text-right">
               <a href="{% url 'admin_update_maintenance' r.id %}" 
                  class="inline-flex px-5 py-2.5 bg-white border-2 border-slate-200 text-slate-900 hover:bg-slate-900 hover:text-white hover:border-slate-900 rounded-xl font-black text-sm transition-all shadow-xs">
-                Update
+                View
               </a>
             </td>
 
           </tr>
           {% empty %}
           <tr>
-            <td colspan="8" class="py-24 text-center bg-white">
+            <td colspan="9" class="py-24 text-center bg-white">
               <div class="max-w-xs mx-auto">
                 <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100">
                   <svg class="w-8 h-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -1,11 +1,12 @@
 from datetime import date
 from decimal import Decimal
 import logging
+import mimetypes
 
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Count, Exists, OuterRef, Q
-from django.http import HttpResponse
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -514,15 +515,15 @@ def admin_view_attachment(request, attachment_id: int):
     attachment = get_object_or_404(TenantAttachment, pk=attachment_id)
 
     if not attachment.file:
-        return HttpResponse("File not found", status=404)
+        raise Http404("Attachment file is not available.")
 
-    response = HttpResponse(attachment.file.read(), content_type="application/octet-stream")
+    content_type = mimetypes.guess_type(attachment.filename)[0] or "application/octet-stream"
+    try:
+        attachment.file.open("rb")
+    except (FileNotFoundError, OSError):
+        raise Http404("Attachment file is not available.")
 
-    if attachment.is_image:
-        response["Content-Type"] = f"image/{attachment.file_extension[1:]}"
-    elif attachment.is_pdf:
-        response["Content-Type"] = "application/pdf"
-
+    response = FileResponse(attachment.file, content_type=content_type)
     response["Content-Disposition"] = f'inline; filename="{attachment.filename}"'
 
     return response
@@ -545,7 +546,10 @@ def admin_delete_attachment(request, attachment_id: int):
                 error="Incorrect admin password. Attachment deletion was not completed.",
             )
         if attachment.file:
-            attachment.file.delete()
+            try:
+                attachment.file.delete(save=False)
+            except (FileNotFoundError, OSError):
+                logger.warning("Attachment file missing during delete: %s", attachment.file.name)
         attachment.delete()
         messages.success(request, f"Attachment '{attachment.filename}' has been deleted successfully.")
         return redirect("admin_tenant_attachments", tenant_id=tenant_id)

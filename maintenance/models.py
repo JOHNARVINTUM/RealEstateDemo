@@ -18,6 +18,13 @@ class MaintenanceRequest(models.Model):
         ("CLOSED", "Closed"),
     ]
 
+    SCHEDULE_DECISION_CHOICES = [
+        ("PENDING", "Pending Admin Review"),
+        ("APPROVED", "Approved"),
+        ("RESCHEDULED", "Rescheduled"),
+        ("DECLINED", "Declined"),
+    ]
+
     # Admin-only (tenant does NOT set this)
     PRIORITY_CHOICES = [
         ("LOW", "Low"),
@@ -33,6 +40,22 @@ class MaintenanceRequest(models.Model):
     title = models.CharField(max_length=120)
     description = models.TextField()
     photo = models.ImageField(upload_to="maintenance_photos/", null=True, blank=True)
+    requested_schedule_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Tenant's preferred date and time for maintenance visit.",
+    )
+    schedule_decision = models.CharField(
+        max_length=20,
+        choices=SCHEDULE_DECISION_CHOICES,
+        default="PENDING",
+    )
+    admin_scheduled_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Admin-approved or rescheduled maintenance visit time.",
+    )
+    schedule_admin_note = models.TextField(blank=True, default="")
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="OPEN")
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default="MEDIUM")

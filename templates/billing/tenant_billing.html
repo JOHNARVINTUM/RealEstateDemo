@@ -5,281 +5,227 @@
 
 {% block tenant_content %}
 
-  <div id="tenantBillingSkeleton" class="space-y-8">
-    <div class="tenant-skeleton p-8 sm:p-10 space-y-5">
-      <div class="tenant-skeleton-bar h-4 w-28"></div>
-      <div class="tenant-skeleton-bar h-12 w-64 max-w-full"></div>
-      <div class="tenant-skeleton-bar h-6 w-80 max-w-full"></div>
-    </div>
-    <div class="tenant-skeleton p-8">
-      <div class="grid grid-cols-1 min-[800px]:grid-cols-3 gap-6">
-        {% for _ in "123" %}
-        <div class="space-y-4">
-          <div class="tenant-skeleton-bar h-4 w-24"></div>
-          <div class="tenant-skeleton-bar h-14 w-full rounded-2xl"></div>
-        </div>
-        {% endfor %}
-      </div>
-      <div class="tenant-skeleton-bar h-12 w-32 rounded-2xl mt-8"></div>
-    </div>
-    <div class="tenant-skeleton p-8 space-y-5">
-      <div class="tenant-skeleton-bar h-6 w-52"></div>
-      <div class="tenant-skeleton-bar h-4 w-72 max-w-full"></div>
-      <div class="space-y-3">
-        <div class="tenant-skeleton-bar h-20 w-full rounded-3xl"></div>
-        <div class="tenant-skeleton-bar h-20 w-full rounded-3xl"></div>
-        <div class="tenant-skeleton-bar h-20 w-full rounded-3xl"></div>
-      </div>
-    </div>
+<div id="tenantBillingSkeleton" class="space-y-6">
+  <div class="tenant-skeleton p-8 space-y-5">
+    <div class="tenant-skeleton-bar h-4 w-28"></div>
+    <div class="tenant-skeleton-bar h-12 w-64 max-w-full"></div>
+    <div class="tenant-skeleton-bar h-5 w-80 max-w-full"></div>
   </div>
+  <div class="grid gap-5 lg:grid-cols-3">
+    {% for _ in "123" %}
+      <div class="tenant-skeleton p-6 space-y-4">
+        <div class="tenant-skeleton-bar h-4 w-24"></div>
+        <div class="tenant-skeleton-bar h-10 w-36"></div>
+      </div>
+    {% endfor %}
+  </div>
+  <div class="tenant-skeleton p-8 space-y-4">
+    <div class="tenant-skeleton-bar h-6 w-52"></div>
+    <div class="tenant-skeleton-bar h-20 w-full rounded-3xl"></div>
+    <div class="tenant-skeleton-bar h-20 w-full rounded-3xl"></div>
+  </div>
+</div>
 
-  <div data-page-content class="tenant-page-content-hidden transition-opacity duration-300">
-
-  <!-- Page Header -->
-  <div class="mb-10 flex flex-col min-[800px]:flex-row min-[800px]:items-center min-[800px]:justify-between gap-6 border-b-2 border-slate-100 pb-8">
+<div data-page-content class="tenant-page-content-hidden tenant-billing-shell transition-opacity duration-300">
+  <header class="tenant-billing-hero">
     <div>
-      <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">Bills</h1>
-      <p class="text-lg text-slate-500 mt-2 font-medium">Check your bills and past payments here.</p>
+      <span class="text-xs font-black uppercase tracking-widest text-blue-700">Tenant Billing</span>
+      <h1 class="mt-3 text-4xl font-black tracking-tight text-slate-950 sm:text-6xl">Bills</h1>
+      <p class="mt-3 max-w-2xl text-base font-bold leading-7 text-slate-600">
+        Review monthly charges, payment status, and approved payment history in one place.
+      </p>
     </div>
-    <!-- Current Month Indicator -->
-    <div class="bg-white border-2 border-slate-100 px-6 py-4 rounded-2xl shadow-sm w-fit self-end text-right min-[800px]:text-left min-[800px]:self-auto">
-      <span class="text-xs font-black text-slate-400 block uppercase tracking-widest mb-1">Current Month</span>
-      <span class="text-xl font-black text-slate-800">{% now "F Y" %}</span>
+    <div class="tenant-month-card">
+      <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Current Month</span>
+      <strong>{% now "F Y" %}</strong>
     </div>
-  </div>
+  </header>
 
-  <!-- Billing Filters -->
-  <div class="tenant-card mb-10 p-8">
-    <form method="get" class="flex flex-wrap gap-6 items-end">
-      <div class="flex-1 min-w-[220px]">
-        <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3">Contract Month</label>
-        <select name="billing_month" class="w-full pl-6 pr-12 py-4 border-2 border-slate-100 rounded-2xl focus:border-slate-900 transition-all text-lg font-black text-slate-900 bg-white">
-          <option value="">All Contract Months</option>
+  <section class="tenant-billing-filter">
+    <form method="get" class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+      <div>
+        <label class="block text-xs font-black uppercase tracking-widest text-slate-400">Contract Month</label>
+        <select name="billing_month" class="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-5 py-4 text-base font-black text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+          <option value="">All contract months</option>
           {% for month_value, month_label in contract_month_choices %}
             <option value="{{ month_value }}" {% if billing_month_filter == month_value %}selected{% endif %}>{{ month_label }}</option>
           {% endfor %}
         </select>
       </div>
-      
-      <div class="flex gap-4 ml-auto w-full sm:w-auto justify-end">
-        <button type="submit" class="px-8 py-4 bg-slate-900 hover:bg-slate-800 text-white font-black rounded-2xl transition-all text-lg shadow-lg active:scale-95">
-          Search
+      <div class="flex flex-col gap-3 sm:flex-row">
+        <button type="submit" class="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-7 py-4 text-sm font-black text-white shadow-lg shadow-slate-200 transition hover:bg-blue-700 active:scale-95">
+          Apply Filter
         </button>
         {% if billing_month_filter %}
-          <a href="{% url 'tenant_billing' %}" class="px-6 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-2xl transition-all text-lg inline-flex items-center justify-center">
+          <a href="{% url 'tenant_billing' %}" class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-4 text-sm font-black text-slate-700 transition hover:bg-slate-50">
             Reset
           </a>
         {% endif %}
       </div>
     </form>
-  </div>
+  </section>
 
-  <!-- Current Bill Summary -->
-  <div class="bg-white border-2 border-slate-100 rounded-[2rem] shadow-sm overflow-hidden mb-10 p-2">
-    <div class="p-6 sm:p-8 flex flex-col min-[800px]:flex-row min-[800px]:items-center min-[800px]:justify-between gap-6">
-      <div class="min-w-0">
-        <div class="flex items-center gap-3 mb-2">
-          <span class="text-xs font-black text-slate-400 uppercase tracking-widest">Current Bill</span>
-          {% if current_bill and current_bill.status == "PAID" %}
-            <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-100 text-emerald-700">Paid</span>
-          {% elif current_bill and current_bill.status == "PARTIALLY_PAID" %}
-            <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-100 text-amber-700">Partial</span>
-          {% else %}
-            <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-rose-100 text-rose-700">Open</span>
-          {% endif %}
-        </div>
-        <h2 class="text-2xl font-black text-slate-900 truncate">
-          {% if current_bill %}{{ current_bill.billing_month|date:"F Y" }}{% else %}-{% endif %}
-        </h2>
-        <p class="text-sm sm:text-base text-slate-500 font-medium mt-1">
-          Due by {% if current_bill and current_bill.due_date %}{{ current_bill.due_date|date:"F j, Y" }}{% else %}-{% endif %}
-        </p>
-      </div>
-
-      <div class="flex items-center gap-4">
-        <div class="text-right">
-          <span class="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1">Total</span>
-          <span class="text-3xl font-black text-slate-900">
-            ₱{% if current_bill %}{{ current_bill.total_due|default:"0.00"|floatformat:2|intcomma }}{% else %}0.00{% endif %}
-          </span>
-        </div>
-        {% if has_pending_payment %}
-          <div class="px-5 py-3 bg-emerald-100 border-2 border-emerald-200 text-emerald-800 font-black text-sm rounded-2xl text-center">
-            Waiting for approval
-          </div>
+  <section class="tenant-current-bill {% if current_bill and current_bill.total_balance > 0 %}is-open{% else %}is-paid{% endif %}">
+    <div class="tenant-current-main">
+      <div class="flex flex-wrap items-center gap-3">
+        <span class="text-xs font-black uppercase tracking-widest {% if current_bill and current_bill.total_balance > 0 %}text-rose-700{% else %}text-emerald-700{% endif %}">
+          Current Statement
+        </span>
+        {% if current_bill and current_bill.status == "PAID" %}
+          <span class="tenant-bill-pill bg-emerald-100 text-emerald-700">Paid</span>
+        {% elif current_bill and current_bill.status == "PARTIALLY_PAID" %}
+          <span class="tenant-bill-pill bg-amber-100 text-amber-700">Partial</span>
+        {% elif current_bill %}
+          <span class="tenant-bill-pill bg-rose-100 text-rose-700">Open</span>
         {% else %}
-          <a href="{% url 'tenant_pay_advance' %}" class="px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white font-black text-sm rounded-2xl transition-all shadow-lg active:scale-95">
-            Pay Now
-          </a>
+          <span class="tenant-bill-pill bg-slate-100 text-slate-600">No Bill</span>
         {% endif %}
       </div>
-    </div>
-  </div>
 
-  <!-- Monthly Billing Status -->
-  <div class="bg-white border-2 border-slate-100 rounded-[2.5rem] shadow-sm overflow-hidden mb-10 p-2">
-    <div class="px-8 py-6 border-b-2 border-slate-50 bg-slate-50/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-t-[2rem]">
+      <h2 class="mt-4 text-3xl font-black tracking-tight text-slate-950 sm:text-5xl">
+        {% if current_bill %}{{ current_bill.billing_month|date:"F Y" }}{% else %}No active bill{% endif %}
+      </h2>
+      <p class="mt-3 text-sm font-bold text-slate-600">
+        Due by {% if current_bill and current_bill.due_date %}{{ current_bill.due_date|date:"F j, Y" }}{% else %}-{% endif %}
+      </p>
+
+      {% if current_bill %}
+        <div class="tenant-charge-grid">
+          <div>
+            <span>Rent</span>
+            <strong>&#8369;{{ current_bill.base_rent|default:"0.00"|floatformat:2|intcomma }}</strong>
+          </div>
+          <div>
+            <span>Water</span>
+            <strong>&#8369;{{ current_bill.water_amount|default:"0.00"|floatformat:2|intcomma }}</strong>
+          </div>
+          <div>
+            <span>Parking</span>
+            <strong>&#8369;{{ current_bill.parking_fee|default:"0.00"|floatformat:2|intcomma }}</strong>
+          </div>
+          <div>
+            <span>Late Fee</span>
+            <strong class="{% if current_bill.interest > 0 %}text-rose-700{% endif %}">&#8369;{{ current_bill.interest|default:"0.00"|floatformat:2|intcomma }}</strong>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    <aside class="tenant-current-action">
+      <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">
+        {% if current_bill and current_bill.total_balance > 0 %}Still Owed{% else %}Total{% endif %}
+      </span>
+      <strong class="mt-2 block text-3xl font-black text-slate-950">
+        &#8369;{% if current_bill %}{{ current_bill.total_balance|default:"0.00"|floatformat:2|intcomma }}{% else %}0.00{% endif %}
+      </strong>
+      <p class="mt-3 text-sm font-bold leading-6 {% if current_bill and current_bill.total_balance > 0 %}text-rose-700{% else %}text-emerald-700{% endif %}">
+        {% if current_bill and current_bill.total_balance > 0 %}
+          This balance is ready for payment.
+        {% else %}
+          No outstanding balance for this statement.
+        {% endif %}
+      </p>
+
+      {% if has_pending_payment %}
+        <span class="mt-5 inline-flex w-full justify-center rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-black text-emerald-800">
+          Waiting for approval
+        </span>
+      {% elif current_bill and current_bill.total_balance > 0 %}
+        <a href="{% url 'tenant_pay_advance' %}" class="mt-5 inline-flex w-full justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-200 transition hover:bg-blue-700">
+          Pay Now
+        </a>
+      {% else %}
+        <a href="{% url 'tenant_dashboard' %}" class="mt-5 inline-flex w-full justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50">
+          Back to Dashboard
+        </a>
+      {% endif %}
+    </aside>
+  </section>
+
+  <section class="tenant-billing-table-card">
+    <div class="tenant-section-heading">
       <div>
-        <h2 class="text-2xl font-black text-slate-900 tracking-tight">Monthly Payment Status</h2>
-        <p class="text-lg text-slate-500 font-bold mt-1">See which months are already paid, partially paid, or still unpaid.</p>
+        <h2>Monthly Payment Status</h2>
+        <p>All contract months are shown here. Future months are upcoming, not unpaid.</p>
       </div>
-      <span class="px-4 py-2 bg-slate-200/50 text-slate-600 text-sm font-black rounded-xl uppercase tracking-widest">{{ monthly_status_rows|length }} Months</span>
+      <span>{{ monthly_status_rows|length }} Months</span>
     </div>
 
-    <div class="overflow-x-auto p-4">
-      <table class="w-full text-left border-separate border-spacing-y-3 min-w-[760px] whitespace-nowrap">
+    <div class="overflow-x-auto">
+      <table class="tenant-billing-table min-w-[800px]">
         <thead>
-          <tr class="text-xs font-black text-slate-400 uppercase tracking-widest">
-            <th class="py-3 px-6">Month</th>
-            <th class="py-3 px-6">Due By</th>
-            <th class="py-3 px-6">Total Due</th>
-            <th class="py-3 px-6">Paid</th>
-            <th class="py-3 px-6">Balance</th>
-            <th class="py-3 px-6">Status</th>
+          <tr>
+            <th>Month</th>
+            <th>Due By</th>
+            <th>Total Due</th>
+            <th>Paid</th>
+            <th>Balance</th>
+            <th>Status</th>
           </tr>
         </thead>
-        <tbody class="text-lg">
+        <tbody>
           {% for row in monthly_status_rows %}
-            <tr class="bg-slate-50 hover:bg-white border-2 border-transparent hover:border-slate-100 transition-all rounded-2xl">
-              <td class="py-6 px-6 font-black text-slate-900 first:rounded-l-2xl">{{ row.month_label }}</td>
-              <td class="py-6 px-6 text-slate-500 font-bold">
-                {% if row.due_date %}{{ row.due_date|date:"M d, Y" }}{% else %}-{% endif %}
-              </td>
-              <td class="py-6 px-6 text-slate-900 font-black">₱{{ row.total_due|floatformat:2|intcomma }}</td>
-              <td class="py-6 px-6 text-slate-700 font-bold">₱{{ row.paid_amount|floatformat:2|intcomma }}</td>
-              <td class="py-6 px-6 text-slate-900 font-black">₱{{ row.balance|floatformat:2|intcomma }}</td>
-              <td class="py-6 px-6 last:rounded-r-2xl">
-                <span class="px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest {{ row.status_class }}">
-                  {{ row.status_label }}
-                </span>
+            <tr>
+              <td class="font-black text-slate-950">{{ row.month_label }}</td>
+              <td>{% if row.due_date %}{{ row.due_date|date:"M d, Y" }}{% else %}-{% endif %}</td>
+              <td class="font-black text-slate-950">&#8369;{{ row.total_due|floatformat:2|intcomma }}</td>
+              <td>&#8369;{{ row.paid_amount|floatformat:2|intcomma }}</td>
+              <td class="font-black text-slate-950">&#8369;{{ row.balance|floatformat:2|intcomma }}</td>
+              <td>
+                <span class="tenant-bill-pill {{ row.status_class }}">{{ row.status_label }}</span>
               </td>
             </tr>
           {% empty %}
             <tr>
-              <td colspan="6" class="py-20 px-6 text-center text-slate-400 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-100">
-                <p class="text-2xl font-black">No billing records yet.</p>
+              <td colspan="6">
+                <div class="tenant-empty-state">No billing records yet.</div>
               </td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-  </div>
+  </section>
 
-  <!-- Ongoing Billing Registry -->
-  <div class="bg-white border-2 border-slate-100 rounded-[2.5rem] shadow-sm overflow-hidden mb-10 p-2">
-    <div class="px-8 py-6 border-b-2 border-slate-50 bg-slate-50/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-t-[2rem]">
+  <section class="tenant-billing-table-card">
+    <div class="tenant-section-heading">
       <div>
-        <h2 class="text-2xl font-black text-slate-900 tracking-tight">Future Bills</h2>
-        <p class="text-lg text-slate-500 font-bold mt-1">Bills that haven't been paid yet.</p>
+        <h2>Payment History</h2>
+        <p>Approved payments and the bill months they covered.</p>
       </div>
-      <span class="px-4 py-2 bg-slate-200/50 text-slate-600 text-sm font-black rounded-xl uppercase tracking-widest">{{ ongoing_rows|length }} Records</span>
+      <span>{{ transactions|length }} Records</span>
     </div>
 
-    <div class="overflow-x-auto p-4">
-      <table class="w-full text-left border-separate border-spacing-y-3 min-w-[700px] whitespace-nowrap">
+    <div class="overflow-x-auto">
+      <table class="tenant-billing-table min-w-[760px]">
         <thead>
-          <tr class="text-xs font-black text-slate-400 uppercase tracking-widest">
-            <th class="py-3 px-6">Month</th>
-            <th class="py-3 px-6">Rent</th>
-            <th class="py-3 px-6">Water</th>
-            <th class="py-3 px-6">Late Fee</th>
-            <th class="py-3 px-6">Total</th>
-            <th class="py-3 px-6">Pay By</th>
-            <th class="py-3 px-6">Status</th>
+          <tr>
+            <th>Paid On</th>
+            <th>Reference</th>
+            <th>Bills Paid</th>
+            <th>Total Paid</th>
           </tr>
         </thead>
-        <tbody class="text-lg" id="ongoingTableBody">
-          {% for r in ongoing_rows %}
-            <tr class="ongoing-row bg-slate-50 hover:bg-white border-2 border-transparent hover:border-slate-100 transition-all rounded-2xl">
-              <td class="py-6 px-6 font-black text-slate-900 first:rounded-l-2xl">{{ r.month_label }}</td>
-              <td class="py-6 px-6 text-slate-600 font-bold">₱{{ r.rent|floatformat:2|intcomma }}</td>
-              <td class="py-6 px-6 text-slate-600 font-bold">
-                ₱{{ r.water|floatformat:2|intcomma }}
-                {% if r.water_reading %}
-                  <span class="block text-xs text-slate-400 font-black uppercase tracking-widest mt-1">({{ r.water_reading.consumption|floatformat:1 }}m³)</span>
-                {% endif %}
-              </td>
-              <td class="py-6 px-6 text-rose-600 font-black">
-                {% if r.penalty and r.penalty != 0 %}₱{{ r.penalty|floatformat:2|intcomma }}{% else %}-{% endif %}
-              </td>
-              <td class="py-6 px-6 font-black text-slate-900">₱{{ r.total|floatformat:2|intcomma }}</td>
-              <td class="py-6 px-6 text-slate-500 font-black text-base">
-                {% if r.due_date %}{{ r.due_date|date:"M d, Y" }}{% else %}-{% endif %}
-              </td>
-              <td class="py-6 px-6 last:rounded-r-2xl">
-                {% if r.status == "OVERDUE" %}
-                  <span class="px-4 py-1 rounded-full text-xs font-black bg-rose-100 text-rose-700 uppercase tracking-widest">Overdue</span>
-                {% elif r.status == "DUE_TODAY" %}
-                  <span class="px-4 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-700 uppercase tracking-widest">Due Today</span>
-                {% else %}
-                  <span class="px-4 py-1 rounded-full text-xs font-black bg-slate-200 text-slate-700 uppercase tracking-widest">Waiting</span>
-                {% endif %}
-              </td>
-            </tr>
-          {% empty %}
-            <tr>
-              <td colspan="7" class="py-20 px-6 text-center text-slate-400 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-100">
-                <p class="text-2xl font-black">No bills to pay.</p>
-                <p class="text-lg font-bold mt-2">All your bills are settled.</p>
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Pagination Controls -->
-    <div class="px-8 py-6 border-t-2 border-slate-50 bg-white flex flex-col sm:flex-row items-center justify-between gap-6" id="ongoingPagination">
-      <div class="text-sm text-slate-400 font-black uppercase tracking-widest">
-        Showing <span id="ongoingStart" class="text-slate-900">0</span> - <span id="ongoingEnd" class="text-slate-900">0</span> of <span id="ongoingTotal" class="text-slate-900">{{ ongoing_rows|length }}</span>
-      </div>
-      <div class="flex items-center gap-2" id="ongoingPageButtons">
-      </div>
-    </div>
-  </div>
-
-  <!-- Historical Payment Vault -->
-  <div class="bg-white border-2 border-slate-100 rounded-[2.5rem] shadow-sm overflow-hidden mb-10 p-2">
-    <div class="px-8 py-6 border-b-2 border-slate-50 bg-slate-50/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-t-[2rem]">
-      <div>
-        <h2 class="text-2xl font-black text-slate-900 tracking-tight">Payment History</h2>
-        <p class="text-lg text-slate-500 font-bold mt-1">A record of all your past payments.</p>
-      </div>
-      <span class="px-4 py-2 bg-slate-200/50 text-slate-600 text-sm font-black rounded-xl uppercase tracking-widest">{{ transactions|length }} Records</span>
-    </div>
-
-    <div class="overflow-x-auto p-4">
-      <table class="w-full text-left border-separate border-spacing-y-3 min-w-[700px] whitespace-nowrap">
-        <thead>
-          <tr class="text-xs font-black text-slate-400 uppercase tracking-widest">
-            <th class="py-3 px-6">Paid On</th>
-            <th class="py-3 px-6">Reference</th>
-            <th class="py-3 px-6">Bills Paid</th>
-            <th class="py-3 px-6">Total Paid</th>
-          </tr>
-        </thead>
-        <tbody class="text-lg" id="historyTableBody">
+        <tbody id="historyTableBody">
           {% for t in transactions %}
-            <tr class="history-row bg-slate-50 hover:bg-white border-2 border-transparent hover:border-slate-100 transition-all rounded-2xl">
-              <td class="py-6 px-6 text-slate-700 font-black first:rounded-l-2xl">
-                {% if t.paid_at %}{{ t.paid_at|date:"M d, Y" }}
-                {% else %}<span class="text-rose-600">Pending</span>{% endif %}
+            <tr class="history-row">
+              <td class="font-black text-slate-950">
+                {% if t.paid_at %}{{ t.paid_at|date:"M d, Y" }}{% else %}<span class="text-rose-600">Pending</span>{% endif %}
               </td>
-              <td class="py-6 px-6 font-black text-slate-900 tracking-wider text-base">{{ t.reference }}</td>
-              <td class="py-6 px-6 text-slate-500 font-bold">
+              <td class="font-black tracking-wide text-slate-950">{{ t.reference }}</td>
+              <td>
                 {% if t.bill_months_label %}
                   {{ t.bill_months_label }}
                 {% else %}
                   {{ t.months_paid }} Month{{ t.months_paid|pluralize }}
                 {% endif %}
               </td>
-              <td class="py-6 px-6 font-black text-slate-900 last:rounded-r-2xl text-xl">₱{{ t.total_amount|floatformat:2|intcomma }}</td>
+              <td class="text-xl font-black text-slate-950">&#8369;{{ t.total_amount|floatformat:2|intcomma }}</td>
             </tr>
           {% empty %}
             <tr>
-              <td colspan="4" class="py-20 px-6 text-center text-slate-400 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-100">
-                <p class="text-2xl font-black">No payments yet.</p>
+              <td colspan="4">
+                <div class="tenant-empty-state">No payments yet.</div>
               </td>
             </tr>
           {% endfor %}
@@ -287,106 +233,376 @@
       </table>
     </div>
 
-    <!-- History Pagination Controls -->
-    <div class="px-8 py-6 border-t-2 border-slate-50 bg-white flex flex-col sm:flex-row items-center justify-between gap-6" id="historyPagination">
-      <div class="text-sm text-slate-400 font-black uppercase tracking-widest">
-        Showing <span id="historyStart" class="text-slate-900">0</span> - <span id="historyEnd" class="text-slate-900">0</span> of <span id="historyTotal" class="text-slate-900">{{ transactions|length }}</span>
+    <div class="tenant-pagination" id="historyPagination">
+      <div>
+        Showing <span id="historyStart">0</span> - <span id="historyEnd">0</span> of <span id="historyTotal">{{ transactions|length }}</span>
       </div>
-      <div class="flex items-center gap-2" id="historyPageButtons">
-      </div>
+      <div class="flex items-center gap-2" id="historyPageButtons"></div>
     </div>
-  </div>
+  </section>
+</div>
 
-  </div>
+<style>
+  .tenant-billing-shell {
+    max-width: 1380px;
+    margin: 0 auto;
+  }
 
-  <script>
-    function toggleWaterDetails() {
-      const details = document.getElementById('waterDetails');
-      if (details) {
-        details.classList.toggle('hidden');
-      }
+  .tenant-billing-hero,
+  .tenant-billing-filter,
+  .tenant-current-bill,
+  .tenant-billing-table-card {
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    box-shadow: 0 18px 45px -30px rgba(15, 23, 42, 0.35);
+  }
+
+  .tenant-billing-hero {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.5rem;
+    border-radius: 1.5rem;
+    padding: clamp(1.25rem, 2vw, 2rem);
+    margin-bottom: 1rem;
+  }
+
+  .tenant-month-card {
+    min-width: 180px;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
+    background: #f8fafc;
+    padding: 1rem;
+    text-align: right;
+  }
+
+  .tenant-month-card strong {
+    display: block;
+    margin-top: 0.35rem;
+    color: #0f172a;
+    font-weight: 900;
+  }
+
+  .tenant-billing-filter,
+  .tenant-current-bill,
+  .tenant-billing-table-card {
+    border-radius: 1.5rem;
+    padding: clamp(1.25rem, 2vw, 2rem);
+    margin-bottom: 1rem;
+  }
+
+  .tenant-current-bill {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+    gap: clamp(1rem, 2vw, 2rem);
+    border-left: 8px solid #059669;
+  }
+
+  .tenant-current-bill.is-open {
+    border-left-color: #e11d48;
+  }
+
+  .tenant-current-main,
+  .tenant-current-action {
+    min-width: 0;
+  }
+
+  .tenant-current-action {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
+    background: #f8fafc;
+    padding: 1.25rem;
+  }
+
+  .tenant-current-bill.is-paid .tenant-current-action {
+    border-color: #bbf7d0;
+    background: linear-gradient(180deg, #ecfdf5 0%, #f8fafc 100%);
+  }
+
+  .tenant-current-bill.is-open .tenant-current-action {
+    border-color: #fecdd3;
+    background: linear-gradient(180deg, #fff1f2 0%, #f8fafc 100%);
+  }
+
+  .tenant-bill-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.68rem;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .tenant-charge-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+  }
+
+  .tenant-charge-grid div {
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
+    background: #f8fafc;
+    padding: 1rem;
+  }
+
+  .tenant-charge-grid span {
+    display: block;
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .tenant-charge-grid strong {
+    display: block;
+    margin-top: 0.45rem;
+    color: #0f172a;
+    font-size: 1rem;
+    font-weight: 900;
+  }
+
+  .tenant-section-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .tenant-section-heading h2 {
+    color: #0f172a;
+    font-size: 1.35rem;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+  }
+
+  .tenant-section-heading p {
+    margin-top: 0.35rem;
+    color: #64748b;
+    font-weight: 700;
+  }
+
+  .tenant-section-heading > span {
+    border-radius: 0.9rem;
+    background: #f1f5f9;
+    color: #475569;
+    padding: 0.6rem 0.85rem;
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .tenant-billing-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 0.65rem;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  .tenant-billing-table th {
+    padding: 0.75rem 1rem;
+    color: #94a3b8;
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .tenant-billing-table td {
+    background: #f8fafc;
+    padding: 1.1rem 1rem;
+    color: #475569;
+    font-weight: 700;
+    border-top: 1px solid #eef2f7;
+    border-bottom: 1px solid #eef2f7;
+  }
+
+  .tenant-billing-table tr:hover td {
+    background: #ffffff;
+    border-color: #e2e8f0;
+  }
+
+  .tenant-billing-table td:first-child {
+    border-left: 1px solid #eef2f7;
+    border-radius: 1rem 0 0 1rem;
+  }
+
+  .tenant-billing-table td:last-child {
+    border-right: 1px solid #eef2f7;
+    border-radius: 0 1rem 1rem 0;
+  }
+
+  .tenant-empty-state {
+    display: flex;
+    min-height: 9rem;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed #cbd5e1;
+    border-radius: 1.25rem;
+    background: #f8fafc;
+    color: #64748b;
+    text-align: center;
+    font-weight: 900;
+  }
+
+  .tenant-empty-state span {
+    margin-top: 0.3rem;
+    color: #64748b;
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+
+  .tenant-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    border-top: 1px solid #e2e8f0;
+    margin-top: 1rem;
+    padding-top: 1.25rem;
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .tenant-pagination button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.8rem;
+    color: #0f172a;
+    font-weight: 900;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+
+  .tenant-pagination button:hover:not(:disabled) {
+    background: #f1f5f9;
+  }
+
+  .tenant-pagination button.is-active {
+    border-color: #0f172a;
+    background: #0f172a;
+    color: #ffffff;
+  }
+
+  .tenant-pagination button:disabled {
+    color: #cbd5e1;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 1100px) {
+    .tenant-current-bill,
+    .tenant-charge-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  @media (max-width: 799px) {
+    .tenant-billing-hero,
+    .tenant-section-heading,
+    .tenant-pagination {
+      flex-direction: column;
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
-      const skeleton = document.getElementById('tenantBillingSkeleton');
-      const content = document.querySelector('[data-page-content]');
+    .tenant-month-card,
+    .tenant-current-action {
+      width: 100%;
+      text-align: left;
+    }
 
-      if (skeleton && content) {
-        window.addEventListener('load', function () {
-          skeleton.classList.add('hidden');
-          content.classList.remove('tenant-page-content-hidden');
-        }, { once: true });
+    .tenant-current-bill,
+    .tenant-charge-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const skeleton = document.getElementById('tenantBillingSkeleton');
+    const content = document.querySelector('[data-page-content]');
+
+    if (skeleton && content) {
+      window.addEventListener('load', function () {
+        skeleton.classList.add('hidden');
+        content.classList.remove('tenant-page-content-hidden');
+      }, { once: true });
+    }
+
+    function setupPagination(rowClass, startId, endId, totalId, containerId, pageSize) {
+      const rows = document.querySelectorAll('.' + rowClass);
+      const total = rows.length;
+      const totalPages = Math.ceil(total / pageSize);
+      const container = document.getElementById(containerId);
+      const startSpan = document.getElementById(startId);
+      const endSpan = document.getElementById(endId);
+
+      if (total <= pageSize) {
+        const wrapper = document.getElementById(containerId)?.closest('.tenant-pagination');
+        if (wrapper) wrapper.style.display = 'none';
+        rows.forEach(row => row.style.display = '');
+        if (startSpan) startSpan.textContent = total > 0 ? 1 : 0;
+        if (endSpan) endSpan.textContent = total;
+        return;
       }
 
-      function setupPagination(rowClass, startId, endId, totalId, containerId, pageSize) {
-        const rows = document.querySelectorAll('.' + rowClass);
-        const total = rows.length;
-        const totalPages = Math.ceil(total / pageSize);
-        const container = document.getElementById(containerId);
-        const startSpan = document.getElementById(startId);
-        const endSpan = document.getElementById(endId);
-
-        if (total <= pageSize) {
-          const pagWrapper = document.getElementById(containerId)?.closest('div[id$="Pagination"]');
-          if (pagWrapper) pagWrapper.style.display = 'none';
-          rows.forEach(r => r.style.display = '');
-          if (startSpan) startSpan.textContent = total > 0 ? 1 : 0;
-          if (endSpan) endSpan.textContent = total;
-          return;
-        }
-
-        function showPage(page) {
-          const start = (page - 1) * pageSize;
-          const end = Math.min(start + pageSize, total);
-
-          rows.forEach((r, idx) => {
-            r.style.display = (idx >= start && idx < end) ? '' : 'none';
-          });
-
-          if (startSpan) startSpan.textContent = total > 0 ? start + 1 : 0;
-          if (endSpan) endSpan.textContent = end;
-
-          if (!container) return;
-          container.innerHTML = '';
-
-          // Prev
-          const prevBtn = document.createElement('button');
-          prevBtn.type = 'button';
-          prevBtn.innerHTML = '←';
-          prevBtn.className = 'w-10 h-10 flex items-center justify-center rounded-xl border-2 transition-all ' + 
-            (page === 1 ? 'border-slate-50 text-slate-200 cursor-not-allowed' : 'border-slate-100 text-slate-900 hover:bg-slate-100');
-          prevBtn.disabled = page === 1;
-          prevBtn.onclick = () => showPage(page - 1);
-          container.appendChild(prevBtn);
-
-          // Numbers
-          for (let i = 1; i <= totalPages; i++) {
-            const pageBtn = document.createElement('button');
-            pageBtn.type = 'button';
-            pageBtn.textContent = i;
-            pageBtn.className = 'w-10 h-10 font-black rounded-xl border-2 transition-all ' + 
-              (i === page ? 'bg-slate-900 text-white border-slate-900 shadow-lg' : 'border-slate-100 text-slate-900 hover:bg-slate-100');
-            pageBtn.onclick = () => showPage(i);
-            container.appendChild(pageBtn);
-          }
-
-          // Next
-          const nextBtn = document.createElement('button');
-          nextBtn.type = 'button';
-          nextBtn.innerHTML = '→';
-          nextBtn.className = 'w-10 h-10 flex items-center justify-center rounded-xl border-2 transition-all ' + 
-            (page === totalPages ? 'border-slate-50 text-slate-200 cursor-not-allowed' : 'border-slate-100 text-slate-900 hover:bg-slate-100');
-          nextBtn.disabled = page === totalPages;
-          nextBtn.onclick = () => showPage(page + 1);
-          container.appendChild(nextBtn);
-        }
-
-        showPage(1);
+      function addButton(label, disabled, active, onClick) {
+        if (!container) return;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = label;
+        button.disabled = disabled;
+        button.className = active ? 'is-active' : '';
+        button.addEventListener('click', onClick);
+        container.appendChild(button);
       }
 
-      setupPagination('ongoing-row', 'ongoingStart', 'ongoingEnd', 'ongoingTotal', 'ongoingPageButtons', 5);
-      setupPagination('history-row', 'historyStart', 'historyEnd', 'historyTotal', 'historyPageButtons', 5);
-    });
-  </script>
+      function showPage(page) {
+        const start = (page - 1) * pageSize;
+        const end = Math.min(start + pageSize, total);
+
+        rows.forEach((row, index) => {
+          row.style.display = (index >= start && index < end) ? '' : 'none';
+        });
+
+        if (startSpan) startSpan.textContent = total > 0 ? start + 1 : 0;
+        if (endSpan) endSpan.textContent = end;
+        if (!container) return;
+
+        container.innerHTML = '';
+        addButton('<', page === 1, false, () => showPage(page - 1));
+        for (let i = 1; i <= totalPages; i += 1) {
+          addButton(String(i), false, i === page, () => showPage(i));
+        }
+        addButton('>', page === totalPages, false, () => showPage(page + 1));
+      }
+
+      showPage(1);
+    }
+
+    setupPagination('history-row', 'historyStart', 'historyEnd', 'historyTotal', 'historyPageButtons', 5);
+  });
+</script>
 
 {% endblock %}

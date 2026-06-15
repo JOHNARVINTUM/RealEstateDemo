@@ -15,6 +15,7 @@ from announcements.models import Announcement
 from billing.models import MonthlyBill
 from billing.services import (
     add_months,
+    due_date_for_month,
     reconcile_approved_payments_for_tenant,
     ensure_bills_since_move_in,
     ensure_bills_up_to,
@@ -26,6 +27,17 @@ from payments.models import ManualPayment
 from payments.views import manual_gcash_payment
 
 from .models import Lease, Notification, TenantProfile, Unit
+
+
+def _unpaid_paymongo_checkout_filter():
+    return Q(payment_method="PAYMONGO", status="PENDING", paymongo_payment_id="")
+
+
+def _remove_cancelled_paymongo_checkouts(user):
+    return ManualPayment.objects.filter(user=user).filter(
+        _unpaid_paymongo_checkout_filter()
+    ).delete()[0]
+
 
 # Temporary inline form to resolve import issue
 class UnitForm(forms.ModelForm):
@@ -236,7 +248,9 @@ def _dashboard_billing_context(user, lease, today):
 
 
 def _recent_payment_context(user):
-    recent_payments = ManualPayment.objects.filter(user=user).order_by("-created_at")[:5]
+    recent_payments = ManualPayment.objects.filter(user=user).exclude(
+        _unpaid_paymongo_checkout_filter()
+    ).order_by("-created_at")[:5]
     approved_move_in_payment = (
         ManualPayment.objects.filter(user=user, payment_type="move_in", status="APPROVED")
         .order_by("-created_at")
@@ -250,7 +264,9 @@ def _recent_payment_context(user):
     return {
         "recent_payments": recent_payments,
         "move_in_payment": move_in_payment,
-        "has_pending_payment": ManualPayment.objects.filter(user=user, status="PENDING").exists(),
+        "has_pending_payment": ManualPayment.objects.filter(user=user, status="PENDING").exclude(
+            _unpaid_paymongo_checkout_filter()
+        ).exists(),
     }
 
 
@@ -380,10 +396,49 @@ def _approved_payment_transactions(user):
     return transactions
 
 
-def _monthly_status_rows(lease):
+def _monthly_status_rows(lease, today=None):
+    if today is None:
+        today = timezone.localdate()
+
     rows = []
-    bills = MonthlyBill.objects.filter(lease=lease).order_by("billing_month")
-    for bill in bills:
+    today_month = month_start(today)
+    contract_end = month_start(lease.end_date or today)
+    bills = list(MonthlyBill.objects.filter(lease=lease).order_by("billing_month"))
+    bills_by_month = {
+        month_start(bill.billing_month): bill
+        for bill in bills
+    }
+
+    current_month = month_start(lease.start_date)
+    while current_month <= contract_end:
+        bill = bills_by_month.get(current_month)
+        due_date = bill.due_date if bill else due_date_for_month(current_month.year, current_month.month, lease.due_day)
+
+        if not bill:
+            projected_total = (lease.monthly_rent + lease.parking_fee).quantize(Decimal("0.01"))
+            if current_month > today_month:
+                rows.append({
+                    "month_label": current_month.strftime("%B %Y"),
+                    "due_date": due_date,
+                    "status_label": "Upcoming",
+                    "status_class": "bg-slate-200 text-slate-700",
+                    "total_due": projected_total,
+                    "balance": Decimal("0.00"),
+                    "paid_amount": Decimal("0.00"),
+                })
+            else:
+                rows.append({
+                    "month_label": current_month.strftime("%B %Y"),
+                    "due_date": due_date,
+                    "status_label": "Unpaid",
+                    "status_class": "bg-rose-100 text-rose-700",
+                    "total_due": projected_total,
+                    "balance": projected_total,
+                    "paid_amount": Decimal("0.00"),
+                })
+            current_month = add_months(current_month, 1)
+            continue
+
         if bill.status == "PAID":
             status_label = "Paid"
             status_class = "bg-emerald-100 text-emerald-700"
@@ -400,15 +455,17 @@ def _monthly_status_rows(lease):
             status_label = "Unpaid"
             status_class = "bg-rose-100 text-rose-700"
 
+        display_balance = Decimal("0.00") if bill.billing_state == "UPCOMING" else bill.total_balance
         rows.append({
             "month_label": bill.billing_month.strftime("%B %Y"),
             "due_date": bill.due_date,
             "status_label": status_label,
             "status_class": status_class,
             "total_due": bill.total_due,
-            "balance": bill.total_balance,
-            "paid_amount": (bill.total_due - bill.total_balance) if bill.total_due is not None else Decimal("0.00"),
+            "balance": display_balance,
+            "paid_amount": (bill.total_due - display_balance) if bill.total_due is not None else Decimal("0.00"),
         })
+        current_month = add_months(current_month, 1)
     return rows
 
 
@@ -697,13 +754,13 @@ def tenant_billing(request):
         current_bill = refreshed_bills[0] if refreshed_bills else None
     water_reading = current_bill.source_water_reading if current_bill and current_bill.source_water_reading else None
     ongoing_rows = _ongoing_billing_rows(refreshed_bills, date.today())
-    monthly_status_rows = _monthly_status_rows(lease)
+    monthly_status_rows = _monthly_status_rows(lease, today)
     transactions = _approved_payment_transactions(user)
     contract_month_choices = _contract_month_choices(lease, today)
 
     has_pending_payment = ManualPayment.objects.filter(
         user=request.user, status="PENDING"
-    ).exists()
+    ).exclude(_unpaid_paymongo_checkout_filter()).exists()
 
     return render(request, "billing/tenant_billing.html", {
         "lease": lease,
@@ -730,6 +787,7 @@ def tenant_pay_advance(request):
     cancelled_param = request.GET.get('cancelled')
     
     if 'paymongo' in referrer.lower() or cancelled_param == '1':
+        _remove_cancelled_paymongo_checkouts(request.user)
         messages.info(request, "Payment cancelled. You can try again or choose a different payment method.")
     
     today = timezone.localdate()

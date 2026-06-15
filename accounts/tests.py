@@ -46,6 +46,7 @@ class AccountProfileTests(TestCase):
             monthly_rent=Decimal("12000.00"),
             due_day=5,
             start_date=date(2026, 6, 1),
+            end_date=date(2027, 6, 1),
             status=Lease.STATUS_ACTIVE,
             is_active=True,
         )
@@ -73,6 +74,7 @@ class AccountProfileTests(TestCase):
         self.assertContains(response, "Ada Lovelace")
         self.assertContains(response, "09170000000")
         self.assertContains(response, "#P-101")
+        self.assertContains(response, "Jun 01, 2027")
         self.assertContains(response, "Government ID")
         self.assertTemplateUsed(response, "accounts/profile_tenant.html")
 
@@ -111,6 +113,55 @@ class AccountProfileTests(TestCase):
         self.client.force_login(other_tenant)
         blocked = self.client.get(reverse("account_profile_attachment", args=[self.attachment.id]))
         self.assertEqual(blocked.status_code, 404)
+
+    def test_admin_attachment_view_missing_file_returns_404(self):
+        self.client.force_login(self.admin)
+        missing_attachment = TenantAttachment.objects.create(
+            tenant=self.tenant,
+            attachment_type="VALID_ID",
+            file="tenant_attachments/missing-file.png",
+            description="Missing file",
+            uploaded_by=self.admin,
+        )
+
+        response = self.client.get(reverse("admin_view_attachment", args=[missing_attachment.id]))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_tenant_profile_form_accepts_iphone_heic_attachment(self):
+        form = TenantProfileForm(
+            data={
+                "email": "heic-tenant@example.com",
+                "first_name": "Heic",
+                "last_name": "Tenant",
+                "contact_no": "09170000001",
+            },
+            files={
+                "valid_id_file": SimpleUploadedFile("iphone-id.HEIC", b"sample", content_type="image/heic"),
+            },
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_tenant_profile_form_rejects_unsupported_attachment_type(self):
+        form = TenantProfileForm(
+            data={
+                "email": "docx-tenant@example.com",
+                "first_name": "Docx",
+                "last_name": "Tenant",
+                "contact_no": "09170000002",
+            },
+            files={
+                "valid_id_file": SimpleUploadedFile(
+                    "id.docx",
+                    b"sample",
+                    content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                ),
+            },
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("Accepted formats", str(form.errors))
 
 
 class AdminPaymentTypeEditTests(TestCase):

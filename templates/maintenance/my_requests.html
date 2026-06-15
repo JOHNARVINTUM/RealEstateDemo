@@ -76,6 +76,7 @@
             <th class="py-3 px-6">Date</th>
             <th class="py-3 px-6">Issue Category</th>
             <th class="py-3 px-6">Problem</th>
+            <th class="py-3 px-6">Visit Schedule</th>
             <th class="py-3 px-6">Priority Level</th>
             <th class="py-3 px-6">Status</th>
           </tr>
@@ -90,6 +91,29 @@
                 <span class="inline-block px-4 py-1 rounded-xl text-xs font-black bg-slate-200 text-slate-700 uppercase tracking-widest">{{ r.get_category_display }}</span>
               </td>
               <td class="py-6 px-6 font-black text-slate-900">{{ r.title }}</td>
+              <td class="py-6 px-6 whitespace-nowrap">
+                {% if r.admin_scheduled_at %}
+                  <span class="block text-sm font-black text-slate-900">{{ r.admin_scheduled_at|date:"M d, Y" }}</span>
+                  <span class="block text-xs font-bold text-slate-500">{{ r.admin_scheduled_at|date:"h:i A" }}</span>
+                {% elif r.requested_schedule_at %}
+                  <span class="block text-sm font-black text-slate-900">{{ r.requested_schedule_at|date:"M d, Y" }}</span>
+                  <span class="block text-xs font-bold text-slate-500">{{ r.requested_schedule_at|date:"h:i A" }}</span>
+                {% else %}
+                  <span class="text-sm font-bold text-slate-400">Not set</span>
+                {% endif %}
+                {% if r.schedule_decision == "APPROVED" %}
+                  <span class="mt-2 inline-block px-3 py-1 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-700 uppercase tracking-widest">Approved</span>
+                {% elif r.schedule_decision == "RESCHEDULED" %}
+                  <span class="mt-2 inline-block px-3 py-1 rounded-full text-[10px] font-black bg-blue-100 text-blue-700 uppercase tracking-widest">Rescheduled</span>
+                {% elif r.schedule_decision == "DECLINED" %}
+                  <span class="mt-2 inline-block px-3 py-1 rounded-full text-[10px] font-black bg-rose-100 text-rose-700 uppercase tracking-widest">Declined</span>
+                {% elif r.requested_schedule_at %}
+                  <span class="mt-2 inline-block px-3 py-1 rounded-full text-[10px] font-black bg-amber-100 text-amber-700 uppercase tracking-widest">Pending</span>
+                {% endif %}
+                {% if r.schedule_admin_note %}
+                  <span class="mt-2 block max-w-[220px] truncate text-xs font-semibold text-slate-500">{{ r.schedule_admin_note }}</span>
+                {% endif %}
+              </td>
               <td class="py-6 px-6 whitespace-nowrap">
                 {% if r.priority == "URGENT" or r.priority == "HIGH" %}
                   <span class="inline-block px-4 py-1 rounded-full text-xs font-black bg-rose-100 text-rose-700 uppercase tracking-widest">{{ r.priority }}</span>
@@ -113,7 +137,7 @@
             </tr>
           {% empty %}
             <tr id="emptyVaultRow">
-              <td colspan="5" class="py-16 sm:py-20 px-4 sm:px-6 text-center text-slate-400 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-100">
+              <td colspan="6" class="py-16 sm:py-20 px-4 sm:px-6 text-center text-slate-400 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-100">
                                 <p class="text-base sm:text-lg font-black">No repairs reported yet.</p>
               </td>
             </tr>
@@ -121,7 +145,7 @@
           
           <!-- No Results -->
           <tr id="noResultsRow" style="display: none;">
-            <td colspan="5" class="py-20 px-6 text-center text-slate-400 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-100">
+            <td colspan="6" class="py-20 px-6 text-center text-slate-400 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-100">
               <p class="text-2xl font-black">Nothing found.</p>
               <p class="text-lg font-bold mt-2">Try changing your filters.</p>
             </td>

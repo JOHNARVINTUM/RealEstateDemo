@@ -6,6 +6,7 @@ from django.urls import reverse
 from unittest.mock import patch
 
 from accounts.models import User
+from accounts.admin_payment_views import _admin_payment_queryset
 from billing.models import MonthlyBill
 from payments.models import ManualPayment
 from payments.paymongo_workflow import (
@@ -187,6 +188,32 @@ class MoveInPaymentNotificationTests(TestCase):
         )
 
         self.assertEqual(get_pending_paymongo_payment(self.admin, "cs_test_admin_lookup"), payment)
+
+    def test_admin_payment_queryset_excludes_unpaid_paymongo_checkout_drafts(self):
+        draft = ManualPayment.objects.create(
+            user=self.tenant,
+            payment_type="rent_only",
+            payment_method="PAYMONGO",
+            amount=Decimal("10475.00"),
+            reference_code="REF-PM-DRAFT",
+            status="PENDING",
+            checkout_session_id="cs_test_cancelled",
+        )
+        paid_pending = ManualPayment.objects.create(
+            user=self.tenant,
+            payment_type="rent_only",
+            payment_method="PAYMONGO",
+            amount=Decimal("10475.00"),
+            reference_code="REF-PM-PAID",
+            status="PENDING",
+            checkout_session_id="cs_test_paid",
+            paymongo_payment_id="pay_test_paid",
+        )
+
+        payments = list(_admin_payment_queryset())
+
+        self.assertNotIn(draft, payments)
+        self.assertIn(paid_pending, payments)
 
 
 class F2FCashScheduleTests(TestCase):

@@ -7,6 +7,7 @@ from django.urls import reverse
 
 from maintenance.forms import AdminMaintenanceUpdateForm
 from maintenance.models import MaintenanceRequest
+from rentals.models import Notification
 from rentals.services import send_email_via_resend
 from django.utils import timezone as dj_timezone
 
@@ -20,10 +21,13 @@ logger = logging.getLogger(__name__)
 def admin_update_maintenance(request, req_id: int):
     req = get_object_or_404(MaintenanceRequest, pk=req_id)
     if request.method == "POST":
+        old_status = req.status
+        old_schedule_decision = req.schedule_decision
+        old_admin_scheduled_at = req.admin_scheduled_at
+        old_schedule_admin_note = req.schedule_admin_note
         form = AdminMaintenanceUpdateForm(request.POST, instance=req)
         if form.is_valid():
             updated = form.save(commit=False)
-            old_status = req.status
             if updated.status == "RESOLVED" and not req.resolved_at:
                 updated.resolved_at = dj_timezone.now()
             if updated.status != "RESOLVED":
@@ -57,6 +61,47 @@ def admin_update_maintenance(request, req_id: int):
                     )
                 except Exception as e:
                     logger.exception("Failed to send maintenance update email: %s", e)
+
+            schedule_changed = (
+                updated.schedule_decision != old_schedule_decision
+                or updated.admin_scheduled_at != old_admin_scheduled_at
+                or updated.schedule_admin_note != old_schedule_admin_note
+            )
+            if schedule_changed and updated.requested_schedule_at:
+                try:
+                    decision_label = dict(req.SCHEDULE_DECISION_CHOICES).get(
+                        updated.schedule_decision,
+                        updated.schedule_decision,
+                    )
+                    visit_time = updated.admin_scheduled_at or updated.requested_schedule_at
+                    visit_time_label = visit_time.strftime("%b %d, %Y at %I:%M %p") if visit_time else "To be confirmed"
+                    note_line = f"\nAdmin note: {updated.schedule_admin_note}" if updated.schedule_admin_note else ""
+                    unit_number = req.lease.unit.number if req.lease else "N/A"
+                    message = (
+                        f"Your maintenance visit schedule for '{req.title}' is {decision_label.lower()}.\n"
+                        f"Visit time: {visit_time_label}\n"
+                        f"Unit: {unit_number}"
+                        f"{note_line}"
+                    )
+                    Notification.create_tenant_notification(
+                        title="Maintenance Schedule Update",
+                        message=message,
+                        notification_type="MAINTENANCE",
+                        tenant_user=req.tenant,
+                        related_unit=req.lease.unit if req.lease else None,
+                    )
+                    send_email_via_resend(
+                        to_email=req.tenant.email,
+                        subject=f"[REALESTATE360+] Maintenance Schedule Update - {req.title}",
+                        message=(
+                            f"Dear {req.tenant.email},\n\n"
+                            f"{message}\n\n"
+                            f"You can view this update in your tenant portal.\n\n"
+                            f"REALESTATE360+ Administration"
+                        ),
+                    )
+                except Exception as e:
+                    logger.exception("Failed to send maintenance schedule update: %s", e)
 
             return redirect("admin_maintenance")
     else:

@@ -22,7 +22,7 @@ from rentals.services import (
     generate_tenant_password,
     repair_historical_move_in_payment,
 )
-from rentals.views import _dashboard_billing_context
+from rentals.views import _dashboard_billing_context, _monthly_status_rows
 from water.models import WaterBill
 
 
@@ -436,6 +436,71 @@ class TenantViewWorkflowTests(TestCase):
         self.assertEqual(response.context["current_bill"].billing_month, date(2026, 6, 1))
         self.assertEqual(response.context["current_bill"].status, "PAID")
         self.assertEqual(response.context["current_bill"].total_due, Decimal("10350.00"))
+
+    def test_monthly_status_rows_include_full_contract_range_as_upcoming(self):
+        lease = self.create_active_lease(
+            start_date=date(2026, 6, 1),
+            end_date=date(2027, 6, 1),
+        )
+        MonthlyBill.objects.create(
+            lease=lease,
+            billing_month=date(2026, 6, 1),
+            due_date=date(2026, 6, 5),
+            base_rent=Decimal("10000.00"),
+            parking_fee=Decimal("350.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("10350.00"),
+            rent_paid=Decimal("10000.00"),
+            parking_paid=Decimal("350.00"),
+            status="PAID",
+        )
+
+        rows = _monthly_status_rows(lease, today=date(2026, 6, 13))
+
+        self.assertEqual(len(rows), 13)
+        self.assertEqual(rows[0]["month_label"], "June 2026")
+        self.assertEqual(rows[0]["status_label"], "Paid")
+        self.assertEqual(rows[1]["month_label"], "July 2026")
+        self.assertEqual(rows[1]["status_label"], "Upcoming")
+        self.assertEqual(rows[-1]["month_label"], "June 2027")
+        self.assertEqual(rows[-1]["status_label"], "Upcoming")
+        self.assertEqual(rows[1]["balance"], Decimal("0.00"))
+
+    def test_cancelled_paymongo_checkout_draft_is_removed_from_tenant_payment_page(self):
+        lease = self.create_active_lease()
+        MonthlyBill.objects.create(
+            lease=lease,
+            billing_month=date(2026, 6, 1),
+            due_date=date(2026, 6, 5),
+            base_rent=Decimal("10000.00"),
+            parking_fee=Decimal("350.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("10350.00"),
+            status="UNPAID",
+        )
+        payment = ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="REF-PM-CANCELLED",
+            bill_ids="1",
+            payment_type="rent_only",
+            payment_method="PAYMONGO",
+            amount=Decimal("10350.00"),
+            status="PENDING",
+            checkout_session_id="cs_test_cancelled",
+        )
+
+        response = self.client.get("/tenant/pay/?cancelled=1")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(ManualPayment.objects.filter(pk=payment.pk).exists())
+        self.assertFalse(
+            ManualPayment.objects.filter(
+                user=self.tenant,
+                payment_method="PAYMONGO",
+                status="PENDING",
+                paymongo_payment_id="",
+            ).exists()
+        )
 
 
 class MoveInRepairWorkflowTests(TestCase):

@@ -56,6 +56,14 @@
         </div>
         {% endif %}
 
+        {% if req.requested_schedule_at %}
+        <div class="bg-blue-50 border border-blue-100 rounded-xl p-6 mb-8">
+          <span class="text-xs font-black text-blue-700 uppercase tracking-tight block mb-2">Tenant Preferred Visit</span>
+          <p class="text-slate-900 text-lg font-black">{{ req.requested_schedule_at|date:"M d, Y" }} at {{ req.requested_schedule_at|date:"h:i A" }}</p>
+          <p class="text-sm font-bold text-blue-700 mt-2">Admin can approve this time, reschedule it, or decline it with a note.</p>
+        </div>
+        {% endif %}
+
         <!-- Tenant & Unit Info -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
           
@@ -140,7 +148,7 @@
         <h2 class="text-lg font-black text-slate-900">Update Status</h2>
         <p class="text-sm text-slate-500 mt-1 mb-6 font-bold leading-relaxed">Change the status or assign a worker to fix this.</p>
 
-        <form method="post" class="space-y-5">
+        <form method="post" class="space-y-5" id="maintenanceUpdateForm" data-requested-schedule='{% if req.requested_schedule_at %}{{ req.requested_schedule_at|date:"Y-m-d\TH:i" }}{% endif %}'>
           {% csrf_token %}
           
           {% for field in form %}
@@ -150,7 +158,7 @@
             </label>
             
             <div class="relative">
-              {% if field.name == 'category' or field.name == 'status' or field.name == 'priority' %}
+              {% if field.name == 'category' or field.name == 'status' or field.name == 'priority' or field.name == 'schedule_decision' %}
                 <select name="{{ field.name }}" id="{{ field.id_for_label }}" 
                         class="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-xl text-sm font-black text-slate-900 focus:border-slate-800 focus:ring-0 transition-all outline-none cursor-pointer appearance-none">
                   {% for val, label in field.field.choices %}
@@ -160,6 +168,19 @@
                 <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                   <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
                 </div>
+              {% elif field.name == 'admin_scheduled_at' %}
+                <input type="datetime-local"
+                       name="{{ field.name }}"
+                       id="{{ field.id_for_label }}"
+                       value="{% if req.admin_scheduled_at %}{{ req.admin_scheduled_at|date:"Y-m-d\TH:i" }}{% endif %}"
+                       placeholder="{{ field.label }}"
+                       class="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:border-slate-800 focus:ring-0 transition-all outline-none">
+              {% elif field.name == 'schedule_admin_note' %}
+                <textarea name="{{ field.name }}"
+                          id="{{ field.id_for_label }}"
+                          placeholder="{{ field.label }}"
+                          rows="3"
+                          class="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:border-slate-800 focus:ring-0 transition-all outline-none">{{ field.value|default:'' }}</textarea>
               {% else %}
                 <input type="{{ field.field.widget.input_type|default:'text' }}" 
                        name="{{ field.name }}" 
@@ -177,6 +198,9 @@
             {% endif %}
             {% if field.name == 'category' %}
               <span class="block text-xs font-bold text-slate-500">Auto-classified from tenant description. Admin can override if needed.</span>
+            {% endif %}
+            {% if field.name == 'admin_scheduled_at' %}
+              <span class="block text-xs font-bold text-slate-500">Leave blank when approving the tenant's preferred time. Required when rescheduling.</span>
             {% endif %}
           </div>
           {% endfor %}
@@ -199,4 +223,24 @@
   </div>
 
 </div>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('maintenanceUpdateForm');
+    if (!form) return;
+
+    const requestedSchedule = form.dataset.requestedSchedule || '';
+    const decisionSelect = form.querySelector('[name="schedule_decision"]');
+    const approvedTimeInput = form.querySelector('[name="admin_scheduled_at"]');
+    if (!decisionSelect || !approvedTimeInput || !requestedSchedule) return;
+
+    function syncApprovedVisitTime() {
+      if (decisionSelect.value === 'APPROVED' && !approvedTimeInput.value) {
+        approvedTimeInput.value = requestedSchedule;
+      }
+    }
+
+    decisionSelect.addEventListener('change', syncApprovedVisitTime);
+    syncApprovedVisitTime();
+  });
+</script>
 {% endblock %}

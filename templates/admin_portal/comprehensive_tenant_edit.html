@@ -144,8 +144,9 @@
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label class="block text-sm font-bold text-slate-600 mb-2 uppercase tracking-wider">Upload New File</label>
-                  <input type="file" name="contract_file" 
+                  <input type="file" name="contract_file" accept=".pdf,.png,.jpg,.jpeg,.heic,.heif,application/pdf,image/png,image/jpeg,image/heic,image/heif"
                          class="w-full text-base text-slate-700 file:mr-3 file:py-2 file:px-4 file:rounded-md file:border file:border-slate-300 file:text-sm file:font-bold file:bg-slate-50 file:text-slate-800 hover:file:bg-slate-100 transition-colors cursor-pointer">
+                  <p class="text-xs text-slate-500 mt-2 font-medium">Accepted: PDF contracts, PNG, JPG/JPEG, and iPhone HEIC/HEIF photos. Max 10MB.</p>
                   <p class="text-sm text-slate-500 mt-2 font-medium">
                     Status: <strong class="text-slate-700">{% if tenant.contract_file %}File Uploaded{% else %}No File Yet{% endif %}</strong>
                   </p>
@@ -165,8 +166,9 @@
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label class="block text-sm font-bold text-slate-600 mb-2 uppercase tracking-wider">Upload New File</label>
-                  <input type="file" name="valid_id_file" 
+                  <input type="file" name="valid_id_file" accept=".pdf,.png,.jpg,.jpeg,.heic,.heif,application/pdf,image/png,image/jpeg,image/heic,image/heif"
                          class="w-full text-base text-slate-700 file:mr-3 file:py-2 file:px-4 file:rounded-md file:border file:border-slate-300 file:text-sm file:font-bold file:bg-slate-50 file:text-slate-800 hover:file:bg-slate-100 transition-colors cursor-pointer">
+                  <p class="text-xs text-slate-500 mt-2 font-medium">Accepted: PNG, JPG/JPEG, iPhone HEIC/HEIF photos, or PDF. Max 10MB.</p>
                   <p class="text-sm text-slate-500 mt-2 font-medium">
                     Status: <strong class="text-slate-700">{% if tenant.valid_id_file %}File Uploaded{% else %}No File Yet{% endif %}</strong>
                   </p>

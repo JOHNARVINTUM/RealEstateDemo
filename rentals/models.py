@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 import os
@@ -388,6 +389,10 @@ class UnitImage(models.Model):
 
 class TenantAttachment(models.Model):
     """Model for tenant attachments like contracts and valid IDs"""
+    MAX_UPLOAD_SIZE = 10 * 1024 * 1024
+    ALLOWED_EXTENSIONS = {'.pdf', '.jpg', '.jpeg', '.png', '.heic', '.heif'}
+    ALLOWED_FORMATS_LABEL = "PDF, PNG, JPG/JPEG, HEIC/HEIF"
+
     ATTACHMENT_TYPES = [
         ('CONTRACT', 'Contract'),
         ('VALID_ID', 'Valid ID'),
@@ -423,8 +428,8 @@ class TenantAttachment(models.Model):
     
     @property
     def is_image(self):
-        """Check if file is an image"""
-        image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
+        """Check if file is a browser-previewable image."""
+        image_extensions = ['.jpg', '.jpeg', '.png']
         return self.file_extension in image_extensions
     
     @property
@@ -445,6 +450,22 @@ class TenantAttachment(models.Model):
                 size /= 1024.0
             return f"{size:.1f} TB"
         return "0 B"
+
+
+def validate_tenant_attachment_upload(uploaded_file, *, label="File"):
+    if not uploaded_file:
+        return uploaded_file
+
+    if uploaded_file.size > TenantAttachment.MAX_UPLOAD_SIZE:
+        raise ValidationError(f"{label} size must be less than 10MB.")
+
+    extension = os.path.splitext(uploaded_file.name or "")[1].lower()
+    if extension not in TenantAttachment.ALLOWED_EXTENSIONS:
+        raise ValidationError(
+            f"Invalid {label.lower()} type. Accepted formats: {TenantAttachment.ALLOWED_FORMATS_LABEL}."
+        )
+
+    return uploaded_file
 
 
 class Room(models.Model):

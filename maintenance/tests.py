@@ -1,11 +1,13 @@
-from datetime import date
+from datetime import date, datetime
 from unittest.mock import patch
 
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from accounts.models import User
 from accounts.ml.maintenance_nlp import classify_issue_category
+from maintenance.forms import AdminMaintenanceUpdateForm
 from maintenance.models import MaintenanceRequest
 from rentals.models import Lease, Unit
 
@@ -67,6 +69,7 @@ class MaintenanceSubmissionTests(TestCase):
             {
                 "title": "Sink issue",
                 "description": "There is water leaking under the sink and the drain is clogged.",
+                "requested_schedule_at": "2026-06-15T13:00",
             },
         )
 
@@ -77,3 +80,30 @@ class MaintenanceSubmissionTests(TestCase):
         self.assertEqual(request_obj.priority, "HIGH")
         self.assertEqual(request_obj.nlp_priority, "HIGH")
         self.assertEqual(request_obj.nlp_priority_confidence, 0.91)
+        self.assertEqual(timezone.localtime(request_obj.requested_schedule_at).replace(tzinfo=None), datetime(2026, 6, 15, 13, 0))
+
+    def test_admin_approval_uses_tenant_requested_schedule_when_blank(self):
+        request_obj = MaintenanceRequest.objects.create(
+            tenant=self.user,
+            lease=self.lease,
+            category="PLUMBING",
+            title="Sink issue",
+            description="There is water leaking under the sink.",
+            requested_schedule_at=timezone.make_aware(datetime(2026, 6, 15, 13, 0)),
+        )
+
+        form = AdminMaintenanceUpdateForm(
+            {
+                "category": "PLUMBING",
+                "status": "IN_PROGRESS",
+                "priority": "MEDIUM",
+                "fixed_by": "",
+                "schedule_decision": "APPROVED",
+                "admin_scheduled_at": "",
+                "schedule_admin_note": "Approved by admin.",
+            },
+            instance=request_obj,
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["admin_scheduled_at"], request_obj.requested_schedule_at)

@@ -44,6 +44,7 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
   position: relative;
 }
@@ -116,6 +117,7 @@
   display: flex;
   align-items: center;
   gap: 40px;
+  margin-left: auto;
 }
 
 .lp-nav-item {
@@ -216,6 +218,9 @@
     radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.6), transparent 60%);
   background-attachment: fixed;
   box-shadow: 0 -30px 80px rgba(0,0,0,0.15);
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
 }
 
 .lp-hero-layout {
@@ -682,6 +687,9 @@
   background-color: var(--lp-primary);
   color: var(--lp-text-light);
   padding: 100px 0 40px;
+  margin-top: auto;
+  position: relative;
+  z-index: 5;
 }
 
 .lp-footer-grid {
@@ -776,6 +784,10 @@
 
 /* Responsive Overrides */
 @media (max-width: 1024px) {
+  /* Navigation */
+  .lp-nav-links { margin-left: auto; }
+
+  /* Hero */
   .lp-hero-layout {
     grid-template-columns: 1fr;
   }
@@ -791,22 +803,109 @@
     grid-column: 1;
     height: 500px;
   }
+
+  /* Bento Grid */
   .lp-bento-grid {
-    grid-template-columns: 1fr;
-    grid-auto-rows: auto;
+    display: flex;
+    flex-direction: column;
   }
-  .col-span-2 { grid-column: span 1; }
-  .row-span-2 { grid-row: span 1; height: 400px; }
+  .col-span-2 { grid-column: auto; }
+  .row-span-2 { height: 400px; display: flex !important; visibility: visible !important; opacity: 1 !important; transform: none !important; }
+  
+  .lp-bento-card:nth-child(1) { order: 1; } /* Our Heritage */
+  .lp-bento-card:nth-child(3) { order: 2; } /* Pristine Interiors */
+  .lp-bento-card:nth-child(4) { order: 3; } /* The Future */
+  .lp-bento-card:nth-child(2) { order: 4; } /* Distinct Architecture */
+  
   .lp-vertical-text, .lp-watermark { display: none; }
   
+  /* Inquiry Box */
   .lp-inquiry-box { grid-template-columns: 1fr; }
   .inquiry-image { height: 350px; min-height: 350px; }
   .inquiry-text { padding: 50px 40px; }
+
+  /* Footer */
+  .lp-footer { padding: 40px 0 20px; }
+  .lp-footer-grid { gap: 30px; margin-bottom: 40px; }
 }
 
 @media (max-width: 768px) {
-  .lp-nav { top: 0; width: 100%; border-radius: 0; }
-  .lp-hero-text h1 { font-size: 3rem; }
-  .cta-content h2 { font-size: 2.5rem; }
-  .lp-footer-grid { grid-template-columns: 1fr; gap: 40px; }
+  /* Navigation */
+  .lp-nav { top: 0; width: 100%; border-radius: 0; padding: 14px 20px; z-index: 1001; }
+  .lp-logo { font-size: 20px; }
+  
+  .lp-hamburger { display: flex; flex-direction: column; justify-content: space-between; width: 30px; height: 21px; background: transparent; border: none; cursor: pointer; padding: 0; z-index: 1002; }
+  .hamburger-line { width: 100%; height: 3px; background-color: var(--lp-primary); border-radius: 10px; transition: var(--lp-transition); }
+  .lp-hamburger.active .hamburger-line:nth-child(1) { transform: translateY(9px) rotate(45deg); }
+  .lp-hamburger.active .hamburger-line:nth-child(2) { opacity: 0; }
+  .lp-hamburger.active .hamburger-line:nth-child(3) { transform: translateY(-9px) rotate(-45deg); }
+
+  .lp-nav-links { position: absolute; top: 100%; left: 0; width: 100%; background: var(--lp-glass-bg); backdrop-filter: blur(16px); flex-direction: column; padding: 20px 0; gap: 20px; border-bottom: var(--lp-glass-border); opacity: 0; visibility: hidden; transform: translateY(-20px); transition: var(--lp-transition); box-shadow: var(--lp-shadow-soft); }
+  .lp-nav-links.active { opacity: 1; visibility: visible; transform: translateY(0); }
+  .lp-nav-item { display: block; font-size: 1.1rem; }
+  .lp-btn-login { padding: 10px 24px; font-size: 1rem; width: 80%; text-align: center; margin: 0 auto; }
+
+  /* Container */
+  .lp-container { padding: 0 20px; }
+
+  /* Hero */
+  .lp-hero { padding-top: 80px; padding-bottom: 30px; }
+  .lp-hero-text { position: relative; padding: 20px 15px; margin-top: -50px; margin-left: 10px; margin-right: 10px; width: calc(100% - 20px); z-index: 20; border-radius: 20px; box-sizing: border-box; }
+  .lp-hero-text h1 { font-size: 2.2rem; margin-bottom: 10px; }
+  .lp-hero-text p { font-size: 0.9rem; margin-bottom: 16px; line-height: 1.4; }
+  .lp-btn-primary { padding: 12px 24px; font-size: 0.95rem; }
+  .lp-hero-visual { height: 280px; border-radius: 20px; grid-column: 1; width: 100%; margin: 0; }
+  
+  .lp-glass-badge { top: 10px; right: 10px; padding: 6px 10px; }
+  .badge-title { font-size: 0.8rem; }
+  .badge-sub { font-size: 0.6rem; }
+
+  /* Carousel */
+  .lp-carousel-btn { width: 32px; height: 32px; font-size: 12px; }
+  .lp-carousel-btn.prev { left: 8px; }
+  .lp-carousel-btn.next { right: 8px; }
+  .lp-carousel-nav { bottom: 8px; }
+
+  /* Bento Grid */
+  .lp-section { padding: 40px 0; }
+  .lp-bento-grid { gap: 15px; }
+  .lp-bento-card { padding: 20px 15px; border-radius: 20px; }
+  .lp-bento-card h2 { font-size: 1.6rem; margin-bottom: 10px; }
+  .col-span-1.lp-bento-card h2 { font-size: 1.4rem; }
+  .lp-bento-card p { font-size: 0.9rem; line-height: 1.5; }
+  .image-card { height: 250px !important; min-height: 250px !important; padding: 0 !important; display: flex !important; visibility: visible !important; opacity: 1 !important; transform: none !important; }
+  .row-span-2 { grid-row: auto !important; display: flex !important; visibility: visible !important; opacity: 1 !important; transform: none !important; }
+
+  /* Reorder Bento Grid for Mobile */
+  .lp-bento-grid { display: flex; flex-direction: column; }
+  .lp-bento-card:nth-child(1) { order: 1; } /* Our Heritage */
+  .lp-bento-card:nth-child(3) { order: 2; } /* Pristine Interiors */
+  .lp-bento-card:nth-child(4) { order: 3; } /* The Future */
+  .lp-bento-card:nth-child(2) { order: 4; } /* Distinct Architecture */
+
+  /* CTA */
+  .cta-wrapper { margin-top: 10px; }
+  .glass-cta { padding: 30px 15px; border-radius: 20px; }
+  .cta-content h2 { font-size: 1.8rem; margin-bottom: 12px; }
+  .cta-content p { font-size: 0.95rem; margin-bottom: 20px; line-height: 1.4; }
+  .lp-btn-cta { padding: 12px 24px; font-size: 0.95rem; width: 100%; box-sizing: border-box; text-align: center; }
+
+  /* Inquiry Section */
+  .inquiry-expand-container { padding: 10px 10px; }
+  .lp-inquiry-box { transform: scale(1) !important; border-radius: 20px !important; }
+  .inquiry-text { padding: 24px 15px; }
+  .inquiry-text h2 { font-size: 1.6rem; margin-bottom: 12px; }
+  .inquiry-image { height: 200px; min-height: 200px; }
+
+  /* Footer */
+  .lp-footer { padding: 20px 0 10px; overflow-x: hidden; }
+  .lp-footer-grid { display: grid; grid-template-columns: 4fr 3fr 4fr; gap: 8px; margin-bottom: 10px; }
+  .lp-footer-grid > div:first-child { grid-column: span 1; text-align: left; margin-bottom: 0; }
+  .lp-footer-logo { font-size: 11px; margin-bottom: 6px; justify-content: flex-start; gap: 4px; }
+  .lp-footer-logo img { height: 14px; border-radius: 2px; }
+  .lp-footer p { display: block; font-size: 0.6rem; line-height: 1.3; margin-bottom: 0; }
+  .lp-footer h4 { margin-bottom: 6px; font-size: 0.7rem; }
+  .lp-footer-links { display: flex; flex-direction: column; gap: 4px; }
+  .lp-footer-links li { margin-bottom: 0; font-size: 0.6rem; line-height: 1.2; word-break: break-word; }
+  .lp-footer-bottom { padding-top: 8px; font-size: 0.6rem; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 10px; }
 }

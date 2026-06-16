@@ -172,11 +172,7 @@
                   <strong class="text-sm font-black text-slate-900">&#8369;{{ row.balance|floatformat:2|intcomma }}</strong>
                 </td>
                 <td class="bg-slate-50 p-4 rounded-r-2xl border-y border-r border-slate-100 text-right pr-4 group-hover:bg-white group-hover:border-slate-200 group-hover:shadow-sm transition-all">
-                  <span class="inline-block px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest
-                    {% if row.status == 'PAID' %}bg-emerald-100 text-emerald-800
-                    {% elif row.status == 'PARTIALLY_PAID' %}bg-amber-100 text-amber-800
-                    {% elif row.status == 'OPEN' %}bg-rose-100 text-rose-800
-                    {% else %}bg-slate-200 text-slate-600{% endif %}">
+                  <span class="inline-block px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest {{ row.status_class }}">
                     {{ row.status_label }}
                   </span>
                 </td>

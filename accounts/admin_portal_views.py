@@ -50,15 +50,7 @@ from .admin_portal_forms import ComprehensiveTenantEditForm
 from .admin_portal_forms import UnitForm
 from rentals.models import UnitImage
 from django.contrib import messages
-from django.contrib.auth.decorators import user_passes_test
-
-def admin_required(view_func):
-    """
-    Decorator to ensure user is authenticated and has ADMIN role
-    """
-    def check(user):
-        return user.is_authenticated and (getattr(user, "role", "") == "ADMIN" or user.is_superuser)
-    return user_passes_test(check)(view_func)
+from .decorators import admin_required
 
 
 def admin_password_verified(request) -> bool:

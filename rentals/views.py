@@ -422,9 +422,9 @@ def _monthly_status_rows(lease, today=None):
                     "month_label": current_month.strftime("%B %Y"),
                     "due_date": due_date,
                     "status_label": "Upcoming",
-                    "status_class": "bg-slate-200 text-slate-700",
+                    "status_class": "bg-amber-100 text-amber-700",
                     "total_due": projected_total,
-                    "balance": Decimal("0.00"),
+                    "balance": projected_total,
                     "paid_amount": Decimal("0.00"),
                 })
             else:
@@ -448,7 +448,7 @@ def _monthly_status_rows(lease, today=None):
             status_class = "bg-amber-100 text-amber-700"
         elif bill.billing_state == "UPCOMING":
             status_label = "Upcoming"
-            status_class = "bg-slate-200 text-slate-700"
+            status_class = "bg-amber-100 text-amber-700"
         elif bill.billing_state == "OVERDUE":
             status_label = "Unpaid"
             status_class = "bg-rose-100 text-rose-700"
@@ -456,7 +456,7 @@ def _monthly_status_rows(lease, today=None):
             status_label = "Unpaid"
             status_class = "bg-rose-100 text-rose-700"
 
-        display_balance = Decimal("0.00") if bill.billing_state == "UPCOMING" else bill.total_balance
+        display_balance = bill.total_balance
         rows.append({
             "month_label": bill.billing_month.strftime("%B %Y"),
             "due_date": bill.due_date,
@@ -675,6 +675,13 @@ def _payment_preview_context(request, lease, months_to_pay):
     bills_to_process = _bills_for_payment_type(all_bills, payment_type, months_to_pay, today_start)
     preview_rows = _payment_preview_rows(lease, bills_to_process, payment_type)
     totals = _payment_totals(preview_rows, payment_type)
+    show_detailed_breakdown = len(preview_rows) > 1 or any(
+        (row["pay_penalty"] or 0) > 0
+        or (row["pay_rent"] or 0) < (row["rent"] or 0)
+        or (row["pay_water"] or 0) < (row["water"] or 0)
+        or (row["pay_parking"] or 0) < (row["parking"] or 0)
+        for row in preview_rows
+    )
 
     unpaid_count = sum(
         1 for bill in all_bills
@@ -697,6 +704,7 @@ def _payment_preview_context(request, lease, months_to_pay):
         "unpaid_count": unpaid_count,
         "water_available": water_available,
         "preview_rows": preview_rows,
+        "show_detailed_breakdown": show_detailed_breakdown,
         **totals,
     }
 
@@ -862,10 +870,12 @@ def tenant_notifications(request):
     
     # Calculate unread count (unfiltered)
     unread_count = base_notifications.filter(is_read=False).count()
+    read_count = base_notifications.filter(is_read=True).count()
     
     context = {
         "notifications": notifications,
         "unread_count": unread_count,
+        "read_count": read_count,
         "status_filter": status_filter,
     }
     return render(request, "rentals/tenant_notifications.html", context)
@@ -932,6 +942,43 @@ def mark_all_notifications_read(request):
         request,
         f"Marked {updated_count} notification{'' if updated_count == 1 else 's'} as read."
     )
+    return redirect("tenant_notifications")
+
+
+@tenant_required
+def delete_all_read_notifications(request):
+    """Delete all read tenant notifications for the current user."""
+    if request.method != "POST":
+        return redirect("tenant_notifications")
+
+    deleted_count, _ = Notification.objects.filter(
+        recipient_type="TENANT",
+        user=request.user,
+        is_read=True,
+    ).delete()
+    messages.success(request, f"Deleted {deleted_count} read notification{'s' if deleted_count != 1 else ''}.")
+    return redirect("tenant_notifications")
+
+
+@tenant_required
+def delete_notification(request, notification_id):
+    """Delete a read tenant notification owned by the current user."""
+    if request.method != "POST":
+        return redirect("tenant_notifications")
+
+    notification = get_object_or_404(
+        Notification,
+        id=notification_id,
+        recipient_type="TENANT",
+        user=request.user,
+    )
+
+    if not notification.is_read:
+        messages.warning(request, "Only notifications already marked as read can be deleted.")
+        return redirect("tenant_notifications")
+
+    notification.delete()
+    messages.success(request, "Notification deleted.")
     return redirect("tenant_notifications")
 
 

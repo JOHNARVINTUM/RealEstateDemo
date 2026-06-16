@@ -33,10 +33,6 @@
       <div class="relative z-10 flex flex-col md:flex-row md:items-end md:justify-between gap-8">
         <div>
           <div class="flex items-center gap-3 mb-6">
-            <span class="flex h-3 w-3 relative">
-              <span class="animate-ping absolute inline-flex h-full w-full rounded-full {% if lease %}bg-emerald-400{% else %}bg-amber-400{% endif %} opacity-75"></span>
-              <span class="relative inline-flex rounded-full h-3 w-3 {% if lease %}bg-emerald-500{% else %}bg-amber-500{% endif %}"></span>
-            </span>
             {% if all_active_leases.count > 1 and lease %}
               <div class="relative inline-block">
                 <select onchange="if(this.value) window.location.href='?lease_id='+this.value"

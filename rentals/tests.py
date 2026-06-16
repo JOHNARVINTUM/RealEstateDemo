@@ -464,7 +464,31 @@ class TenantViewWorkflowTests(TestCase):
         self.assertEqual(rows[1]["status_label"], "Upcoming")
         self.assertEqual(rows[-1]["month_label"], "June 2027")
         self.assertEqual(rows[-1]["status_label"], "Upcoming")
-        self.assertEqual(rows[1]["balance"], Decimal("0.00"))
+        self.assertEqual(rows[1]["balance"], Decimal("10350.00"))
+
+    def test_monthly_status_rows_keep_future_partial_balance_visible(self):
+        lease = self.create_active_lease(
+            start_date=date(2026, 6, 1),
+            end_date=date(2026, 8, 1),
+        )
+        MonthlyBill.objects.create(
+            lease=lease,
+            billing_month=date(2026, 7, 1),
+            due_date=date(2026, 7, 5),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("500.00"),
+            parking_fee=Decimal("350.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("10850.00"),
+            rent_paid=Decimal("4000.00"),
+            status="PARTIALLY_PAID",
+        )
+
+        rows = _monthly_status_rows(lease, today=date(2026, 6, 13))
+        july_row = next(row for row in rows if row["month_label"] == "July 2026")
+
+        self.assertEqual(july_row["status_label"], "Partially Paid")
+        self.assertEqual(july_row["balance"], Decimal("6850.00"))
 
     def test_cancelled_paymongo_checkout_draft_is_removed_from_tenant_payment_page(self):
         lease = self.create_active_lease()

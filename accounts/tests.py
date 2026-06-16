@@ -975,6 +975,12 @@ class TenantPortalBoundaryTests(TestCase):
             password="password123",
             role=User.Role.ADMIN,
         )
+        self.tenant = User.objects.create_user(
+            email="boundary-tenant@example.com",
+            username="boundarytenant",
+            password="password123",
+            role=User.Role.TENANT,
+        )
 
     def test_admin_is_redirected_away_from_tenant_dashboard(self):
         self.client.force_login(self.admin)
@@ -982,6 +988,8 @@ class TenantPortalBoundaryTests(TestCase):
         response = self.client.get(reverse("tenant_dashboard"))
 
         self.assertRedirects(response, reverse("admin_dashboard"))
+        messages = list(response.wsgi_request._messages)
+        self.assertTrue(any("tenant portal" in str(message).lower() for message in messages))
 
     def test_admin_is_redirected_away_from_tenant_maintenance(self):
         self.client.force_login(self.admin)
@@ -989,6 +997,8 @@ class TenantPortalBoundaryTests(TestCase):
         response = self.client.get(reverse("maintenance_list"))
 
         self.assertRedirects(response, reverse("admin_dashboard"))
+        messages = list(response.wsgi_request._messages)
+        self.assertTrue(any("tenant portal" in str(message).lower() for message in messages))
 
     def test_admin_is_redirected_away_from_tenant_payment_checkout(self):
         self.client.force_login(self.admin)
@@ -996,6 +1006,93 @@ class TenantPortalBoundaryTests(TestCase):
         response = self.client.get(reverse("paymongo_checkout"))
 
         self.assertRedirects(response, reverse("admin_dashboard"))
+        messages = list(response.wsgi_request._messages)
+        self.assertTrue(any("tenant portal" in str(message).lower() for message in messages))
+
+    def test_tenant_is_redirected_away_from_admin_dashboard(self):
+        self.client.force_login(self.tenant)
+
+        response = self.client.get(reverse("admin_dashboard"))
+
+        self.assertRedirects(response, reverse("tenant_dashboard"))
+        messages = list(response.wsgi_request._messages)
+        self.assertTrue(any("admin portal" in str(message).lower() for message in messages))
+
+
+class TenantNotificationBehaviorTests(TestCase):
+    def setUp(self):
+        self.tenant = User.objects.create_user(
+            email="tenant-notify@example.com",
+            username="tenantnotify",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        TenantProfile.objects.create(
+            user=self.tenant,
+            first_name="Tenant",
+            last_name="Notify",
+            password_change_required=False,
+            created_by=None,
+        )
+
+    def test_tenant_can_delete_read_notification(self):
+        notification = Notification.objects.create(
+            title="Read",
+            message="Done",
+            notification_type="SYSTEM",
+            recipient_type="TENANT",
+            user=self.tenant,
+            is_read=True,
+        )
+        self.client.force_login(self.tenant)
+
+        response = self.client.post(reverse("delete_notification", args=[notification.id]))
+
+        self.assertRedirects(response, reverse("tenant_notifications"))
+        self.assertFalse(Notification.objects.filter(pk=notification.pk).exists())
+
+    def test_tenant_cannot_delete_unread_notification(self):
+        notification = Notification.objects.create(
+            title="Unread",
+            message="Pending",
+            notification_type="SYSTEM",
+            recipient_type="TENANT",
+            user=self.tenant,
+            is_read=False,
+        )
+        self.client.force_login(self.tenant)
+
+        response = self.client.post(reverse("delete_notification", args=[notification.id]))
+
+        self.assertRedirects(response, reverse("tenant_notifications"))
+        self.assertTrue(Notification.objects.filter(pk=notification.pk).exists())
+        messages = list(response.wsgi_request._messages)
+        self.assertTrue(any("already marked as read" in str(message).lower() for message in messages))
+
+    def test_tenant_can_delete_all_read_notifications_without_touching_unread(self):
+        read_notification = Notification.objects.create(
+            title="Read",
+            message="Done",
+            notification_type="SYSTEM",
+            recipient_type="TENANT",
+            user=self.tenant,
+            is_read=True,
+        )
+        unread_notification = Notification.objects.create(
+            title="Unread",
+            message="Pending",
+            notification_type="SYSTEM",
+            recipient_type="TENANT",
+            user=self.tenant,
+            is_read=False,
+        )
+        self.client.force_login(self.tenant)
+
+        response = self.client.post(reverse("delete_all_read_notifications"))
+
+        self.assertRedirects(response, reverse("tenant_notifications"))
+        self.assertFalse(Notification.objects.filter(pk=read_notification.pk).exists())
+        self.assertTrue(Notification.objects.filter(pk=unread_notification.pk).exists())
 
 
 class AdminForecastingRevenueTests(TestCase):

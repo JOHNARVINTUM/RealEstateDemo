@@ -25,14 +25,6 @@
           Choose how many months you want to pay for. Stay ahead of your dues with our secure payment options.
         </p>
       </div>
-      
-      <div class="bg-white/10 backdrop-blur-lg border border-white/20 px-8 py-5 rounded-3xl text-center min-w-[200px] self-start min-[800px]:self-auto flex items-center gap-4">
-        <div class="w-4 h-4 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_15px_rgba(52,211,153,0.8)]"></div>
-        <div class="text-left">
-          <span class="text-[10px] font-black text-emerald-300 block uppercase tracking-widest mb-0.5">System Status</span>
-          <strong class="text-xl font-black text-white block">Ready</strong>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -88,8 +80,67 @@
             {% else %}
               <h3 class="text-2xl font-black text-slate-900 mb-2">You're All Caught Up!</h3>
               <p class="text-base font-medium text-slate-600 leading-relaxed">
-                Good job. Your current dues are already settled. You can proceed with advance payments anytime if you want to stay ahead.
+                Your current dues are already settled. This preview shows what will be covered if you proceed with advance payment.
               </p>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="ml-4 mt-8 rounded-[2rem] border border-slate-200 bg-slate-50/80 p-6 sm:p-7">
+          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+            <div>
+              <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-2">Advance Payment Breakdown</span>
+              <h4 class="text-xl font-black text-slate-900">
+                {% if preview_rows %}
+                  {{ preview_rows|length }} month{{ preview_rows|length|pluralize }} selected
+                {% else %}
+                  No coverage selected
+                {% endif %}
+              </h4>
+              <p class="text-sm font-semibold text-slate-500 mt-1">
+                {% if payment_type == 'rent_only' %}Rent only{% elif payment_type == 'water_only' %}Water only{% else %}Full bill{% endif %}
+                {% if preview_rows %}for the generated billing months below{% else %}Select a duration to build the preview{% endif %}
+              </p>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white px-5 py-4 min-w-[180px]">
+              <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">Total to Pay</span>
+              <strong class="text-2xl font-black text-slate-900 block">&#8369;{{ total_amount|default:"0.00"|floatformat:2|intcomma }}</strong>
+            </div>
+          </div>
+
+          <div class="grid sm:grid-cols-2 gap-3 mb-5">
+            <div class="rounded-2xl border border-slate-200 bg-white px-5 py-4">
+              <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">Rent</span>
+              <strong class="text-lg font-black text-slate-900">&#8369;{{ total_rent|floatformat:2|intcomma }}</strong>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white px-5 py-4">
+              <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">Water</span>
+              <strong class="text-lg font-black text-slate-900">&#8369;{{ total_water|floatformat:2|intcomma }}</strong>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white px-5 py-4">
+              <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">Parking</span>
+              <strong class="text-lg font-black text-slate-900">&#8369;{{ total_parking|floatformat:2|intcomma }}</strong>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white px-5 py-4">
+              <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">Late Fee</span>
+              <strong class="text-lg font-black {% if total_penalty > 0 %}text-rose-600{% else %}text-slate-900{% endif %}">
+                &#8369;{{ total_penalty|floatformat:2|intcomma }}
+              </strong>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-dashed border-slate-200 bg-white/90 px-5 py-4">
+            <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-3">Covered Months</span>
+            {% if preview_rows %}
+              <div class="flex flex-wrap gap-2">
+                {% for row in preview_rows %}
+                  <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-black text-slate-700">
+                    {{ row.month_label }}
+                  </span>
+                {% endfor %}
+              </div>
+            {% else %}
+              <p class="text-sm font-semibold text-slate-500">No billing rows are available for the selected payment setup yet.</p>
             {% endif %}
           </div>
         </div>
@@ -250,6 +301,7 @@
     </div>
   </div>
 
+  {% if show_detailed_breakdown %}
   <!-- 3. Detailed Breakdown Table -->
   <div class="bg-white border border-slate-200 rounded-[2.5rem] p-8 sm:p-10 shadow-sm mt-8">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 border-b border-slate-100 pb-6">
@@ -333,6 +385,7 @@
       </table>
     </div>
   </div>
+  {% endif %}
 
 </div>
 {% endblock %}

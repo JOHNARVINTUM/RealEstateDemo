@@ -9,7 +9,12 @@
         <!-- Breadcrumb -->
         {% if back_url %}
         <nav class="flex items-center justify-center gap-2 mb-8 text-[10px] font-black uppercase tracking-widest text-slate-400">
-            <a href="{{ back_url }}" class="hover:text-blue-600 transition-colors">Back to Tenant</a>
+            <a href="{{ back_url }}" onclick="if (document.referrer) { window.history.back(); return false; }" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
+      <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
+      </svg>
+      <span>Back</span>
+    </a>
             <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg>
             <span>Delete Confirmation</span>
         </nav>
@@ -71,9 +76,12 @@
                         </button>
                         
                         {% if back_url %}
-                        <a href="{{ back_url }}" class="w-full py-4 bg-white border border-slate-200 text-slate-500 rounded-2xl font-display font-bold text-sm hover:bg-slate-50 transition-all text-center">
-                            Cancel
-                        </a>
+                        <a href="{{ back_url }}" onclick="if (document.referrer) { window.history.back(); return false; }" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
+      <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
+      </svg>
+      <span>Back</span>
+    </a>
                         {% endif %}
                     </div>
                 </form>
@@ -202,9 +210,12 @@
                     </button>
                     
                     {% if back_url %}
-                    <a href="{{ back_url }}" class="flex-1 py-4 bg-white border border-slate-200 text-slate-500 rounded-2xl font-display font-bold text-sm hover:bg-slate-50 transition-all text-center">
-                        Cancel
-                    </a>
+                    <a href="{{ back_url }}" onclick="if (document.referrer) { window.history.back(); return false; }" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
+      <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
+      </svg>
+      <span>Back</span>
+    </a>
                     {% endif %}
                 </div>
             </form>

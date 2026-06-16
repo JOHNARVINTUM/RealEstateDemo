@@ -1,0 +1,174 @@
+import os
+
+file_path = r"c:\Users\Domeld\Documents\FEU\3rd Year\3rd Sem\Thesis\RealEstateDemo\templates\rentals\tenant_notifications.html"
+
+new_content = """{% extends "tenant_base.html" %}
+{% load humanize %}
+{% block title %}Notifications | RealEstate360+{% endblock %}
+
+{% block tenant_content %}
+<div class="max-w-6xl mx-auto pb-16">
+
+  <!-- Premium Glassmorphic Header -->
+  <div class="relative overflow-hidden rounded-[2.5rem] bg-slate-900 p-8 sm:p-12 text-white shadow-2xl mb-8">
+    <!-- Decorative Orbs -->
+    <div class="absolute -top-32 -right-32 w-[30rem] h-[30rem] bg-blue-600 rounded-full mix-blend-multiply filter blur-[100px] opacity-40"></div>
+    <div class="absolute -bottom-24 -left-24 w-72 h-72 bg-emerald-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30"></div>
+    
+    <div class="relative z-10 flex flex-col min-[800px]:flex-row min-[800px]:items-center min-[800px]:justify-between gap-8">
+      <div>
+        <div class="flex items-center gap-3 mb-4">
+          <span class="inline-block p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shadow-inner">
+            <svg class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+          </span>
+          <h1 class="text-4xl sm:text-6xl font-black tracking-tight">Inbox</h1>
+        </div>
+        <p class="text-lg text-slate-300 font-medium max-w-lg">
+          {% if unread_count > 0 %}
+            You have <strong class="text-white">{{ unread_count }} unread</strong> notification{{ unread_count|pluralize }}.
+          {% else %}
+            All caught up! You have no unread notifications right now.
+          {% endif %}
+        </p>
+      </div>
+      
+      <div class="flex flex-col sm:flex-row items-center gap-4 min-[800px]:self-end">
+        <div class="bg-white/10 backdrop-blur-lg border border-white/20 px-6 py-4 rounded-3xl text-center min-w-[140px]">
+          <span class="text-[10px] font-black text-slate-300 block uppercase tracking-widest mb-1">Total Received</span>
+          <span class="text-3xl font-black text-white">{{ notifications|length }}</span>
+        </div>
+        
+        {% if unread_count > 0 %}
+          <form method="post" action="{% url 'mark_all_notifications_read' %}" data-loading-form class="w-full sm:w-auto">
+            {% csrf_token %}
+            <button type="submit" data-loading-button data-loading-text="Marking..." class="w-full h-full px-6 py-4 bg-white text-slate-900 text-sm font-black rounded-3xl hover:bg-slate-100 transition-all shadow-lg shadow-white/10 hover:scale-105 flex items-center justify-center gap-2">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              <span class="button-label">Mark All Read</span>
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Neumorphic Filter Bar -->
+  <div class="flex items-center gap-2 mb-10 bg-slate-100 p-2 rounded-2xl w-fit shadow-inner border border-slate-200">
+    <a href="?status=all" class="px-6 py-2.5 rounded-xl text-sm font-black transition-all {% if status_filter == 'all' or not status_filter %}bg-white text-slate-900 shadow-sm border border-slate-200{% else %}text-slate-500 hover:text-slate-700{% endif %}">
+      All
+    </a>
+    <a href="?status=unread" class="px-6 py-2.5 rounded-xl text-sm font-black transition-all {% if status_filter == 'unread' %}bg-white text-slate-900 shadow-sm border border-slate-200{% else %}text-slate-500 hover:text-slate-700{% endif %}">
+      Unread
+      {% if unread_count > 0 %}
+        <span class="ml-2 inline-flex items-center justify-center w-5 h-5 bg-rose-500 text-white rounded-full text-[10px]">{{ unread_count }}</span>
+      {% endif %}
+    </a>
+    <a href="?status=read" class="px-6 py-2.5 rounded-xl text-sm font-black transition-all {% if status_filter == 'read' %}bg-white text-slate-900 shadow-sm border border-slate-200{% else %}text-slate-500 hover:text-slate-700{% endif %}">
+      Read
+    </a>
+  </div>
+
+  <!-- Notifications List -->
+  <div class="space-y-6">
+    {% for notification in notifications %}
+      <div class="group relative overflow-hidden bg-white border border-slate-200 rounded-[2rem] p-6 sm:p-8 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 {% if not notification.is_read %}bg-blue-50/30 border-blue-200 shadow-blue-100/50{% endif %}" data-notification-id="{{ notification.id }}">
+        
+        <!-- Status Indicator Strip -->
+        {% if not notification.is_read %}
+          <div class="absolute left-0 top-0 bottom-0 w-2 bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.6)]"></div>
+        {% else %}
+          <div class="absolute left-0 top-0 bottom-0 w-2 bg-slate-200 group-hover:bg-slate-300 transition-colors"></div>
+        {% endif %}
+
+        <div class="ml-4 flex flex-col lg:flex-row justify-between gap-6">
+          <div class="flex-1 min-w-0">
+            <!-- Header Row -->
+            <div class="flex flex-wrap items-center gap-3 mb-4">
+              <span class="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5
+                {% if notification.notification_type == 'PAYMENT' %}bg-emerald-100 text-emerald-800
+                {% elif notification.notification_type == 'BILLING' %}bg-blue-100 text-blue-800
+                {% elif notification.notification_type == 'MAINTENANCE' %}bg-amber-100 text-amber-800
+                {% elif notification.notification_type == 'SYSTEM' %}bg-slate-200 text-slate-800
+                {% else %}bg-slate-100 text-slate-600{% endif %}">
+                {% if notification.notification_type == 'PAYMENT' %}
+                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                {% elif notification.notification_type == 'BILLING' %}
+                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                {% elif notification.notification_type == 'MAINTENANCE' %}
+                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /></svg>
+                {% else %}
+                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                {% endif %}
+                {{ notification.get_notification_type_display }}
+              </span>
+              
+              {% if not notification.is_read %}
+                <span class="px-2 py-1 bg-rose-50 border border-rose-200 text-rose-600 text-[9px] font-black rounded-lg uppercase tracking-widest shrink-0 animate-pulse">New</span>
+              {% endif %}
+              
+              <span class="text-xs text-slate-400 font-bold ml-auto">{{ notification.created_at|date:"F d, Y - g:i A" }}</span>
+            </div>
+            
+            <!-- Content -->
+            <h3 class="text-2xl font-black text-slate-900 mb-3 tracking-tight">{{ notification.title }}</h3>
+            <div class="text-[15px] text-slate-600 leading-relaxed font-medium bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+              {{ notification.message|linebreaksbr }}
+            </div>
+            
+            <!-- Smart Action Links -->
+            <div class="mt-5 flex flex-wrap gap-3">
+              {% if notification.notification_type == 'PAYMENT' or notification.notification_type == 'BILLING' %}
+                <a href="{% url 'tenant_billing' %}" class="px-5 py-2.5 bg-slate-900 text-white text-xs font-black rounded-xl hover:bg-slate-800 hover:-translate-y-0.5 transition-all inline-flex items-center gap-2 shadow-md">
+                  View Billing Details
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                </a>
+              {% elif notification.notification_type == 'MAINTENANCE' %}
+                <a href="{% url 'maintenance_list' %}" class="px-5 py-2.5 bg-slate-900 text-white text-xs font-black rounded-xl hover:bg-slate-800 hover:-translate-y-0.5 transition-all inline-flex items-center gap-2 shadow-md">
+                  View Repairs
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                </a>
+              {% endif %}
+            </div>
+          </div>
+          
+          <!-- Mark as Read Button -->
+          {% if not notification.is_read %}
+            <div class="lg:shrink-0 flex items-end lg:items-center mt-4 lg:mt-0 pt-4 lg:pt-0 border-t lg:border-t-0 border-slate-100">
+              <form method="post" action="{% url 'mark_notification_read' notification.id %}" data-loading-form class="w-full">
+                {% csrf_token %}
+                <button type="submit" data-loading-button data-loading-text="Marking..." class="w-full px-5 py-3.5 bg-blue-50 text-blue-700 border border-blue-200 text-xs font-black rounded-xl hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all flex items-center justify-center gap-2">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span class="button-label">Mark Read</span>
+                </button>
+              </form>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    {% empty %}
+      <!-- Premium Empty State -->
+      <div class="bg-white border-2 border-dashed border-slate-200 rounded-[3rem] p-16 text-center shadow-sm">
+        <div class="w-32 h-32 bg-slate-50 border-8 border-white shadow-xl rounded-full flex items-center justify-center mx-auto mb-8 relative">
+          <svg class="w-14 h-14 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+          </svg>
+          <div class="absolute -bottom-2 -right-2 w-10 h-10 bg-emerald-500 rounded-full border-4 border-white flex items-center justify-center">
+            <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+          </div>
+        </div>
+        <h2 class="text-3xl font-black text-slate-900 tracking-tight mb-3">Inbox Zero!</h2>
+        <p class="text-lg font-medium text-slate-500 max-w-md mx-auto">You have absolutely no notifications right now. Enjoy the peace and quiet.</p>
+      </div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}"""
+
+with open(file_path, "w", encoding="utf-8") as f:
+    f.write(new_content)

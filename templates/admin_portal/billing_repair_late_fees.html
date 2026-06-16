@@ -5,11 +5,11 @@
 {% block content %}
 <div class="max-w-5xl mx-auto font-sans text-slate-900 pb-12 px-4 py-6">
   <div class="mb-6">
-    <a href="{{ back_url }}" class="w-fit px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-colors shadow-xs mb-4">
-      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+    <a href="{{ back_url }}" onclick="if (document.referrer) { window.history.back(); return false; }" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
+      <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
       </svg>
-      Back to Billing
+      <span>Back</span>
     </a>
     <p class="text-xs font-black uppercase tracking-wide text-amber-700">Penalty Repair</p>
     <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 mt-1">Repair Inflated Late Fees</h1>
@@ -27,7 +27,7 @@
       <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Skipped</span>
       <p class="text-3xl font-black text-slate-900 mt-1">{{ preview.skipped_count }}</p>
     </div>
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-emerald-600">
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-emerald-600 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
       <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total reduction</span>
       <p class="text-3xl font-black text-emerald-700 mt-1">₱{{ preview.total_reduction|floatformat:2|intcomma }}</p>
     </div>

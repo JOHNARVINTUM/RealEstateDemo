@@ -18,11 +18,11 @@
   <header class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
     <div>
       <div class="flex items-center gap-2 mb-1">
-        <span class="inline-block w-3 h-3 rounded-full bg-emerald-500"></span>
-        <span class="text-indigo-600 font-bold tracking-wider uppercase text-xs">Admin Home</span>
+        <span class="inline-block w-3 h-3 rounded-full bg-emerald-600"></span>
+        <span class="text-sm font-semibold text-slate-700">System Overview</span>
       </div>
-      <h1 class="text-3xl md:text-4xl font-extrabold text-slate-900 mt-1">Dashboard</h1>
-      <p class="text-slate-600 mt-2 text-lg font-medium">A quick look at your properties, tenants, and bills.</p>
+      <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 mt-1">Dashboard</h1>
+      <p class="text-base text-slate-700 mt-1 leading-relaxed">A quick look at your properties, tenants, and bills.</p>
     </div>
     
     <div class="flex items-center gap-3 w-full md:w-auto">
@@ -42,7 +42,7 @@
   <!-- Key Metrics Counters (Highly Readable & High Contrast) -->
   <section class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
     
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-blue-600 flex flex-col justify-between">
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-blue-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
       <div>
         <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Active Tenants</span>
         <div class="text-3xl font-black text-slate-900 tracking-tight">{{ total_tenants|intcomma }}<span class="text-xl text-slate-400 font-medium"> / {{ total_units }}</span></div>
@@ -53,7 +53,7 @@
     </div>
 
     <!-- Occupied Assets -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-emerald-600 flex flex-col justify-between">
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-emerald-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
       <div>
         <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Filled Units</span>
         <div class="text-3xl font-black text-slate-900 tracking-tight">{{ occupied_units|intcomma }}</div>
@@ -64,7 +64,7 @@
     </div>
 
     <!-- Available Units -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-purple-600 flex flex-col justify-between">
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-purple-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
       <div>
         <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Empty Units</span>
         <div class="text-3xl font-black text-slate-900 tracking-tight">{{ available_units|intcomma }}</div>
@@ -75,7 +75,11 @@
     </div>
 
     <!-- Rent Collection Status -->
-    <a href="{% url 'admin_billed_this_month' %}?month={{ current_month_str }}" class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-slate-700 flex flex-col justify-between hover:shadow-md hover:border-slate-400 transition-all group">
+    <a href="{% url 'admin_billed_this_month' %}?month={{ current_month_str }}" class="relative bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-slate-700 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 hover:border-slate-400 transition-all duration-300 group">
+      <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-max px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg opacity-0 invisible group-hover:visible group-hover:opacity-100 transition-all duration-300 delay-500 pointer-events-none z-10 shadow-xl border border-slate-700">
+        <strong class="text-indigo-400">Click to view full billing details</strong>
+        <div class="absolute top-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-slate-900"></div>
+      </div>
       <div>
         <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Collected This Month</span>
         <div class="mt-1 space-y-1">
@@ -97,7 +101,7 @@
     </a>
 
     <!-- Total Revenue Breakdown -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-indigo-600 flex flex-col justify-between">
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-indigo-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
       <div>
         <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Total Collected</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight dashboard-amount-full" title="₱{{ total_collected|floatformat:0|intcomma }}">
@@ -137,117 +141,59 @@
         </select>
       </div>
 
-      <!-- Revenue Performance line chart -->
-      <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
-        <div class="mb-4 pb-3 border-b border-slate-100">
-          <h3 class="text-lg font-bold text-slate-900">Income Over Time</h3>
-          <p class="text-sm text-slate-700 mt-0.5">This shows how much money was collected compared to what was expected. The table below lists the exact numbers.</p>
-        </div>
-        <div id="rentTableContainer" class="mb-6 overflow-x-auto max-h-[250px] overflow-y-auto"></div>
-        <div class="h-[300px] w-full">
-          <canvas id="rentChart"></canvas>
-        </div>
+      <!-- Tab Buttons -->
+      <div class="flex space-x-2 border-b border-slate-200 pb-2 overflow-x-auto">
+        <button onclick="showReportTab('income')" id="tab-income" class="px-4 py-2 text-sm font-bold rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 transition-colors whitespace-nowrap">Income</button>
+        <button onclick="showReportTab('water')" id="tab-water" class="px-4 py-2 text-sm font-bold rounded-lg bg-white text-slate-600 hover:bg-slate-50 border border-transparent transition-colors whitespace-nowrap">Water Usage</button>
+        <button onclick="showReportTab('repairs')" id="tab-repairs" class="px-4 py-2 text-sm font-bold rounded-lg bg-white text-slate-600 hover:bg-slate-50 border border-transparent transition-colors whitespace-nowrap">Repairs</button>
       </div>
 
-      <!-- Water Usage line chart -->
-      <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
-        <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
-          <div>
-            <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Water Usage</h2>
-            <p class="text-sm text-slate-700 mt-0.5">This tracks the total water used across all units. Use the table to see the exact cubic meters used.</p>
+      <!-- Reports Container -->
+      <div class="relative">
+        <!-- Revenue Performance line chart -->
+        <div id="report-income" class="report-section bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
+          <div class="mb-4 pb-3 border-b border-slate-100">
+            <h3 class="text-lg font-bold text-slate-900">Income Over Time</h3>
+            <p class="text-sm text-slate-700 mt-0.5">This shows how much money was collected compared to what was expected. The table below lists the exact numbers.</p>
           </div>
-          <span class="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded">m³</span>
-        </div>
-        <div id="waterTableContainer" class="mb-6 overflow-x-auto max-h-[250px] overflow-y-auto"></div>
-        <div class="h-[300px] w-full">
-          <canvas id="waterChart"></canvas>
-        </div>
-      </div>
-
-      <!-- Maintenance Trend bar chart -->
-      <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
-        <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
-          <div>
-            <h3 class="font-bold text-slate-900">Repair History</h3>
-            <p class="text-sm text-slate-500 mt-1">This shows the number of repair requests made by tenants each month.</p>
-          </div>
-          <span class="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded">repairs</span>
-        </div>
-        <div id="maintenanceTableContainer" class="mb-6 overflow-x-auto max-h-[250px] overflow-y-auto"></div>
-        <div class="h-[300px] w-full">
-          <canvas id="maintenanceChart"></canvas>
-        </div>
-      </div>
-
-      <!-- Scannable Property Gateway Panel (Highly practical custom frontend control) -->
-      <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
-        <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
-          <div>
-            <h2 class="text-2xl font-extrabold text-slate-900">Property Management</h2>
-            <p class="text-sm text-slate-700 mt-0.5">Quickly check your properties and tenants.</p>
+          <div id="rentTableContainer" class="mb-6 overflow-x-auto max-h-[250px] overflow-y-auto"></div>
+          <div class="h-[300px] w-full">
+            <canvas id="rentChart"></canvas>
           </div>
         </div>
 
-        <!-- Scanning tiles grid -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-6 items-stretch">
-          
-          <!-- Filter Available -->
-          <div class="border border-slate-200 rounded-lg p-4 bg-slate-50/50 hover:bg-slate-50 transition-colors flex flex-col justify-between h-full">
+        <!-- Water Usage line chart -->
+        <div id="report-water" class="report-section bg-white border border-slate-200 rounded-xl p-6 shadow-xs hidden">
+          <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
             <div>
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-bold text-purple-800 bg-purple-50 px-2.5 py-0.5 rounded border border-purple-200">Available</span>
-                <span class="text-sm font-extrabold text-slate-900">{{ available_units }} units</span>
-              </div>
-              <p class="text-sm text-slate-700 leading-relaxed mt-2">Units that are ready for new tenants.</p>
+              <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Water Usage</h2>
+              <p class="text-sm text-slate-700 mt-0.5">This tracks the total water used across all units. Use the table to see the exact cubic meters used.</p>
             </div>
-            <a href="{% url 'admin_units' %}?status=AVAILABLE" class="mt-4 block text-center bg-white hover:bg-purple-50 border border-slate-300 text-purple-800 font-extrabold text-sm py-2 rounded transition-colors shadow-xs">
-              See Empty Units →
-            </a>
+            <span class="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded">m³</span>
           </div>
-
-          <!-- Filter Occupied -->
-          <div class="border border-slate-200 rounded-lg p-4 bg-slate-50/50 hover:bg-slate-50 transition-colors flex flex-col justify-between h-full">
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200">Occupied</span>
-                <span class="text-sm font-extrabold text-slate-900">{{ occupied_units }} units</span>
-              </div>
-              <p class="text-sm text-slate-700 leading-relaxed mt-2">Units that have tenants.</p>
-            </div>
-            <a href="{% url 'admin_units' %}?status=OCCUPIED" class="mt-4 block text-center bg-white hover:bg-emerald-50 border border-slate-300 text-emerald-800 font-extrabold text-sm py-2 rounded transition-colors shadow-xs">
-              See Filled Units →
-            </a>
-          </div>
-
-          <!-- Filter Tenants -->
-          <div class="border border-slate-200 rounded-lg p-4 bg-slate-50/50 hover:bg-slate-50 transition-colors flex flex-col justify-between h-full">
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-bold text-blue-800 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-200">Tenants</span>
-                <span class="text-sm font-extrabold text-slate-900">{{ total_tenants }} users</span>
-              </div>
-              <p class="text-sm text-slate-700 leading-relaxed mt-2">List of all your tenants.</p>
-            </div>
-            <a href="{% url 'admin_tenants' %}" class="mt-4 block text-center bg-white hover:bg-blue-50 border border-slate-300 text-blue-800 font-extrabold text-sm py-2 rounded transition-colors shadow-xs">
-              See All Tenants →
-            </a>
-          </div>
-
-        </div>
-
-        <!-- Practical Action Footer -->
-        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div class="text-sm text-slate-800 leading-relaxed">
-            <span class="font-extrabold text-slate-900">Quick Actions:</span> Add new records here.
-          </div>
-          <div class="flex items-center gap-3 w-full sm:w-auto">
-            <a href="{% url 'admin_create_tenant_profile' %}" class="flex-1 sm:flex-none text-center px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-sm rounded transition-colors">
-              + Add Tenant
-            </a>
+          <div id="waterTableContainer" class="mb-6 overflow-x-auto max-h-[250px] overflow-y-auto"></div>
+          <div class="h-[300px] w-full">
+            <canvas id="waterChart"></canvas>
           </div>
         </div>
 
+        <!-- Maintenance Trend bar chart -->
+        <div id="report-repairs" class="report-section bg-white border border-slate-200 rounded-xl p-6 shadow-xs hidden">
+          <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
+            <div>
+              <h3 class="font-bold text-slate-900">Repair History</h3>
+              <p class="text-sm text-slate-500 mt-1">This shows the number of repair requests made by tenants each month.</p>
+            </div>
+            <span class="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded">repairs</span>
+          </div>
+          <div id="maintenanceTableContainer" class="mb-6 overflow-x-auto max-h-[250px] overflow-y-auto"></div>
+          <div class="h-[300px] w-full">
+            <canvas id="maintenanceChart"></canvas>
+          </div>
+        </div>
       </div>
+
+
 
     </div>
 
@@ -527,4 +473,26 @@
     monthFilter.addEventListener('change', (e) => updateCharts(parseInt(e.target.value)));
   });
 </script>
+
+<script>
+function showReportTab(tabId) {
+  // Hide all report sections
+  document.querySelectorAll('.report-section').forEach(el => el.classList.add('hidden'));
+  
+  // Show target report section
+  document.getElementById('report-' + tabId).classList.remove('hidden');
+  
+  // Reset all tabs to inactive state
+  const tabs = ['income', 'water', 'repairs'];
+  tabs.forEach(t => {
+    const btn = document.getElementById('tab-' + t);
+    btn.className = 'px-4 py-2 text-sm font-bold rounded-lg whitespace-nowrap transition-colors bg-white text-slate-600 hover:bg-slate-50 border border-transparent';
+  });
+  
+  // Set active tab styling
+  const activeBtn = document.getElementById('tab-' + tabId);
+  activeBtn.className = 'px-4 py-2 text-sm font-bold rounded-lg whitespace-nowrap transition-colors bg-indigo-50 text-indigo-700 border border-indigo-200';
+}
+</script>
+
 {% endblock %}

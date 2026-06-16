@@ -8,8 +8,12 @@
   <!-- Studio Top Title Block -->
   <header class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
     <div>
-      <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">Rent & Bills</h1>
-      <p class="text-sm text-slate-700 mt-1 leading-relaxed">See who has paid rent, check for late payments, and manage bills.</p>
+      <div class="flex items-center gap-2 mb-1">
+        <span class="inline-block w-3 h-3 rounded-full bg-slate-700"></span>
+        <span class="text-sm font-semibold text-slate-700">Manage Finances</span>
+      </div>
+      <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 leading-tight">Rent & Bills</h1>
+      <p class="text-base text-slate-700 mt-1 leading-relaxed">See who has paid rent, check for late payments, and manage bills.</p>
     </div>
     <div class="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
       <a href="{% url 'admin_cleanup_duplicate_bills' %}"
@@ -27,7 +31,7 @@
   <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
     
     <!-- Paid Sum Box -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-emerald-600 flex flex-col justify-between">
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-emerald-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
       <div>
         <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Paid</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ paid_count }}</div>
@@ -38,7 +42,7 @@
     </div>
 
     <!-- Unpaid Sum Box -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-rose-600 flex flex-col justify-between">
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-rose-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
       <div>
         <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Unpaid</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ unpaid_count }}</div>
@@ -49,7 +53,7 @@
     </div>
 
     <!-- Overdue Sum Box -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-orange-600 flex flex-col justify-between">
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-orange-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
       <div>
         <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Late</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ overdue_count }}</div>
@@ -60,7 +64,7 @@
     </div>
 
     <!-- Partial Sum Box -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-amber-600 flex flex-col justify-between">
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-amber-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
       <div>
         <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Partly Paid</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ partial_count }}</div>
@@ -71,7 +75,7 @@
     </div>
 
     <!-- Upcoming Sum Box -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-slate-700 flex flex-col justify-between">
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-slate-700 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
       <div>
         <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Coming Soon</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ upcoming_count }}</div>
@@ -94,11 +98,6 @@
         <span class="px-2 py-0.5 rounded text-xs {% if active_tab == 'active' %}bg-slate-900 text-white font-bold{% else %}bg-slate-200 text-slate-700{% endif %}">{{ unpaid_count }}</span>
       </a>
       
-      <a href="?tab=upcoming&q={{ q }}&status={{ status_filter }}&month={{ month_filter }}&year={{ year_filter }}"
-         class="px-6 py-3.5 text-sm font-bold transition-colors border-b-2 flex items-center gap-2 {% if active_tab == 'upcoming' %}border-slate-900 text-slate-900 bg-white font-extrabold{% else %}border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/60{% endif %}">
-        <span>Next Bills</span>
-        <span class="px-2 py-0.5 rounded text-xs {% if active_tab == 'upcoming' %}bg-slate-900 text-white font-bold{% else %}bg-slate-200 text-slate-700{% endif %}">{{ upcoming_count }}</span>
-      </a>
     </div>
 
     <!-- Filter Control Row -->
@@ -184,14 +183,14 @@
         </thead>
         <tbody class="divide-y divide-slate-200 text-sm">
           {% for b in page_obj %}
-          <tr class="hover:bg-slate-50 transition-colors">
+          <tr class="hover:bg-slate-50 transition-colors group">
             
             <!-- Account Information Mapping Column -->
             <td class="px-5 py-3.5">
               {% with tp=b.lease.tenant.tenantprofile %}
               <a href="{% if tp %}{% url 'admin_tenant_detail' tp.id %}{% else %}#{% endif %}"
-                 class="flex items-center gap-2.5 group hover:no-underline">
-                <div class="w-8 h-8 rounded bg-slate-100 group-hover:bg-slate-200 flex items-center justify-center text-slate-800 font-bold text-xs shrink-0 border border-slate-200 transition-colors">
+                 class="flex items-center gap-2.5 hover:no-underline">
+                <div class="w-8 h-8 rounded bg-slate-100 group-hover:bg-slate-800 group-hover:text-white flex items-center justify-center text-slate-800 font-bold text-xs shrink-0 border border-slate-200 transition-colors">
                   {% if tp and tp.first_name %}{{ tp.first_name|first }}{{ tp.last_name|first }}{% else %}{{ b.lease.tenant.email|first|upper }}{% endif %}
                 </div>
                 <div class="min-w-0">
@@ -211,7 +210,7 @@
 
             <!-- Due Bound Column -->
             <td class="px-5 py-3.5 text-slate-700 font-medium">
-              {{ b.due_date|date:"M d, Y"|default:"-" }}
+              {{ b.due_date|date:"n/j/Y"|default:"-" }}
             </td>
 
             <!-- Original Sum Base Column -->
@@ -250,10 +249,15 @@
             </td>
 
             <!-- Secondary Reference Column -->
-            <td class="px-5 py-3.5">
-              <div class="text-xs font-mono font-bold text-slate-800">{{ b.payment_reference|default:"-" }}</div>
+            <td class="px-5 py-3.5 relative group/ref">
+              <div class="text-xs font-mono font-bold text-slate-800 {% if b.paid_at %}cursor-help inline-block border-b border-dashed border-slate-300{% endif %}">
+                {{ b.payment_reference|default:"-" }}
+              </div>
               {% if b.paid_at %}
-                <span class="text-[10px] text-slate-500 block mt-0.5">on {{ b.paid_at|date:"M d, Y" }}</span>
+                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-3 py-1.5 bg-slate-900 text-white rounded-lg shadow-xl text-xs font-bold opacity-0 invisible group-hover/ref:opacity-100 group-hover/ref:visible transition-all duration-300 z-50 pointer-events-none border border-slate-700 delay-[150ms]">
+                  Paid on: <span class="text-emerald-400">{{ b.paid_at|date:"M d, Y" }}</span>
+                  <div class="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-slate-900"></div>
+                </div>
               {% endif %}
             </td>
 

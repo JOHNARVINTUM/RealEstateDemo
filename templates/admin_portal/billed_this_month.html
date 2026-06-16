@@ -5,17 +5,25 @@
 {% block content %}
 <div class="max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12">
 
-  <!-- Header -->
-  <header class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-    <div class="flex items-center gap-4">
-      <a href="{% url 'admin_dashboard' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-lg transition-colors">
-        ← Back to Dashboard
-      </a>
-      <div>
-        <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Monthly Billing Breakdown</p>
-        <h1 class="text-2xl font-black text-slate-900 tracking-tight">Collected This Month</h1>
-        <p class="text-sm text-slate-500 font-medium mt-0.5">{{ target_month|date:"F Y" }} — all payments received (rent, water, parking)</p>
+  <!-- Navigation: Consistent Back Button -->
+  <nav class="flex items-center pt-4 sm:pt-6 mb-6">
+    <a href="{% url 'admin_dashboard' %}" onclick="if (document.referrer) { window.history.back(); return false; }" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
+      <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
+      </svg>
+      <span>Back</span>
+    </a>
+  </nav>
+
+  <!-- Studio Header -->
+  <header class="bg-white border border-slate-200 rounded-xl p-8 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <span class="inline-block w-3 h-3 rounded-full bg-emerald-500"></span>
+        <span class="text-sm font-semibold text-slate-700">Financial Analytics</span>
       </div>
+      <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 leading-tight">Collected This Month</h1>
+      <p class="text-base text-slate-700 mt-1 leading-relaxed">{{ target_month|date:"F Y" }} — all payments received (rent, water, parking)</p>
     </div>
 
     <!-- Month Switcher -->
@@ -29,26 +37,36 @@
 
   <!-- Summary Totals -->
   <section class="grid grid-cols-2 md:grid-cols-5 gap-4">
-    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs border-l-4 border-l-emerald-600">
-      <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Total Collected</p>
-      <p class="text-2xl font-black text-slate-900">₱{{ grand_total|floatformat:2|intcomma }}</p>
-      <p class="text-xs text-slate-400 mt-1">{{ bills|length }} paid bill{{ bills|length|pluralize }} / {{ total_bills }} total</p>
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm border-t-4 border-t-emerald-600 flex flex-col justify-between hover:shadow-md transition-all hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+      <div>
+        <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Total Collected</p>
+        <p class="text-3xl font-black text-slate-900 tracking-tight">₱{{ grand_total|floatformat:2|intcomma }}</p>
+      </div>
+      <p class="text-xs font-bold text-slate-500 mt-3">{{ bills|length }} paid bill{{ bills|length|pluralize }} / {{ total_bills }} total</p>
     </div>
-    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs border-l-4 border-l-blue-500">
-      <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Base Rent</p>
-      <p class="text-xl font-black text-slate-900">₱{{ total_rent|floatformat:2|intcomma }}</p>
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm border-t-4 border-t-blue-500 flex flex-col justify-between hover:shadow-md transition-all hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+      <div>
+        <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Base Rent</p>
+        <p class="text-2xl font-black text-slate-900 tracking-tight">₱{{ total_rent|floatformat:2|intcomma }}</p>
+      </div>
     </div>
-    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs border-l-4 border-l-cyan-500">
-      <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Water</p>
-      <p class="text-xl font-black text-slate-900">₱{{ total_water|floatformat:2|intcomma }}</p>
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm border-t-4 border-t-cyan-500 flex flex-col justify-between hover:shadow-md transition-all hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+      <div>
+        <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Water</p>
+        <p class="text-2xl font-black text-slate-900 tracking-tight">₱{{ total_water|floatformat:2|intcomma }}</p>
+      </div>
     </div>
-    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs border-l-4 border-l-amber-500">
-      <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Parking</p>
-      <p class="text-xl font-black text-slate-900">₱{{ total_parking|floatformat:2|intcomma }}</p>
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm border-t-4 border-t-amber-500 flex flex-col justify-between hover:shadow-md transition-all hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+      <div>
+        <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Parking</p>
+        <p class="text-2xl font-black text-slate-900 tracking-tight">₱{{ total_parking|floatformat:2|intcomma }}</p>
+      </div>
     </div>
-    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs border-l-4 border-l-rose-500">
-      <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Interest</p>
-      <p class="text-xl font-black text-slate-900">₱{{ total_interest|floatformat:2|intcomma }}</p>
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm border-t-4 border-t-rose-500 flex flex-col justify-between hover:shadow-md transition-all hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+      <div>
+        <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Interest</p>
+        <p class="text-2xl font-black text-slate-900 tracking-tight">₱{{ total_interest|floatformat:2|intcomma }}</p>
+      </div>
     </div>
   </section>
 
@@ -150,15 +168,15 @@
   </div>
 
   <!-- Formula Explainer -->
-  <div class="bg-slate-50 border border-slate-200 rounded-xl p-5">
-    <p class="text-xs font-extrabold text-slate-500 uppercase tracking-wider mb-2">How "Billed This Month" is Calculated</p>
-    <p class="text-sm text-slate-600 font-medium">
-      <span class="font-bold text-slate-800">Total Collected</span> =
-      <span class="text-blue-700 font-bold">Rent Paid</span> +
-      <span class="text-cyan-700 font-bold">Water Paid</span> +
-      <span class="text-amber-700 font-bold">Parking Paid</span> +
-      <span class="text-rose-700 font-bold">Late Interest</span>
-      &nbsp;— summed from actual payments received for {{ target_month|date:"F Y" }}. Includes partial payments (e.g. rent-only or water-only).
+  <div class="bg-slate-50 border border-slate-200 rounded-xl p-6">
+    <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">How "Billed This Month" is Calculated</p>
+    <p class="text-sm text-slate-600 font-bold">
+      <span class="text-slate-900 bg-white px-2 py-1 rounded border border-slate-200">Total Collected</span> =
+      <span class="text-blue-700 bg-blue-50 px-2 py-1 rounded border border-blue-100">Rent</span> +
+      <span class="text-cyan-700 bg-cyan-50 px-2 py-1 rounded border border-cyan-100">Water</span> +
+      <span class="text-amber-700 bg-amber-50 px-2 py-1 rounded border border-amber-100">Parking</span> +
+      <span class="text-rose-700 bg-rose-50 px-2 py-1 rounded border border-rose-100">Interest</span>
+      <span class="block mt-3 text-xs font-medium text-slate-500">Summed from actual payments received for {{ target_month|date:"F Y" }}. Includes partial payments (e.g. rent-only or water-only).</span>
     </p>
   </div>
 

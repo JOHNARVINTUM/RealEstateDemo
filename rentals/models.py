@@ -86,7 +86,7 @@ class Unit(models.Model):
         primary_image = self.get_primary_image()
         if primary_image and primary_image.image:
             return primary_image.image.url
-        return "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+        return "https://ezrxfodgrztlajiiilfz.supabase.co/storage/v1/object/public/unit-images/placeholders/cdd906739ed64fb78aaf8d41b078feea.jpg"
     
     def get_all_images(self):
         """Get all images ordered by primary first then by order"""

@@ -24,12 +24,12 @@
         </svg>
         Edit Unit
       </a>
-      <a href="{% url 'admin_units' %}" class="link">
-        <svg class="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-        </svg>
-        Back to Units
-      </a>
+      <a href="{% url 'admin_units' %}" onclick="if (document.referrer) { window.history.back(); return false; }" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
+      <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
+      </svg>
+      <span>Back</span>
+    </a>
     </div>
   </div>
 </div>

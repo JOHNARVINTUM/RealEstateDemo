@@ -9,7 +9,7 @@
   
   <!-- Navigation: Simple Back Button -->
   <nav class="flex items-center">
-    <a href="{{ back_url|default:'/admin-portal/tenants/' }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
+    <a href="{{ back_url|default:'/admin-portal/tenants/' }}" onclick="if (document.referrer) { window.history.back(); return false; }" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
       <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
       </svg>
@@ -23,41 +23,49 @@
     <div class="flex-1 w-full space-y-6">
       
       <!-- Studio Header -->
-      <header class="bg-white border border-slate-200 rounded-xl p-8 shadow-xs">
-        <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 leading-tight">Edit Profile</h1>
-        <p class="text-slate-600 mt-3 text-xl font-medium leading-relaxed">Update the account information and personal details for <strong class="text-slate-900">{{ tenant.full_name }}</strong>.</p>
+      <header class="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl relative overflow-hidden group">
+        <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-transparent to-rose-500/10 opacity-50 group-hover:opacity-100 transition-opacity duration-700"></div>
+        <div class="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="relative z-10">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="inline-block w-3 h-3 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.8)]"></span>
+            <span class="text-xs font-black text-indigo-400 uppercase tracking-widest">Edit Profile</span>
+          </div>
+          <h1 class="text-3xl md:text-4xl font-black tracking-tight text-white leading-tight">Edit Profile</h1>
+          <p class="text-slate-400 mt-3 text-lg font-medium leading-relaxed max-w-2xl">Update the account information and personal details for <strong class="text-white">{{ tenant.full_name }}</strong>.</p>
+        </div>
       </header>
 
-      <!-- Main Consolidated Edit Form Card -->
-      <form method="post" enctype="multipart/form-data" class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden divide-y divide-slate-100">
+      <!-- Main Consolidated Edit Form -->
+      <form method="post" enctype="multipart/form-data" class="space-y-6">
         {% csrf_token %}
         
         <!-- Section 1: Account Identification & Access Scope -->
-        <div class="p-6 sm:p-8 space-y-5">
-          <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
-            <span class="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-800 font-extrabold text-sm">1</span>
-            <h3 class="text-xl font-extrabold text-slate-900 tracking-tight">Account Info</h3>
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow p-6 sm:p-8 space-y-6">
+          <div class="flex items-center gap-4 pb-4 border-b border-slate-100">
+            <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 text-indigo-700 font-black text-sm border border-indigo-100">1</span>
+            <h3 class="text-xl font-black text-slate-900 tracking-tight">Account Info</h3>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Email Address <span class="text-rose-600">*</span></label>
+              <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Email Address <span class="text-rose-600">*</span></label>
               <input type="email" name="email" value="{{ form.email.value|default:'' }}" 
-                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none" required>
+                     class="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none" required>
               {% if form.email.errors %}
                 <p class="text-sm font-bold text-rose-600 mt-2">{{ form.email.errors.0 }}</p>
               {% endif %}
             </div>
 
             <div>
-              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Username <span class="text-rose-600">*</span></label>
+              <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Username <span class="text-rose-600">*</span></label>
               <input type="text" name="username" value="{{ form.username.value|default:'' }}" 
-                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none" required>
+                     class="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none" required>
             </div>
 
             <div>
-              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Role</label>
-               <select name="role" class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none cursor-pointer">
+              <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Role</label>
+               <select name="role" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none cursor-pointer appearance-none">
                 {% for value, label in form.fields.role.choices %}
                   <option value="{{ value }}" {% if form.role.value == value %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
@@ -74,67 +82,79 @@
         </div>
 
         <!-- Section 2: Core Personal Details -->
-        <div class="p-6 sm:p-8 space-y-5 bg-slate-50/30">
-          <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
-            <span class="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-800 font-extrabold text-sm">2</span>
-            <h3 class="text-xl font-extrabold text-slate-900 tracking-tight">Personal Info</h3>
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow p-6 sm:p-8 space-y-6">
+          <div class="flex items-center gap-4 pb-4 border-b border-slate-100">
+            <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 font-black text-sm border border-emerald-100">2</span>
+            <h3 class="text-xl font-black text-slate-900 tracking-tight">Personal Info</h3>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">First Name <span class="text-rose-600">*</span></label>
+              <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">First Name <span class="text-rose-600">*</span></label>
               <input type="text" name="first_name" value="{{ form.first_name.value|default:'' }}" 
-                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none" required>
+                     class="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none" required>
             </div>
 
             <div>
-              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Last Name <span class="text-rose-600">*</span></label>
+              <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Last Name <span class="text-rose-600">*</span></label>
               <input type="text" name="last_name" value="{{ form.last_name.value|default:'' }}" 
-                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none" required>
+                     class="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none" required>
             </div>
 
             <div class="md:col-span-2">
-              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Phone Number</label>
+              <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Phone Number</label>
               <input type="text" name="contact_no" value="{{ form.contact_no.value|default:'' }}" 
-                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-400" 
+                     class="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none placeholder:text-slate-400" 
                      placeholder="+63 9XX XXX XXXX">
             </div>
           </div>
         </div>
 
         <!-- Section 3: Manual Authentication Protocols -->
-        <div class="p-6 sm:p-8 space-y-5">
-          <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
-            <span class="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-800 font-extrabold text-sm">3</span>
-            <h3 class="text-xl font-extrabold text-slate-900 tracking-tight">Change Password</h3>
-          </div>
-
-          <div class="p-4 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600 font-medium leading-relaxed">
-            <strong>Note:</strong> Leave these blank if you don't want to change the password.
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow p-6 sm:p-8 space-y-6">
+          <div class="flex items-center gap-4 pb-4 border-b border-slate-100">
+            <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-amber-50 text-amber-700 font-black text-sm border border-amber-100">3</span>
+            <h3 class="text-xl font-black text-slate-900 tracking-tight">Change Password</h3>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">New Password</label>
+              <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">
+                <div class="relative group/tooltip inline-block">
+                  <span class="cursor-help inline-block border-b border-dashed border-slate-300">New Password</span>
+                  <div class="absolute bottom-full left-0 mb-2 w-[200px] px-3 py-2 bg-slate-900 text-white rounded-lg shadow-xl text-xs font-medium opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-300 z-50 pointer-events-none border border-slate-700 whitespace-normal text-center delay-[150ms]">
+                    <strong class="text-indigo-400">Note:</strong> Leave blank if keeping current password.
+                    <div class="absolute top-full left-10 -translate-x-1/2 border-[5px] border-transparent border-t-slate-900"></div>
+                  </div>
+                </div>
+              </label>
               <input type="password" name="new_password" 
-                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-300" 
+                     class="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none placeholder:text-slate-300" 
                      placeholder="••••••••">
             </div>
 
             <div>
-              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Confirm Password</label>
+              <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">
+                <div class="relative group/tooltip inline-block">
+                  <span class="cursor-help inline-block border-b border-dashed border-slate-300">Confirm Password</span>
+                  <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[200px] px-3 py-2 bg-slate-900 text-white rounded-lg shadow-xl text-xs font-medium opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-300 z-50 pointer-events-none border border-slate-700 whitespace-normal text-center delay-[150ms]">
+                    <strong class="text-indigo-400">Note:</strong> Leave blank if keeping current password.
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-slate-900"></div>
+                  </div>
+                </div>
+              </label>
               <input type="password" name="confirm_password" 
-                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-300" 
+                     class="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none placeholder:text-slate-300" 
                      placeholder="••••••••">
             </div>
           </div>
         </div>
 
         <!-- Section 4: Document Updating Integration -->
-        <div class="p-6 sm:p-8 space-y-5 bg-slate-50/30">
-          <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
-            <span class="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-800 font-extrabold text-sm">4</span>
-            <h3 class="text-xl font-extrabold text-slate-900 tracking-tight">Documents</h3>
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow p-6 sm:p-8 space-y-6">
+          <div class="flex items-center gap-4 pb-4 border-b border-slate-100">
+            <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-rose-50 text-rose-700 font-black text-sm border border-rose-100">4</span>
+            <h3 class="text-xl font-black text-slate-900 tracking-tight">Documents</h3>
           </div>
 
           <div class="space-y-6">
@@ -143,20 +163,38 @@
               <span class="text-sm font-extrabold text-slate-800 block uppercase tracking-wider">Lease Agreement</span>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-sm font-bold text-slate-600 mb-2 uppercase tracking-wider">Upload New File</label>
-                  <input type="file" name="contract_file" accept=".pdf,.png,.jpg,.jpeg,.heic,.heif,application/pdf,image/png,image/jpeg,image/heic,image/heif"
+                  <label class="block text-sm font-bold text-slate-600 mb-2 uppercase tracking-wider">
+                    <div class="relative group/tooltip inline-block">
+                      <span class="cursor-help inline-block border-b border-dashed border-slate-300">Upload New File</span>
+                      <div class="absolute bottom-full left-0 mb-2 w-[220px] px-3 py-2 bg-slate-900 text-white rounded-lg shadow-xl text-xs font-medium opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-300 z-50 pointer-events-none border border-slate-700 whitespace-normal text-center delay-[150ms]">
+                        <strong class="block text-indigo-400 mb-1">Format Rules</strong>
+                        Accepted: PDF contracts, PNG, JPG/JPEG, and iPhone HEIC/HEIF photos. Max 10MB.
+                        <div class="absolute top-full left-10 -translate-x-1/2 border-[5px] border-transparent border-t-slate-900"></div>
+                      </div>
+                    </div>
+                  </label>
+                  <input type="file" id="contract_file" name="contract_file" accept=".pdf,.png,.jpg,.jpeg,.heic,.heif,application/pdf,image/png,image/jpeg,image/heic,image/heif"
                          class="w-full text-base text-slate-700 file:mr-3 file:py-2 file:px-4 file:rounded-md file:border file:border-slate-300 file:text-sm file:font-bold file:bg-slate-50 file:text-slate-800 hover:file:bg-slate-100 transition-colors cursor-pointer">
-                  <p class="text-xs text-slate-500 mt-2 font-medium">Accepted: PDF contracts, PNG, JPG/JPEG, and iPhone HEIC/HEIF photos. Max 10MB.</p>
-                  <p class="text-sm text-slate-500 mt-2 font-medium">
+
+                  <div id="contract_preview_container" class="mt-3 hidden">
+                    <p class="text-sm font-bold text-slate-600 mb-1">New File Preview:</p>
+                    <img id="contract_preview_img" src="" alt="New Contract Preview" class="w-32 h-32 object-cover rounded-lg border border-slate-300 shadow-sm">
+                  </div>
+
+                  <div class="text-sm text-slate-500 mt-2 font-medium" id="contract_status_area">
                     Status:
-                    {% if contract_attachment %}
-                      <a href="{% url 'admin_view_attachment' contract_attachment.id %}" target="_blank" rel="noopener" class="font-black text-blue-700 hover:text-blue-900">
-                        {{ contract_attachment.filename }}
-                      </a>
+                    {% if contract_attachments %}
+                      <div class="flex flex-wrap gap-3 mt-3">
+                        {% for att in contract_attachments %}
+                          <a href="{% url 'admin_view_attachment' att.id %}" target="_blank" rel="noopener" class="inline-block" title="Uploaded: {{ att.uploaded_at|date:'M d, Y' }}">
+                            <img src="{% url 'admin_view_attachment' att.id %}" alt="Lease Agreement Preview" class="w-32 h-32 object-cover rounded-lg border border-slate-300 shadow-sm hover:opacity-80 transition-opacity">
+                          </a>
+                        {% endfor %}
+                      </div>
                     {% else %}
                       <strong class="text-slate-700">No File Yet</strong>
                     {% endif %}
-                  </p>
+                  </div>
                 </div>
                 <div>
                   <label class="block text-sm font-bold text-slate-600 mb-2 uppercase tracking-wider">Description</label>
@@ -172,20 +210,38 @@
               <span class="text-sm font-extrabold text-slate-800 block uppercase tracking-wider">Valid ID</span>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-sm font-bold text-slate-600 mb-2 uppercase tracking-wider">Upload New File</label>
-                  <input type="file" name="valid_id_file" accept=".pdf,.png,.jpg,.jpeg,.heic,.heif,application/pdf,image/png,image/jpeg,image/heic,image/heif"
+                  <label class="block text-sm font-bold text-slate-600 mb-2 uppercase tracking-wider">
+                    <div class="relative group/tooltip inline-block">
+                      <span class="cursor-help inline-block border-b border-dashed border-slate-300">Upload New File</span>
+                      <div class="absolute bottom-full left-0 mb-2 w-[220px] px-3 py-2 bg-slate-900 text-white rounded-lg shadow-xl text-xs font-medium opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-300 z-50 pointer-events-none border border-slate-700 whitespace-normal text-center delay-[150ms]">
+                        <strong class="block text-indigo-400 mb-1">Format Rules</strong>
+                        Accepted: PNG, JPG/JPEG, iPhone HEIC/HEIF photos, or PDF. Max 10MB.
+                        <div class="absolute top-full left-10 -translate-x-1/2 border-[5px] border-transparent border-t-slate-900"></div>
+                      </div>
+                    </div>
+                  </label>
+                  <input type="file" id="valid_id_file" name="valid_id_file" accept=".pdf,.png,.jpg,.jpeg,.heic,.heif,application/pdf,image/png,image/jpeg,image/heic,image/heif"
                          class="w-full text-base text-slate-700 file:mr-3 file:py-2 file:px-4 file:rounded-md file:border file:border-slate-300 file:text-sm file:font-bold file:bg-slate-50 file:text-slate-800 hover:file:bg-slate-100 transition-colors cursor-pointer">
-                  <p class="text-xs text-slate-500 mt-2 font-medium">Accepted: PNG, JPG/JPEG, iPhone HEIC/HEIF photos, or PDF. Max 10MB.</p>
-                  <p class="text-sm text-slate-500 mt-2 font-medium">
+
+                  <div id="valid_id_preview_container" class="mt-3 hidden">
+                    <p class="text-sm font-bold text-slate-600 mb-1">New File Preview:</p>
+                    <img id="valid_id_preview_img" src="" alt="New Valid ID Preview" class="w-32 h-32 object-cover rounded-lg border border-slate-300 shadow-sm">
+                  </div>
+
+                  <div class="text-sm text-slate-500 mt-2 font-medium" id="valid_id_status_area">
                     Status:
-                    {% if valid_id_attachment %}
-                      <a href="{% url 'admin_view_attachment' valid_id_attachment.id %}" target="_blank" rel="noopener" class="font-black text-blue-700 hover:text-blue-900">
-                        {{ valid_id_attachment.filename }}
-                      </a>
+                    {% if valid_id_attachments %}
+                      <div class="flex flex-wrap gap-3 mt-3">
+                        {% for att in valid_id_attachments %}
+                          <a href="{% url 'admin_view_attachment' att.id %}" target="_blank" rel="noopener" class="inline-block" title="Uploaded: {{ att.uploaded_at|date:'M d, Y' }}">
+                            <img src="{% url 'admin_view_attachment' att.id %}" alt="Valid ID Preview" class="w-32 h-32 object-cover rounded-lg border border-slate-300 shadow-sm hover:opacity-80 transition-opacity">
+                          </a>
+                        {% endfor %}
+                      </div>
                     {% else %}
                       <strong class="text-slate-700">No File Yet</strong>
                     {% endif %}
-                  </p>
+                  </div>
                 </div>
                 <div>
                   <label class="block text-sm font-bold text-slate-600 mb-2 uppercase tracking-wider">Description</label>
@@ -199,11 +255,11 @@
         </div>
 
         <!-- Form Submission Button Bar -->
-        <div class="p-6 bg-slate-50 flex flex-col sm:flex-row items-center gap-3 justify-end">
-          <a href="{{ back_url|default:'/admin-portal/tenants/' }}" class="w-full sm:w-auto px-6 py-3 bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 rounded-lg font-bold text-base transition-colors text-center shadow-xs">
-            Cancel
+        <div class="flex flex-col sm:flex-row items-center gap-4 justify-end pt-4">
+          <a href="{{ back_url|default:'/admin-portal/tenants/' }}" onclick="if (document.referrer) { window.history.back(); return false; }" class="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white border-2 border-slate-200 rounded-xl text-sm font-black text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm w-full sm:w-auto">
+            Back
           </a>
-          <button type="submit" class="w-full sm:w-auto px-8 py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-extrabold text-base transition-colors text-center shadow-xs">
+          <button type="submit" class="w-full sm:w-auto px-8 py-3.5 bg-slate-900 hover:bg-black text-white rounded-xl font-black text-sm tracking-wide transition-all shadow-lg active:scale-95 text-center">
             Save Changes
           </button>
         </div>
@@ -216,25 +272,25 @@
     <div class="w-full lg:w-[320px] space-y-6 shrink-0 lg:sticky lg:top-6">
       
       <!-- Account Overview Panel -->
-      <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-3">
-        <span class="text-sm font-extrabold text-slate-800 uppercase tracking-wider block pb-3 border-b border-slate-100">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
+        <span class="text-xs font-black text-slate-400 uppercase tracking-widest block pb-4 border-b border-slate-800">
           Account Status
         </span>
         
-        <div class="space-y-3 text-sm font-medium">
+        <div class="space-y-4 text-sm font-medium">
           <div class="flex justify-between items-center">
-            <span class="text-slate-500">Status</span>
-            <strong class="px-2.5 py-1 rounded text-xs font-extrabold uppercase {% if tenant.user.is_active %}bg-emerald-100 text-emerald-800{% else %}bg-rose-100 text-rose-800{% endif %}">
+            <span class="text-slate-400">Status</span>
+            <strong class="px-3 py-1 rounded-lg text-[11px] font-black uppercase tracking-wider {% if tenant.user.is_active %}bg-emerald-500/20 text-emerald-400 border border-emerald-500/30{% else %}bg-rose-500/20 text-rose-400 border border-rose-500/30{% endif %}">
               {% if tenant.user.is_active %}Active{% else %}Suspended{% endif %}
             </strong>
           </div>
-          <div class="pt-2 border-t border-slate-100 flex justify-between items-center">
-            <span class="text-slate-500">Role</span>
-            <strong class="text-slate-900 font-bold text-base">{{ tenant.user.get_role_display }}</strong>
+          <div class="pt-3 border-t border-slate-800 flex justify-between items-center">
+            <span class="text-slate-400">Role</span>
+            <strong class="text-white font-black text-base">{{ tenant.user.get_role_display }}</strong>
           </div>
-          <div class="pt-2 border-t border-slate-100 flex justify-between items-center">
-            <span class="text-slate-500">Tenant ID</span>
-            <strong class="text-slate-800 font-mono font-bold text-base">#{{ tenant.id|stringformat:"04d" }}</strong>
+          <div class="pt-3 border-t border-slate-800 flex justify-between items-center">
+            <span class="text-slate-400">Tenant ID</span>
+            <strong class="text-indigo-400 font-mono font-black text-base">#{{ tenant.id|stringformat:"04d" }}</strong>
           </div>
         </div>
       </div>
@@ -244,4 +300,48 @@
   </div>
 
 </div>
+
+<script>
+  function handleFilePreview(inputId, previewContainerId, previewImgId, statusAreaId) {
+    const fileInput = document.getElementById(inputId);
+    const previewContainer = document.getElementById(previewContainerId);
+    const previewImg = document.getElementById(previewImgId);
+    const statusArea = document.getElementById(statusAreaId);
+
+    if (fileInput) {
+      fileInput.addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (file && file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            previewContainer.classList.remove('hidden');
+            if (statusArea) {
+              statusArea.style.display = 'none';
+            }
+          };
+          reader.readAsDataURL(file);
+        } else if (file && file.type === 'application/pdf') {
+            previewImg.src = ''; 
+            previewContainer.classList.add('hidden');
+            if (statusArea) {
+              statusArea.style.display = 'block'; 
+              statusArea.innerHTML = '<strong class="text-slate-700">PDF File Selected: ' + file.name + '</strong>';
+            }
+        } else {
+          previewContainer.classList.add('hidden');
+          if (statusArea) {
+            statusArea.style.display = 'block';
+            statusArea.innerHTML = '<strong class="text-slate-700">Selected File: ' + (file ? file.name : 'None') + '</strong>';
+          }
+        }
+      });
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    handleFilePreview('contract_file', 'contract_preview_container', 'contract_preview_img', 'contract_status_area');
+    handleFilePreview('valid_id_file', 'valid_id_preview_container', 'valid_id_preview_img', 'valid_id_status_area');
+  });
+</script>
 {% endblock %}

@@ -9,7 +9,7 @@
   
   <!-- Navigation: Consistent Back Button -->
   <nav class="flex items-center pt-4 sm:pt-6">
-    <a href="{{ back_url }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
+    <a href="{{ back_url }}" onclick="if (document.referrer) { window.history.back(); return false; }" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
       <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
       </svg>
@@ -23,34 +23,42 @@
     <div class="flex-1 w-full space-y-6">
       
       <!-- Studio Header -->
-      <header class="bg-white border border-slate-200 rounded-xl p-8 shadow-xs">
-        <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900">
-          {% if action == "Add" %}Add a New Room{% else %}Edit Room Details{% endif %}
-        </h1>
-        <p class="text-slate-600 mt-3 text-xl font-medium leading-relaxed">
-          {% if action == "Add" %}
-            Add a new room to your property list and set its details.
-          {% else %}
-            Update the room's details, price, and photos.
-          {% endif %}
-        </p>
+      <header class="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl relative overflow-hidden group">
+        <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-transparent to-rose-500/10 opacity-50 group-hover:opacity-100 transition-opacity duration-700"></div>
+        <div class="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="relative z-10">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="inline-block w-3 h-3 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.8)]"></span>
+            <span class="text-xs font-black text-indigo-400 uppercase tracking-widest">{% if action == "Add" %}New Room{% else %}Room Profile{% endif %}</span>
+          </div>
+          <h1 class="text-3xl md:text-4xl font-black tracking-tight text-white leading-tight">
+            {% if action == "Add" %}Add a New Room{% else %}Edit Room Details{% endif %}
+          </h1>
+          <p class="text-slate-400 mt-3 text-lg font-medium leading-relaxed max-w-2xl">
+            {% if action == "Add" %}
+              Add a new room to your property list and set its details.
+            {% else %}
+              Update the room's details, price, and photos.
+            {% endif %}
+          </p>
+        </div>
       </header>
 
-      <form method="post" enctype="multipart/form-data" class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden divide-y divide-slate-100">
+      <form method="post" enctype="multipart/form-data" class="space-y-6">
         {% csrf_token %}
         
         <!-- Section 1: Room Information -->
-        <div class="p-6 sm:p-8 space-y-5">
-          <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
-            <span class="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-800 font-extrabold text-sm">1</span>
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow p-6 sm:p-8 space-y-6">
+          <div class="flex items-center gap-3 pb-3 border-b border-slate-100 pb-4">
+            <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 text-indigo-700 font-black text-sm border border-indigo-100">1</span>
             <h3 class="text-xl font-extrabold text-slate-900 tracking-tight">Room Information</h3>
           </div>
           
           <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Room Number <span class="text-rose-600">*</span></label>
+              <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Room Number <span class="text-rose-600">*</span></label>
               <input type="text" name="number" value="{{ form.number.value|default:'' }}" 
-                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-400" 
+                     class="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none placeholder:text-slate-400" 
                      placeholder="e.g. 101" required>
               {% if form.number.errors %}
                 <p class="text-sm font-bold text-rose-600 mt-2">{{ form.number.errors.0 }}</p>
@@ -58,8 +66,8 @@
             </div>
 
             <div>
-              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Room Type</label>
-              <select name="unit_type" class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none cursor-pointer">
+              <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Room Type</label>
+              <select name="unit_type" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none cursor-pointer">
                 {% for value, label in form.fields.unit_type.choices %}
                   <option value="{{ value }}" {% if form.unit_type.value == value %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
@@ -67,37 +75,37 @@
             </div>
 
             <div>
-              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Floor Number <span class="text-rose-600">*</span></label>
+              <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Floor Number <span class="text-rose-600">*</span></label>
               <input type="number" name="floor_level" value="{{ form.floor_level.value|default:'1' }}" 
-                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none" required>
+                     class="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none" required>
             </div>
           </div>
         </div>
 
         <!-- Section 2: Price & Availability -->
-        <div class="p-6 sm:p-8 space-y-5 bg-slate-50/30">
-          <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
-            <span class="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-800 font-extrabold text-sm">2</span>
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow p-6 sm:p-8 space-y-6">
+          <div class="flex items-center gap-3 pb-3 border-b border-slate-100 pb-4">
+            <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 text-indigo-700 font-black text-sm border border-indigo-100">2</span>
             <h3 class="text-xl font-extrabold text-slate-900 tracking-tight">Price & Availability</h3>
           </div>
           
           <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Monthly Rent (₱) <span class="text-rose-600">*</span></label>
+              <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Monthly Rent (₱) <span class="text-rose-600">*</span></label>
               <input type="number" step="0.01" name="monthly_rent" value="{{ form.monthly_rent.value|default:'10000.00' }}" 
-                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none" required>
+                     class="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none" required>
               <p class="text-xs text-slate-500 mt-2 font-medium">Monthly cost for the tenant.</p>
             </div>
 
             <div>
-              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Room Size (sqm) <span class="text-rose-600">*</span></label>
+              <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Room Size (sqm) <span class="text-rose-600">*</span></label>
               <input type="number" step="0.01" name="size_sqm" value="{{ form.size_sqm.value|default:'25.00' }}" 
-                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none" required>
+                     class="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none" required>
             </div>
 
             <div>
-              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Current Status</label>
-              <select name="status" class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none cursor-pointer">
+              <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Current Status</label>
+              <select name="status" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none cursor-pointer">
                 {% for value, label in form.fields.status.choices %}
                   <option value="{{ value }}" {% if form.status.value == value %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
@@ -107,34 +115,34 @@
         </div>
 
         <!-- Section 3: Description & Amenities -->
-        <div class="p-6 sm:p-8 space-y-5">
-          <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
-            <span class="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-800 font-extrabold text-sm">3</span>
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow p-6 sm:p-8 space-y-6">
+          <div class="flex items-center gap-3 pb-3 border-b border-slate-100 pb-4">
+            <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 text-indigo-700 font-black text-sm border border-indigo-100">3</span>
             <h3 class="text-xl font-extrabold text-slate-900 tracking-tight">Description & Amenities</h3>
           </div>
           
           <div class="space-y-5">
             <div>
-              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">About this Room</label>
+              <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">About this Room</label>
               <textarea name="description" rows="5" 
-                        class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 leading-relaxed focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-400" 
+                        class="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 leading-relaxed focus:bg-white focus:border-indigo-500 transition-all outline-none placeholder:text-slate-400" 
                         placeholder="Describe the room, views, and features...">{{ form.description.value|default:'' }}</textarea>
             </div>
 
             <div>
-              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Amenities (separated by commas)</label>
+              <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Amenities (separated by commas)</label>
               <input type="text" name="amenities" value="{{ form.amenities.value|default:'' }}" 
-                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-400" 
+                     class="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none placeholder:text-slate-400" 
                      placeholder="e.g. Air Conditioning, WiFi, Balcony">
             </div>
           </div>
         </div>
 
         <!-- Section 4: Photos -->
-        <div class="p-6 sm:p-8 space-y-6 bg-slate-50/30">
-          <div class="flex items-center justify-between gap-3 pb-3 border-b border-slate-100">
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow p-6 sm:p-8 space-y-6">
+          <div class="flex items-center justify-between gap-3 pb-3 border-b border-slate-100 pb-4">
             <div class="flex items-center gap-3">
-              <span class="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-800 font-extrabold text-sm">4</span>
+              <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 text-indigo-700 font-black text-sm border border-indigo-100">4</span>
               <h3 class="text-xl font-extrabold text-slate-900 tracking-tight">Photos</h3>
             </div>
             <span class="text-xs font-bold text-slate-500 bg-white px-3 py-1 border border-slate-200 rounded-full">Max 5 photos</span>
@@ -142,10 +150,10 @@
           
           <div class="space-y-8">
             <!-- Upload Box -->
-            <div class="bg-white border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:bg-slate-50 hover:border-slate-400 transition-all cursor-pointer group relative">
+            <div class="bg-white border-2 border-dashed border-slate-300 rounded-[2rem] p-10 hover:shadow-lg hover:-translate-y-1 text-center hover:bg-slate-50 hover:border-slate-400 transition-all cursor-pointer group relative">
               <input type="file" name="images" id="images" multiple accept="image/*" class="sr-only" onchange="handleImagePreview(event)">
               <label for="images" class="cursor-pointer block">
-                <div class="w-16 h-16 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <div class="w-20 h-20 bg-indigo-50 border border-indigo-100 rounded-[2rem] text-indigo-600 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
                   <svg class="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                   </svg>
@@ -168,7 +176,7 @@
               <strong class="text-sm font-extrabold text-slate-700 block uppercase tracking-wider">Current Room Photos</strong>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-6" id="existingImagesGrid">
                 {% for image in unit_images %}
-                  <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs relative flex flex-col h-72" data-image-id="{{ image.id }}">
+                  <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow relative flex flex-col h-72" data-image-id="{{ image.id }}">
                     <div class="relative h-44 bg-slate-100">
                       <img src="{{ image.image.url }}" alt="Room Photo" class="w-full h-full object-cover">
                       {% if image.is_primary %}
@@ -201,11 +209,14 @@
         </div>
 
         <!-- Form Submission Controls -->
-        <div class="p-6 bg-slate-50 flex flex-col sm:flex-row items-center gap-3 justify-end">
-          <a href="{{ back_url }}" class="w-full sm:w-auto px-6 py-3 bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 rounded-lg font-bold text-base transition-colors text-center shadow-xs">
-            Cancel
-          </a>
-          <button type="submit" class="w-full sm:w-auto px-8 py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-extrabold text-base transition-colors text-center shadow-xs">
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 flex flex-col sm:flex-row items-center gap-3 justify-end mt-8">
+          <a href="{{ back_url }}" onclick="if (document.referrer) { window.history.back(); return false; }" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
+      <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
+      </svg>
+      <span>Back</span>
+    </a>
+          <button type="submit" class="w-full sm:w-auto px-8 py-3 bg-slate-900 hover:bg-black text-white rounded-xl shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-md font-extrabold text-base transition-colors text-center shadow-xs">
             {% if action == "Add" %}Save Room{% else %}Save Changes{% endif %}
           </button>
         </div>
@@ -245,7 +256,7 @@ function handleImagePreview(event) {
       const reader = new FileReader();
       reader.onload = function(e) {
         const previewDiv = document.createElement('div');
-        previewDiv.className = 'bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs relative flex flex-col h-72';
+        previewDiv.className = 'bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow relative flex flex-col h-72';
         previewDiv.innerHTML = `
           <div class="relative h-44 bg-slate-100">
             <img src="${e.target.result}" class="w-full h-full object-cover">

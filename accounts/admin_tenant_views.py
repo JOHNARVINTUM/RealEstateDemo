@@ -261,14 +261,8 @@ def admin_edit_tenant(request, tenant_id: int):
         .select_related("uploaded_by")
         .order_by("-uploaded_at")
     )
-    contract_attachment = next(
-        (attachment for attachment in attachments if attachment.attachment_type == "CONTRACT"),
-        None,
-    )
-    valid_id_attachment = next(
-        (attachment for attachment in attachments if attachment.attachment_type == "VALID_ID"),
-        None,
-    )
+    contract_attachments = [a for a in attachments if a.attachment_type == "CONTRACT"]
+    valid_id_attachments = [a for a in attachments if a.attachment_type == "VALID_ID"]
     form = ComprehensiveTenantEditForm(tenant, request.POST or None, request.FILES or None)
 
     if request.method == "POST" and form.is_valid():
@@ -312,8 +306,8 @@ def admin_edit_tenant(request, tenant_id: int):
             "form": form,
             "tenant": tenant,
             "attachments": attachments,
-            "contract_attachment": contract_attachment,
-            "valid_id_attachment": valid_id_attachment,
+            "contract_attachments": contract_attachments,
+            "valid_id_attachments": valid_id_attachments,
             "back_url": reverse("admin_tenant_detail", args=[tenant.id]),
         },
     )
@@ -562,6 +556,7 @@ def admin_delete_attachment(request, attachment_id: int):
                 post_url=reverse("admin_delete_attachment", args=[attachment.id]),
                 back_url=reverse("admin_tenant_attachments", args=[tenant_id]),
                 error=error,
+                attachment=attachment,
             )
         if attachment.file:
             try:
@@ -578,4 +573,5 @@ def admin_delete_attachment(request, attachment_id: int):
         message=f"Delete attachment '{attachment.filename}'? This cannot be undone.",
         post_url=reverse("admin_delete_attachment", args=[attachment.id]),
         back_url=reverse("admin_tenant_attachments", args=[tenant_id]),
+        attachment=attachment,
     )

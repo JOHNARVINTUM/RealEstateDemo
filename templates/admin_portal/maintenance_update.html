@@ -3,11 +3,11 @@
 {% block title %}Resolve Issue #{{ req.id }} | Real Estate Administration{% endblock %}
 
 {% block content %}
-<div class="maintenance-resolve-studio max-w-6xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
+<div class="tenant-form-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
   
   <!-- Navigation: Simple Back Button -->
   <nav class="flex items-center">
-    <a href="{{ back_url }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
+    <a href="{{ back_url }}" onclick="if (document.referrer) { window.history.back(); return false; }" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
       <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
       </svg>
@@ -20,6 +20,28 @@
     <!-- Left Column: Problem Details -->
     <div class="flex-1 space-y-6">
       
+      
+      <!-- Premium Studio Header -->
+      <header class="bg-slate-900 border border-slate-800 rounded-2xl p-6 lg:p-8 shadow-xl shadow-slate-900/10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 relative overflow-hidden mb-6">
+        <!-- Subtle glow effect -->
+        <div class="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10">
+          <div class="flex items-center gap-3 mb-2">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-inner border border-white/10">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              </svg>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-white leading-tight">Resolve Issue #{{ req.id }}</h1>
+          </div>
+          <p class="text-sm text-slate-400 mt-1 leading-relaxed pl-13 ml-1">
+            Update the status or assign a worker to fix this maintenance request.
+          </p>
+        </div>
+      </header>
+
       <!-- Main Info Card -->
       <div class="bg-white border border-slate-200 rounded-xl p-8 shadow-xs">
         
@@ -72,10 +94,10 @@
             <span class="text-[11px] font-black text-slate-500 uppercase block mb-2">Tenant</span>
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-800 font-black text-sm shrink-0">
-                {{ req.tenant.email|first|upper }}
+                {% if req.tenant.tenantprofile.first_name %}{{ req.tenant.tenantprofile.first_name|first|upper }}{% else %}{{ req.tenant.email|first|upper }}{% endif %}
               </div>
               <div class="min-w-0">
-                <div class="text-base font-black text-slate-900 truncate">{{ req.tenant.email }}</div>
+                <div class="text-base font-black text-slate-900 truncate">{% if req.tenant.tenantprofile.first_name %}{{ req.tenant.tenantprofile.first_name }} {{ req.tenant.tenantprofile.last_name }}{% else %}{{ req.tenant.email }}{% endif %}</div>
                 <div class="text-xs text-slate-500 font-bold">Contact Person</div>
               </div>
             </div>
@@ -153,14 +175,34 @@
           
           {% for field in form %}
           <div class="space-y-2">
-            <label for="{{ field.id_for_label }}" class="block text-sm font-black text-slate-800">
-              {{ field.label }}
+            <label for="{{ field.id_for_label }}" class="block text-sm font-black text-slate-800 uppercase tracking-wider mb-2">
+              {% if field.name == 'category' %}
+                <div class="relative group/tooltip inline-block">
+                  <span class="cursor-help inline-block border-b border-dashed border-slate-300 pb-0.5">{{ field.label }}</span>
+                  <div class="absolute bottom-full left-0 mb-2 w-[250px] px-3 py-2 bg-slate-900 text-white rounded-lg shadow-xl text-xs font-bold opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-300 z-50 pointer-events-none border border-slate-700 whitespace-normal delay-[150ms]">
+                    <strong class="block text-indigo-400 mb-1">Note</strong>
+                    Auto-classified from tenant description. Admin can override if needed.
+                    <div class="absolute top-full left-6 -translate-x-1/2 border-[5px] border-transparent border-t-slate-900"></div>
+                  </div>
+                </div>
+              {% elif field.name == 'admin_scheduled_at' %}
+                <div class="relative group/tooltip inline-block">
+                  <span class="cursor-help inline-block border-b border-dashed border-slate-300 pb-0.5">{{ field.label }}</span>
+                  <div class="absolute bottom-full left-0 mb-2 w-[250px] px-3 py-2 bg-slate-900 text-white rounded-lg shadow-xl text-xs font-bold opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-300 z-50 pointer-events-none border border-slate-700 whitespace-normal delay-[150ms]">
+                    <strong class="block text-indigo-400 mb-1">Important</strong>
+                    Leave blank when approving the tenant's preferred time. Required when rescheduling.
+                    <div class="absolute top-full left-6 -translate-x-1/2 border-[5px] border-transparent border-t-slate-900"></div>
+                  </div>
+                </div>
+              {% else %}
+                {{ field.label }}
+              {% endif %}
             </label>
             
             <div class="relative">
               {% if field.name == 'category' or field.name == 'status' or field.name == 'priority' or field.name == 'schedule_decision' %}
                 <select name="{{ field.name }}" id="{{ field.id_for_label }}" 
-                        class="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-xl text-sm font-black text-slate-900 focus:border-slate-800 focus:ring-0 transition-all outline-none cursor-pointer appearance-none">
+                        class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 hover:border-slate-400 shadow-sm transition-all outline-none cursor-pointer appearance-none">
                   {% for val, label in field.field.choices %}
                     <option value="{{ val }}" {% if field.value == val %}selected{% endif %}>{{ label }}</option>
                   {% endfor %}
@@ -174,20 +216,20 @@
                        id="{{ field.id_for_label }}"
                        value="{% if req.admin_scheduled_at %}{{ req.admin_scheduled_at|date:"Y-m-d\TH:i" }}{% endif %}"
                        placeholder="{{ field.label }}"
-                       class="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:border-slate-800 focus:ring-0 transition-all outline-none">
+                       class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 hover:border-slate-400 shadow-sm transition-all outline-none">
               {% elif field.name == 'schedule_admin_note' %}
                 <textarea name="{{ field.name }}"
                           id="{{ field.id_for_label }}"
                           placeholder="{{ field.label }}"
                           rows="3"
-                          class="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:border-slate-800 focus:ring-0 transition-all outline-none">{{ field.value|default:'' }}</textarea>
+                          class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 hover:border-slate-400 shadow-sm transition-all outline-none">{{ field.value|default:'' }}</textarea>
               {% else %}
                 <input type="{{ field.field.widget.input_type|default:'text' }}" 
                        name="{{ field.name }}" 
                        id="{{ field.id_for_label }}" 
                        value="{{ field.value|default:'' }}"
                        placeholder="{{ field.label }}"
-                       class="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:border-slate-800 focus:ring-0 transition-all outline-none">
+                       class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 hover:border-slate-400 shadow-sm transition-all outline-none">
               {% endif %}
             </div>
 
@@ -196,23 +238,20 @@
                 {{ field.errors.0 }}
               </span>
             {% endif %}
-            {% if field.name == 'category' %}
-              <span class="block text-xs font-bold text-slate-500">Auto-classified from tenant description. Admin can override if needed.</span>
-            {% endif %}
-            {% if field.name == 'admin_scheduled_at' %}
-              <span class="block text-xs font-bold text-slate-500">Leave blank when approving the tenant's preferred time. Required when rescheduling.</span>
-            {% endif %}
           </div>
           {% endfor %}
 
           <!-- Buttons -->
           <div class="pt-6 space-y-3">
-            <button type="submit" class="w-full py-4 bg-slate-900 hover:bg-black text-white rounded-xl font-black text-sm transition-all text-center shadow-lg active:scale-95">
+            <button type="submit" class="w-full py-4 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-extrabold text-base transition-colors text-white rounded-lg font-extrabold text-sm transition-all text-center shadow-lg active:scale-95">
               Save Changes
             </button>
-            <a href="{{ back_url }}" class="block w-full py-3 bg-white border-2 border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl font-black text-sm text-center transition-all">
-              Cancel
-            </a>
+            <a href="{{ back_url }}" onclick="if (document.referrer) { window.history.back(); return false; }" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
+      <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
+      </svg>
+      <span>Back</span>
+    </a>
           </div>
 
         </form>

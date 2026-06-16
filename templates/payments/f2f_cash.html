@@ -8,10 +8,12 @@
   <!-- Page Header -->
   <div class="mb-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 border-b-2 border-slate-100 pb-8">
     <div>
-      <a href="{{ back_url }}" class="inline-flex items-center gap-2 mb-5 px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl font-black text-sm transition-all shadow-sm">
-        <span aria-hidden="true">&larr;</span>
-        Back
-      </a>
+      <a href="{{ back_url }}" onclick="if (document.referrer) { window.history.back(); return false; }" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
+      <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
+      </svg>
+      <span>Back</span>
+    </a>
       <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">Pay in Cash</h1>
       <p class="text-lg text-slate-500 font-bold mt-2">Pick a date and time to visit the office and pay in person.</p>
     </div>

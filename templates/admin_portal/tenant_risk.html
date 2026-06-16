@@ -7,8 +7,12 @@
 
   <header class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
     <div>
-      <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">Tenant Payment Risk Analysis</h1>
-      <p class="text-sm text-slate-700 mt-1 leading-relaxed">Review Random Forest payment risk classifications generated from billing and payment history.</p>
+      <div class="flex items-center gap-2 mb-1">
+        <span class="inline-block w-3 h-3 rounded-full bg-rose-600"></span>
+        <span class="text-sm font-semibold text-slate-700">Payment Risk</span>
+      </div>
+      <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 leading-tight">Tenant Payment Risk Analysis</h1>
+      <p class="text-base text-slate-700 mt-1 leading-relaxed">Review Random Forest payment risk classifications generated from billing and payment history.</p>
     </div>
 
     <div class="w-full sm:w-auto shrink-0">
@@ -22,7 +26,7 @@
   </header>
 
   <section class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-blue-600 flex flex-col justify-between">
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-blue-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
       <div>
         <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Total Tenants</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ total_tenants }}</div>
@@ -32,7 +36,7 @@
       </div>
     </div>
 
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-emerald-600 flex flex-col justify-between">
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-emerald-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
       <div>
         <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Low RF Risk</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ low_risk_count }}</div>
@@ -42,7 +46,7 @@
       </div>
     </div>
 
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-amber-600 flex flex-col justify-between">
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-amber-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
       <div>
         <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Medium RF Risk</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ medium_risk_count }}</div>
@@ -52,7 +56,7 @@
       </div>
     </div>
 
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-rose-600 flex flex-col justify-between">
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-rose-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
       <div>
         <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">High RF Risk</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ high_risk_count }}</div>
@@ -62,7 +66,7 @@
       </div>
     </div>
 
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-slate-700 flex flex-col justify-between">
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-slate-700 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
       <div>
         <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">New Tenants</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ new_tenant_count }}</div>
@@ -176,7 +180,7 @@
           <tr class="hover:bg-slate-50/70 transition-colors group/row">
             <td class="px-3 py-4">
               <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded bg-slate-100 flex items-center justify-center text-slate-800 font-extrabold text-sm shrink-0 border border-slate-200 shadow-xs">
+                <div class="w-10 h-10 rounded bg-slate-100 group-hover/row:bg-slate-800 group-hover/row:text-white flex items-center justify-center text-slate-800 font-extrabold text-sm shrink-0 border border-slate-200 shadow-xs transition-colors">
                   {{ r.tenant.email|first|upper }}
                 </div>
                 <div class="min-w-0">
@@ -225,17 +229,19 @@
 
             <td class="px-3 py-4 text-center">
               {% if r.rf_risk_level %}
-                <div class="inline-flex flex-col items-center gap-1">
+                <div class="inline-flex flex-col items-center gap-1 relative group/rf">
                   {% if r.rf_risk_level == 'LOW' %}
-                    <span class="px-2.5 py-1 rounded bg-indigo-50 text-indigo-900 font-black text-[11px] uppercase border border-indigo-100 block shadow-xs">Low Risk</span>
+                    <span class="px-2.5 py-1 rounded bg-indigo-50 text-indigo-900 font-black text-[11px] uppercase border border-indigo-100 block shadow-xs cursor-help">Low Risk</span>
                   {% elif r.rf_risk_level == 'MEDIUM' %}
-                    <span class="px-2.5 py-1 rounded bg-amber-50 text-amber-900 font-black text-[11px] uppercase border border-amber-100 block shadow-xs">Medium Risk</span>
+                    <span class="px-2.5 py-1 rounded bg-amber-50 text-amber-900 font-black text-[11px] uppercase border border-amber-100 block shadow-xs cursor-help">Medium Risk</span>
                   {% else %}
-                    <span class="px-2.5 py-1 rounded bg-rose-50 text-rose-900 font-black text-[11px] uppercase border border-rose-100 block shadow-xs">High Risk</span>
+                    <span class="px-2.5 py-1 rounded bg-rose-50 text-rose-900 font-black text-[11px] uppercase border border-rose-100 block shadow-xs cursor-help">High Risk</span>
                   {% endif %}
-                  <span class="text-[11px] text-slate-600 font-extrabold mt-1">
-                    Risk Probability: {{ r.rf_risk_probability|floatformat:2 }}
-                  </span>
+                  
+                  <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-3 py-1.5 bg-slate-900 text-white rounded-lg shadow-xl text-xs font-bold opacity-0 invisible group-hover/rf:opacity-100 group-hover/rf:visible transition-all duration-300 z-50 pointer-events-none border border-slate-700 delay-[150ms]">
+                    Risk Probability: <span class="text-indigo-300">{{ r.rf_risk_probability|floatformat:2 }}</span>
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-slate-900"></div>
+                  </div>
                 </div>
               {% else %}
                 <span class="text-sm text-slate-400 font-bold italic">Checking...</span>
@@ -261,7 +267,7 @@
                 </div>
               </div>
 
-              <div class="invisible group-hover:visible absolute right-full top-0 mr-4 z-50 w-72 bg-slate-900 text-white rounded-xl shadow-2xl p-5 border border-slate-700 transition-all duration-75 scale-95 group-hover:scale-100 origin-right">
+              <div class="invisible group-hover:visible absolute right-full {% if forloop.revcounter0 < 3 %}bottom-0{% else %}top-0{% endif %} mr-4 z-50 w-72 bg-slate-900 text-white rounded-xl shadow-2xl p-5 border border-slate-700 transition-all duration-75 scale-95 group-hover:scale-100 origin-right">
                 <div class="flex items-center gap-2 mb-4 border-b border-slate-700 pb-2 text-left">
                   <svg class="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -306,7 +312,7 @@
                   <p class="text-xs text-slate-400 italic text-left">Not enough data to show details yet.</p>
                 {% endif %}
 
-                <div class="absolute left-full top-6 w-0 h-0 border-t-[8px] border-t-transparent border-l-[10px] border-l-slate-900 border-b-[8px] border-b-transparent"></div>
+                <div class="absolute left-full {% if forloop.revcounter0 < 3 %}bottom-6{% else %}top-6{% endif %} w-0 h-0 border-t-[8px] border-t-transparent border-l-[10px] border-l-slate-900 border-b-[8px] border-b-transparent"></div>
               </div>
             </td>
 

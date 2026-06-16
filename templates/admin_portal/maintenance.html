@@ -7,24 +7,36 @@
   
   <!-- Studio Top Title Block -->
   <header class="bg-white border border-slate-200 rounded-xl p-8 shadow-xs">
-    <h1 class="text-3xl md:text-4xl font-black tracking-tight text-slate-900 leading-tight">Maintenance</h1>
-    <p class="text-base text-slate-600 mt-2 font-bold leading-relaxed">Keep track of repairs, see what's being fixed, and check completed jobs.</p>
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <span class="inline-block w-3 h-3 rounded-full bg-rose-600"></span>
+        <span class="text-sm font-semibold text-slate-700">Manage Repairs</span>
+      </div>
+      <h1 class="text-3xl md:text-4xl font-black tracking-tight text-slate-900 leading-tight">Maintenance</h1>
+      <p class="text-base text-slate-600 mt-2 font-bold leading-relaxed">Keep track of repairs, see what's being fixed, and check completed jobs.</p>
+    </div>
   </header>
 
   <!-- NLP Model Metrics Card -->
   {% if nlp_metrics %}
-  <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+  <details class="bg-white border border-slate-200 rounded-xl shadow-xs group [&_summary::-webkit-details-marker]:hidden mb-6">
+    <summary class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-5 cursor-pointer list-none">
       <div>
         <div class="flex items-center gap-2 mb-1">
           <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 font-black text-xs">AI</span>
           <span class="text-sm font-black text-slate-900">Maintenance NLP Classifier</span>
-          <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">TF-IDF + Logistic Regression</span>
-          <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-50 text-slate-700 border border-slate-200">Rule-based issue category</span>
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 hidden md:inline-block">TF-IDF + Logistic Regression</span>
         </div>
         <p class="text-xs text-slate-500 font-medium">Auto-predicts priority level from description text and assigns issue category with keyword rules.</p>
       </div>
-      <div class="flex flex-wrap items-center gap-3 shrink-0">
+      <div class="flex items-center gap-4 shrink-0 text-slate-400 group-open:text-indigo-600 transition-colors">
+        <span class="text-xs font-bold uppercase tracking-widest hidden sm:block group-open:hidden">View Metrics</span>
+        <span class="text-xs font-bold uppercase tracking-widest hidden sm:group-open:block">Hide Metrics</span>
+        <svg class="w-5 h-5 transform group-open:rotate-180 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
+      </div>
+    </summary>
+    <div class="px-5 pb-5 border-t border-slate-100 pt-4">
+      <div class="flex flex-wrap items-center gap-6">
         <div class="text-center">
           <div class="text-xl font-black text-slate-900">{{ nlp_metrics.accuracy_pct }}%</div>
           <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Accuracy</div>
@@ -39,14 +51,14 @@
         </div>
       </div>
     </div>
-  </div>
+  </details>
   {% endif %}
 
   <!-- Summary Metric Overview Cards -->
   <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
     
     <!-- Total Requests -->
-    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs border-l-4 border-l-slate-800 flex flex-col justify-between">
+    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs border-l-4 border-l-slate-800 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
       <div>
         <span class="text-sm font-black text-slate-500 uppercase tracking-wider block mb-1">Total Jobs</span>
         <div class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">{{ total_count }}</div>
@@ -57,7 +69,7 @@
     </div>
 
     <!-- Waiting -->
-    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs border-l-4 border-l-amber-500 flex flex-col justify-between">
+    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs border-l-4 border-l-amber-500 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
       <div>
         <span class="text-sm font-black text-slate-500 uppercase tracking-wider block mb-1">Waiting</span>
         <div class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">{{ pending_count }}</div>
@@ -68,7 +80,7 @@
     </div>
 
     <!-- Being Fixed -->
-    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs border-l-4 border-l-indigo-600 flex flex-col justify-between">
+    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs border-l-4 border-l-indigo-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
       <div>
         <span class="text-sm font-black text-slate-500 uppercase tracking-wider block mb-1">Being Fixed</span>
         <div class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">{{ in_progress_count }}</div>
@@ -79,7 +91,7 @@
     </div>
 
     <!-- Finished -->
-    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs border-l-4 border-l-emerald-500 flex flex-col justify-between">
+    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs border-l-4 border-l-emerald-500 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
       <div>
         <span class="text-sm font-black text-slate-500 uppercase tracking-wider block mb-1">Finished</span>
         <div class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">{{ resolved_count }}</div>
@@ -92,7 +104,7 @@
   </section>
 
   <!-- Filters -->
-  <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
+  <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6 mb-6">
     
     <!-- Search -->
     <div class="w-full md:flex-1 md:max-w-[300px] lg:max-w-md">
@@ -139,35 +151,90 @@
   </div>
 
   <!-- Table Card -->
-  <div id="maintenance-table" class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+  <div id="maintenance-table" class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden mt-2">
+    <!-- Table Header with View Options Dropdown -->
+    <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50/50">
+      <div>
+        <h2 class="text-xl font-black text-slate-900">Maintenance Records</h2>
+        <p class="text-sm text-slate-600 mt-1">Manage and track all repair requests</p>
+      </div>
+      <div class="flex items-center gap-3 w-full sm:w-auto">
+        <div class="relative group w-full sm:w-auto">
+          <button type="button" class="w-full sm:w-auto flex items-center justify-center gap-2 bg-white border border-slate-300 rounded-lg px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+            Columns
+          </button>
+          <div class="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 p-2 flex flex-col gap-0.5">
+            <label class="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
+              <input type="checkbox" class="col-toggle rounded text-slate-800 focus:ring-slate-500 w-4 h-4" value="col-tenant" checked>
+              <span class="text-sm font-bold text-slate-700">Tenant & Unit</span>
+            </label>
+            <label class="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
+              <input type="checkbox" class="col-toggle rounded text-slate-800 focus:ring-slate-500 w-4 h-4" value="col-category" checked>
+              <span class="text-sm font-bold text-slate-700">Category</span>
+            </label>
+            <label class="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
+              <input type="checkbox" class="col-toggle rounded text-slate-800 focus:ring-slate-500 w-4 h-4" value="col-priority" checked>
+              <span class="text-sm font-bold text-slate-700">Priority</span>
+            </label>
+            <label class="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
+              <input type="checkbox" class="col-toggle rounded text-slate-800 focus:ring-slate-500 w-4 h-4" value="col-nlp" checked>
+              <span class="text-sm font-bold text-slate-700">NLP Suggest</span>
+            </label>
+            <label class="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
+              <input type="checkbox" class="col-toggle rounded text-slate-800 focus:ring-slate-500 w-4 h-4" value="col-status" checked>
+              <span class="text-sm font-bold text-slate-700">Status</span>
+            </label>
+            <label class="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
+              <input type="checkbox" class="col-toggle rounded text-slate-800 focus:ring-slate-500 w-4 h-4" value="col-visit" checked>
+              <span class="text-sm font-bold text-slate-700">Requested Visit</span>
+            </label>
+            <label class="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
+              <input type="checkbox" class="col-toggle rounded text-slate-800 focus:ring-slate-500 w-4 h-4" value="col-problem" checked>
+              <span class="text-sm font-bold text-slate-700">Problem</span>
+            </label>
+            <label class="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
+              <input type="checkbox" class="col-toggle rounded text-slate-800 focus:ring-slate-500 w-4 h-4" value="col-solution" checked>
+              <span class="text-sm font-bold text-slate-700">Solution</span>
+            </label>
+            <label class="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
+              <input type="checkbox" class="col-toggle rounded text-slate-800 focus:ring-slate-500 w-4 h-4" value="col-action" checked>
+              <span class="text-sm font-bold text-slate-700">Action</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="overflow-x-auto custom-scrollbar">
-      <table class="w-full text-left border-collapse min-w-[1120px]">
+      <table class="w-full text-left border-collapse min-w-[800px]">
         <thead>
           <tr class="bg-slate-50 border-b border-slate-200">
-            <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Tenant & Unit</th>
-            <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-center">Issue Category</th>
-            <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-center">Priority Level</th>
-            <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-center">NLP Suggest</th>
-            <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-center">Status</th>
-            <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Requested Visit</th>
-            <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Problem</th>
-            <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Solution</th>
-            <th class="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-right">Action</th>
+            <th class="col-tenant px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Tenant & Unit</th>
+            <th class="col-category px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-center">Issue Category</th>
+            <th class="col-priority px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-center">Priority Level</th>
+            <th class="col-nlp px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-center">NLP Suggest</th>
+            <th class="col-status px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-center">Status</th>
+            <th class="col-visit px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Requested Visit</th>
+            <th class="col-problem px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Problem</th>
+            <th class="col-solution px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Solution</th>
+            <th class="col-action px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-right">Action</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
           {% for r in page_obj %}
-          <tr class="hover:bg-slate-50/50 transition-colors">
+          <tr class="hover:bg-slate-50/50 transition-colors group">
             
             <!-- Tenant & Unit -->
-            <td class="px-6 py-5">
+            <td class="col-tenant px-6 py-5">
               <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-800 font-black text-sm shrink-0 border border-slate-200">
-                  {{ r.lease.tenant.email|first|upper }}
+                <div class="w-10 h-10 rounded-lg bg-slate-100 group-hover:bg-slate-800 group-hover:text-white flex items-center justify-center text-slate-800 font-black text-sm shrink-0 border border-slate-200 transition-colors">
+                  {% if r.lease.tenant.tenantprofile.first_name %}{{ r.lease.tenant.tenantprofile.first_name|first|upper }}{% else %}{{ r.lease.tenant.email|first|upper }}{% endif %}
                 </div>
                 <div class="min-w-0">
                   <div class="font-black text-slate-900 text-sm truncate max-w-[200px]">
-                    {{ r.lease.tenant.email }}
+                    {% if r.lease.tenant.tenantprofile.first_name %}{{ r.lease.tenant.tenantprofile.first_name }} {{ r.lease.tenant.tenantprofile.last_name }}{% else %}{{ r.lease.tenant.email }}{% endif %}
                   </div>
                   <div class="text-xs font-black text-indigo-600">Unit #{{ r.lease.unit.number }}</div>
                 </div>
@@ -175,14 +242,14 @@
             </td>
 
             <!-- Issue Category -->
-            <td class="px-6 py-5 text-center">
+            <td class="col-category px-6 py-5 text-center">
               <span class="inline-flex px-3 py-1 rounded-lg bg-slate-100 text-slate-700 font-black text-[11px] uppercase tracking-wider border border-slate-200">
                 {{ r.get_category_display }}
               </span>
             </td>
 
             <!-- Priority Level -->
-            <td class="px-6 py-5 text-center">
+            <td class="col-priority px-6 py-5 text-center">
               {% if r.priority == 'HIGH' or r.priority == 'URGENT' %}
                 <span class="inline-flex px-3 py-1 rounded-lg bg-rose-50 text-rose-700 font-black text-[11px] uppercase tracking-wider border border-rose-100">
                   {{ r.priority }}
@@ -199,59 +266,87 @@
             </td>
 
             <!-- NLP Prediction -->
-            <td class="px-6 py-5 text-center">
+            <td class="col-nlp px-6 py-5 text-center">
               {% if r.nlp_priority %}
-                {% if r.nlp_priority == r.priority %}
-                  <span class="inline-flex flex-col items-center gap-0.5">
-                    <span class="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <div class="relative group/tooltip inline-block">
+                  {% if r.nlp_priority == r.priority %}
+                    <span class="cursor-help inline-flex px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-dashed border-emerald-300">
                       {{ r.nlp_priority }}
                     </span>
-                    <span class="text-[9px] text-slate-400 font-bold">{% widthratio r.nlp_priority_confidence 1 100 %}%&nbsp;&#10003;</span>
-                  </span>
-                {% else %}
-                  <span class="inline-flex flex-col items-center gap-0.5">
-                    <span class="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-orange-50 text-orange-700 border border-orange-200">
+                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-3 py-2 bg-slate-900 text-white rounded-lg shadow-xl text-xs font-medium opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-300 z-50 pointer-events-none border border-slate-700 text-center delay-[150ms]">
+                      <strong class="text-emerald-400 block mb-1">AI Match</strong>
+                      {% widthratio r.nlp_priority_confidence 1 100 %}%&nbsp;&#10003; Confidence
+                      <div class="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-slate-900"></div>
+                    </div>
+                  {% else %}
+                    <span class="cursor-help inline-flex px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-orange-50 text-orange-700 border border-dashed border-orange-300">
                       {{ r.nlp_priority }}
                     </span>
-                    <span class="text-[9px] text-orange-400 font-bold">{% widthratio r.nlp_priority_confidence 1 100 %}%&nbsp;&#9888;</span>
-                  </span>
-                {% endif %}
+                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-3 py-2 bg-slate-900 text-white rounded-lg shadow-xl text-xs font-medium opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-300 z-50 pointer-events-none border border-slate-700 text-center delay-[150ms]">
+                      <strong class="text-orange-400 block mb-1">AI Mismatch</strong>
+                      {% widthratio r.nlp_priority_confidence 1 100 %}%&nbsp;&#9888; Confidence
+                      <div class="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-slate-900"></div>
+                    </div>
+                  {% endif %}
+                </div>
               {% else %}
                 <span class="text-[10px] text-slate-300 font-bold">—</span>
               {% endif %}
             </td>
 
             <!-- Status -->
-            <td class="px-6 py-5 text-center">
-              {% if r.status == 'RESOLVED' %}
-                <span class="inline-flex px-3 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-black text-[11px] uppercase tracking-wider border border-emerald-100">
-                  Fixed
-                </span>
-              {% elif r.status == 'IN_PROGRESS' %}
-                <span class="inline-flex px-3 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-black text-[11px] uppercase tracking-wider border border-indigo-100">
-                  Being fixed
-                </span>
-              {% else %}
-                <span class="inline-flex px-3 py-1 rounded-lg bg-amber-50 text-amber-700 font-black text-[11px] uppercase tracking-wider border border-amber-100">
-                  Waiting
-                </span>
-              {% endif %}
-              <span class="block text-[10px] text-slate-400 font-black mt-1 uppercase tracking-tighter">
-                {{ r.created_at|date:"M d" }}
-              </span>
+            <td class="col-status px-6 py-5 text-center">
+              <div class="relative group/tooltip inline-block">
+                {% if r.status == 'RESOLVED' %}
+                  <span class="cursor-help inline-flex px-3 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-black text-[11px] uppercase tracking-wider border border-dashed border-emerald-300">
+                    Fixed
+                  </span>
+                  <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-3 py-2 bg-slate-900 text-white rounded-lg shadow-xl text-xs font-medium opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-300 z-50 pointer-events-none border border-slate-700 text-center delay-[150ms]">
+                    <strong class="text-emerald-400 block mb-1">Created</strong>
+                    {{ r.created_at|date:"M d, Y" }}
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-slate-900"></div>
+                  </div>
+                {% elif r.status == 'IN_PROGRESS' %}
+                  <span class="cursor-help inline-flex px-3 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-black text-[11px] uppercase tracking-wider border border-dashed border-indigo-300">
+                    Being fixed
+                  </span>
+                  <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-3 py-2 bg-slate-900 text-white rounded-lg shadow-xl text-xs font-medium opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-300 z-50 pointer-events-none border border-slate-700 text-center delay-[150ms]">
+                    <strong class="text-indigo-400 block mb-1">Created</strong>
+                    {{ r.created_at|date:"M d, Y" }}
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-slate-900"></div>
+                  </div>
+                {% else %}
+                  <span class="cursor-help inline-flex px-3 py-1 rounded-lg bg-amber-50 text-amber-700 font-black text-[11px] uppercase tracking-wider border border-dashed border-amber-300">
+                    Waiting
+                  </span>
+                  <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-3 py-2 bg-slate-900 text-white rounded-lg shadow-xl text-xs font-medium opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-300 z-50 pointer-events-none border border-slate-700 text-center delay-[150ms]">
+                    <strong class="text-amber-400 block mb-1">Created</strong>
+                    {{ r.created_at|date:"M d, Y" }}
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-slate-900"></div>
+                  </div>
+                {% endif %}
+              </div>
             </td>
 
             <!-- Requested Visit -->
-            <td class="px-6 py-5">
+            <td class="col-visit px-6 py-5">
               {% if r.admin_scheduled_at %}
-                <div class="text-sm">
-                  <span class="text-slate-900 font-black block">{{ r.admin_scheduled_at|date:"M d, Y" }}</span>
-                  <span class="text-[11px] text-slate-500 block font-bold mt-0.5">{{ r.admin_scheduled_at|date:"h:i A" }} &bull; {{ r.get_schedule_decision_display }}</span>
+                <div class="relative group/tooltip inline-block">
+                  <span class="cursor-help text-slate-900 font-black block border-b border-dashed border-slate-300 pb-0.5 text-sm">{{ r.admin_scheduled_at|date:"M d, Y" }}</span>
+                  <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-3 py-2 bg-slate-900 text-white rounded-lg shadow-xl text-xs font-medium opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-300 z-50 pointer-events-none border border-slate-700 text-center delay-[150ms]">
+                    <strong class="text-indigo-400 block mb-1">Time & Status</strong>
+                    {{ r.admin_scheduled_at|date:"h:i A" }} &bull; {{ r.get_schedule_decision_display }}
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-slate-900"></div>
+                  </div>
                 </div>
               {% elif r.requested_schedule_at %}
-                <div class="text-sm">
-                  <span class="text-slate-900 font-black block">{{ r.requested_schedule_at|date:"M d, Y" }}</span>
-                  <span class="text-[11px] text-amber-600 block font-bold mt-0.5">{{ r.requested_schedule_at|date:"h:i A" }} &bull; Pending review</span>
+                <div class="relative group/tooltip inline-block">
+                  <span class="cursor-help text-slate-900 font-black block border-b border-dashed border-slate-300 pb-0.5 text-sm">{{ r.requested_schedule_at|date:"M d, Y" }}</span>
+                  <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-3 py-2 bg-slate-900 text-white rounded-lg shadow-xl text-xs font-medium opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-300 z-50 pointer-events-none border border-slate-700 text-center delay-[150ms]">
+                    <strong class="text-amber-400 block mb-1">Pending Review</strong>
+                    {{ r.requested_schedule_at|date:"h:i A" }}
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-slate-900"></div>
+                  </div>
                 </div>
               {% else %}
                 <span class="text-sm text-slate-400 italic font-bold">No preference</span>
@@ -259,18 +354,31 @@
             </td>
 
             <!-- Problem -->
-            <td class="px-6 py-5">
-              <div class="text-sm text-slate-700 leading-relaxed font-bold max-w-sm">
-                {{ r.description|truncatechars:100 }}
+            <td class="col-problem px-6 py-5">
+              <div class="relative group/tooltip inline-block max-w-[100px] w-full align-middle">
+                <span class="cursor-help text-sm text-slate-700 font-bold block border-b border-dashed border-slate-300 pb-0.5 truncate">
+                  {{ r.description }}
+                </span>
+                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[300px] px-3 py-2 bg-slate-900 text-white rounded-lg shadow-xl text-xs font-medium opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-300 z-50 pointer-events-none border border-slate-700 text-center delay-[150ms] whitespace-normal">
+                  <strong class="text-sky-400 block mb-1">Problem Details</strong>
+                  {{ r.description }}
+                  <div class="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-slate-900"></div>
+                </div>
               </div>
             </td>
 
             <!-- Solution -->
-            <td class="px-6 py-5">
+            <td class="col-solution px-6 py-5">
               {% if r.status == 'RESOLVED' %}
-                <div class="text-sm">
-                  <span class="text-slate-900 font-black block">{{ r.fixed_by|default:"Main Worker" }}</span>
-                  <span class="text-[11px] text-slate-500 block font-bold mt-0.5">Finished {{ r.resolved_at|date:"M d, Y" }}</span>
+                <div class="relative group/tooltip inline-block">
+                  <span class="cursor-help text-slate-900 font-black block border-b border-dashed border-slate-300 pb-0.5 text-sm">
+                    {{ r.fixed_by|default:"Main Worker" }}
+                  </span>
+                  <div class="absolute bottom-full right-0 mb-2 w-max px-3 py-2 bg-slate-900 text-white rounded-lg shadow-xl text-xs font-medium opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-300 z-50 pointer-events-none border border-slate-700 text-center delay-[150ms]">
+                    <strong class="text-emerald-400 block mb-1">Finished Date</strong>
+                    {{ r.resolved_at|date:"M d, Y" }}
+                    <div class="absolute top-full right-4 border-[5px] border-transparent border-t-slate-900"></div>
+                  </div>
                 </div>
               {% else %}
                 <span class="text-sm text-slate-400 italic font-bold">Not fixed yet...</span>
@@ -278,7 +386,7 @@
             </td>
 
             <!-- Action -->
-            <td class="px-6 py-5 text-right">
+            <td class="col-action px-6 py-5 text-right">
               <a href="{% url 'admin_update_maintenance' r.id %}" 
                  class="inline-flex px-5 py-2.5 bg-white border-2 border-slate-200 text-slate-900 hover:bg-slate-900 hover:text-white hover:border-slate-900 rounded-xl font-black text-sm transition-all shadow-xs">
                 View
@@ -353,4 +461,45 @@
   </div>
 
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const checkboxes = document.querySelectorAll('.col-toggle');
+    
+    // Load saved preferences from localStorage
+    const savedCols = JSON.parse(localStorage.getItem('maintenanceTableCols') || '{}');
+    
+    checkboxes.forEach(cb => {
+      const colClass = cb.value;
+      
+      // Initialize state from saved or default to checked
+      if (savedCols[colClass] !== undefined) {
+        cb.checked = savedCols[colClass];
+      }
+      
+      // Apply initial state
+      toggleColumn(colClass, cb.checked);
+      
+      // Handle changes
+      cb.addEventListener('change', (e) => {
+        toggleColumn(colClass, e.target.checked);
+        
+        // Save to localStorage
+        savedCols[colClass] = e.target.checked;
+        localStorage.setItem('maintenanceTableCols', JSON.stringify(savedCols));
+      });
+    });
+    
+    function toggleColumn(colClass, isVisible) {
+      const elements = document.querySelectorAll('.' + colClass);
+      elements.forEach(el => {
+        if (isVisible) {
+          el.classList.remove('hidden');
+        } else {
+          el.classList.add('hidden');
+        }
+      });
+    }
+  });
+</script>
 {% endblock %}

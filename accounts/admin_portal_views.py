@@ -65,7 +65,7 @@ def admin_password_verified(request) -> bool:
     return request.user.check_password((request.POST.get("admin_password") or "").strip())
 
 
-def render_admin_password_confirm(request, *, title, message, post_url, back_url, error=None):
+def render_admin_password_confirm(request, *, title, message, post_url, back_url, error=None, attachment=None):
     return render(
         request,
         "admin_portal/confirm.html",
@@ -76,6 +76,7 @@ def render_admin_password_confirm(request, *, title, message, post_url, back_url
             "back_url": back_url,
             "require_admin_password": True,
             "error": error,
+            "attachment": attachment,
         },
     )
 
@@ -386,7 +387,7 @@ def admin_units(request):
         unit.cover_image_url = (
             cover_image.image.url
             if cover_image and cover_image.image
-            else "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+            else "https://ezrxfodgrztlajiiilfz.supabase.co/storage/v1/object/public/unit-images/placeholders/cdd906739ed64fb78aaf8d41b078feea.jpg"
         )
         display_leases = getattr(unit, 'admin_display_leases', [])
         active_lease = next(

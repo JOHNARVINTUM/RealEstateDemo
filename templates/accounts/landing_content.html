@@ -4,53 +4,156 @@
   <!-- Navigation -->
   <nav class="lp-nav">
     <a href="/" class="lp-logo">
-      <img src="{% static 'img/logo.svg' %}" alt="RealEstate360+ Logo">
-      RealEstate360+
+      <img src="{% static 'img/accounts/RealEstate360+ Logo2 jpg.jpg' %}" alt="RealEstate360+ Logo">
+      <span style="font-family: 'Outfit', sans-serif; font-weight: 600;">RealEstate360<span style="color: #3b82f6;">+</span></span>
     </a>
-    <div class="lp-mobile-menu-btn" id="mobileMenuBtn">
-      <span></span>
-      <span></span>
-      <span></span>
-    </div>
     <div class="lp-nav-links" id="navLinks">
-      <a href="#about" class="lp-nav-item">About</a>
-      <a href="{% url 'login' %}" class="lp-btn-login">Login</a>
+      <a href="#about" class="lp-nav-item">Our Story</a>
+      <a href="#contact" class="lp-nav-item">Inquire</a>
+      <a href="{% url 'login' %}" class="lp-btn-login">Sign In</a>
     </div>
   </nav>
 
   <!-- Hero Section -->
   <section class="lp-hero">
-    <div class="lp-hero-content">
-      <h1>Quality Living at <br><span>Sta. Maria Apartments</span></h1>
-      <p>Among the cheapest in Mandaluyong, we offer quality property developments that you can truly call home.</p>
-      <a href="#about" class="lp-btn-primary">Explore Our Town</a>
+    <div class="lp-watermark" data-reveal="fade">STA MARIA</div>
+    <div class="lp-vertical-text">ELEVATING URBAN LIVING</div>
+    
+    <div class="lp-container lp-hero-layout">
+      <!-- Carousel Visual Layer -->
+      <div class="lp-hero-visual" data-reveal="right">
+        <div class="lp-carousel">
+          <div class="lp-slide active"><img src="{% static 'img/accounts/img 1.jpg' %}" alt="Sta Maria Img 1"></div>
+          <div class="lp-slide"><img src="{% static 'img/accounts/img 2.jpg' %}" alt="Sta Maria Img 2"></div>
+          <div class="lp-slide"><img src="{% static 'img/accounts/img 3.jpg' %}" alt="Sta Maria Img 3"></div>
+          <div class="lp-slide"><img src="{% static 'img/accounts/img 4.jpg' %}" alt="Sta Maria Img 4"></div>
+          <div class="lp-slide"><img src="{% static 'img/accounts/img 5.jpg' %}" alt="Sta Maria Img 5"></div>
+          <div class="lp-slide"><img src="{% static 'img/accounts/img 6.jpg' %}" alt="Sta Maria Img 6"></div>
+          <div class="lp-slide"><img src="{% static 'img/accounts/img 7.jpg' %}" alt="Sta Maria Img 7"></div>
+          <div class="lp-slide"><img src="{% static 'img/accounts/img 8.jpg' %}" alt="Sta Maria Img 8"></div>
+        </div>
+        
+        <div class="lp-glass-badge">
+          <span class="badge-title">Affordable spaces</span>
+          <span class="badge-sub">Mandaluyong City</span>
+        </div>
+
+        <button class="lp-carousel-btn prev" id="carouselPrev">&#10094;</button>
+        <button class="lp-carousel-btn next" id="carouselNext">&#10095;</button>
+        <div class="lp-carousel-nav">
+          <button class="lp-dot active" data-slide="0"></button>
+          <button class="lp-dot" data-slide="1"></button>
+          <button class="lp-dot" data-slide="2"></button>
+          <button class="lp-dot" data-slide="3"></button>
+          <button class="lp-dot" data-slide="4"></button>
+          <button class="lp-dot" data-slide="5"></button>
+          <button class="lp-dot" data-slide="6"></button>
+          <button class="lp-dot" data-slide="7"></button>
+        </div>
+      </div>
+
+      <!-- Text Content Layer (Overlaps visual) -->
+      <div class="lp-hero-text" data-reveal="up">
+        <h1>Spaces<br>Designed<br>For <i>You</i>.</h1>
+        <p>A masterclass in modern living. Affordable, pristine, and perfectly located in the heart of Mandaluyong. We provide a space you can truly call home.</p>
+        <a href="#about" class="lp-btn-primary">Explore Sta. Maria</a>
+      </div>
     </div>
   </section>
 
-  <!-- About Section -->
-  <section id="about" class="lp-section lp-section-bg">
+  <div class="lp-section-wrapper">
+  <!-- Bento Grid Section -->
+  <section id="about" class="lp-section">
     <div class="lp-container">
-      <div class="lp-about-grid">
-        <div class="lp-about-text">
-          <span class="lp-section-subtitle">About Us</span>
-          <h2 class="lp-section-title">Your Trusted Real Estate Partner</h2>
-          <p>Sta. Maria is a small to medium-scale real estate business focused on providing affordable yet high-quality living spaces in Mandaluyong.</p>
-          <p>We currently own and manage three apartment complexes, ensuring excellent property developments with exciting plans for future site expansions to serve our growing community.</p>
+      <div class="lp-bento-grid">
+        
+        <!-- Large Text Card -->
+        <div class="lp-bento-card col-span-2 row-span-1 bg-navy" data-reveal="up">
+          <span class="lp-section-subtitle text-light-blue">Our Heritage</span>
+          <h2 class="text-white">A Foundation Built on Trust</h2>
+          <p class="text-light-blue">Sta. Maria started as a small family endeavor with a simple belief: everyone deserves a high-quality, affordable place to live without compromising on comfort or modern design.</p>
         </div>
-        <div>
-          <img src="{% static 'img/accounts/apt_building_1.jpg' %}" alt="Sta. Maria Apartments" class="lp-about-img">
+
+        <!-- Vertical Image Card -->
+        <div class="lp-bento-card col-span-1 row-span-2 image-card" data-reveal="right">
+          <img src="{% static 'img/accounts/img 6.jpg' %}" alt="Exterior">
+          <div class="image-overlay">Distinct Architecture</div>
         </div>
+
+        <!-- Square Image Card -->
+        <div class="lp-bento-card col-span-1 row-span-1 image-card" data-reveal="up" style="transition-delay: 0.1s;">
+          <img src="{% static 'img/accounts/img 7.jpg' %}" alt="Interior" onerror="this.style.display='none'">
+          <div class="image-overlay">Pristine Interiors</div>
+        </div>
+
+        <!-- Medium Text Card -->
+        <div class="lp-bento-card col-span-1 row-span-1 bg-white border-card" data-reveal="up" style="transition-delay: 0.2s;">
+          <span class="lp-section-subtitle">The Future</span>
+          <h2>Growing With You</h2>
+          <p>Exciting plans for future site expansions mean our community continues to thrive, providing seamless access to lease management via RealEstate360+.</p>
+        </div>
+
       </div>
     </div>
   </section>
 
   <!-- Call to Action -->
-  <section class="lp-section-bg" style="padding: 20px 0;">
-    <div class="lp-container">
-      <div class="lp-cta">
-        <h2>Ready to Find Your Home Here?</h2>
-        <p>Join the RealEstate360+ platform to explore properties, manage leases, and become part of our thriving Sta. Maria community.</p>
-        <a href="{% url 'login' %}" class="lp-btn-cta">Sign In to Your Account</a>
+  <section class="lp-section cta-wrapper">
+    <div class="lp-container lp-cta-section" data-reveal="up">
+      <div class="lp-cta-card glass-cta">
+        <div class="cta-glow"></div>
+        <div class="cta-content">
+          <h2>
+            <span class="modern-text">Ready to</span>
+            <span class="elegant-text">come home?</span>
+          </h2>
+          <p>Join the RealEstate360+ platform to explore properties, manage your lease, and become part of our thriving Sta. Maria community today.</p>
+          <a href="{% url 'login' %}" class="lp-btn-cta">Join Our Community</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Inquiry Section -->
+  <section id="contact" class="lp-section" style="padding: 0;">
+    <div class="inquiry-expand-container">
+      <div class="lp-inquiry-box" id="inquiryExpandBox" style="transition: transform 0.1s ease-out, border-radius 0.1s ease-out;">
+        <div class="inquiry-text">
+          <span class="lp-section-subtitle text-light-blue">Get in Touch</span>
+          <h2 class="text-white">Looking to Inquire?</h2>
+          <p class="text-white">We'd love to hear from you. Reach out to our team to learn more about available spaces, schedule a viewing, or ask any questions.</p>
+          <div class="contact-details">
+            <div class="contact-item">
+              <div>
+                <strong>Location</strong>
+                <p>91 Coronado, Mandaluyong City, 1550 Metro Manila</p>
+              </div>
+            </div>
+            <div class="contact-item">
+              <div>
+                <strong>Email</strong>
+                <p>lod.bituin@yahoo.com</p>
+              </div>
+            </div>
+            <div class="contact-item">
+              <div>
+                <strong>Office</strong>
+                <p>09178255935</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="inquiry-image">
+          <iframe 
+            src="https://maps.google.com/maps?q=91%20Coronado,%20Mandaluyong%20City,%201550%20Metro%20Manila&t=&z=16&ie=UTF8&iwloc=&output=embed" 
+            width="100%" 
+            height="100%" 
+            style="border:0; position:absolute; top:0; left:0;" 
+            allowfullscreen="" 
+            loading="lazy" 
+            referrerpolicy="no-referrer-when-downgrade">
+          </iframe>
+        </div>
       </div>
     </div>
   </section>
@@ -60,45 +163,190 @@
     <div class="lp-container">
       <div class="lp-footer-grid">
         <div>
-          <a href="/" class="lp-logo" style="color: white; margin-bottom: 20px; display: inline-flex;">
-            <img src="{% static 'img/logo.svg' %}" alt="Logo" style="filter: brightness(0) invert(1);">
-            RealEstate360+
+          <a href="/" class="lp-footer-logo">
+            <img src="{% static 'img/accounts/RealEstate360+ Logo2 jpg.jpg' %}" alt="Logo">
+            <span style="font-family: 'Outfit', sans-serif; font-weight: 600;">RealEstate360<span style="color: #3b82f6;">+</span></span>
           </a>
-          <p>Your trusted real estate partner in Mandaluyong. Providing quality, affordable apartment living.</p>
+          <p>Your trusted real estate partner in Mandaluyong. Providing quality, affordable apartment living that feels just like home.</p>
         </div>
         <div>
-          <h4>Quick Links</h4>
+          <h4>Discover</h4>
           <ul class="lp-footer-links">
-            <li><a href="#about">About Sta. Maria</a></li>
-            <li><a href="{% url 'login' %}">Login Portal</a></li>
+            <li><a href="#about">Our Story</a></li>
+            <li><a href="{% url 'login' %}">Resident Portal</a></li>
           </ul>
         </div>
         <div>
-          <h4>Contact Us</h4>
+          <h4>Connect</h4>
           <ul class="lp-footer-links">
-            <li>Mandaluyong City, Metro Manila</li>
-            <li>contact@realestate360.com</li>
-            <li>+63 (123) 456-7890</li>
+            <li>91 Coronado, Mandaluyong City, 1550 Metro Manila</li>
+            <li>lod.bituin@yahoo.com</li>
+            <li>09178255935</li>
           </ul>
         </div>
       </div>
       <div class="lp-footer-bottom">
-        &copy; {% now "Y" %} RealEstate360+. All rights reserved.
+        &copy; {% now "Y" %} Sta. Maria RealEstate360+. Crafted with care.
       </div>
     </div>
   </footer>
 
+  </div> <!-- End lp-section-wrapper -->
 </div>
+
+<style>
+.cta-content h2 {
+  text-align: center;
+  margin-bottom: 30px;
+  line-height: 1.2;
+}
+
+.cta-content h2 .modern-text {
+  display: block;
+  font-family: 'Outfit', sans-serif;
+  font-size: 5.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.02em;
+  filter: drop-shadow(0 10px 20px rgba(0,0,0,0.15));
+}
+
+.cta-content h2 .elegant-text {
+  display: block;
+  font-family: 'Playfair Display', serif;
+  font-size: 6.5rem;
+  font-style: italic;
+  font-weight: 400;
+  background: linear-gradient(270deg, #60A5FA, #ffffff, #93C5FD, #60A5FA);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shine 5s linear infinite;
+  margin-top: -15px;
+  filter: drop-shadow(0 8px 16px rgba(96, 165, 250, 0.4));
+}
+
+@keyframes shine {
+  to {
+    background-position: 200% center;
+  }
+}
+
+@media (max-width: 768px) {
+  .cta-content h2 .modern-text { font-size: 3.5rem; }
+  .cta-content h2 .elegant-text { font-size: 4rem; margin-top: -5px; }
+}
+</style>
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-    const navLinks = document.getElementById('navLinks');
-    
-    if (mobileMenuBtn && navLinks) {
-      mobileMenuBtn.addEventListener('click', function() {
-        this.classList.toggle('active');
-        navLinks.classList.toggle('active');
+    // Carousel Logic
+    const slides = document.querySelectorAll('.lp-slide');
+    const dots = document.querySelectorAll('.lp-dot');
+    let currentSlide = 0;
+    const slideCount = slides.length;
+    let autoPlayTimer;
+
+    function goToSlide(index) {
+      if (slides.length === 0) return;
+      slides[currentSlide].classList.remove('active');
+      if (dots[currentSlide]) dots[currentSlide].classList.remove('active');
+      currentSlide = index;
+      slides[currentSlide].classList.add('active');
+      if (dots[currentSlide]) dots[currentSlide].classList.add('active');
+    }
+
+    function nextSlide() {
+      if (slideCount === 0) return;
+      const next = (currentSlide + 1) % slideCount;
+      goToSlide(next);
+    }
+
+    function prevSlide() {
+      if (slideCount === 0) return;
+      const prev = (currentSlide - 1 + slideCount) % slideCount;
+      goToSlide(prev);
+    }
+
+    function startAutoPlay() {
+      if (slideCount > 0) {
+        autoPlayTimer = setInterval(nextSlide, 4500);
+      }
+    }
+
+    function resetAutoPlay() {
+      clearInterval(autoPlayTimer);
+      startAutoPlay();
+    }
+
+    dots.forEach((dot, index) => {
+      dot.addEventListener('click', () => {
+        if (index !== currentSlide) {
+          goToSlide(index);
+          resetAutoPlay();
+        }
+      });
+    });
+
+    const prevBtn = document.getElementById('carouselPrev');
+    const nextBtn = document.getElementById('carouselNext');
+    if (prevBtn) {
+      prevBtn.addEventListener('click', () => {
+        prevSlide();
+        resetAutoPlay();
+      });
+    }
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        nextSlide();
+        resetAutoPlay();
+      });
+    }
+
+    startAutoPlay();
+
+    // Intersection Observer for Reveal Animations
+    const revealOptions = {
+      threshold: 0.1,
+      rootMargin: "0px 0px -50px 0px"
+    };
+
+    const revealObserver = new IntersectionObserver(function(entries, observer) {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) {
+          return;
+        } else {
+          entry.target.classList.add('reveal-visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, revealOptions);
+
+    const revealElements = document.querySelectorAll('[data-reveal]');
+    revealElements.forEach(el => {
+      revealObserver.observe(el);
+    });
+
+    // Expand Inquiry Box on Scroll
+    const inquiryBox = document.getElementById('inquiryExpandBox');
+    if (inquiryBox) {
+      window.addEventListener('scroll', () => {
+        const rect = inquiryBox.getBoundingClientRect();
+        const windowHeight = window.innerHeight;
+        
+        // Calculate progress: 0 when far away, 1 when center of box is at center of viewport
+        let progress = 1 - (Math.abs((windowHeight / 2) - (rect.top + rect.height / 2)) / (windowHeight / 1.5));
+        progress = Math.max(0, Math.min(1, progress)); // Clamp between 0 and 1
+        
+        // Scale from 0.85 to 1.0
+        const scale = 0.85 + (0.15 * progress);
+        // Border radius from 60px down to 0px
+        const radius = 60 * (1 - progress);
+        
+        inquiryBox.style.transform = `scale(${scale})`;
+        inquiryBox.style.borderRadius = `${radius}px`;
       });
     }
   });

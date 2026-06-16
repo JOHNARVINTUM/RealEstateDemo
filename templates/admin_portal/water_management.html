@@ -3,19 +3,25 @@
 {% block title %}Water Utility Console | Real Estate Administration{% endblock %}
 
 {% block content %}
-<div class="water-management-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
+<div class="water-management-wrapper w-full mx-auto font-sans text-slate-900 space-y-4 pb-6 px-2 sm:px-4 lg:px-6 py-4">
   
   <!-- Studio Top Title Block -->
   <header class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
-    <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">Water Usage</h1>
-    <p class="text-sm text-slate-700 mt-1 leading-relaxed">Track how much water units use, set the price per cubic meter, and record meter readings.</p>
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <span class="inline-block w-3 h-3 rounded-full bg-cyan-600"></span>
+        <span class="text-sm font-semibold text-slate-700">Manage Water</span>
+      </div>
+      <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 leading-tight">Water Usage</h1>
+      <p class="text-base text-slate-700 mt-1 leading-relaxed">Track how much water units use, set the price per cubic meter, and record meter readings.</p>
+    </div>
   </header>
 
   <!-- Summary Metric Overview Cards (Consistent Iconless Layout) -->
-  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
     
     <!-- Total Units -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-blue-600 flex flex-col justify-between">
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-blue-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
       <div>
         <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Units with Water</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ total_units }}</div>
@@ -26,7 +32,7 @@
     </div>
 
     <!-- Completed Submissions -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-emerald-600 flex flex-col justify-between">
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-emerald-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
       <div>
         <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Readings Added</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ filled_count }}</div>
@@ -37,7 +43,7 @@
     </div>
 
     <!-- Missing Submissions -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-rose-600 flex flex-col justify-between">
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-rose-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
       <div>
         <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Still Missing</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ missing_count }}</div>
@@ -48,7 +54,7 @@
     </div>
 
     <!-- Active Base Rate -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-indigo-600 flex flex-col justify-between">
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-indigo-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
       <div>
         <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Price per m³</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
@@ -62,11 +68,8 @@
 
   </section>
 
-  <!-- Master Multi-Column Grid Space -->
-  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-    
-    <!-- Left Configuration & Timeline Column -->
-    <div class="lg:col-span-4 space-y-6">
+  <!-- Configuration & Timeline Top Row -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
       
       <!-- Water Rate Settings Box -->
       <details class="bg-white border border-slate-200 rounded-xl shadow-xs group">
@@ -159,10 +162,10 @@
         </form>
       </div>
 
-    </div>
+  </div>
 
-    <!-- Right Target Execution Data Workspace Column -->
-    <div class="lg:col-span-8 space-y-6">
+  <!-- Right Target Execution Data Workspace Column -->
+  <div class="space-y-4">
       
       <!-- Missing Constant System Alert Banner -->
       {% if not current_rate %}
@@ -181,21 +184,71 @@
         <!-- Table Scope Top Navigation Section -->
         <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50/50">
           <div>
-            <h2 class="text-base font-extrabold text-slate-900">{{ month_name }} {{ year }} Sub-Meter Index</h2>
-            <p class="text-xs text-slate-600 mt-0.5">Input current total values to automatically project sum dues</p>
+            <h2 class="text-xl font-black text-slate-900">{{ month_name }} {{ year }} Sub-Meter Index</h2>
+            <p class="text-sm text-slate-600 mt-1">Input current total values to automatically project sum dues</p>
           </div>
           
-          <form method="get" class="w-full sm:w-auto relative min-w-[220px]">
-            <input type="hidden" name="month" value="{{ month }}">
-            <input type="hidden" name="year" value="{{ year }}">
-            <input type="text" name="search" value="{{ search }}" placeholder="Filter unit identifier or string..." 
-                   class="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 transition-all outline-none">
-            <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400">
-              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-              </svg>
-            </span>
-          </form>
+          <div class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+            <!-- View Options Dropdown -->
+            <div class="relative group w-full sm:w-auto">
+              <button type="button" class="w-full sm:w-auto flex items-center justify-center gap-2 bg-white border border-slate-300 rounded-lg px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+                Columns
+              </button>
+              <div class="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 p-2 flex flex-col gap-0.5">
+                <label class="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
+                  <input type="checkbox" class="col-toggle rounded text-slate-800 focus:ring-slate-500 w-4 h-4" value="col-last" checked>
+                  <span class="text-sm font-bold text-slate-700">Last (m³)</span>
+                </label>
+                <label class="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
+                  <input type="checkbox" class="col-toggle rounded text-slate-800 focus:ring-slate-500 w-4 h-4" value="col-current" checked>
+                  <span class="text-sm font-bold text-slate-700">Current (m³)</span>
+                </label>
+                <label class="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
+                  <input type="checkbox" class="col-toggle rounded text-slate-800 focus:ring-slate-500 w-4 h-4" value="col-usage" checked>
+                  <span class="text-sm font-bold text-slate-700">Usage</span>
+                </label>
+                <label class="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
+                  <input type="checkbox" class="col-toggle rounded text-slate-800 focus:ring-slate-500 w-4 h-4" value="col-rate" checked>
+                  <span class="text-sm font-bold text-slate-700">Rate</span>
+                </label>
+                <label class="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
+                  <input type="checkbox" class="col-toggle rounded text-slate-800 focus:ring-slate-500 w-4 h-4" value="col-pump-rate" checked>
+                  <span class="text-sm font-bold text-slate-700">Pump Rate</span>
+                </label>
+                <label class="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
+                  <input type="checkbox" class="col-toggle rounded text-slate-800 focus:ring-slate-500 w-4 h-4" value="col-pump-price" checked>
+                  <span class="text-sm font-bold text-slate-700">Pump Price</span>
+                </label>
+                <label class="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
+                  <input type="checkbox" class="col-toggle rounded text-slate-800 focus:ring-slate-500 w-4 h-4" value="col-price" checked>
+                  <span class="text-sm font-bold text-slate-700">Price</span>
+                </label>
+                <label class="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
+                  <input type="checkbox" class="col-toggle rounded text-slate-800 focus:ring-slate-500 w-4 h-4" value="col-status" checked>
+                  <span class="text-sm font-bold text-slate-700">Status</span>
+                </label>
+                <label class="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
+                  <input type="checkbox" class="col-toggle rounded text-slate-800 focus:ring-slate-500 w-4 h-4" value="col-ref" checked>
+                  <span class="text-sm font-bold text-slate-700">Reference</span>
+                </label>
+              </div>
+            </div>
+            
+            <form method="get" class="w-full sm:w-auto relative min-w-[220px]">
+              <input type="hidden" name="month" value="{{ month }}">
+              <input type="hidden" name="year" value="{{ year }}">
+              <input type="text" name="search" value="{{ search }}" placeholder="Filter unit identifier or string..." 
+                     class="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 transition-all outline-none">
+              <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+              </span>
+            </form>
+          </div>
         </div>
 
         <!-- Master Records Injection Loop Form -->
@@ -208,49 +261,46 @@
             <table class="w-full text-left border-collapse">
               <thead>
                 <tr class="bg-slate-50 border-b border-slate-200">
-                  <th class="px-5 py-3 text-xs font-bold text-slate-700">Tenant & Room</th>
-                  <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Last Reading (m³)</th>
-                  <th class="px-5 py-3 text-xs font-bold text-slate-700">Current Reading (m³)</th>
-                  <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Usage</th>
-                  <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Rate</th>
-                  <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Shared Pump Rate</th>
-                  <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Shared Pump Price</th>
-                  <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Price</th>
-                  <th class="px-5 py-3 text-xs font-bold text-slate-700 text-center">Status</th>
-                  <th class="px-5 py-3 text-xs font-bold text-slate-700">Reference</th>
+                  <th class="px-4 py-3.5 text-sm font-extrabold text-slate-700 whitespace-nowrap">Tenant & Room</th>
+                  <th class="col-last px-4 py-3.5 text-sm font-extrabold text-slate-700 text-right whitespace-nowrap">Last (m³)</th>
+                  <th class="col-current px-4 py-3.5 text-sm font-extrabold text-slate-700 whitespace-nowrap">Current (m³)</th>
+                  <th class="col-usage px-4 py-3.5 text-sm font-extrabold text-slate-700 text-right whitespace-nowrap">Usage</th>
+                  <th class="col-rate px-4 py-3.5 text-sm font-extrabold text-slate-700 text-right whitespace-nowrap">Rate</th>
+                  <th class="col-pump-rate px-4 py-3.5 text-sm font-extrabold text-slate-700 text-right whitespace-nowrap">Pump Rate</th>
+                  <th class="col-pump-price px-4 py-3.5 text-sm font-extrabold text-slate-700 text-right whitespace-nowrap">Pump Price</th>
+                  <th class="col-price px-4 py-3.5 text-sm font-extrabold text-slate-700 text-right whitespace-nowrap">Price</th>
+                  <th class="col-status px-4 py-3.5 text-sm font-extrabold text-slate-700 text-center whitespace-nowrap">Status</th>
+                  <th class="col-ref px-4 py-3.5 text-sm font-extrabold text-slate-700 whitespace-nowrap">Reference</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-200 text-sm" id="water-table-body">
                 {% for row in readings_data %}
-                <tr class="reading-row transition-colors {% if row.has_reading %}bg-emerald-50/40{% else %}bg-white{% endif %}" data-lease="{{ row.lease_id }}">
+                <tr class="reading-row hover:bg-slate-50 transition-colors group {% if row.has_reading %}bg-emerald-50/40{% else %}bg-white{% endif %}" data-lease="{{ row.lease_id }}">
                   <input type="hidden" name="lease_ids" value="{{ row.lease_id }}">
                   
-                  <!-- Contract Unit Mapping Column -->
-                  <td class="px-5 py-3.5">
-                    <div class="flex items-center gap-2.5">
-                      <div class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-800 font-bold text-xs shrink-0 border border-slate-200">
+                  <td class="px-4 py-3">
+                    <div class="flex items-center gap-3.5">
+                      <div class="w-10 h-10 rounded bg-slate-100 group-hover:bg-slate-800 group-hover:text-white flex items-center justify-center text-slate-800 font-bold text-base shrink-0 border border-slate-200 transition-colors">
                         {{ row.tenant_name|first|upper }}
                       </div>
-                      <div class="min-w-0">
-                        <div class="font-bold text-slate-900 text-sm">Unit Space #{{ row.unit_number }}</div>
-                        <div class="text-xs font-medium text-slate-600 truncate max-w-[140px]">{{ row.tenant_name }}</div>
+                      <div class="w-[130px] shrink-0">
+                        <div class="font-extrabold text-slate-900 text-base leading-tight">#{{ row.unit_number }}</div>
+                        <div class="text-sm font-medium text-slate-600 truncate leading-tight">{{ row.tenant_name }}</div>
                       </div>
                       {% if row.is_first_billing %}
-                        <span class="px-2 py-0.5 rounded bg-slate-900 text-white font-extrabold text-[10px] shrink-0 uppercase select-none">Initial Bill</span>
+                        <span class="px-2 py-1 rounded bg-slate-900 text-white font-extrabold text-[10px] shrink-0 uppercase select-none tracking-wide">Initial</span>
                       {% endif %}
                     </div>
                   </td>
 
-                  <!-- Previous Data Column -->
-                  <td class="px-5 py-3.5 text-right font-mono font-bold text-slate-600">
+                  <td class="col-last px-4 py-3 text-right font-mono font-bold text-slate-600 text-sm">
                     {{ row.previous_reading|floatformat:2 }}
                   </td>
 
-                  <!-- Input Sub-Meter Reading Column -->
-                  <td class="px-5 py-3.5">
+                  <td class="col-current px-4 py-3">
                     <input type="number" 
                            name="reading_{{ row.lease_id }}" 
-                           class="w-28 bg-white border border-slate-300 rounded px-2.5 py-1 text-xs font-bold text-slate-900 focus:ring-2 focus:ring-slate-500 outline-none text-right transition-all reading-input" 
+                           class="w-24 bg-white border border-slate-300 rounded px-2.5 py-1.5 text-sm font-extrabold text-slate-900 focus:ring-2 focus:ring-slate-500 outline-none text-right transition-all reading-input" 
                            value="{{ row.current_reading|default:'' }}"
                            step="0.01"
                            min="0"
@@ -263,56 +313,53 @@
                            oninput="calculateRow(this)">
                   </td>
 
-                  <!-- Sub-Meter Output Usage Hook Column -->
-                  <td class="px-5 py-3.5 text-right font-mono font-bold text-slate-800">
+                  <td class="col-usage px-4 py-3 text-right font-mono font-extrabold text-slate-800 text-sm">
                     <span class="usage-display" id="usage_{{ row.lease_id }}">
                       {% if row.has_reading %}{{ row.usage|floatformat:2 }}{% else %}-{% endif %}
                     </span>
                   </td>
 
-                  <td class="px-5 py-3.5 text-right font-mono font-bold text-slate-700">
+                  <td class="col-rate px-4 py-3 text-right font-mono font-bold text-slate-700 text-sm">
                     &#8369;{{ row.rate_used|floatformat:2 }}
                   </td>
 
-                  <td class="px-5 py-3.5 text-right font-mono font-bold text-slate-800">
+                  <td class="col-pump-rate px-4 py-3 text-right font-mono font-bold text-slate-800 text-sm">
                     <span class="pump-display" id="pump_{{ row.lease_id }}">
                       {% if row.has_reading %}{{ row.usage_share_percent|floatformat:2 }}%{% else %}-{% endif %}
                     </span>
                   </td>
 
-                  <td class="px-5 py-3.5 text-right font-mono font-bold text-slate-800">
+                  <td class="col-pump-price px-4 py-3 text-right font-mono font-bold text-slate-800 text-sm">
                     <span class="pump-price-display" id="pump_price_{{ row.lease_id }}">
                       {% if row.has_reading %}&#8369;{{ row.shared_pump_amount|floatformat:2|intcomma }}{% else %}-{% endif %}
                     </span>
                   </td>
 
-                  <!-- Calculated Financial Projected String Hook Column -->
-                  <td class="px-5 py-3.5 text-right">
-                    <strong class="amount-display text-slate-900 font-black" id="amount_{{ row.lease_id }}">
+                  <td class="col-price px-4 py-3 text-right">
+                    <strong class="amount-display text-slate-900 font-black text-base" id="amount_{{ row.lease_id }}">
                       {% if row.has_reading %}&#8369;{{ row.amount|intcomma }}{% else %}-{% endif %}
                     </strong>
                   </td>
 
-                  <!-- Inline Badge Status Column -->
-                  <td class="px-5 py-3.5 text-center">
+                  <td class="col-status px-4 py-3 text-center">
                     {% if row.bill_paid %}
-                      <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-extrabold text-[10px] uppercase block select-none">Water Paid</span>
+                      <span class="px-2 py-1 rounded bg-emerald-100 text-emerald-800 font-extrabold text-[10px] uppercase block select-none tracking-wide">Paid</span>
                     {% elif row.has_reading %}
-                      <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-900 font-bold text-[10px] uppercase block select-none">Completed</span>
+                      <span class="px-2 py-1 rounded bg-slate-100 text-slate-900 font-extrabold text-[10px] uppercase block select-none tracking-wide">Done</span>
                     {% else %}
-                      <span class="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-extrabold text-[10px] uppercase block select-none">Pending</span>
+                      <span class="px-2 py-1 rounded bg-rose-100 text-rose-800 font-extrabold text-[10px] uppercase block select-none tracking-wide">Pending</span>
                     {% endif %}
                   </td>
 
-                  <td class="px-5 py-3.5 text-xs font-bold text-slate-600">
+                  <td class="col-ref px-4 py-3 font-bold text-slate-600 text-sm">
                     {{ row.reference|default:"-" }}
                   </td>
 
                 </tr>
                 {% empty %}
                 <tr>
-                  <td colspan="10" class="py-12 text-center bg-white">
-                    <strong class="text-xs text-slate-600 block">No target unit bindings configured for this timestamp scope.</strong>
+                  <td colspan="10" class="py-8 text-center bg-white">
+                    <strong class="text-sm text-slate-600 block">No target unit bindings configured for this timestamp scope.</strong>
                   </td>
                 </tr>
                 {% endfor %}
@@ -363,8 +410,6 @@
       </div>
 
     </div>
-
-  </div>
 
 </div>
 
@@ -523,4 +568,45 @@
     }
   });
 </script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const checkboxes = document.querySelectorAll('.col-toggle');
+    
+    // Load saved preferences from localStorage
+    const savedCols = JSON.parse(localStorage.getItem('waterTableCols') || '{}');
+    
+    checkboxes.forEach(cb => {
+      const colClass = cb.value;
+      
+      // Initialize state from saved or default to checked
+      if (savedCols[colClass] !== undefined) {
+        cb.checked = savedCols[colClass];
+      }
+      
+      // Apply initial state
+      toggleColumn(colClass, cb.checked);
+      
+      // Handle changes
+      cb.addEventListener('change', (e) => {
+        toggleColumn(colClass, e.target.checked);
+        
+        // Save to localStorage
+        savedCols[colClass] = e.target.checked;
+        localStorage.setItem('waterTableCols', JSON.stringify(savedCols));
+      });
+    });
+    
+    function toggleColumn(colClass, isVisible) {
+      const elements = document.querySelectorAll('.' + colClass);
+      elements.forEach(el => {
+        if (isVisible) {
+          el.classList.remove('hidden');
+        } else {
+          el.classList.add('hidden');
+        }
+      });
+    }
+  });
+</script>
+
 {% endblock %}

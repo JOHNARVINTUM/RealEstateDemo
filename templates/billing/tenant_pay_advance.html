@@ -4,199 +4,224 @@
 {% block meta_description %}Pay your rent in advance easily.{% endblock %}
 
 {% block tenant_content %}
+<div class="max-w-7xl mx-auto pb-16 space-y-8">
 
-  <!-- Page Header -->
-  <div class="mb-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 border-b-2 border-slate-100 pb-8">
-    <div>
-      <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">Make a Payment</h1>
-      <p class="text-lg text-slate-500 font-bold mt-2">Choose how many months you want to pay for.</p>
-    </div>
-    <!-- System Status -->
-    <div class="bg-white border-2 border-slate-100 px-6 py-4 rounded-2xl shadow-sm w-fit self-end text-right sm:text-left sm:self-auto">
-      <span class="text-xs font-black text-slate-400 block uppercase tracking-widest mb-1">System</span>
-      <span class="text-lg font-black text-emerald-600 flex items-center justify-end sm:justify-start gap-2">
-        <span class="w-3 h-3 rounded-full bg-emerald-500 block animate-pulse"></span> Available
-      </span>
+  <!-- 1. Premium Glassmorphic Hero -->
+  <div class="relative overflow-hidden rounded-[2.5rem] bg-slate-900 p-8 sm:p-12 text-white shadow-2xl">
+    <div class="absolute -top-32 -right-32 w-[30rem] h-[30rem] bg-indigo-600 rounded-full mix-blend-multiply filter blur-[100px] opacity-40"></div>
+    <div class="absolute -bottom-24 -left-24 w-72 h-72 bg-emerald-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30"></div>
+    
+    <div class="relative z-10 flex flex-col min-[800px]:flex-row min-[800px]:items-center min-[800px]:justify-between gap-8">
+      <div>
+        <div class="flex items-center gap-3 mb-4">
+          <span class="inline-block p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shadow-inner">
+            <svg class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          </span>
+          <h1 class="text-4xl sm:text-6xl font-black tracking-tight">Make a Payment</h1>
+        </div>
+        <p class="text-lg text-slate-300 font-medium max-w-2xl">
+          Choose how many months you want to pay for. Stay ahead of your dues with our secure payment options.
+        </p>
+      </div>
+      
+      <div class="bg-white/10 backdrop-blur-lg border border-white/20 px-8 py-5 rounded-3xl text-center min-w-[200px] self-start min-[800px]:self-auto flex items-center gap-4">
+        <div class="w-4 h-4 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_15px_rgba(52,211,153,0.8)]"></div>
+        <div class="text-left">
+          <span class="text-[10px] font-black text-emerald-300 block uppercase tracking-widest mb-0.5">System Status</span>
+          <strong class="text-xl font-black text-white block">Ready</strong>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Main Payment Setup -->
-  <div class="tenant-card mb-10 p-2">
-    <div class="flex flex-col min-[800px]:flex-row min-[800px]:items-stretch min-[800px]:justify-between gap-2">
-
-      <!-- Settings -->
-      <form method="get" class="w-full min-[800px]:flex-1 p-8">
-        <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-4">Select Number of Months</label>
-        <div class="relative">
-          <select name="months_to_pay"
-                  class="w-full px-8 py-5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-slate-900 font-black appearance-none focus:border-slate-900 transition-all text-xl cursor-pointer shadow-sm"
-                  onchange="this.form.submit()">
-            {% for n in months_options %}
-              <option value="{{ n }}" {% if months_to_pay == n %}selected{% endif %}>
-                Pay for {{ n }} month{% if n != 1 %}s{% endif %}
-              </option>
-            {% endfor %}
-          </select>
-          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-6 text-slate-400">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path></svg>
-          </div>
-        </div>
-
-        <!-- Guidance -->
-        <div class="mt-8 p-8 rounded-[2rem] bg-slate-50 border-2 border-slate-100 text-lg text-slate-600 leading-relaxed shadow-sm">
-          <div class="flex items-start gap-4">
-            <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shrink-0">
-              <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div>
-              {% if has_pending %}
-                <span class="font-black text-rose-700 block mb-1">Settle Your Due First</span>
-                Please pay your due balance before proceeding with advance payments. We found <span class="text-rose-600 font-black">{{ unpaid_count }} unpaid bill{{ unpaid_count|pluralize }}</span>, and your payment will cover the oldest one{{ unpaid_count|pluralize }} first.
-              {% else %}
-                <span class="font-black text-emerald-700 block mb-1">You're All Caught Up</span>
-                Good job. Your current dues are already settled, and you can proceed with advance payments anytime if you want to stay ahead.
-              {% endif %}
+  <!-- 2. Main Payment Setup (Bento Grid Layout) -->
+  <div class="flex flex-col lg:flex-row gap-8">
+    
+    <!-- Left Column: Settings -->
+    <div class="flex-1 flex flex-col gap-8">
+      
+      <!-- Month Selection Widget -->
+      <form method="get" class="bg-white border border-slate-200 rounded-[2.5rem] p-8 sm:p-10 shadow-sm relative overflow-hidden group">
+        <div class="absolute -right-10 -top-10 w-40 h-40 bg-slate-50 rounded-full mix-blend-multiply transition-transform duration-500 group-hover:scale-150"></div>
+        <div class="relative z-10">
+          <label class="block text-sm font-black text-slate-900 mb-6 flex items-center gap-3">
+            <span class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 border border-slate-200">1</span>
+            Select Payment Duration
+          </label>
+          <div class="relative">
+            <select name="months_to_pay"
+                    class="w-full px-8 py-5 bg-slate-50 hover:bg-slate-100 border-2 border-slate-200 rounded-2xl text-slate-900 font-black appearance-none focus:border-blue-500 transition-all text-xl cursor-pointer shadow-inner focus:ring-4 focus:ring-blue-100/50 outline-none"
+                    onchange="this.form.submit()">
+              {% for n in months_options %}
+                <option value="{{ n }}" {% if months_to_pay == n %}selected{% endif %}>
+                  Pay for {{ n }} month{% if n != 1 %}s{% endif %}
+                </option>
+              {% endfor %}
+            </select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-6 text-slate-400">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path></svg>
             </div>
           </div>
         </div>
       </form>
 
-      <!-- Summary & Checkout -->
-      <div class="w-full min-[800px]:max-w-md bg-slate-900 rounded-[2rem] p-10 flex flex-col justify-between shadow-2xl">
-        <div>
-          <!-- Type -->
-          <div class="mb-10">
-            <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 block">Payment Type</label>
-            <div class="grid grid-cols-1 gap-3">
-              {% if water_only_locked %}
-                <div class="px-6 py-4 rounded-2xl font-black text-lg text-center border-2 bg-slate-900/50 text-slate-600 border-slate-800 cursor-not-allowed">
-                  Rent Only
-                </div>
-              {% else %}
-                <a href="?months_to_pay={{ months_to_pay }}&payment_type=rent_only"
-                   class="px-6 py-4 rounded-2xl font-black text-lg text-center transition-all border-2
-                          {% if payment_type == 'rent_only' %}bg-white text-slate-900 border-white shadow-lg{% else %}bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500{% endif %}">
-                  Rent Only
-                </a>
-              {% endif %}
-              
-              {% if water_available %}
-                <a href="?months_to_pay={{ months_to_pay }}&payment_type=water_only"
-                   class="px-6 py-4 rounded-2xl font-black text-lg text-center transition-all border-2
-                          {% if payment_type == 'water_only' %}bg-white text-slate-900 border-white shadow-lg{% else %}bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500{% endif %}">
-                  Water Only
-                </a>
-              {% else %}
-                <div class="px-6 py-4 rounded-2xl font-black text-lg text-center border-2 bg-slate-900/50 text-slate-600 border-slate-800 cursor-not-allowed relative group" title="Water bill not yet available. Please check back after meter reading.">
-                  Water Only
-                  <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                    Water bill not yet available
-                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
-                  </div>
-                </div>
-              {% endif %}
-
-              {% if can_pay_full_bill %}
-                <a href="?months_to_pay={{ months_to_pay }}&payment_type=full"
-                   class="px-6 py-4 rounded-2xl font-black text-lg text-center transition-all border-2
-                          {% if payment_type == 'full' %}bg-white text-slate-900 border-white shadow-lg{% else %}bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500{% endif %}">
-                  Full Bill
-                </a>
-              {% else %}
-                <div class="px-6 py-4 rounded-2xl font-black text-lg text-center border-2 bg-slate-900/50 text-slate-600 border-slate-800 cursor-not-allowed relative group" title="Full bill is available only when rent and water are both posted.">
-                  Full Bill
-                  <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                    Rent and water must both be posted
-                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
-                  </div>
-                </div>
-              {% endif %}
-            </div>
-            {% if water_only_locked %}
-              <p class="mt-4 text-sm font-bold text-amber-300">
-                Rent and parking are already settled for the oldest unpaid bill. Only water payment is available right now.
-              {% elif full_bill_available %}
-                <p class="mt-4 text-sm font-bold text-slate-400">
-                  Full bill is available because rent and water are both posted.
-                </p>
-              {% else %}
-                <p class="mt-4 text-sm font-bold text-slate-400">
-                  Advance payment is rent only. Water is handled separately when posted.
+      <!-- Account Guidance Widget -->
+      <div class="bg-white border border-slate-200 rounded-[2.5rem] p-8 sm:p-10 shadow-sm relative overflow-hidden">
+        <div class="absolute left-0 top-0 bottom-0 w-3 {% if has_pending %}bg-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.6)]{% else %}bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.6)]{% endif %}"></div>
+        
+        <div class="ml-4 flex flex-col sm:flex-row items-start gap-6">
+          <div class="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 {% if has_pending %}bg-rose-100 text-rose-600{% else %}bg-emerald-100 text-emerald-600{% endif %}">
+            {% if has_pending %}
+              <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            {% else %}
+              <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            {% endif %}
+          </div>
+          <div>
+            {% if has_pending %}
+              <h3 class="text-2xl font-black text-slate-900 mb-2">Settle Your Dues</h3>
+              <p class="text-base font-medium text-slate-600 leading-relaxed">
+                Please pay your due balance before proceeding with advance payments. We found <strong class="text-rose-600 font-black">{{ unpaid_count }} unpaid bill{{ unpaid_count|pluralize }}</strong>, and your payment will cover the oldest one first.
+              </p>
+            {% else %}
+              <h3 class="text-2xl font-black text-slate-900 mb-2">You're All Caught Up!</h3>
+              <p class="text-base font-medium text-slate-600 leading-relaxed">
+                Good job. Your current dues are already settled. You can proceed with advance payments anytime if you want to stay ahead.
               </p>
             {% endif %}
           </div>
+        </div>
+      </div>
+      
+    </div>
 
-          <!-- Total -->
-          <div class="border-t-2 border-slate-800 pt-8">
-            <div class="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">
-              {% if payment_type == 'rent_only' %}
-                Total Rent
-              {% elif payment_type == 'water_only' %}
-                Total Water
-              {% else %}
-                Total Amount
-              {% endif %}
-            </div>
-            <div class="text-5xl font-black text-white tracking-tight">
-              ₱{{ total_amount|default:"0.00"|floatformat:2|intcomma }}
-            </div>
+    <!-- Right Column: Summary & Checkout Mega-Card -->
+    <div class="w-full lg:w-[450px] bg-slate-900 rounded-[3rem] p-1 shadow-2xl shrink-0">
+      <div class="bg-slate-900 rounded-[2.9rem] p-8 sm:p-10 h-full flex flex-col justify-between relative overflow-hidden">
+        <div class="absolute -right-20 -bottom-20 w-64 h-64 bg-slate-800 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
+        
+        <div class="relative z-10">
+          <label class="block text-sm font-black text-white mb-6 flex items-center gap-3">
+            <span class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 border border-slate-700">2</span>
+            Payment Type
+          </label>
+          
+          <div class="grid grid-cols-1 gap-3 mb-10">
+            {% if water_only_locked %}
+              <div class="px-6 py-4 rounded-2xl font-black text-center border-2 bg-slate-800/50 text-slate-500 border-slate-800 cursor-not-allowed">
+                Rent Only
+              </div>
+            {% else %}
+              <a href="?months_to_pay={{ months_to_pay }}&payment_type=rent_only"
+                 class="px-6 py-4 rounded-2xl font-black text-center transition-all border-2
+                        {% if payment_type == 'rent_only' %}bg-white text-slate-900 border-white shadow-[0_0_20px_rgba(255,255,255,0.3)]{% else %}bg-slate-800 text-slate-300 border-slate-700 hover:border-slate-500 hover:bg-slate-700{% endif %}">
+                Rent Only
+              </a>
+            {% endif %}
+            
+            {% if water_available %}
+              <a href="?months_to_pay={{ months_to_pay }}&payment_type=water_only"
+                 class="px-6 py-4 rounded-2xl font-black text-center transition-all border-2
+                        {% if payment_type == 'water_only' %}bg-white text-slate-900 border-white shadow-[0_0_20px_rgba(255,255,255,0.3)]{% else %}bg-slate-800 text-slate-300 border-slate-700 hover:border-slate-500 hover:bg-slate-700{% endif %}">
+                Water Only
+              </a>
+            {% else %}
+              <div class="px-6 py-4 rounded-2xl font-black text-center border-2 bg-slate-800/50 text-slate-500 border-slate-800 cursor-not-allowed relative group" title="Water bill not yet available. Please check back after meter reading.">
+                Water Only
+                <div class="absolute -top-12 left-1/2 -translate-x-1/2 bg-white text-slate-900 text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-20 shadow-xl">
+                  Water bill not posted
+                  <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-white"></div>
+                </div>
+              </div>
+            {% endif %}
+
+            {% if can_pay_full_bill %}
+              <a href="?months_to_pay={{ months_to_pay }}&payment_type=full"
+                 class="px-6 py-4 rounded-2xl font-black text-center transition-all border-2
+                        {% if payment_type == 'full' %}bg-white text-slate-900 border-white shadow-[0_0_20px_rgba(255,255,255,0.3)]{% else %}bg-slate-800 text-slate-300 border-slate-700 hover:border-slate-500 hover:bg-slate-700{% endif %}">
+                Full Bill
+              </a>
+            {% else %}
+              <div class="px-6 py-4 rounded-2xl font-black text-center border-2 bg-slate-800/50 text-slate-500 border-slate-800 cursor-not-allowed relative group" title="Full bill is available only when rent and water are both posted.">
+                Full Bill
+                <div class="absolute -top-12 left-1/2 -translate-x-1/2 bg-white text-slate-900 text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-20 shadow-xl">
+                  Rent & Water required
+                  <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-white"></div>
+                </div>
+              </div>
+            {% endif %}
           </div>
           
-          <!-- Breakdown -->
-          <div class="mt-8 space-y-3">
+          <div class="text-center mb-8">
+            {% if water_only_locked %}
+              <p class="text-[11px] font-bold uppercase tracking-widest text-amber-400">Rent settled. Water only available.</p>
+            {% elif full_bill_available %}
+              <p class="text-[11px] font-bold uppercase tracking-widest text-emerald-400">Full bill available.</p>
+            {% else %}
+              <p class="text-[11px] font-bold uppercase tracking-widest text-slate-400">Advance payment is rent only.</p>
+            {% endif %}
+          </div>
+
+          <div class="border-t border-slate-700 pt-8 mb-8">
+            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 text-center">
+              {% if payment_type == 'rent_only' %}Total Rent{% elif payment_type == 'water_only' %}Total Water{% else %}Total Amount{% endif %}
+            </span>
+            <strong class="text-6xl font-black text-white tracking-tight block text-center">
+              ₱{{ total_amount|default:"0.00"|floatformat:2|intcomma }}
+            </strong>
+          </div>
+
+          <!-- Checkout Breakdown -->
+          <div class="space-y-4 mb-10 bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50">
             {% if payment_type == 'rent_only' %}
-              <div class="flex justify-between items-center">
-                <span class="text-slate-400 font-bold">Rent Total</span>
-                <span class="text-white font-black text-xl">₱{{ total_rent|floatformat:2|intcomma }}</span>
+              <div class="flex justify-between items-center text-sm font-bold">
+                <span class="text-slate-400">Rent Total</span>
+                <span class="text-white">₱{{ total_rent|floatformat:2|intcomma }}</span>
               </div>
               {% if total_parking > 0 %}
-                <div class="flex justify-between items-center">
-                  <span class="text-slate-400 font-bold">Parking</span>
-                  <span class="text-white font-black text-lg">₱{{ total_parking|floatformat:2|intcomma }}</span>
+                <div class="flex justify-between items-center text-sm font-bold">
+                  <span class="text-slate-400">Parking</span>
+                  <span class="text-white">₱{{ total_parking|floatformat:2|intcomma }}</span>
                 </div>
               {% endif %}
             {% elif payment_type == 'water_only' %}
-              <div class="flex justify-between items-center">
-                <span class="text-slate-400 font-bold">Water Total</span>
-                <span class="text-white font-black text-xl">₱{{ total_water|floatformat:2|intcomma }}</span>
+              <div class="flex justify-between items-center text-sm font-bold">
+                <span class="text-slate-400">Water Total</span>
+                <span class="text-white">₱{{ total_water|floatformat:2|intcomma }}</span>
               </div>
             {% else %}
-              <div class="flex justify-between items-center">
-                <span class="text-slate-400 font-bold">Rent</span>
-                <span class="text-white font-black text-lg">₱{{ total_rent|floatformat:2|intcomma }}</span>
+              <div class="flex justify-between items-center text-sm font-bold">
+                <span class="text-slate-400">Rent</span>
+                <span class="text-white">₱{{ total_rent|floatformat:2|intcomma }}</span>
               </div>
-              <div class="flex justify-between items-center">
-                <span class="text-slate-400 font-bold">Water</span>
-                <span class="text-white font-black text-lg">₱{{ total_water|floatformat:2|intcomma }}</span>
+              <div class="flex justify-between items-center text-sm font-bold">
+                <span class="text-slate-400">Water</span>
+                <span class="text-white">₱{{ total_water|floatformat:2|intcomma }}</span>
               </div>
               {% if total_parking > 0 %}
-                <div class="flex justify-between items-center">
-                  <span class="text-slate-400 font-bold">Parking</span>
-                  <span class="text-white font-black text-lg">₱{{ total_parking|floatformat:2|intcomma }}</span>
+                <div class="flex justify-between items-center text-sm font-bold">
+                  <span class="text-slate-400">Parking</span>
+                  <span class="text-white">₱{{ total_parking|floatformat:2|intcomma }}</span>
                 </div>
               {% endif %}
               {% if total_penalty > 0 %}
-                <div class="flex justify-between items-center">
-                  <span class="text-rose-400 font-bold">Late Fees</span>
-                  <span class="text-rose-400 font-black text-lg">₱{{ total_penalty|floatformat:2|intcomma }}</span>
+                <div class="flex justify-between items-center text-sm font-bold">
+                  <span class="text-rose-400">Late Fees</span>
+                  <span class="text-rose-400">₱{{ total_penalty|floatformat:2|intcomma }}</span>
                 </div>
               {% endif %}
             {% endif %}
           </div>
         </div>
 
-        <!-- Actions -->
-        <div class="mt-12 space-y-4">
+        <div class="relative z-10 space-y-3">
           <form method="get" action="{% url 'manual_gcash_payment' %}" data-loading-form>
             <input type="hidden" name="bill_ids" value="{% for row in preview_rows %}{{ row.bill_id }}{% if not forloop.last %},{% endif %}{% endfor %}">
             <input type="hidden" name="payment_type" value="{{ payment_type|default:'full' }}">
             <input type="hidden" name="amount" value="{{ total_amount }}">
-            <button type="submit"
-                    data-loading-button
-                    data-loading-text="Redirecting..."
-                    class="w-full flex items-center justify-center gap-3 px-8 py-5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xl shadow-xl transition-all active:scale-95">
+            <button type="submit" data-loading-button data-loading-text="Redirecting..." class="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-xl font-black text-lg transition-all active:scale-95 shadow-lg shadow-blue-900/50">
               <span class="button-label">Pay via GCash</span>
             </button>
           </form>
@@ -205,15 +230,9 @@
             <input type="hidden" name="bill_ids" value="{% for row in preview_rows %}{{ row.bill_id }}{% if not forloop.last %},{% endif %}{% endfor %}">
             <input type="hidden" name="payment_type" value="{{ payment_type|default:'full' }}">
             <input type="hidden" name="amount" value="{{ total_amount }}">
-            <button type="submit"
-                    data-loading-button
-                    data-loading-text="Redirecting..."
-                    class="w-full flex flex-col items-center justify-center gap-1 px-8 py-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xl shadow-xl transition-all active:scale-95">
-              <span class="button-label flex items-center gap-2">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
-                Pay Online
-              </span>
-              <span class="text-xs text-emerald-200 font-bold">(GCash · GrabPay · Card)</span>
+            <button type="submit" data-loading-button data-loading-text="Redirecting..." class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-4 rounded-xl font-black text-lg transition-all active:scale-95 shadow-lg shadow-emerald-900/50 flex flex-col items-center justify-center">
+              <span class="button-label flex items-center gap-2">Pay Online</span>
+              <span class="text-[10px] text-emerald-200 uppercase tracking-widest mt-0.5">(Cards · E-Wallets)</span>
             </button>
           </form>
 
@@ -221,78 +240,92 @@
             <input type="hidden" name="bill_ids" value="{% for row in preview_rows %}{{ row.bill_id }}{% if not forloop.last %},{% endif %}{% endfor %}">
             <input type="hidden" name="payment_type" value="{{ payment_type|default:'full' }}">
             <input type="hidden" name="amount" value="{{ total_amount }}">
-            <button type="submit"
-                    data-loading-button
-                    data-loading-text="Redirecting..."
-                    class="w-full flex flex-col items-center justify-center gap-1 px-8 py-5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white border-2 border-slate-700 font-black shadow-xl transition-all active:scale-95">
+            <button type="submit" data-loading-button data-loading-text="Redirecting..." class="w-full bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 py-4 rounded-xl font-black text-lg transition-all active:scale-95 flex flex-col items-center justify-center">
               <span class="button-label text-base">Pay in Cash</span>
-              <span class="text-xs text-slate-400 font-bold">(Face-to-Face)</span>
+              <span class="text-[10px] text-slate-400 uppercase tracking-widest mt-0.5">(Face-to-Face)</span>
             </button>
           </form>
         </div>
       </div>
-
     </div>
   </div>
 
-  <!-- Payment Details -->
-  <div class="bg-white border-2 border-slate-100 rounded-[2.5rem] shadow-sm overflow-hidden mb-10 p-2">
-    <div class="px-8 py-6 border-b-2 border-slate-50 bg-slate-50/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-t-[2rem]">
+  <!-- 3. Detailed Breakdown Table -->
+  <div class="bg-white border border-slate-200 rounded-[2.5rem] p-8 sm:p-10 shadow-sm mt-8">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 border-b border-slate-100 pb-6">
       <div>
-        <h2 class="text-2xl font-black text-slate-900 tracking-tight">Detailed Breakdown</h2>
-        <p class="text-lg text-slate-500 font-bold mt-1">See exactly what this payment covers.</p>
+        <h2 class="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+          <span class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 border border-slate-200 text-sm">3</span>
+          Detailed Breakdown
+        </h2>
+        <p class="text-sm font-semibold text-slate-500 mt-1 ml-11">See exactly what this payment covers.</p>
       </div>
-      <span class="px-4 py-2 bg-slate-200/50 text-slate-600 text-sm font-black rounded-xl uppercase tracking-widest">{{ preview_rows|length }} Month{{ preview_rows|length|pluralize }}</span>
+      <span class="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest">{{ preview_rows|length }} Month{{ preview_rows|length|pluralize }}</span>
     </div>
 
-    <div class="overflow-x-auto p-4">
-      <table class="w-full text-left border-separate border-spacing-y-3">
+    <div class="overflow-x-auto -mx-8 px-8">
+      <table class="w-full text-left border-separate border-spacing-y-2">
         <thead>
-          <tr class="text-xs font-black text-slate-400 uppercase tracking-widest">
-            <th class="py-3 px-6">Month</th>
-            <th class="py-3 px-6">Rent</th>
-            <th class="py-3 px-6">Water</th>
-            <th class="py-3 px-6">Parking</th>
-            <th class="py-3 px-6">Late Fee</th>
-            <th class="py-3 px-6">Total</th>
-            <th class="py-3 px-6">Pay By</th>
+          <tr class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            <th class="pb-3 px-4">Month</th>
+            <th class="pb-3 px-4 text-right">Rent</th>
+            <th class="pb-3 px-4 text-right">Water</th>
+            <th class="pb-3 px-4 text-right">Parking</th>
+            <th class="pb-3 px-4 text-right">Late Fee</th>
+            <th class="pb-3 px-4 text-right">Total</th>
+            <th class="pb-3 px-4 pl-8">Pay By</th>
           </tr>
         </thead>
-        <tbody class="text-lg">
+        <tbody>
           {% for r in preview_rows %}
-            <tr class="bg-slate-50 hover:bg-white border-2 border-transparent hover:border-slate-100 transition-all rounded-2xl">
-              <td class="py-6 px-6 font-black text-slate-900 first:rounded-l-2xl">{{ r.month_label }}</td>
-              <td class="py-6 px-6 text-slate-600 font-bold">
-                <span class="{% if r.pay_rent == 0 %}text-slate-300{% endif %}">₱{{ r.rent|floatformat:2|intcomma }}</span>
+            <tr class="group hover:-translate-y-0.5 transition-transform">
+              <td class="bg-slate-50 p-4 rounded-l-2xl border-y border-l border-slate-100 group-hover:bg-white group-hover:border-slate-200 group-hover:shadow-sm transition-all font-black text-slate-900 whitespace-nowrap">{{ r.month_label }}</td>
+              
+              <td class="bg-slate-50 p-4 border-y border-slate-100 text-right group-hover:bg-white group-hover:border-slate-200 group-hover:shadow-sm transition-all">
+                <strong class="text-sm font-black {% if r.pay_rent == 0 %}text-slate-300{% else %}text-slate-700{% endif %}">₱{{ r.rent|floatformat:2|intcomma }}</strong>
                 {% if r.pay_rent > 0 and r.pay_rent < r.rent %}
-                  <span class="block text-xs font-black text-emerald-600 uppercase tracking-widest mt-1">[Apply ₱{{ r.pay_rent|floatformat:2 }}]</span>
+                  <span class="block text-[9px] font-black text-emerald-600 uppercase tracking-widest mt-1.5">[Apply ₱{{ r.pay_rent|floatformat:2 }}]</span>
                 {% endif %}
               </td>
-              <td class="py-6 px-6 text-slate-600 font-bold">
-                <span class="{% if r.pay_water == 0 %}text-slate-300{% endif %}">₱{{ r.water|default:"0.00"|floatformat:2|intcomma }}</span>
+              
+              <td class="bg-slate-50 p-4 border-y border-slate-100 text-right group-hover:bg-white group-hover:border-slate-200 group-hover:shadow-sm transition-all">
+                <strong class="text-sm font-black {% if r.pay_water == 0 %}text-slate-300{% else %}text-slate-700{% endif %}">₱{{ r.water|default:"0.00"|floatformat:2|intcomma }}</strong>
                 {% if r.pay_water > 0 and r.pay_water < r.water %}
-                  <span class="block text-xs font-black text-emerald-600 uppercase tracking-widest mt-1">[Apply ₱{{ r.pay_water|floatformat:2 }}]</span>
+                  <span class="block text-[9px] font-black text-emerald-600 uppercase tracking-widest mt-1.5">[Apply ₱{{ r.pay_water|floatformat:2 }}]</span>
                 {% endif %}
               </td>
-              <td class="py-6 px-6 text-slate-600 font-bold">
-                <span class="{% if r.pay_parking == 0 %}text-slate-300{% endif %}">₱{{ r.parking|default:"0.00"|floatformat:2|intcomma }}</span>
+              
+              <td class="bg-slate-50 p-4 border-y border-slate-100 text-right group-hover:bg-white group-hover:border-slate-200 group-hover:shadow-sm transition-all">
+                <strong class="text-sm font-black {% if r.pay_parking == 0 %}text-slate-300{% else %}text-slate-700{% endif %}">₱{{ r.parking|default:"0.00"|floatformat:2|intcomma }}</strong>
                 {% if r.pay_parking > 0 and r.pay_parking < r.parking %}
-                  <span class="block text-xs font-black text-emerald-600 uppercase tracking-widest mt-1">[Apply ₱{{ r.pay_parking|floatformat:2 }}]</span>
+                  <span class="block text-[9px] font-black text-emerald-600 uppercase tracking-widest mt-1.5">[Apply ₱{{ r.pay_parking|floatformat:2 }}]</span>
                 {% endif %}
               </td>
-              <td class="py-6 px-6 text-rose-600 font-black">
-                {% if r.pay_penalty and r.pay_penalty != 0 %}₱{{ r.pay_penalty|floatformat:2|intcomma }}{% else %}-{% endif %}
+              
+              <td class="bg-slate-50 p-4 border-y border-slate-100 text-right group-hover:bg-white group-hover:border-slate-200 group-hover:shadow-sm transition-all">
+                <strong class="text-sm font-black {% if r.pay_penalty and r.pay_penalty != 0 %}text-rose-600{% else %}text-slate-300{% endif %}">
+                  {% if r.pay_penalty and r.pay_penalty != 0 %}₱{{ r.pay_penalty|floatformat:2|intcomma }}{% else %}-{% endif %}
+                </strong>
               </td>
-              <td class="py-6 px-6 font-black text-slate-900">₱{{ r.pay_total|floatformat:2|intcomma }}</td>
-              <td class="py-6 px-6 text-slate-500 font-black text-base last:rounded-r-2xl">
-                {% if r.due_date %}{{ r.due_date|date:"M d, Y" }}{% else %}-{% endif %}
+              
+              <td class="bg-slate-50 p-4 border-y border-slate-100 text-right group-hover:bg-white group-hover:border-slate-200 group-hover:shadow-sm transition-all">
+                <strong class="text-base font-black text-slate-900">₱{{ r.pay_total|floatformat:2|intcomma }}</strong>
+              </td>
+              
+              <td class="bg-slate-50 p-4 rounded-r-2xl border-y border-r border-slate-100 pl-8 group-hover:bg-white group-hover:border-slate-200 group-hover:shadow-sm transition-all">
+                <span class="text-xs font-bold text-slate-500 whitespace-nowrap">{% if r.due_date %}{{ r.due_date|date:"M d, Y" }}{% else %}-{% endif %}</span>
               </td>
             </tr>
           {% empty %}
             <tr>
-              <td colspan="7" class="py-20 px-6 text-center text-slate-400 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-100">
-                <p class="text-2xl font-black">Nothing selected yet.</p>
-                <p class="text-lg font-bold mt-2">Select how many months you want to pay above.</p>
+              <td colspan="7">
+                <div class="border-2 border-dashed border-slate-200 rounded-3xl p-16 text-center bg-slate-50/50 mt-4 shadow-inner">
+                  <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mx-auto mb-4 border border-slate-200">
+                    <svg class="w-8 h-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+                  </div>
+                  <strong class="text-xl font-black text-slate-900 block mb-2">Nothing selected yet</strong>
+                  <p class="text-sm font-medium text-slate-500">Please select a duration in Step 1 to generate a breakdown.</p>
+                </div>
               </td>
             </tr>
           {% endfor %}
@@ -301,4 +334,5 @@
     </div>
   </div>
 
+</div>
 {% endblock %}

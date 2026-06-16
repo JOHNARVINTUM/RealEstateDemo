@@ -75,7 +75,7 @@ function toggleMoveInPaymentMethod() {
   
   <!-- Navigation: Consistent Back Button -->
   <nav class="flex items-center pt-4 sm:pt-6">
-    <a href="{{ back_url|default:'/admin-portal/tenants/' }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
+    <a href="{{ back_url|default:'/admin-portal/tenants/' }}" onclick="if (document.referrer) { window.history.back(); return false; }" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
       <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
       </svg>
@@ -89,26 +89,34 @@ function toggleMoveInPaymentMethod() {
     <div class="flex-1 w-full space-y-6">
       
       <!-- Studio Top Title Card -->
-      <header class="bg-white border border-slate-200 rounded-xl p-8 shadow-xs">
-        <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900">{{ title|default:"Add a New Lease" }}</h1>
-        <p class="text-slate-600 mt-3 text-xl font-medium leading-relaxed">Connect a tenant to a room and set their payment schedule. The preview on the right will update as you type.</p>
+      <header class="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl relative overflow-hidden group">
+        <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-transparent to-rose-500/10 opacity-50 group-hover:opacity-100 transition-opacity duration-700"></div>
+        <div class="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="relative z-10">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="inline-block w-3 h-3 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.8)]"></span>
+            <span class="text-xs font-black text-indigo-400 uppercase tracking-widest">Lease Management</span>
+          </div>
+          <h1 class="text-3xl md:text-4xl font-black tracking-tight text-white leading-tight">{{ title|default:"Add a New Lease" }}</h1>
+          <p class="text-slate-400 mt-3 text-lg font-medium leading-relaxed max-w-2xl">Connect a tenant to a room and set their payment schedule. The preview on the right will update as you type.</p>
+        </div>
       </header>
 
       <!-- Main Creation Form Card -->
-      <form method="post" id="lease-form" class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden divide-y divide-slate-100">
+      <form method="post" id="lease-form" class="space-y-6">
         {% csrf_token %}
         
         <!-- Section 1: Tenant & Room Selection -->
-        <div class="p-6 sm:p-8 space-y-5">
-          <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
-            <span class="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-800 font-extrabold text-sm">1</span>
-            <h3 class="text-xl font-extrabold text-slate-900 tracking-tight">Tenant & Room Selection</h3>
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow p-6 sm:p-8 space-y-6">
+          <div class="flex items-center gap-4 pb-4 border-b border-slate-100">
+            <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 text-indigo-700 font-black text-sm border border-indigo-100">1</span>
+            <h3 class="text-xl font-black text-slate-900 tracking-tight">Tenant & Room Selection</h3>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider" for="id_tenant">Select Tenant <span class="text-rose-600">*</span></label>
-              <select name="tenant" id="id_tenant" class="w-full px-4 py-3 {% if lease %}bg-slate-100 text-slate-700 cursor-not-allowed{% else %}bg-white text-slate-900{% endif %} border border-slate-300 rounded-lg text-base font-medium focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none cursor-pointer" {% if lease %}disabled{% endif %} required>
+              <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest" for="id_tenant">Select Tenant <span class="text-rose-600">*</span></label>
+              <select name="tenant" id="id_tenant" class="w-full px-4 py-3.5 {% if lease %}bg-slate-100 text-slate-700 cursor-not-allowed border-2 border-slate-200{% else %}bg-slate-50 border-2 border-slate-100 focus:bg-white focus:border-indigo-500{% endif %} rounded-xl text-base font-bold transition-all outline-none cursor-pointer appearance-none" {% if lease %}disabled{% endif %} required>
                 <option value="">Choose a Tenant</option>
                 {% for tenant in form.tenant.field.queryset %}
                   <option value="{{ tenant.pk }}" {% if form.tenant.value == tenant.pk|stringformat:"s" or lease and lease.tenant_id == tenant.pk %}selected{% endif %}>
@@ -120,8 +128,8 @@ function toggleMoveInPaymentMethod() {
             </div>
 
             <div>
-              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider" for="id_unit">Select Room <span class="text-rose-600">*</span></label>
-              <select name="unit" id="id_unit" onchange="handleUnitSelection(this)" class="w-full px-4 py-3 {% if lease %}bg-slate-100 text-slate-700 cursor-not-allowed{% else %}bg-white text-slate-900{% endif %} border border-slate-300 rounded-lg text-base font-medium focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none cursor-pointer" {% if lease %}disabled{% endif %} required>
+              <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest" for="id_unit">Select Room <span class="text-rose-600">*</span></label>
+              <select name="unit" id="id_unit" onchange="handleUnitSelection(this)" class="w-full px-4 py-3.5 {% if lease %}bg-slate-100 text-slate-700 cursor-not-allowed border-2 border-slate-200{% else %}bg-slate-50 border-2 border-slate-100 focus:bg-white focus:border-indigo-500{% endif %} rounded-xl text-base font-bold transition-all outline-none cursor-pointer appearance-none" {% if lease %}disabled{% endif %} required>
                 <option value="">Choose an Available Room</option>
                 {% for unit in form.unit.field.queryset %}
                   <option value="{{ unit.pk }}" {% if form.unit.value == unit.pk|stringformat:"s" or lease and lease.unit_id == unit.pk %}selected{% endif %}>
@@ -135,91 +143,103 @@ function toggleMoveInPaymentMethod() {
         </div>
 
         <!-- Section 2: Rent & Payment Details -->
-        <div class="p-6 sm:p-8 space-y-5 bg-slate-50/30">
-          <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
-            <span class="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-800 font-extrabold text-sm">2</span>
-            <h3 class="text-xl font-extrabold text-slate-900 tracking-tight">Rent & Payment Details</h3>
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow p-6 sm:p-8 space-y-6">
+          <div class="flex items-center gap-4 pb-4 border-b border-slate-100">
+            <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 font-black text-sm border border-emerald-100">2</span>
+            <h3 class="text-xl font-black text-slate-900 tracking-tight">Rent & Payment Details</h3>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div>
-              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider" for="id_monthly_rent">Monthly Rent <span class="text-rose-600">*</span></label>
+            <div class="relative group">
+              <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest" for="id_monthly_rent">Monthly Rent <span class="text-rose-600">*</span></label>
               <div class="relative">
-                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-base">₱</span>
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-base">₱</span>
                 <input type="number" name="monthly_rent" id="id_monthly_rent" value="{{ form.monthly_rent.value|default:'' }}"
-                       class="w-full pl-9 pr-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none" placeholder="17,000.00" required>
+                       class="w-full pl-9 pr-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none" placeholder="17,000.00" required>
               </div>
-              <p class="text-[10px] text-slate-500 mt-2 font-bold uppercase tracking-tight">Base rent only. Parking added separately below.</p>
+              <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-max px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg opacity-0 invisible group-hover:visible group-hover:opacity-100 transition-all duration-300 delay-500 pointer-events-none z-10 shadow-xl border border-slate-700">
+                <strong class="text-indigo-400">Note:</strong> Base rent only. Parking added separately below.
+                <div class="absolute top-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-slate-900"></div>
+              </div>
             </div>
 
-            <div>
-              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider" for="id_security_deposit">Security Deposit</label>
+            <div class="relative group">
+              <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest" for="id_security_deposit">Security Deposit</label>
               <div class="relative">
-                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-base">₱</span>
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-base">₱</span>
                 <input type="number" name="security_deposit" id="id_security_deposit" value="{% if lease %}{{ lease.contract_deposit|floatformat:2 }}{% else %}{{ form.security_deposit.value|default:'' }}{% endif %}"
                        {% if lease %}readonly{% endif %}
-                       class="w-full pl-9 pr-4 py-3 {% if lease %}bg-slate-100 text-slate-700 cursor-not-allowed focus:ring-0 focus:border-slate-300{% else %}bg-white text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500{% endif %} border border-slate-300 rounded-lg text-base font-medium transition-all outline-none" placeholder="34,000.00">
+                       class="w-full pl-9 pr-4 py-3.5 {% if lease %}bg-slate-100 text-slate-700 cursor-not-allowed border-2 border-slate-200 focus:ring-0 focus:border-slate-200{% else %}bg-slate-50 border-2 border-slate-100 focus:bg-white focus:border-indigo-500{% endif %} rounded-xl text-base font-bold transition-all outline-none" placeholder="34,000.00">
               </div>
-              <p class="text-[10px] text-slate-500 mt-2 font-bold uppercase tracking-tight">{% if lease %}Collateral deposit. Locked after move-in and based on 2 months rent only.{% else %}Fixed at 2× monthly rent. Parking is excluded.{% endif %}</p>
+              <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-max px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg opacity-0 invisible group-hover:visible group-hover:opacity-100 transition-all duration-300 delay-500 pointer-events-none z-10 shadow-xl border border-slate-700">
+                <strong class="text-indigo-400">Note:</strong> {% if lease %}Collateral deposit. Locked after move-in and based on 2 months rent only.{% else %}Fixed at 2× monthly rent. Parking is excluded.{% endif %}
+                <div class="absolute top-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-slate-900"></div>
+              </div>
             </div>
           </div>
           <!-- Note: Contract Deposit Multiplier removed - using fixed 2x multiplier -->
 
-          <div class="mt-4">
-            <label class="block text-sm font-bold text-slate-800 mb-3 uppercase tracking-wider">Parking Slots</label>
+          <div class="mt-4 relative group">
+            <label class="block text-xs font-black text-slate-500 mb-3 uppercase tracking-widest">Parking Slots</label>
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide" for="id_motorcycle_slots">Motorcycle <span class="text-slate-400 font-medium normal-case">₱350 each/mo</span></label>
+                <label class="block text-[11px] font-black text-slate-500 mb-1.5 uppercase tracking-wide" for="id_motorcycle_slots">Motorcycle <span class="text-slate-400 font-medium normal-case">₱350 each/mo</span></label>
                 <input type="number" name="motorcycle_slots" id="id_motorcycle_slots" value="{{ form.motorcycle_slots.value|default:0 }}" min="0" max="10"
                        oninput="updateParkingFee()"
-                       class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none">
+                       class="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none">
               </div>
               <div>
-                <label class="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide" for="id_car_slots">Car <span class="text-slate-400 font-medium normal-case">₱2,500 each/mo</span></label>
+                <label class="block text-[11px] font-black text-slate-500 mb-1.5 uppercase tracking-wide" for="id_car_slots">Car <span class="text-slate-400 font-medium normal-case">₱2,500 each/mo</span></label>
                 <input type="number" name="car_slots" id="id_car_slots" value="{{ form.car_slots.value|default:0 }}" min="0" max="10"
                        oninput="updateParkingFee()"
-                       class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none">
+                       class="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none">
               </div>
             </div>
-            <p class="text-[10px] text-slate-500 mt-2 font-bold uppercase tracking-tight">Added to monthly billing automatically. Mix motorcycle and car slots freely.</p>
+            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-max max-w-xs text-center px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg opacity-0 invisible group-hover:visible group-hover:opacity-100 transition-all duration-300 delay-500 pointer-events-none z-10 shadow-xl border border-slate-700">
+              <strong class="text-indigo-400">Note:</strong> Added to monthly billing automatically. Mix motorcycle and car slots freely.
+              <div class="absolute top-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-slate-900"></div>
+            </div>
           </div>
         </div>
 
         <!-- Section 3: Lease Dates -->
-        <div class="p-6 sm:p-8 space-y-5">
-          <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
-            <span class="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-800 font-extrabold text-sm">3</span>
-            <h3 class="text-xl font-extrabold text-slate-900 tracking-tight">Lease Dates</h3>
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow p-6 sm:p-8 space-y-6">
+          <div class="flex items-center gap-4 pb-4 border-b border-slate-100">
+            <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-amber-50 text-amber-700 font-black text-sm border border-amber-100">3</span>
+            <h3 class="text-xl font-black text-slate-900 tracking-tight">Lease Dates</h3>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
             <div>
-              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider" for="id_start_date">Start Date <span class="text-rose-600">*</span></label>
+              <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest" for="id_start_date">Start Date <span class="text-rose-600">*</span></label>
               <input type="text" name="start_date" id="id_start_date" value="{% if lease %}{{ lease.start_date|date:'Y-m-d' }}{% else %}{{ form.start_date.value|default:'' }}{% endif %}" 
-                     class="flatpickr w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none cursor-pointer" placeholder="Select Date" required>
+                     class="flatpickr w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none cursor-pointer" placeholder="Select Date" required>
             </div>
 
             <div>
-              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider" for="id_end_date">End Date (Optional)</label>
+              <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest" for="id_end_date">End Date (Optional)</label>
               <input type="text" name="end_date" id="id_end_date" value="{% if lease and lease.end_date %}{{ lease.end_date|date:'Y-m-d' }}{% else %}{{ form.end_date.value|default:'' }}{% endif %}" 
-                     class="flatpickr w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none cursor-pointer" placeholder="No end date">
+                     class="flatpickr w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none cursor-pointer" placeholder="No end date">
             </div>
 
-            <div>
-              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider" for="id_due_day">Payment Due Day <span class="text-rose-600">*</span></label>
+            <div class="relative group">
+              <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest" for="id_due_day">Payment Due Day <span class="text-rose-600">*</span></label>
               <input type="number" name="due_day" id="id_due_day" value="{% if lease %}{{ lease.start_date|date:'j' }}{% else %}{{ form.due_day.value|default:'' }}{% endif %}" min="1" max="31" readonly
-                     class="w-full px-4 py-3 bg-slate-100 border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-0 focus:border-slate-300 transition-all outline-none cursor-not-allowed" required>
-              <p class="text-[10px] text-slate-500 mt-2 font-bold uppercase tracking-tight">Automatically follows the move-in date day.</p>
+                     class="w-full px-4 py-3.5 bg-slate-100 border-2 border-slate-200 rounded-xl text-base font-bold text-slate-900 focus:ring-0 focus:border-slate-200 transition-all outline-none cursor-not-allowed" required>
+              <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-max px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg opacity-0 invisible group-hover:visible group-hover:opacity-100 transition-all duration-300 delay-500 pointer-events-none z-10 shadow-xl border border-slate-700">
+                <strong class="text-indigo-400">Note:</strong> Automatically follows the move-in date day.
+                <div class="absolute top-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-slate-900"></div>
+              </div>
             </div>
           </div>
         </div>
 
         {% if not lease %}
         <!-- Section 4: Payment Notice -->
-        <div class="p-6 sm:p-8 space-y-5 bg-slate-50/30">
-          <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
-            <span class="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-800 font-extrabold text-sm">4</span>
-            <h3 class="text-xl font-extrabold text-slate-900 tracking-tight">Payment</h3>
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow p-6 sm:p-8 space-y-6">
+          <div class="flex items-center gap-4 pb-4 border-b border-slate-100">
+            <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-rose-50 text-rose-700 font-black text-sm border border-rose-100">4</span>
+            <h3 class="text-xl font-black text-slate-900 tracking-tight">Payment</h3>
           </div>
 
           <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl">
@@ -242,19 +262,19 @@ function toggleMoveInPaymentMethod() {
         {% endif %}
 
         <!-- Form Buttons -->
-        <div class="p-6 bg-slate-50 flex flex-col sm:flex-row items-center gap-3 justify-between">
+        <div class="flex flex-col sm:flex-row items-center gap-4 justify-between pt-4">
           <div>
             {% if lease %}
-              <a href="{% url 'admin_delete_lease' lease.id %}" class="px-5 py-3 bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-200 text-rose-700 rounded-lg font-bold text-sm transition-colors text-center inline-block">
+              <a href="{% url 'admin_delete_lease' lease.id %}" class="px-6 py-3.5 bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-200 hover:border-rose-600 text-rose-700 rounded-xl font-black text-sm transition-all shadow-sm text-center inline-block">
                 Delete Lease
               </a>
             {% endif %}
           </div>
-          <div class="flex flex-col sm:flex-row items-center gap-3">
-            <a href="{{ back_url|default:'/admin-portal/tenants/' }}" class="w-full sm:w-auto px-6 py-3 bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 rounded-lg font-bold text-base transition-colors text-center shadow-xs">
-              Cancel
+          <div class="flex flex-col sm:flex-row items-center gap-4">
+            <a href="{{ back_url|default:'/admin-portal/tenants/' }}" onclick="if (document.referrer) { window.history.back(); return false; }" class="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white border-2 border-slate-200 rounded-xl text-sm font-black text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm w-full sm:w-auto">
+              Back
             </a>
-            <button type="submit" class="w-full sm:w-auto px-8 py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-extrabold text-base transition-colors text-center shadow-xs">
+            <button type="submit" class="w-full sm:w-auto px-8 py-3.5 bg-slate-900 hover:bg-black text-white rounded-xl font-black text-sm tracking-wide transition-all shadow-lg active:scale-95 text-center">
               Save Lease
             </button>
           </div>

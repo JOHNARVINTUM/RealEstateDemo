@@ -68,3 +68,6 @@ investigate_*.py
 
 # Local thesis notes
 exports/ml/ML_THESIS_EXPLANATION.txt
+
+# Custom Folders
+skills/

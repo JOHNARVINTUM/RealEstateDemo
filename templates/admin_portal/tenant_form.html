@@ -9,7 +9,7 @@
   
   <!-- Navigation: Simple Back Button -->
   <nav class="flex items-center">
-    <a href="{{ back_url|default:'/admin-portal/tenants/' }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
+    <a href="{{ back_url|default:'/admin-portal/tenants/' }}" onclick="if (document.referrer) { window.history.back(); return false; }" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
       <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
       </svg>
@@ -22,14 +22,26 @@
     <!-- Left Workspace Column: Main Studio Form -->
     <div class="flex-1 w-full space-y-6">
       
-      <!-- Studio Header -->
-      <header class="bg-white border border-slate-200 rounded-xl p-8 shadow-xs">
-        <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900">{{ title|default:"Add New Tenant" }}</h1>
-        <p class="text-slate-600 mt-3 text-xl font-medium leading-relaxed">Enter the details for the new tenant below. Account access will be set up automatically.</p>
+      <!-- Premium Studio Header -->
+      <header class="bg-slate-900 border border-slate-800 rounded-2xl p-6 lg:p-8 shadow-xl shadow-slate-900/10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 relative overflow-hidden">
+        <!-- Subtle glow effect -->
+        <div class="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10">
+          <div class="flex items-center gap-3 mb-2">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-inner border border-white/10">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-white leading-tight">{{ title|default:"Add New Tenant" }}</h1>
+          </div>
+          <p class="text-sm text-slate-400 mt-1 leading-relaxed pl-13 ml-1">
+            Enter the details for the new tenant below. Account access will be set up automatically.
+          </p>
+        </div>
       </header>
 
       <!-- Main Unified Form Card -->
-      <form method="post" enctype="multipart/form-data" class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden divide-y divide-slate-100">
+      <form method="post" enctype="multipart/form-data" class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-visible divide-y divide-slate-100">
         {% csrf_token %}
         
         <!-- Section 1: Identity & Personal Details -->
@@ -43,7 +55,7 @@
             <div>
               <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">First Name <span class="text-rose-600">*</span></label>
               <input type="text" name="first_name" value="{{ form.first_name.value|default:'' }}" 
-                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-400" 
+                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none placeholder:text-slate-400 hover:border-slate-400 shadow-sm" 
                      placeholder="e.g. Alice" required>
               {% if form.first_name.errors %}
                 <p class="text-sm font-bold text-rose-600 mt-2">{{ form.first_name.errors.0 }}</p>
@@ -53,7 +65,7 @@
             <div>
               <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Last Name <span class="text-rose-600">*</span></label>
               <input type="text" name="last_name" value="{{ form.last_name.value|default:'' }}" 
-                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-400" 
+                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none placeholder:text-slate-400 hover:border-slate-400 shadow-sm" 
                      placeholder="e.g. Brown" required>
               {% if form.last_name.errors %}
                 <p class="text-sm font-bold text-rose-600 mt-2">{{ form.last_name.errors.0 }}</p>
@@ -71,25 +83,40 @@
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Email <span class="text-rose-600">*</span></label>
+              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">
+                <div class="relative group/tooltip inline-block">
+                  <span class="cursor-help inline-block border-b border-dashed border-slate-300">Email</span>
+                  <div class="absolute bottom-full left-0 mb-2 w-max max-w-[200px] px-3 py-1.5 bg-slate-900 text-white rounded-lg shadow-xl text-xs font-bold opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-300 z-50 pointer-events-none border border-slate-700 whitespace-normal text-center delay-[150ms]">
+                    <strong class="block text-indigo-400 mb-1">Note</strong>
+                    This will be used for their login.
+                    <div class="absolute top-full left-8 -translate-x-1/2 border-[5px] border-transparent border-t-slate-900"></div>
+                  </div>
+                </div> <span class="text-rose-600">*</span>
+              </label>
               <input type="email" name="email" value="{{ form.email.value|default:'' }}" 
-                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-400" 
+                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none placeholder:text-slate-400 hover:border-slate-400 shadow-sm" 
                      placeholder="e.g. alice@example.com" required>
               {% if form.email.errors %}
                 <p class="text-sm font-bold text-rose-600 mt-2">{{ form.email.errors.0 }}</p>
               {% endif %}
-              <p class="text-xs text-slate-500 mt-2 font-medium">This will be used for their login.</p>
             </div>
 
             <div>
-              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">Phone Number</label>
+              <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider">
+                <div class="relative group/tooltip inline-block">
+                  <span class="cursor-help inline-block border-b border-dashed border-slate-300">Phone Number</span>
+                  <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-3 py-1.5 bg-slate-900 text-white rounded-lg shadow-xl text-xs font-bold opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-300 z-50 pointer-events-none border border-slate-700 delay-[150ms]">
+                    <strong class="text-indigo-400 mr-1">Note:</strong>Optional.
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-slate-900"></div>
+                  </div>
+                </div>
+              </label>
               <input type="text" name="contact_no" value="{{ form.contact_no.value|default:'' }}" 
-                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none placeholder:text-slate-400" 
+                     class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none placeholder:text-slate-400 hover:border-slate-400 shadow-sm" 
                      placeholder="e.g. 09123456789">
               {% if form.contact_no.errors %}
                 <p class="text-sm font-bold text-rose-600 mt-2">{{ form.contact_no.errors.0 }}</p>
               {% endif %}
-              <p class="text-xs text-slate-500 mt-2 font-medium">Optional.</p>
             </div>
           </div>
         </div>
@@ -107,15 +134,23 @@
               <span class="text-sm font-extrabold text-slate-800 block uppercase tracking-wider">Lease Agreement</span>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">Upload File <span class="text-rose-600">*</span></label>
+                  <label class="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">
+                    <div class="relative group/tooltip inline-block">
+                      <span class="cursor-help inline-block border-b border-dashed border-slate-300">Upload File</span>
+                      <div class="absolute bottom-full left-0 mb-2 w-[220px] px-3 py-2 bg-slate-900 text-white rounded-lg shadow-xl text-xs font-medium opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-300 z-50 pointer-events-none border border-slate-700 whitespace-normal text-center delay-[150ms]">
+                        <strong class="block text-indigo-400 mb-1">Format Rules</strong>
+                        Accepted: PDF contracts, PNG, JPG/JPEG, and iPhone HEIC/HEIF photos. Max 10MB.
+                        <div class="absolute top-full left-10 -translate-x-1/2 border-[5px] border-transparent border-t-slate-900"></div>
+                      </div>
+                    </div> <span class="text-rose-600">*</span>
+                  </label>
                   <input type="file" name="contract_file" required accept=".pdf,.png,.jpg,.jpeg,.heic,.heif,application/pdf,image/png,image/jpeg,image/heic,image/heif"
-                         class="w-full text-base text-slate-700 file:mr-3 file:py-2 file:px-4 file:rounded-md file:border file:border-slate-300 file:text-sm file:font-bold file:bg-slate-50 file:text-slate-800 hover:file:bg-slate-100 transition-colors cursor-pointer">
-                  <p class="text-xs text-slate-500 mt-2 font-medium">Accepted: PDF contracts, PNG, JPG/JPEG, and iPhone HEIC/HEIF photos. Max 10MB.</p>
+                         class="w-full text-base text-slate-700 file:mr-3 file:py-2.5 file:px-4 file:rounded-lg file:border file:border-slate-300 file:text-xs file:font-bold file:bg-slate-50 file:text-slate-800 hover:file:bg-slate-100 transition-colors cursor-pointer border border-slate-300 rounded-lg bg-white shadow-sm hover:border-slate-400">
                 </div>
                 <div>
                   <label class="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">Description</label>
                   <input type="text" name="contract_description" 
-                         class="w-full px-4 py-3 bg-white border border-slate-300 rounded-md text-base font-medium text-slate-900 outline-none" 
+                         class="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all hover:border-slate-400 shadow-sm" 
                          placeholder="e.g. Contract, Agreement">
                 </div>
               </div>
@@ -126,15 +161,23 @@
               <span class="text-sm font-extrabold text-slate-800 block uppercase tracking-wider">Valid ID</span>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">Upload File <span class="text-rose-600">*</span></label>
+                  <label class="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">
+                    <div class="relative group/tooltip inline-block">
+                      <span class="cursor-help inline-block border-b border-dashed border-slate-300">Upload File</span>
+                      <div class="absolute bottom-full left-0 mb-2 w-[220px] px-3 py-2 bg-slate-900 text-white rounded-lg shadow-xl text-xs font-medium opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-300 z-50 pointer-events-none border border-slate-700 whitespace-normal text-center delay-[150ms]">
+                        <strong class="block text-indigo-400 mb-1">Format Rules</strong>
+                        Accepted: PNG, JPG/JPEG, iPhone HEIC/HEIF photos, or PDF. Max 10MB.
+                        <div class="absolute top-full left-10 -translate-x-1/2 border-[5px] border-transparent border-t-slate-900"></div>
+                      </div>
+                    </div> <span class="text-rose-600">*</span>
+                  </label>
                   <input type="file" name="valid_id_file" required accept=".pdf,.png,.jpg,.jpeg,.heic,.heif,application/pdf,image/png,image/jpeg,image/heic,image/heif"
-                         class="w-full text-base text-slate-700 file:mr-3 file:py-2 file:px-4 file:rounded-md file:border file:border-slate-300 file:text-sm file:font-bold file:bg-slate-50 file:text-slate-800 hover:file:bg-slate-100 transition-colors cursor-pointer">
-                  <p class="text-xs text-slate-500 mt-2 font-medium">Accepted: PNG, JPG/JPEG, iPhone HEIC/HEIF photos, or PDF. Max 10MB.</p>
+                         class="w-full text-base text-slate-700 file:mr-3 file:py-2.5 file:px-4 file:rounded-lg file:border file:border-slate-300 file:text-xs file:font-bold file:bg-slate-50 file:text-slate-800 hover:file:bg-slate-100 transition-colors cursor-pointer border border-slate-300 rounded-lg bg-white shadow-sm hover:border-slate-400">
                 </div>
                 <div>
                   <label class="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">Description</label>
                   <input type="text" name="valid_id_description" 
-                         class="w-full px-4 py-3 bg-white border border-slate-300 rounded-md text-base font-medium text-slate-900 outline-none" 
+                         class="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all hover:border-slate-400 shadow-sm" 
                          placeholder="e.g. Driver's License">
                 </div>
               </div>
@@ -143,10 +186,13 @@
         </div>
 
         <!-- Form Submission Controls -->
-        <div class="p-6 bg-slate-50 flex flex-col sm:flex-row items-center gap-3 justify-end">
-          <a href="{{ back_url|default:'/admin-portal/tenants/' }}" class="w-full sm:w-auto px-6 py-3 bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 rounded-lg font-bold text-base transition-colors text-center shadow-xs">
-            Cancel
-          </a>
+        <div class="p-6 bg-slate-50 flex flex-col sm:flex-row items-center gap-3 justify-end rounded-b-xl">
+          <a href="{{ back_url|default:'/admin-portal/tenants/' }}" onclick="if (document.referrer) { window.history.back(); return false; }" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
+      <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
+      </svg>
+      <span>Back</span>
+    </a>
           <button type="submit" class="w-full sm:w-auto px-8 py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-extrabold text-base transition-colors text-center shadow-xs">
             Add Tenant
           </button>

@@ -20,7 +20,7 @@ class ManualPayment(models.Model):
     
     PAYMENT_TYPE_CHOICES = [
         ("full", "Full Payment"),
-        ("rent_only", "Rent Only"),
+        ("rent_only", "Monthly Rent"),
         ("water_only", "Water Only"),
         ("move_in", "Move-in Payment"),
     ]

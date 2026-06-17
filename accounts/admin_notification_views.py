@@ -95,6 +95,9 @@ def admin_notifications(request):
     purge_read_admin_notifications()
     base_notifications = Notification.objects.filter(
         _admin_notification_scope(request.user)
+    ).exclude(
+        notification_type="LEASE",
+        title="New Lease Created",
     ).select_related("related_tenant__tenantprofile", "related_unit")
     notifications = base_notifications
 

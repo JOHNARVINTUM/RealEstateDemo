@@ -26,12 +26,28 @@ from rentals.models import Lease
 
 
 def _active_water_leases(reading_date):
+    billed_lease_ids = MonthlyBill.objects.filter(
+        billing_month__year=reading_date.year,
+        billing_month__month=reading_date.month,
+        lease__tenant__is_active=True,
+    ).values_list("lease_id", flat=True)
     return Lease.objects.filter(
         Q(end_date__isnull=True) | Q(end_date__gte=reading_date),
-        status=Lease.STATUS_ACTIVE,
-        is_active=True,
-        start_date__lte=reading_date
-    ).select_related('tenant', 'unit').order_by('unit__number')
+        Q(status=Lease.STATUS_ACTIVE)
+        | Q(is_active=True)
+        | Q(unit__status="OCCUPIED", tenant__is_active=True)
+        | Q(id__in=billed_lease_ids),
+        start_date__lt=reading_date
+    ).select_related('tenant', 'tenant__tenantprofile', 'unit').order_by('unit__number')
+
+
+def _tenant_display_name(user):
+    profile = getattr(user, "tenantprofile", None)
+    if profile:
+        full_name = f"{profile.first_name or ''} {profile.last_name or ''}".strip()
+        if full_name:
+            return full_name
+    return user.get_full_name() or user.email or user.username or ""
 
 
 def _water_search_filter(queryset, search):
@@ -39,8 +55,8 @@ def _water_search_filter(queryset, search):
         return queryset
     return queryset.filter(
         Q(unit__number__icontains=search) |
-        Q(tenant__first_name__icontains=search) |
-        Q(tenant__last_name__icontains=search) |
+        Q(tenant__tenantprofile__first_name__icontains=search) |
+        Q(tenant__tenantprofile__last_name__icontains=search) |
         Q(tenant__email__icontains=search)
     )
 
@@ -66,7 +82,6 @@ def admin_water(request):
     search = request.GET.get('search', '').strip().lower()
     
     reading_date = date(year, month, 1)
-    
     billing_settings = get_water_billing_settings_for_month(reading_date)
 
     # Get water rate for this month (latest rate before or on this date)
@@ -166,8 +181,7 @@ def admin_water(request):
             not prev_reading  # No previous water reading means this is first billing
         )
         
-        # Get tenant full name (fallback to username)
-        tenant_full_name = lease.tenant.get_full_name() or lease.tenant.username or ''
+        tenant_full_name = _tenant_display_name(lease.tenant)
         
         readings_data.append({
             'lease_id': lease.id,
@@ -278,7 +292,7 @@ def admin_water_export_csv(request):
             if reading and total_month_usage > 0
             else Decimal("0.00")
         )
-        tenant_name = lease.tenant.get_full_name() or lease.tenant.username or lease.tenant.email
+        tenant_name = _tenant_display_name(lease.tenant)
         status = "Water Paid" if is_water_bill_locked(bill) else ("Completed" if reading else "Pending")
         writer.writerow([
             reading_date.strftime("%B %Y"),
@@ -339,7 +353,7 @@ def admin_water_process(request):
 
         try:
             current_reading = Decimal(current_reading)
-            lease = Lease.objects.get(pk=lease_id, status=Lease.STATUS_ACTIVE, is_active=True)
+            lease = _active_water_leases(reading_date).get(pk=lease_id)
 
             existing_bill = MonthlyBill.objects.filter(
                 lease=lease,

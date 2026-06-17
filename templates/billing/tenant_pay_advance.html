@@ -98,7 +98,7 @@
                 {% endif %}
               </h4>
               <p class="text-sm font-semibold text-slate-500 mt-1">
-                {% if payment_type == 'rent_only' %}Rent only{% elif payment_type == 'water_only' %}Water only{% else %}Full bill{% endif %}
+                {% if payment_type == 'rent_only' %}Monthly rent{% elif payment_type == 'water_only' %}Water only{% else %}Full bill{% endif %}
                 {% if preview_rows %}for the generated billing months below{% else %}Select a duration to build the preview{% endif %}
               </p>
             </div>
@@ -162,13 +162,13 @@
           <div class="grid grid-cols-1 gap-3 mb-10">
             {% if water_only_locked %}
               <div class="px-6 py-4 rounded-2xl font-black text-center border-2 bg-slate-800/50 text-slate-500 border-slate-800 cursor-not-allowed">
-                Rent Only
+                Monthly Rent
               </div>
             {% else %}
               <a href="?months_to_pay={{ months_to_pay }}&payment_type=rent_only"
                  class="px-6 py-4 rounded-2xl font-black text-center transition-all border-2
                         {% if payment_type == 'rent_only' %}bg-white text-slate-900 border-white shadow-[0_0_20px_rgba(255,255,255,0.3)]{% else %}bg-slate-800 text-slate-300 border-slate-700 hover:border-slate-500 hover:bg-slate-700{% endif %}">
-                Rent Only
+                Monthly Rent
               </a>
             {% endif %}
             
@@ -211,13 +211,13 @@
             {% elif full_bill_available %}
               <p class="text-[11px] font-bold uppercase tracking-widest text-emerald-400">Full bill available.</p>
             {% else %}
-              <p class="text-[11px] font-bold uppercase tracking-widest text-slate-400">Advance payment is rent only.</p>
+              <p class="text-[11px] font-bold uppercase tracking-widest text-slate-400">Advance payment covers monthly rent.</p>
             {% endif %}
           </div>
 
           <div class="border-t border-slate-700 pt-8 mb-8">
             <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 text-center">
-              {% if payment_type == 'rent_only' %}Total Rent{% elif payment_type == 'water_only' %}Total Water{% else %}Total Amount{% endif %}
+              {% if payment_type == 'rent_only' %}Total Monthly Rent{% elif payment_type == 'water_only' %}Total Water{% else %}Total Amount{% endif %}
             </span>
             <strong class="text-6xl font-black text-white tracking-tight block text-center">
               ₱{{ total_amount|default:"0.00"|floatformat:2|intcomma }}
@@ -228,7 +228,7 @@
           <div class="space-y-4 mb-10 bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50">
             {% if payment_type == 'rent_only' %}
               <div class="flex justify-between items-center text-sm font-bold">
-                <span class="text-slate-400">Rent Total</span>
+                <span class="text-slate-400">Monthly Rent Total</span>
                 <span class="text-white">₱{{ total_rent|floatformat:2|intcomma }}</span>
               </div>
               {% if total_parking > 0 %}

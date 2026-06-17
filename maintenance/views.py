@@ -1,6 +1,6 @@
-from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 import logging
+from django.utils import timezone
 
 from accounts.decorators import tenant_required
 from rentals.models import Lease, Notification
@@ -10,10 +10,36 @@ from .models import MaintenanceRequest
 logger = logging.getLogger(__name__)
 
 
+def _current_maintenance_lease(user, today=None):
+    if today is None:
+        today = timezone.localdate()
+
+    return (
+        Lease.objects.filter(
+            tenant=user,
+            status=Lease.STATUS_ACTIVE,
+            start_date__lte=today,
+        )
+        .filter(end_date__isnull=True)
+        .select_related("unit")
+        .order_by("-start_date", "-id")
+        .first()
+        or Lease.objects.filter(
+            tenant=user,
+            status=Lease.STATUS_ACTIVE,
+            start_date__lte=today,
+            end_date__gte=today,
+        )
+        .select_related("unit")
+        .order_by("-start_date", "-id")
+        .first()
+    )
+
+
 @tenant_required
 def report_issue(request):
     user = request.user
-    lease = Lease.objects.filter(tenant=user, is_active=True).select_related("unit").first()
+    lease = _current_maintenance_lease(user)
 
     if request.method == "POST":
         form = MaintenanceRequestForm(request.POST, request.FILES)

@@ -189,6 +189,32 @@ class MoveInPaymentNotificationTests(TestCase):
 
         self.assertEqual(get_pending_paymongo_payment(self.admin, "cs_test_admin_lookup"), payment)
 
+    def test_pending_paymongo_move_in_for_active_lease_is_finalized(self):
+        payment = ManualPayment.objects.create(
+            user=self.tenant,
+            payment_type="move_in",
+            payment_method="PAYMONGO",
+            amount=Decimal("36000.00"),
+            reference_code="REF-PM-ACTIVE",
+            status="PENDING",
+            checkout_session_id="cs_test_active_movein",
+            metadata={
+                "generated_by_admin": str(self.admin.id),
+                "tenant_id": str(self.tenant.id),
+                "lease_id": str(self.lease.id),
+            },
+        )
+
+        with patch("payments.paymongo_workflow.Notification.create_notification"):
+            auto_approve_paymongo_payment(payment)
+
+        payment.refresh_from_db()
+        first_bill = MonthlyBill.objects.get(lease=self.lease, billing_month=date(2026, 6, 1))
+        self.assertEqual(payment.status, "APPROVED")
+        self.assertEqual(payment.bill_ids, str(first_bill.id))
+        self.assertEqual(first_bill.status, "PAID")
+        self.assertEqual(first_bill.payment_reference, "REF-PM-ACTIVE")
+
     def test_admin_payment_queryset_excludes_unpaid_paymongo_checkout_drafts(self):
         draft = ManualPayment.objects.create(
             user=self.tenant,

@@ -10,7 +10,7 @@
                 <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block">Projection Schedule</span>
                 <h5 class="text-base font-extrabold text-slate-900 tracking-tight mt-0.5">Live Accounting Ledger</h5>
             </div>
-            <span class="px-2 py-0.5 rounded bg-slate-200 text-slate-700 text-[10px] font-bold">12-Month Scope</span>
+            <span class="px-2 py-0.5 rounded bg-slate-200 text-slate-700 text-[10px] font-bold" id="contract-scope-label">Contract Scope</span>
         </div>
 
         <div class="p-5 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
@@ -52,9 +52,9 @@
                 </div>
             </div>
 
-            <!-- Full Year Projection Table -->
+            <!-- Contract Projection Table -->
             <div class="space-y-2">
-                <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500 block">Full 12-Month Trajectory</span>
+                <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500 block">Contract Billing Trajectory</span>
                 <div class="border border-slate-200 rounded-lg overflow-hidden">
                     <table class="w-full text-left text-xs" id="monthly-schedule-table">
                         <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200 text-[11px]">
@@ -70,7 +70,7 @@
                         <tfoot class="bg-slate-50 border-t border-slate-200">
                             <tr class="font-extrabold text-slate-900">
                                 <td colspan="2" class="px-3 py-2.5 text-xs text-slate-700">Calculated Contract Value</td>
-                                <td class="px-3 py-2.5 text-right text-sm text-slate-900" id="total-12-months">₱0.00</td>
+                                <td class="px-3 py-2.5 text-right text-sm text-slate-900" id="total-contract-months">₱0.00</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const isExistingLease = previewContainer?.dataset.existingLease === 'true';
     
     if (form && previewContainer) {
-        const fields = ['id_monthly_rent', 'id_security_deposit', 'id_start_date', 'id_due_day', 'id_motorcycle_slots', 'id_car_slots'];
+        const fields = ['id_monthly_rent', 'id_security_deposit', 'id_start_date', 'id_end_date', 'id_due_day', 'id_motorcycle_slots', 'id_car_slots'];
         // Note: id_deposit_multiplier removed - using fixed 2x multiplier
         
         function formatCurrency(amount) {
@@ -121,6 +121,18 @@ document.addEventListener('DOMContentLoaded', function() {
             const lastDayOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
             date.setDate(Math.min(dueDay, lastDayOfMonth));
             return date;
+        }
+
+        function contractCycleCount(startDate, endDate) {
+            if (!startDate || !endDate || isNaN(startDate.getTime()) || isNaN(endDate.getTime()) || endDate < startDate) {
+                return 0;
+            }
+            const monthDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12
+                + (endDate.getMonth() - startDate.getMonth());
+            if (monthDiff >= 12) {
+                return 12;
+            }
+            return Math.max(monthDiff + 1, 1);
         }
         
         function getVal(id, fallback) {
@@ -146,6 +158,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const monthlyRent = parseFloat(getVal('id_monthly_rent', 0)) || 0;
             const depositMultiplier = 2; // Fixed 2x multiplier
             const startDateInput = getVal('id_start_date', '');
+            const endDateInput = getVal('id_end_date', '');
             syncDueDayWithStartDate();
             const dueDay = parseInt(getVal('id_due_day', 1)) || 1;
             const motorcycleSlots = parseInt(getVal('id_motorcycle_slots', 0)) || 0;
@@ -166,9 +179,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 gcashPreviewFooter.style.display = (paymentMethod === 'GCASH') ? 'block' : 'none';
             }
 
-            if (monthlyRent > 0 && startDateInput) {
-                previewContainer.style.display = 'block';
+            if (monthlyRent > 0 && startDateInput && endDateInput) {
                 const startDate = new Date(startDateInput);
+                const endDate = new Date(endDateInput);
+                const cycleCount = contractCycleCount(startDate, endDate);
+                if (!cycleCount) {
+                    previewContainer.style.display = 'none';
+                    return;
+                }
+
+                previewContainer.style.display = 'block';
                 const monthlyTotal = monthlyRent + parkingFee;
                 // Total move-in cost = 1st month rent + security deposit + parking
                 // Security deposit = (rent + parking) × 2
@@ -193,11 +213,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 setEl('milestone-first-rent', formatCurrency(monthlyTotal));
                 const firstRentDueDate = calculateDueDate(startDate, 0, dueDay);
                 setEl('milestone-first-rent-date', formatDate(firstRentDueDate));
+                setEl('contract-scope-label', `${cycleCount} Cycle${cycleCount === 1 ? '' : 's'}`);
                 
                 let scheduleHTML = '';
-                let total12Months = 0;
+                let totalContractAmount = 0;
                 
-                for (let i = 0; i < 12; i++) {
+                for (let i = 0; i < cycleCount; i++) {
                     const monthNumber = i + 1;
                     const dueDate = calculateDueDate(startDate, i, dueDay);
                     let amount = monthlyRent;
@@ -206,13 +227,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (i === 0 && !isExistingLease) {
                         amount = totalMoveInCost;
                         amountDisplay = `<span class="text-amber-700 font-extrabold">${formatCurrency(amount)}</span>`;
-                        total12Months += amount;
+                        totalContractAmount += amount;
                     } else {
                         amount = monthlyTotal;
                         amountDisplay = parkingFee > 0
                             ? `${formatCurrency(monthlyRent)} <span class="text-slate-500 text-[10px] font-bold">+\u20b1${parkingFee.toLocaleString('en-PH')} parking</span>`
                             : formatCurrency(amount);
-                        total12Months += amount;
+                        totalContractAmount += amount;
                     }
                     
                     scheduleHTML += `
@@ -225,7 +246,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 if (monthlyScheduleBody) monthlyScheduleBody.innerHTML = scheduleHTML;
-                setEl('total-12-months', formatCurrency(total12Months));
+                setEl('total-contract-months', formatCurrency(totalContractAmount));
             } else {
                 previewContainer.style.display = 'none';
             }

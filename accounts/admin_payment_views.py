@@ -490,7 +490,7 @@ def admin_payment_detail(request, payment_id: int):
     tenant_display_name = _tenant_display_name(payment.user)
 
     payment_type_choices = [
-        ("rent_only", "Rent Only"),
+        ("rent_only", "Monthly Rent"),
         ("water_only", "Water Only"),
         ("full", "Full Bill"),
     ]

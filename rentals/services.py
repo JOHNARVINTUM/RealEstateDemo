@@ -216,6 +216,18 @@ class TenantRiskService:
     """Service for calculating and managing tenant risk classifications"""
 
     @staticmethod
+    def _current_active_lease_queryset(tenant, today=None):
+        if today is None:
+            today = timezone.now().date()
+        return Lease.objects.filter(
+            tenant=tenant,
+            status=Lease.STATUS_ACTIVE,
+            start_date__lte=today,
+        ).filter(
+            Q(end_date__isnull=True) | Q(end_date__gte=today)
+        )
+
+    @staticmethod
     def _timeliness_bill_queryset(tenant, since_date):
         bills = MonthlyBill.objects.filter(
             lease__tenant=tenant,
@@ -267,7 +279,7 @@ class TenantRiskService:
         """
         try:
             # Get tenant's leases
-            leases = Lease.objects.filter(tenant=tenant, is_active=True)
+            leases = TenantRiskService._current_active_lease_queryset(tenant)
             if not leases:
                 return 50  # Default score for tenants without active leases
             
@@ -327,7 +339,7 @@ class TenantRiskService:
             total_count = 0
 
             for bill in all_bills:
-                if TenantRiskService._bill_is_future_month(bill, today):
+                if TenantRiskService._bill_is_future_month(bill, today) and bill.status != "PAID":
                     continue
 
                 total_count += 1
@@ -355,7 +367,8 @@ class TenantRiskService:
             all_bills = MonthlyBill.objects.filter(
                 lease__tenant=tenant,
                 billing_month__gte=twelve_months_ago,
-                billing_month__lte=current_month,
+            ).filter(
+                Q(billing_month__lte=current_month) | Q(status="PAID"),
             )
             
             if all_bills.count() == 0:
@@ -847,6 +860,7 @@ class LeaseSchedulingService:
         advance_months,
         security_deposit,
         due_day,
+        end_date=None,
     ):
         import calendar
 
@@ -876,8 +890,14 @@ class LeaseSchedulingService:
         adjusted_due_day = min(due_day, last_day_of_month)
         first_rent_date = date(first_rent_month.year, first_rent_month.month, adjusted_due_day)
 
+        if end_date:
+            month_diff = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
+            cycle_count = 12 if month_diff >= 12 else max(month_diff + 1, 1)
+        else:
+            cycle_count = advance_months + min(6, max(12 - advance_months, 0))
+
         current_date = first_rent_date
-        for _ in range(min(6, 12 - advance_months)):
+        for _ in range(max(cycle_count - advance_months, 0)):
             events.append({
                 'date': current_date,
                 'type': 'Rent Due',
@@ -901,6 +921,7 @@ class LeaseSchedulingService:
         advance_months = lease_data.get('advance_months', 2)
         security_deposit = lease_data.get('security_deposit', monthly_rent)
         start_date = lease_data.get('start_date')
+        end_date = lease_data.get('end_date')
         due_day = lease_data.get('due_day', 5)
         
         if not start_date:
@@ -914,6 +935,7 @@ class LeaseSchedulingService:
             advance_months=advance_months,
             security_deposit=security_deposit,
             due_day=due_day,
+            end_date=end_date,
         )
 
         return {
@@ -1005,7 +1027,7 @@ class LeaseActivationService:
             try:
                 lease = Lease.objects.get(id=lease_id, status=Lease.STATUS_ACTIVE)
                 logger.info(f"Lease {lease_id} already active, skipping activation")
-                return None, (True, "Lease already active")
+                return lease, (True, "Lease already active")
             except Lease.DoesNotExist:
                 logger.error(f"Lease {lease_id} not found or not in PENDING_PAYMENT status")
                 return None, (False, "Lease not found or invalid status")
@@ -1163,6 +1185,22 @@ class LeaseActivationService:
             with transaction.atomic():
                 lease, early_result = LeaseActivationService._get_pending_or_active_lease(lease_id)
                 if early_result:
+                    if early_result[0] and lease and existing_payment is not None:
+                        first_bill = None
+                        if not skip_billing_generation:
+                            first_bill = LeaseActivationService._generate_initial_billing(
+                                lease,
+                                payment_reference,
+                                activated_at,
+                            )
+                        LeaseActivationService._record_move_in_payment(
+                            lease=lease,
+                            payment_method=payment_method,
+                            payment_reference=payment_reference,
+                            amount=amount,
+                            first_bill=first_bill,
+                            existing_payment=existing_payment,
+                        )
                     return early_result
 
                 activated, activation_message = LeaseActivationService._activate_pending_lease(

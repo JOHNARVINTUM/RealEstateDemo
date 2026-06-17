@@ -362,9 +362,9 @@ class TenantProfileEditForm(forms.ModelForm):
 class LeaseForm(forms.ModelForm):
     # Additional fields for payment calculations
     end_date = forms.DateField(
-        required=False,
+        required=True,
         widget=forms.DateInput(attrs={"type": "text", "class": "flatpickr", "autocomplete": "off"}),
-        help_text="Lease end date (optional)"
+        help_text="Lease end date"
     )
     
     class Meta:
@@ -406,31 +406,39 @@ class LeaseForm(forms.ModelForm):
             from django.utils import timezone as tz
             from django.db.models import Q
             _today = tz.localdate()
-            if unit.status != "AVAILABLE" and not (
+            if unit.status == "MAINTENANCE" and not (
                 self.instance and self.instance.pk and self.instance.unit_id == unit.id
             ):
                 raise ValidationError({"unit": "Selected unit is not available for a new lease."})
             qs = Lease.objects.filter(
-                unit=unit, start_date__lte=_today
-            ).filter(Q(end_date__isnull=True) | Q(end_date__gte=_today))
+                unit=unit,
+                status__in=[Lease.STATUS_ACTIVE, Lease.STATUS_PENDING_PAYMENT],
+            )
             if self.instance and self.instance.pk:
                 qs = qs.exclude(pk=self.instance.pk)
             if qs.exists():
-                raise ValidationError({"unit": "Selected unit already has an active lease."})
+                raise ValidationError({"unit": "Selected unit already has an active or pending lease."})
             # Prevent duplicate lease for same tenant + same unit
             if tenant:
                 dup_qs = Lease.objects.filter(
-                    tenant=tenant, unit=unit
-                ).filter(Q(end_date__isnull=True) | Q(end_date__gte=_today))
+                    tenant=tenant,
+                    unit=unit,
+                    status__in=[Lease.STATUS_ACTIVE, Lease.STATUS_PENDING_PAYMENT],
+                )
                 if self.instance and self.instance.pk:
                     dup_qs = dup_qs.exclude(pk=self.instance.pk)
                 if dup_qs.exists():
                     raise ValidationError({"unit": f"This tenant already has an active or upcoming lease for Unit {unit.number}."})
         
         # Validate date logic
+        if start_date and not end_date:
+            raise ValidationError({"end_date": "End date is required."})
+
         if start_date and end_date:
             if start_date > end_date:
                 raise ValidationError({"end_date": "End date must be after start date."})
+            if end_date.day != start_date.day:
+                raise ValidationError({"end_date": "End date must use the same day as the move-in date."})
 
         # Payment due day follows the tenant move-in date.
         if start_date:
@@ -547,13 +555,18 @@ class LeaseForm(forms.ModelForm):
         except Exception as e:
             logger.exception("Failed to set tenant queryset: %s", e)
         
-        # only allow selecting available units, but preserve the current unit on edit
+        # Available means no active lease. Some historical rooms still have
+        # status=OCCUPIED even after their lease was cleared, so do not rely on
+        # Unit.status alone for lease assignment.
         try:
             occupied_units = Lease.objects.filter(is_active=True).values_list('unit_id', flat=True)
             unit_queryset = Unit.objects.filter(
                 is_active=True,
-                status='AVAILABLE'
-            ).exclude(id__in=occupied_units)
+            ).exclude(
+                id__in=occupied_units
+            ).exclude(
+                status='MAINTENANCE'
+            )
             if self.instance and self.instance.pk and self.instance.unit_id:
                 unit_queryset = (unit_queryset | Unit.objects.filter(pk=self.instance.unit_id)).distinct()
             self.fields["unit"].queryset = unit_queryset.order_by('floor_level', 'number')

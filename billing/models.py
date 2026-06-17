@@ -141,6 +141,77 @@ class MonthlyBill(models.Model):
         return "OVERDUE"
 
 
+class BillLineItem(models.Model):
+    LINE_TYPE_RENT = "RENT"
+    LINE_TYPE_PARKING = "PARKING"
+    LINE_TYPE_WATER = "WATER"
+    LINE_TYPE_LATE_FEE = "LATE_FEE"
+    LINE_TYPE_SECURITY_DEPOSIT = "SECURITY_DEPOSIT"
+    LINE_TYPE_CONTRACT_DEPOSIT = "CONTRACT_DEPOSIT"
+
+    LINE_TYPE_CHOICES = [
+        (LINE_TYPE_RENT, "Rent"),
+        (LINE_TYPE_PARKING, "Parking"),
+        (LINE_TYPE_WATER, "Water"),
+        (LINE_TYPE_LATE_FEE, "Late Fee"),
+        (LINE_TYPE_SECURITY_DEPOSIT, "Security Deposit"),
+        (LINE_TYPE_CONTRACT_DEPOSIT, "Contract Deposit"),
+    ]
+
+    STATUS_UNPAID = "UNPAID"
+    STATUS_PARTIAL = "PARTIAL"
+    STATUS_PAID = "PAID"
+
+    STATUS_CHOICES = [
+        (STATUS_UNPAID, "Unpaid"),
+        (STATUS_PARTIAL, "Partial"),
+        (STATUS_PAID, "Paid"),
+    ]
+
+    monthly_bill = models.ForeignKey(MonthlyBill, on_delete=models.CASCADE, related_name="line_items")
+    line_type = models.CharField(max_length=30, choices=LINE_TYPE_CHOICES)
+    amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    paid_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_UNPAID)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    payment_reference = models.CharField(max_length=80, blank=True, default="")
+    source_water_reading = models.ForeignKey(
+        "water.WaterReading",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="billing_line_items",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("monthly_bill", "line_type")
+        ordering = ("monthly_bill", "line_type")
+        indexes = [
+            models.Index(fields=["monthly_bill", "line_type"], name="line_bill_type_idx"),
+            models.Index(fields=["line_type", "status"], name="line_type_status_idx"),
+        ]
+
+    @property
+    def balance(self):
+        return max(self.amount - self.paid_amount, 0)
+
+    def refresh_status(self):
+        if self.amount <= 0:
+            self.status = self.STATUS_PAID
+        elif self.paid_amount >= self.amount:
+            self.status = self.STATUS_PAID
+        elif self.paid_amount > 0:
+            self.status = self.STATUS_PARTIAL
+        else:
+            self.status = self.STATUS_UNPAID
+        return self.status
+
+    def __str__(self):
+        return f"{self.monthly_bill_id} - {self.line_type} ({self.status})"
+
+
 class BillingInvoice(models.Model):
     invoice_number = models.CharField(max_length=40, unique=True)
     tenant = models.ForeignKey("accounts.User", on_delete=models.CASCADE, related_name="billing_invoices")

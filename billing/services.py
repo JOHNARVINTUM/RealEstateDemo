@@ -7,7 +7,7 @@ from django.db.models import Sum
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
-from billing.models import BillingInvoice, MonthlyBill
+from billing.models import BillingInvoice, BillLineItem, MonthlyBill
 from water.models import WaterBill
 
 # 3% flat late interest (BASE RENT ONLY for now)
@@ -279,6 +279,214 @@ def duplicate_monthly_bill_cleanup_preview():
     }
 
 
+def _money_or_zero(value) -> Decimal:
+    return Decimal(value or 0).quantize(Decimal("0.01"))
+
+
+def _line_status(amount: Decimal, paid_amount: Decimal) -> str:
+    if amount <= 0 or paid_amount >= amount:
+        return BillLineItem.STATUS_PAID
+    if paid_amount > 0:
+        return BillLineItem.STATUS_PARTIAL
+    return BillLineItem.STATUS_UNPAID
+
+
+def _upsert_line_item(
+    bill: MonthlyBill,
+    line_type: str,
+    *,
+    amount,
+    paid_amount=None,
+    paid_at=None,
+    payment_reference="",
+    source_water_reading=None,
+):
+    amount = _money_or_zero(amount)
+    paid_amount = _money_or_zero(paid_amount)
+    if amount == 0 and paid_amount == 0:
+        line = BillLineItem.objects.filter(monthly_bill=bill, line_type=line_type).first()
+        if not line:
+            return None
+        line.amount = Decimal("0.00")
+        line.paid_amount = Decimal("0.00")
+        line.paid_at = None
+        line.payment_reference = ""
+        if line_type == BillLineItem.LINE_TYPE_WATER:
+            line.source_water_reading = source_water_reading
+        line.refresh_status()
+        line.save(update_fields=[
+            "amount",
+            "paid_amount",
+            "paid_at",
+            "payment_reference",
+            "source_water_reading",
+            "status",
+            "updated_at",
+        ])
+        return line
+
+    line, _ = BillLineItem.objects.get_or_create(
+        monthly_bill=bill,
+        line_type=line_type,
+        defaults={"amount": amount},
+    )
+    line.amount = amount
+    line.paid_amount = min(paid_amount, amount) if amount > 0 else paid_amount
+    line.paid_at = paid_at if line.paid_amount > 0 else None
+    line.payment_reference = payment_reference if line.paid_amount > 0 else ""
+    if line_type == BillLineItem.LINE_TYPE_WATER:
+        line.source_water_reading = source_water_reading
+    line.refresh_status()
+    line.save(update_fields=[
+        "amount",
+        "paid_amount",
+        "paid_at",
+        "payment_reference",
+        "source_water_reading",
+        "status",
+        "updated_at",
+    ])
+    return line
+
+
+def ensure_bill_line_items_from_legacy(bill: MonthlyBill):
+    _upsert_line_item(
+        bill,
+        BillLineItem.LINE_TYPE_RENT,
+        amount=bill.base_rent,
+        paid_amount=bill.rent_paid,
+        paid_at=bill.rent_paid_at or bill.paid_at,
+        payment_reference=bill.payment_reference,
+    )
+    _upsert_line_item(
+        bill,
+        BillLineItem.LINE_TYPE_PARKING,
+        amount=bill.parking_fee,
+        paid_amount=bill.parking_paid,
+        paid_at=bill.rent_paid_at or bill.paid_at,
+        payment_reference=bill.payment_reference,
+    )
+    _upsert_line_item(
+        bill,
+        BillLineItem.LINE_TYPE_WATER,
+        amount=bill.water_amount,
+        paid_amount=bill.water_paid,
+        paid_at=bill.water_paid_at or bill.paid_at,
+        payment_reference=bill.payment_reference,
+        source_water_reading=bill.source_water_reading,
+    )
+    _upsert_line_item(
+        bill,
+        BillLineItem.LINE_TYPE_LATE_FEE,
+        amount=bill.interest,
+        paid_amount=bill.interest if bill.status == "PAID" else Decimal("0.00"),
+        paid_at=bill.paid_at,
+        payment_reference=bill.payment_reference,
+    )
+    return list(bill.line_items.all())
+
+
+def sync_monthly_bill_from_line_items(bill: MonthlyBill):
+    lines = {
+        line.line_type: line
+        for line in bill.line_items.all()
+    }
+    rent = lines.get(BillLineItem.LINE_TYPE_RENT)
+    parking = lines.get(BillLineItem.LINE_TYPE_PARKING)
+    water = lines.get(BillLineItem.LINE_TYPE_WATER)
+    late_fee = lines.get(BillLineItem.LINE_TYPE_LATE_FEE)
+
+    bill.base_rent = rent.amount if rent else Decimal("0.00")
+    bill.rent_paid = rent.paid_amount if rent else Decimal("0.00")
+    bill.rent_paid_at = rent.paid_at if rent and rent.paid_amount > 0 else None
+    bill.parking_fee = parking.amount if parking else Decimal("0.00")
+    bill.parking_paid = parking.paid_amount if parking else Decimal("0.00")
+    bill.water_amount = water.amount if water else Decimal("0.00")
+    bill.water_paid = water.paid_amount if water else Decimal("0.00")
+    bill.water_paid_at = water.paid_at if water and water.paid_amount > 0 else None
+    bill.interest = late_fee.balance if late_fee else Decimal("0.00")
+    bill.total_due = (bill.base_rent + bill.parking_fee + bill.water_amount + bill.interest).quantize(Decimal("0.01"))
+    if water and water.source_water_reading:
+        bill.source_water_reading = water.source_water_reading
+
+    has_payment = any(line.paid_amount > 0 for line in lines.values())
+    has_balance = any(line.balance > 0 for line in lines.values())
+    paid_times = [line.paid_at for line in lines.values() if line.paid_at]
+    if not has_balance and has_payment:
+        bill.status = "PAID"
+        bill.paid_at = max(paid_times) if paid_times else bill.paid_at
+    elif has_payment:
+        bill.status = "PARTIALLY_PAID"
+        bill.paid_at = None
+    else:
+        bill.status = "UNPAID"
+        bill.paid_at = None
+    bill.save(update_fields=[
+        "base_rent",
+        "rent_paid",
+        "rent_paid_at",
+        "parking_fee",
+        "parking_paid",
+        "water_amount",
+        "water_paid",
+        "water_paid_at",
+        "interest",
+        "total_due",
+        "status",
+        "paid_at",
+        "source_water_reading",
+    ])
+    return bill
+
+
+def bill_line_items_for_payment_type(bill: MonthlyBill, payment_type: str):
+    ensure_bill_line_items_from_legacy(bill)
+    if payment_type == "rent_only":
+        line_types = {
+            BillLineItem.LINE_TYPE_RENT,
+            BillLineItem.LINE_TYPE_PARKING,
+            BillLineItem.LINE_TYPE_LATE_FEE,
+        }
+    elif payment_type == "water_only":
+        line_types = {BillLineItem.LINE_TYPE_WATER}
+    else:
+        line_types = {
+            BillLineItem.LINE_TYPE_RENT,
+            BillLineItem.LINE_TYPE_PARKING,
+            BillLineItem.LINE_TYPE_WATER,
+            BillLineItem.LINE_TYPE_LATE_FEE,
+        }
+    return list(bill.line_items.filter(line_type__in=line_types))
+
+
+def set_bill_line_item_amount(
+    bill: MonthlyBill,
+    line_type: str,
+    *,
+    amount,
+    source_water_reading=None,
+    protect_paid=True,
+):
+    ensure_bill_line_items_from_legacy(bill)
+    amount = _money_or_zero(amount)
+    line = bill.line_items.filter(line_type=line_type).first()
+    paid_amount = line.paid_amount if line else Decimal("0.00")
+    if protect_paid and line and line.paid_amount > 0 and line.amount != amount:
+        raise ValidationError("Paid billing line items cannot be overwritten.")
+
+    updated_line = _upsert_line_item(
+        bill,
+        line_type,
+        amount=amount,
+        paid_amount=paid_amount,
+        paid_at=line.paid_at if line else None,
+        payment_reference=line.payment_reference if line else "",
+        source_water_reading=source_water_reading,
+    )
+    sync_monthly_bill_from_line_items(bill)
+    return updated_line
+
+
 def cleanup_duplicate_monthly_bills() -> int:
     preview = duplicate_monthly_bill_cleanup_preview()
     candidate_ids = [row["bill_id"] for row in preview["duplicates"]]
@@ -324,7 +532,7 @@ def _apply_monthly_bill_changes(bill, *, due_date, base_rent, water_amount, park
 
 
 def _create_monthly_bill(lease, billing_month, due_date, base_rent, water_amount, parking_fee, interest, total_due):
-    return MonthlyBill.objects.create(
+    bill = MonthlyBill.objects.create(
         lease=lease,
         billing_month=billing_month,
         due_date=due_date,
@@ -336,6 +544,8 @@ def _create_monthly_bill(lease, billing_month, due_date, base_rent, water_amount
         status="UNPAID",
         bill_type="RENT",
     )
+    ensure_bill_line_items_from_legacy(bill)
+    return bill
 
 
 def _monthly_bill_values(lease, billing_month: date, today: date, water_amount: Decimal | None = None):
@@ -458,6 +668,13 @@ def _ensure_bills_for_range(lease, end_month: date, today: date, *, apply_move_i
             bills_to_update,
             ["due_date", "base_rent", "water_amount", "parking_fee", "interest", "total_due"],
         )
+    if bills_to_create or bills_to_update:
+        for bill in MonthlyBill.objects.filter(
+            lease=lease,
+            billing_month__gte=start,
+            billing_month__lt=add_months(end, 1),
+        ):
+            ensure_bill_line_items_from_legacy(bill)
 
     if apply_move_in:
         _apply_approved_move_in_payment_if_needed(lease, start)
@@ -512,6 +729,9 @@ def get_or_update_monthly_bill(lease, billing_month: date, today: date | None = 
 
     if changed:
         bill.save()
+        ensure_bill_line_items_from_legacy(bill)
+    elif bill is not None:
+        ensure_bill_line_items_from_legacy(bill)
 
     # extra values useful in UI
     bill._is_late = is_late
@@ -553,26 +773,17 @@ def apply_move_in_payment_to_first_bill(lease, payment_reference: str = "MOVE-IN
         return None
 
     paid_time = paid_at or tz.now()
-    first_bill.rent_paid = first_bill.base_rent
-    first_bill.parking_paid = first_bill.parking_fee
-    first_bill.rent_paid_at = paid_time
-    first_bill.interest = Decimal("0.00")
-    first_bill.total_due = (
-        first_bill.base_rent + first_bill.water_amount + first_bill.parking_fee
-    ).quantize(Decimal("0.01"))
-    first_bill.status = "PAID" if first_bill.water_balance == 0 else "PARTIALLY_PAID"
-    first_bill.paid_at = paid_time if first_bill.status == "PAID" else None
+    for line in bill_line_items_for_payment_type(first_bill, "rent_only"):
+        if line.amount <= 0:
+            continue
+        line.paid_amount = line.amount
+        line.paid_at = paid_time
+        line.payment_reference = payment_reference
+        line.refresh_status()
+        line.save(update_fields=["paid_amount", "paid_at", "payment_reference", "status", "updated_at"])
     first_bill.payment_reference = payment_reference
-    first_bill.save(update_fields=[
-        "rent_paid",
-        "parking_paid",
-        "rent_paid_at",
-        "interest",
-        "total_due",
-        "status",
-        "paid_at",
-        "payment_reference",
-    ])
+    first_bill.save(update_fields=["payment_reference"])
+    sync_monthly_bill_from_line_items(first_bill)
     return first_bill
 
 
@@ -649,9 +860,9 @@ def _is_payment_applied_to_bill(bill: MonthlyBill, payment) -> bool:
     payment_amount = Decimal(getattr(payment, "amount", 0) or 0).quantize(Decimal("0.01"))
 
     if payment_type == "rent_only":
-        return (
-            bill.rent_paid >= bill.base_rent
-            and bill.parking_paid >= bill.parking_fee
+        return all(
+            line.amount <= 0 or line.paid_amount >= line.amount
+            for line in bill_line_items_for_payment_type(bill, payment_type)
         )
     if payment_type == "water_only":
         if bill.water_paid <= 0:
@@ -717,12 +928,10 @@ def _validate_payment_type(payment_type: str):
 def _expected_amount_for_payment_type(bills, payment_type: str) -> Decimal:
     expected_amount = Decimal("0.00")
     for bill in bills:
-        if payment_type == "rent_only":
-            expected_amount += bill.rent_balance + bill.parking_balance + bill.interest
-        elif payment_type == "water_only":
-            expected_amount += bill.water_balance
-        else:
-            expected_amount += bill.total_balance
+        expected_amount += sum(
+            (line.balance for line in bill_line_items_for_payment_type(bill, payment_type)),
+            Decimal("0.00"),
+        )
     return expected_amount.quantize(Decimal("0.01"))
 
 
@@ -737,7 +946,7 @@ def _payment_method_display(payment) -> str:
 def _payment_type_display(payment_type: str) -> str:
     return {
         "full": "Full Payment",
-        "rent_only": "Rent Only",
+        "rent_only": "Monthly Rent",
         "water_only": "Water Only",
         "move_in": "Move-in Payment",
     }.get(payment_type, "Payment")
@@ -752,22 +961,22 @@ def _invoice_number_for_bill(bill) -> str:
 
 
 def _build_invoice_line_for_bill(bill, payment_type: str):
-    if payment_type == "rent_only":
-        amount_paid = bill.rent_balance + bill.parking_balance + bill.interest
-    elif payment_type == "water_only":
-        amount_paid = bill.water_balance
-    else:
-        amount_paid = bill.total_balance
+    selected_lines = bill_line_items_for_payment_type(bill, payment_type)
+    amounts = {
+        line.line_type: line.amount
+        for line in selected_lines
+    }
+    amount_paid = sum((line.balance for line in selected_lines), Decimal("0.00")).quantize(Decimal("0.01"))
 
     return {
         "bill_id": bill.id,
         "billing_month": bill.billing_month.strftime("%B %Y"),
         "unit": getattr(bill.lease.unit, "number", ""),
-        "rent_charge": _money(bill.base_rent),
-        "water_charge": _money(bill.water_amount),
-        "parking_charge": _money(bill.parking_fee),
-        "late_fee": _money(bill.interest),
-        "total_due_before_payment": _money(bill.total_balance),
+        "rent_charge": _money(amounts.get(BillLineItem.LINE_TYPE_RENT, Decimal("0.00"))),
+        "water_charge": _money(amounts.get(BillLineItem.LINE_TYPE_WATER, Decimal("0.00"))),
+        "parking_charge": _money(amounts.get(BillLineItem.LINE_TYPE_PARKING, Decimal("0.00"))),
+        "late_fee": _money(amounts.get(BillLineItem.LINE_TYPE_LATE_FEE, Decimal("0.00"))),
+        "total_due_before_payment": _money(amount_paid),
         "amount_paid": _money(amount_paid),
         "status_before_payment": bill.status,
     }
@@ -932,46 +1141,23 @@ def create_and_send_invoice_for_paid_bill(bill, *, paid_at=None, logger=None):
 
 
 def _apply_payment_to_bill(bill, payment, payment_type: str, approved_at):
-    if payment_type == "rent_only":
-        bill.rent_paid = max(bill.rent_paid, bill.base_rent)
-        bill.parking_paid = max(bill.parking_paid, bill.parking_fee)
-        bill.rent_paid_at = approved_at
-        bill.payment_reference = payment.reference_code
-        bill.interest = Decimal("0.00")
-        bill.total_due = (bill.base_rent + bill.water_amount + bill.parking_fee).quantize(Decimal("0.01"))
-    elif payment_type == "water_only":
-        bill.water_paid = max(bill.water_paid, bill.water_amount)
-        bill.water_paid_at = approved_at
-        bill.payment_reference = payment.reference_code
-    else:
-        if bill.status == "PAID" and bill.payment_reference == payment.reference_code:
-            return
-        bill.rent_paid = max(bill.rent_paid, bill.base_rent)
-        bill.water_paid = max(bill.water_paid, bill.water_amount)
-        bill.parking_paid = max(bill.parking_paid, bill.parking_fee)
-        bill.rent_paid_at = approved_at
-        bill.water_paid_at = approved_at
-        bill.payment_reference = payment.reference_code
-        bill.interest = Decimal("0.00")
-        bill.total_due = (bill.base_rent + bill.water_amount + bill.parking_fee).quantize(Decimal("0.01"))
+    if bill.status == "PAID" and bill.payment_reference == payment.reference_code:
+        ensure_bill_line_items_from_legacy(bill)
+        return
 
-    if bill.total_balance == 0:
-        bill.status = "PAID"
-        bill.paid_at = approved_at
-    elif bill.rent_paid > 0 or bill.water_paid > 0:
-        bill.status = "PARTIALLY_PAID"
-        bill.paid_at = None
-    else:
-        bill.status = "UNPAID"
-        bill.paid_at = None
+    selected_lines = bill_line_items_for_payment_type(bill, payment_type)
+    for line in selected_lines:
+        if line.amount <= 0:
+            continue
+        line.paid_amount = line.amount
+        line.paid_at = approved_at
+        line.payment_reference = payment.reference_code
+        line.refresh_status()
+        line.save(update_fields=["paid_amount", "paid_at", "payment_reference", "status", "updated_at"])
 
-    update_fields = [
-        "rent_paid", "water_paid", "parking_paid", "rent_paid_at", "water_paid_at",
-        "status", "paid_at", "payment_reference"
-    ]
-    if payment_type in {"full", "rent_only"}:
-        update_fields += ["interest", "total_due"]
-    bill.save(update_fields=update_fields)
+    bill.payment_reference = payment.reference_code
+    bill.save(update_fields=["payment_reference"])
+    sync_monthly_bill_from_line_items(bill)
 
 
 def _generate_next_month_bill_if_needed(bills, approved_at):
@@ -1124,34 +1310,27 @@ def reconcile_approved_payments_for_tenant(user):
 @transaction.atomic
 def set_bill_status(bill: MonthlyBill, *, status: str, payment_reference: str = "", paid_at=None) -> MonthlyBill:
     bill = MonthlyBill.objects.select_for_update().get(pk=bill.pk)
+    ensure_bill_line_items_from_legacy(bill)
 
     if status == "PAID":
         paid_time = paid_at or timezone.now()
-        bill.rent_paid = bill.base_rent
-        bill.water_paid = bill.water_amount
-        bill.parking_paid = bill.parking_fee  # Set parking paid
-        bill.rent_paid_at = paid_time
-        bill.water_paid_at = paid_time
-        bill.interest = Decimal("0.00")
-        bill.total_due = (bill.base_rent + bill.water_amount + bill.parking_fee).quantize(Decimal("0.01"))
-        bill.status = "PAID"
-        bill.paid_at = paid_time
-        bill.payment_reference = payment_reference
+        for line in bill.line_items.all():
+            line.paid_amount = line.amount
+            line.paid_at = paid_time
+            line.payment_reference = payment_reference
+            line.refresh_status()
+            line.save(update_fields=["paid_amount", "paid_at", "payment_reference", "status", "updated_at"])
     else:
-        bill.rent_paid = Decimal("0.00")
-        bill.water_paid = Decimal("0.00")
-        bill.parking_paid = Decimal("0.00")  # Reset parking paid
-        bill.rent_paid_at = None
-        bill.water_paid_at = None
-        bill.status = "UNPAID"
-        bill.paid_at = None
-        bill.payment_reference = ""
+        for line in bill.line_items.all():
+            line.paid_amount = Decimal("0.00")
+            line.paid_at = None
+            line.payment_reference = ""
+            line.refresh_status()
+            line.save(update_fields=["paid_amount", "paid_at", "payment_reference", "status", "updated_at"])
 
-    bill.save(update_fields=[
-        "rent_paid", "water_paid", "parking_paid", "rent_paid_at", "water_paid_at",
-        "interest", "total_due", "status", "paid_at", "payment_reference"
-    ])
-    return bill
+    bill.payment_reference = payment_reference if status == "PAID" else ""
+    bill.save(update_fields=["payment_reference"])
+    return sync_monthly_bill_from_line_items(bill)
 
 
 @transaction.atomic

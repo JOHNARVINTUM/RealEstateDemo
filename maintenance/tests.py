@@ -107,3 +107,20 @@ class MaintenanceSubmissionTests(TestCase):
 
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(form.cleaned_data["admin_scheduled_at"], request_obj.requested_schedule_at)
+
+    def test_report_issue_uses_date_valid_active_lease_even_if_is_active_flag_is_false(self):
+        self.lease.is_active = False
+        self.lease.save(update_fields=["is_active"])
+
+        response = self.client.post(
+            reverse("report_issue"),
+            {
+                "title": "Outlet issue",
+                "description": "The outlet sparked near the desk.",
+                "requested_schedule_at": "2026-06-15T13:00",
+            },
+        )
+
+        self.assertRedirects(response, reverse("maintenance_list"))
+        request_obj = MaintenanceRequest.objects.latest("id")
+        self.assertEqual(request_obj.lease_id, self.lease.id)

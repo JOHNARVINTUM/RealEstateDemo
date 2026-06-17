@@ -250,6 +250,23 @@ def get_pending_paymongo_payment(request_user, session_id):
             return payment
         return None
 
+    request_user_is_admin = (
+        getattr(request_user, "role", "") == "ADMIN"
+        or getattr(request_user, "is_staff", False)
+        or getattr(request_user, "is_superuser", False)
+    )
+    if request_user_is_admin:
+        admin_generated = [
+            payment
+            for payment in ManualPayment.objects.filter(
+                payment_method="PAYMONGO",
+                status="PENDING",
+            ).order_by("-created_at")[:20]
+            if str(_payment_metadata(payment).get("generated_by_admin", "")) == str(request_user.id)
+        ]
+        if admin_generated:
+            return admin_generated[0]
+
     return ManualPayment.objects.filter(
         user=request_user,
         payment_method="PAYMONGO",
@@ -408,6 +425,7 @@ def activate_paymongo_move_in_lease(payment):
         payment_method="PAYMONGO",
         payment_reference=payment.reference_code,
         amount=payment.amount,
+        existing_payment=payment,
     )
     if success:
         logger.info(f"Lease {lease_id} activated via PayMongo webhook")

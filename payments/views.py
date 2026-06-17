@@ -246,7 +246,7 @@ def paymongo_checkout(request):
         return redirect("tenant_pay_advance")
 
     # Build description
-    type_label = {"full": "Full Payment", "rent_only": "Rent Only", "water_only": "Water Only"}.get(payment_type, "Payment")
+    type_label = {"full": "Full Payment", "rent_only": "Monthly Rent", "water_only": "Water Only"}.get(payment_type, "Payment")
     description = f"REALESTATE360+ {type_label} - {request.user.email}"
 
     # Build cancel URL (success URL needs session ID, built after creation)

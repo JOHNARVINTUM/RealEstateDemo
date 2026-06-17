@@ -4,10 +4,11 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 
 from maintenance.forms import AdminMaintenanceUpdateForm
 from maintenance.models import MaintenanceRequest
-from rentals.models import Notification
+from rentals.models import Lease, Notification
 from rentals.services import send_email_via_resend
 from django.utils import timezone as dj_timezone
 
@@ -15,6 +16,38 @@ from .admin_portal_views import admin_required
 
 
 logger = logging.getLogger(__name__)
+
+
+def _current_active_leases_by_tenant(tenant_ids, today=None):
+    if today is None:
+        today = timezone.localdate()
+
+    leases = (
+        Lease.objects.select_related("unit")
+        .filter(
+            tenant_id__in=tenant_ids,
+            status=Lease.STATUS_ACTIVE,
+            start_date__lte=today,
+        )
+        .filter(Q(end_date__isnull=True) | Q(end_date__gte=today))
+        .order_by("tenant_id", "-start_date", "-id")
+    )
+
+    current_by_tenant = {}
+    for lease in leases:
+        current_by_tenant.setdefault(lease.tenant_id, lease)
+
+    missing_tenant_ids = [tenant_id for tenant_id in tenant_ids if tenant_id not in current_by_tenant]
+    if missing_tenant_ids:
+        latest_leases = (
+            Lease.objects.select_related("unit")
+            .filter(tenant_id__in=missing_tenant_ids)
+            .order_by("tenant_id", "-start_date", "-id")
+        )
+        for lease in latest_leases:
+            current_by_tenant.setdefault(lease.tenant_id, lease)
+
+    return current_by_tenant
 
 
 @admin_required
@@ -125,7 +158,14 @@ def admin_maintenance(request):
     status = request.GET.get("status", "").strip()
     priority = request.GET.get("priority", "").strip()
 
-    reqs = MaintenanceRequest.objects.select_related("lease", "lease__unit", "lease__tenant")
+    reqs = MaintenanceRequest.objects.select_related(
+        "tenant",
+        "tenant__tenantprofile",
+        "lease",
+        "lease__unit",
+        "lease__tenant",
+        "lease__tenant__tenantprofile",
+    )
 
     if status:
         reqs = reqs.filter(status=status)
@@ -135,7 +175,10 @@ def admin_maintenance(request):
 
     if q:
         reqs = reqs.filter(
-            Q(lease__tenant__email__icontains=q)
+            Q(tenant__email__icontains=q)
+            | Q(tenant__tenantprofile__first_name__icontains=q)
+            | Q(tenant__tenantprofile__last_name__icontains=q)
+            | Q(lease__tenant__email__icontains=q)
             | Q(lease__unit__number__icontains=q)
             | Q(description__icontains=q)
         )
@@ -145,7 +188,10 @@ def admin_maintenance(request):
     all_reqs = MaintenanceRequest.objects.all()
     if q:
         all_reqs = all_reqs.filter(
-            Q(lease__tenant__email__icontains=q)
+            Q(tenant__email__icontains=q)
+            | Q(tenant__tenantprofile__first_name__icontains=q)
+            | Q(tenant__tenantprofile__last_name__icontains=q)
+            | Q(lease__tenant__email__icontains=q)
             | Q(lease__unit__number__icontains=q)
             | Q(description__icontains=q)
         )
@@ -158,6 +204,13 @@ def admin_maintenance(request):
     paginator = Paginator(reqs, 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
+    tenant_ids = [req.tenant_id for req in page_obj.object_list]
+    fallback_leases = _current_active_leases_by_tenant(tenant_ids)
+
+    for req in page_obj.object_list:
+        display_lease = req.lease or fallback_leases.get(req.tenant_id)
+        req.display_lease = display_lease
+        req.display_unit_number = display_lease.unit.number if display_lease and display_lease.unit else None
 
     try:
         from accounts.ml.maintenance_nlp import load_metrics

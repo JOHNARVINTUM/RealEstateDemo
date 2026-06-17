@@ -17,6 +17,7 @@ from billing.models import MonthlyBill
 from maintenance.models import MaintenanceRequest
 from payments.models import ManualPayment
 from rentals.models import Lease, Notification, TenantAttachment, TenantProfile, Unit
+from rentals.services import TenantRiskService
 
 from .admin_portal_forms import ComprehensiveTenantEditForm, TenantProfileForm
 from .admin_portal_views import admin_password_verified, admin_required, render_admin_password_confirm
@@ -59,6 +60,36 @@ def tenant_has_records(tenant):
         or MaintenanceRequest.objects.filter(tenant=user).exists()
         or TenantAttachment.objects.filter(tenant=user).exists()
     )
+
+
+def _tenant_display_lease(leases):
+    today = timezone.localdate()
+    for lease in leases:
+        if (
+            lease.status == Lease.STATUS_ACTIVE
+            and lease.start_date <= today
+            and (lease.end_date is None or lease.end_date >= today)
+        ):
+            return lease
+    return leases[0] if leases else None
+
+
+def _parse_payment_bill_ids(raw_bill_ids):
+    bill_ids = []
+    for value in (raw_bill_ids or "").split(","):
+        value = value.strip()
+        if value.isdigit():
+            bill_ids.append(int(value))
+    return bill_ids
+
+
+def _format_covered_months(bills):
+    if not bills:
+        return "-"
+    ordered = sorted(bills, key=lambda bill: bill.billing_month)
+    if len(ordered) == 1:
+        return ordered[0].billing_month.strftime("%b %Y")
+    return f"{ordered[0].billing_month.strftime('%b %Y')} - {ordered[-1].billing_month.strftime('%b %Y')}"
 
 
 def deactivate_tenant(tenant):
@@ -159,9 +190,17 @@ def admin_tenant_detail(request, tenant_id: int):
         TenantProfile.objects.select_related("user", "user__tenantriskclassification"),
         pk=tenant_id,
     )
+    TenantRiskService.update_tenant_risk_classification(tenant.user)
+    tenant = get_object_or_404(
+        TenantProfile.objects.select_related("user", "user__tenantriskclassification"),
+        pk=tenant_id,
+    )
     leases = list(
         Lease.objects.select_related("unit", "tenant").filter(tenant=tenant.user).order_by("-start_date")
     )
+    display_lease = _tenant_display_lease(leases)
+    if display_lease and leases and leases[0].id != display_lease.id:
+        leases = [display_lease] + [lease for lease in leases if lease.id != display_lease.id]
     attachments = TenantAttachment.objects.filter(tenant=tenant.user).select_related("uploaded_by").order_by("-uploaded_at")
     tenant.has_records = tenant_has_records(tenant)
 
@@ -171,9 +210,23 @@ def admin_tenant_detail(request, tenant_id: int):
         lease_id__in=lease_ids,
     ).filter(
         Q(billing_month__lte=current_month) | Q(status="PAID")
-    ).select_related("lease__unit").order_by("-billing_month")[:24]
+    ).select_related("lease__unit").order_by("billing_month", "id")[:24]
 
-    manual_payments = ManualPayment.objects.filter(user=tenant.user).order_by("-created_at")[:20]
+    manual_payments = list(ManualPayment.objects.filter(user=tenant.user).order_by("-created_at")[:20])
+    payment_bill_ids = {}
+    page_bill_ids = set()
+    for payment in manual_payments:
+        bill_ids = _parse_payment_bill_ids(payment.bill_ids)
+        payment_bill_ids[payment.id] = bill_ids
+        page_bill_ids.update(bill_ids)
+    bills_by_id = {
+        bill.id: bill
+        for bill in MonthlyBill.objects.filter(pk__in=page_bill_ids).only("id", "billing_month")
+    }
+    for payment in manual_payments:
+        payment.covered_months = _format_covered_months(
+            [bills_by_id[bill_id] for bill_id in payment_bill_ids.get(payment.id, []) if bill_id in bills_by_id]
+        )
     next_url = request.GET.get("next", "")
     back_url = (
         next_url
@@ -187,6 +240,7 @@ def admin_tenant_detail(request, tenant_id: int):
         {
             "tenant": tenant,
             "leases": leases,
+            "display_lease": display_lease,
             "attachments": attachments,
             "bill_history": bill_history,
             "manual_payments": manual_payments,

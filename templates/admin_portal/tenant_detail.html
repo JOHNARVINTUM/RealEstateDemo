@@ -88,7 +88,7 @@
         <div class="bg-white/80 backdrop-blur-md border border-white/40 border-l-4 border-l-purple-600 rounded-3xl p-5 shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
           <span class="text-xs font-bold text-slate-600 block mb-1">Rent Amount</span>
           <strong class="text-2xl font-black text-slate-900 tracking-tight">
-            {% if leases %}
+            {% if display_lease %}
               ₱{{ leases.0.monthly_rent|add:leases.0.parking_fee|floatformat:0|intcomma }}
             {% else %}
               ₱0
@@ -96,12 +96,20 @@
           </strong>
         </div>
 
-        <!-- Moved In -->
+        <!-- Contract Dates -->
         <div class="bg-white/80 backdrop-blur-md border border-white/40 border-l-4 border-l-amber-600 rounded-3xl p-5 shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
-          <span class="text-xs font-bold text-slate-600 block mb-1">Moved In</span>
+          <span class="text-xs font-bold text-slate-600 block mb-1">Contract Dates</span>
           <strong class="text-base font-black text-slate-900 tracking-tight block mt-1">
-            {% if leases %}
-              {{ leases.last.start_date|date:"M Y" }}
+            {% if display_lease %}
+              In: {{ display_lease.start_date|date:"M d, Y" }}
+              <span class="text-xs font-bold text-slate-500 block mt-1">
+                Out:
+                {% if display_lease.end_date %}
+                  {{ display_lease.end_date|date:"M d, Y" }}
+                {% else %}
+                  Open-ended
+                {% endif %}
+              </span>
             {% else %}
               N/A
             {% endif %}
@@ -301,15 +309,18 @@
         </div>
       </section>
 
-      <!-- Payments Bento Module -->
+      <!-- Contract Ledger Bento Module -->
       <section class="bg-white/80 backdrop-blur-md border border-white/40 rounded-[2rem] shadow-sm overflow-hidden transition-all duration-500 hover:shadow-lg">
         
         <!-- Header & Segment Control -->
         <div class="p-5 border-b border-slate-100/50 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <h2 class="text-base font-extrabold text-slate-900 tracking-tight">Payment History</h2>
+          <div>
+            <h2 class="text-base font-extrabold text-slate-900 tracking-tight">Contract Ledger</h2>
+            <p class="text-xs font-bold text-slate-500 mt-1">All contract months, paid status, and upcoming billing cycles.</p>
+          </div>
           
           <div class="flex items-center p-1 bg-slate-100 rounded-lg">
-            <button onclick="togglePaymentSection('history')" id="btn-payment-history" class="px-4 py-2 text-sm font-extrabold rounded-md transition-all bg-white text-slate-900 shadow-sm">Payment History</button>
+            <button onclick="togglePaymentSection('history')" id="btn-payment-history" class="px-4 py-2 text-sm font-extrabold rounded-md transition-all bg-white text-slate-900 shadow-sm">Contract Ledger</button>
             {% if manual_payments %}
             <button onclick="togglePaymentSection('submissions')" id="btn-payment-submissions" class="px-4 py-2 text-sm font-bold rounded-md transition-all text-slate-600 hover:text-slate-900">Payment Submissions</button>
             {% endif %}
@@ -349,8 +360,14 @@
                   <td class="px-5 py-3 text-center">
                     {% if bill.status == "PAID" %}
                       <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">PAID</span>
+                    {% elif bill.status == "PARTIALLY_PAID" %}
+                      <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-50 text-amber-700 border border-amber-200">PARTIAL</span>
+                    {% elif bill.billing_state == "UPCOMING" %}
+                      <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black bg-yellow-50 text-yellow-700 border border-yellow-200">UPCOMING</span>
+                    {% elif bill.billing_state == "OVERDUE" %}
+                      <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-50 text-rose-700 border border-rose-200">OVERDUE</span>
                     {% else %}
-                      <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-50 text-rose-700 border border-rose-200">UNPAID</span>
+                      <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black bg-sky-50 text-sky-700 border border-sky-200">DUE</span>
                     {% endif %}
                   </td>
                 </tr>
@@ -375,6 +392,7 @@
                   <th class="text-left px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
                   <th class="text-left px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Method</th>
                   <th class="text-left px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Type</th>
+                  <th class="text-left px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Covered Month</th>
                   <th class="text-left px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Reference</th>
                   <th class="text-right px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount</th>
                   <th class="text-center px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
@@ -386,6 +404,7 @@
                   <td class="px-5 py-3 font-bold text-slate-800 whitespace-nowrap">{{ mp.created_at|date:"M d, Y" }}</td>
                   <td class="px-5 py-3 text-slate-600 font-medium">{{ mp.get_payment_method_display }}</td>
                   <td class="px-5 py-3 text-slate-600 font-medium">{{ mp.get_payment_type_display }}</td>
+                  <td class="px-5 py-3 text-slate-600 font-bold whitespace-nowrap">{{ mp.covered_months }}</td>
                   <td class="px-5 py-3 text-slate-500 font-mono text-xs">{{ mp.reference_code|default:"—" }}</td>
                   <td class="px-5 py-3 text-right font-black text-slate-900">₱{{ mp.amount|floatformat:0|intcomma }}</td>
                   <td class="px-5 py-3 text-center">

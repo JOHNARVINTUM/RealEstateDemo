@@ -321,7 +321,10 @@ def admin_billing(request):
             filter=Q(status__in=["UNPAID", "PARTIALLY_PAID"], billing_month__lt=current_month),
         ),
         partial_count=Count("id", filter=Q(status="PARTIALLY_PAID")),
-        upcoming_count=Count("id", filter=Q(billing_month__gt=current_month)),
+        upcoming_count=Count(
+            "id",
+            filter=Q(billing_month__gt=current_month) & ~Q(status="PAID"),
+        ),
     )
     paid_count = stats["paid_count"] or 0
     unpaid_count = stats["unpaid_count"] or 0
@@ -330,7 +333,7 @@ def admin_billing(request):
     upcoming_count = stats["upcoming_count"] or 0
 
     if active_tab == "active":
-        display_qs = base_qs.filter(billing_month__lte=current_month)
+        display_qs = base_qs.filter(Q(billing_month__lte=current_month) | Q(status="PAID"))
         if status_filter == "UNPAID":
             display_qs = display_qs.filter(status__in=("UNPAID", "PARTIALLY_PAID"))
         elif status_filter == "OVERDUE":
@@ -343,8 +346,9 @@ def admin_billing(request):
         elif status_filter == "PAID":
             display_qs = display_qs.filter(status="PAID")
     else:
-        display_qs = base_qs.filter(billing_month__gt=current_month)
+        display_qs = base_qs.filter(billing_month__gt=current_month).exclude(status="PAID")
 
+    active_count = display_qs.count()
     paginator = Paginator(display_qs.order_by("-billing_month"), 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
@@ -371,6 +375,7 @@ def admin_billing(request):
         "overdue_count": overdue_count,
         "partial_count": partial_count,
         "upcoming_count": upcoming_count,
+        "active_count": active_count,
     })
 
 

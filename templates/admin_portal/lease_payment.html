@@ -11,7 +11,7 @@
             <h1 class="text-3xl font-bold text-slate-900">{{ title }}</h1>
             <p class="text-slate-600 mt-1">Complete move-in payment to activate the lease</p>
         </div>
-        <a href="{{ back_url }}" onclick="if (document.referrer) { window.history.back(); return false; }" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
+        <a href="{{ back_url }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
       <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
       </svg>
@@ -241,6 +241,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const cashPanel = document.getElementById('cash-payment-panel');
     const submitLabel = document.getElementById('lease-payment-submit-label');
     const adminPasswordInput = document.getElementById('id_admin_password');
+    const cancelPendingLeaseUrl = "{{ back_url|escapejs }}";
 
     function syncLeasePaymentUI() {
         const selected = document.querySelector('input[name="payment_method"]:checked')?.value || '';
@@ -263,6 +264,13 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     syncLeasePaymentUI();
+
+    if (window.history && window.history.pushState && cancelPendingLeaseUrl) {
+        window.history.pushState({ leasePaymentGuard: true }, '', window.location.href);
+        window.addEventListener('popstate', function () {
+            window.location.href = cancelPendingLeaseUrl;
+        });
+    }
 });
 </script>
 {% endblock %}

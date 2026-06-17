@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from accounts.models import User
-from billing.models import BillingInvoice, MonthlyBill
+from billing.models import BillingInvoice, BillLineItem, MonthlyBill
 from billing.services import (
     approve_manual_payment,
     compute_weekly_interest,
@@ -185,6 +185,7 @@ class BillingWorkflowTests(TestCase):
         self.assertEqual(invoice.reference_code, "REF-INV-1")
         self.assertEqual(invoice.amount_paid, Decimal("10300.00"))
         self.assertEqual(invoice.snapshot["lines"][0]["rent_charge"], "10000.00")
+        self.assertEqual(invoice.snapshot["lines"][0]["water_charge"], "0.00")
         self.assertEqual(invoice.snapshot["lines"][0]["late_fee"], "300.00")
         self.assertEqual(invoice.snapshot["lines"][0]["amount_paid"], "10300.00")
         self.assertEqual(bill.interest, Decimal("0.00"))
@@ -248,6 +249,18 @@ class BillingWorkflowTests(TestCase):
         self.assertEqual(bill.water_balance, Decimal("1200.00"))
         self.assertEqual(bill.total_balance, Decimal("1200.00"))
         self.assertEqual(bill.status, "PARTIALLY_PAID")
+        self.assertEqual(
+            bill.line_items.get(line_type=BillLineItem.LINE_TYPE_RENT).status,
+            BillLineItem.STATUS_PAID,
+        )
+        self.assertEqual(
+            bill.line_items.get(line_type=BillLineItem.LINE_TYPE_PARKING).status,
+            BillLineItem.STATUS_PAID,
+        )
+        self.assertEqual(
+            bill.line_items.get(line_type=BillLineItem.LINE_TYPE_WATER).status,
+            BillLineItem.STATUS_UNPAID,
+        )
 
     def test_rent_only_payment_includes_interest_and_leaves_water(self):
         bill = MonthlyBill.objects.create(
@@ -283,6 +296,92 @@ class BillingWorkflowTests(TestCase):
         self.assertEqual(bill.water_balance, Decimal("1200.00"))
         self.assertEqual(bill.total_balance, Decimal("1200.00"))
         self.assertEqual(bill.status, "PARTIALLY_PAID")
+
+    def test_later_water_billing_keeps_advance_rent_paid_and_marks_month_partial(self):
+        WaterRate.objects.create(
+            effective_date=date(2026, 2, 1),
+            rate_per_cu_m=Decimal("45.00"),
+        )
+        bill = MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=date(2026, 2, 1),
+            due_date=date(2026, 2, 28),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("0.00"),
+            parking_fee=Decimal("500.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("10500.00"),
+            status="UNPAID",
+        )
+        payment = ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="REF-ADVANCE-RENT",
+            bill_ids=str(bill.id),
+            payment_type="rent_only",
+            amount=Decimal("10500.00"),
+            status="PENDING",
+        )
+        approve_manual_payment(payment)
+
+        reading = WaterReading.objects.create(
+            lease=self.lease,
+            reading_month=date(2026, 2, 1),
+            previous_reading=Decimal("10.00"),
+            current_reading=Decimal("15.00"),
+            consumption=Decimal("5.00"),
+            rate_used=Decimal("45.00"),
+            base_water_amount=Decimal("225.00"),
+            shared_pump_amount=Decimal("0.00"),
+            vat_percent=Decimal("0.00"),
+            vat_amount=Decimal("0.00"),
+            previous_unpaid_water_amount=Decimal("0.00"),
+            computed_amount=Decimal("225.00"),
+        )
+
+        from water.services import create_or_update_monthly_bill_from_reading
+
+        create_or_update_monthly_bill_from_reading(reading, force_update=True)
+
+        bill.refresh_from_db()
+        self.assertEqual(bill.rent_paid, Decimal("10000.00"))
+        self.assertEqual(bill.parking_paid, Decimal("500.00"))
+        self.assertEqual(bill.water_amount, Decimal("225.00"))
+        self.assertEqual(bill.water_paid, Decimal("0.00"))
+        self.assertEqual(bill.status, "PARTIALLY_PAID")
+        self.assertEqual(bill.total_balance, Decimal("225.00"))
+        self.assertEqual(
+            bill.line_items.get(line_type=BillLineItem.LINE_TYPE_WATER).status,
+            BillLineItem.STATUS_UNPAID,
+        )
+
+    def test_full_payment_marks_all_monthly_line_items_paid(self):
+        bill = MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=date(2026, 2, 1),
+            due_date=date(2026, 2, 28),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("1200.00"),
+            parking_fee=Decimal("500.00"),
+            interest=Decimal("315.00"),
+            total_due=Decimal("12015.00"),
+            status="UNPAID",
+        )
+        payment = ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="REF-FULL-LINES",
+            bill_ids=str(bill.id),
+            payment_type="full",
+            amount=Decimal("12015.00"),
+            status="PENDING",
+        )
+
+        approve_manual_payment(payment)
+
+        bill.refresh_from_db()
+        self.assertEqual(bill.status, "PAID")
+        self.assertEqual(bill.total_balance, Decimal("0.00"))
+        statuses = set(bill.line_items.values_list("status", flat=True))
+        self.assertEqual(statuses, {BillLineItem.STATUS_PAID})
 
     def test_water_payment_refreshes_future_unpaid_carryover(self):
         WaterRate.objects.create(

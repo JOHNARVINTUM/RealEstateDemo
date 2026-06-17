@@ -683,6 +683,11 @@ def admin_tenant_risk(request):
     paginator = Paginator(risk_classifications, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
+    refreshed_rows = []
+    for classification in page_obj.object_list:
+        refreshed = TenantRiskService.update_tenant_risk_classification(classification.tenant)
+        refreshed_rows.append(refreshed or classification)
+    page_obj.object_list = refreshed_rows
     
     # Calculate statistics
     total_tenants = risk_classifications.count()

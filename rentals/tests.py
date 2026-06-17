@@ -716,6 +716,54 @@ class TenantRiskTimelinessTests(TestCase):
         self.assertIsNotNone(risk)
         self.assertEqual(risk.late_payment_count, 0)
 
+    def test_risk_score_uses_date_valid_active_lease_when_is_active_flag_is_stale(self):
+        tenant, lease = self._create_lease_with_tenant()
+        lease.is_active = False
+        lease.save(update_fields=["is_active"])
+        MonthlyBill.objects.create(
+            lease=lease,
+            billing_month=date(2026, 6, 1),
+            due_date=date(2026, 6, 5),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("0.00"),
+            parking_fee=Decimal("0.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("10000.00"),
+            status="PAID",
+            paid_at=datetime(2026, 6, 5, 10, 0, tzinfo=zoneinfo.ZoneInfo("UTC")),
+        )
+
+        with patch("rentals.services.timezone.now", return_value=datetime(2026, 6, 6, 12, 0, tzinfo=zoneinfo.ZoneInfo("UTC"))):
+            risk = TenantRiskService.update_tenant_risk_classification(tenant)
+
+        self.assertIsNotNone(risk)
+        self.assertGreaterEqual(risk.payment_score, 80)
+
+    def test_advance_paid_future_contract_months_count_as_strong_payment_history(self):
+        tenant, lease = self._create_lease_with_tenant()
+        for month in (7, 8, 9):
+            MonthlyBill.objects.create(
+                lease=lease,
+                billing_month=date(2026, month, 1),
+                due_date=date(2026, month, 5),
+                base_rent=Decimal("10000.00"),
+                water_amount=Decimal("0.00"),
+                parking_fee=Decimal("0.00"),
+                interest=Decimal("0.00"),
+                total_due=Decimal("10000.00"),
+                status="PAID",
+                paid_at=datetime(2026, 6, 16, 10, 0, tzinfo=zoneinfo.ZoneInfo("UTC")),
+            )
+
+        with patch("rentals.services.timezone.now", return_value=datetime(2026, 6, 17, 12, 0, tzinfo=zoneinfo.ZoneInfo("UTC"))):
+            risk = TenantRiskService.update_tenant_risk_classification(tenant)
+
+        self.assertIsNotNone(risk)
+        self.assertGreaterEqual(risk.payment_score, 90)
+        self.assertEqual(risk.risk_level, "LOW")
+        self.assertEqual(risk.risk_factors["payment_timeliness"], 100)
+        self.assertEqual(risk.risk_factors["payment_consistency"], 100)
+
 
 class TenantPasswordTests(TestCase):
     def test_generate_tenant_password_uses_initials_and_last_name(self):

@@ -205,7 +205,7 @@
             <td class="px-5 py-4 text-right">
               <strong class="text-sm font-black text-slate-900 block">₱{{ p.amount|floatformat:2|intcomma }}</strong>
               <span class="text-[10px] text-slate-600 font-bold uppercase block mt-0.5">
-                {% if p.payment_type == "full" %}Paid in full{% else %}{{ p.payment_type }}{% endif %}
+                {% if p.payment_type == "full" %}Paid in full{% else %}{{ p.bill_type_label }}{% endif %}
               </span>
             </td>
 

@@ -10,7 +10,7 @@ from django.db import transaction
 from django.core.exceptions import ValidationError
 from django.db.models import Q, Sum
 
-from billing.models import MonthlyBill
+from billing.models import BillLineItem, MonthlyBill
 from .models import WaterBillingSettings, WaterRate, WaterReading, WaterComputationLog
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,14 @@ def quantize_money(value) -> Decimal:
 
 
 def is_water_bill_locked(bill: MonthlyBill | None) -> bool:
-    return bool(bill and bill.water_paid > 0)
+    if not bill:
+        return False
+    if bill.water_paid > 0:
+        return True
+    return bill.line_items.filter(
+        line_type=BillLineItem.LINE_TYPE_WATER,
+        paid_amount__gt=0,
+    ).exists()
 
 
 def refresh_bill_status_from_component_payments(bill: MonthlyBill) -> None:
@@ -84,7 +91,11 @@ def previous_unpaid_water_balance(lease, reading_month: date) -> Decimal:
         billing_month__lt=reading_month,
     ).filter(Q(status="UNPAID") | Q(status="PARTIALLY_PAID"))
     for bill in bills:
-        total += bill.water_balance
+        water_line = bill.line_items.filter(line_type=BillLineItem.LINE_TYPE_WATER).first()
+        if water_line:
+            total += water_line.balance
+        else:
+            total += bill.water_balance
     return quantize_money(total)
 
 
@@ -231,6 +242,7 @@ def create_or_update_monthly_bill_from_reading(
             'source_water_reading': water_reading,
         }
     )
+    from billing.services import ensure_bill_line_items_from_legacy, set_bill_line_item_amount
     
     if not created:
         # Bill already exists - check if we can update the water portion.
@@ -242,30 +254,40 @@ def create_or_update_monthly_bill_from_reading(
             )
         
         if not force_update:
+            ensure_bill_line_items_from_legacy(bill)
             logger.info(f"MonthlyBill #{bill.id} exists, skipping update (force_update=False)")
             return bill, created
         
         # Safe to update (UNPAID status) - ALWAYS update water from reading
         # This ensures water_amount is always transferred from WaterReading
         old_water = bill.water_amount
-        bill.water_amount = water_amount
-        bill.total_due = bill.base_rent + water_amount + bill.parking_fee + bill.interest
         bill.water_computed_from_system = True
         bill.source_water_reading = water_reading
-        refresh_bill_status_from_component_payments(bill)
         bill.save(update_fields=[
-            "water_amount",
-            "total_due",
             "water_computed_from_system",
             "source_water_reading",
-            "status",
-            "paid_at",
         ])
+        set_bill_line_item_amount(
+            bill,
+            BillLineItem.LINE_TYPE_WATER,
+            amount=water_amount,
+            source_water_reading=water_reading,
+            protect_paid=True,
+        )
         
         logger.info(
             f"Updated MonthlyBill #{bill.id}: "
             f"water {old_water} → {water_amount}, "
             f"total_due now {bill.total_due}"
+        )
+    else:
+        ensure_bill_line_items_from_legacy(bill)
+        set_bill_line_item_amount(
+            bill,
+            BillLineItem.LINE_TYPE_WATER,
+            amount=water_amount,
+            source_water_reading=water_reading,
+            protect_paid=True,
         )
     
     # Log the computation (bill is already linked via source_water_reading)
@@ -292,7 +314,13 @@ def validate_reading_can_be_modified(water_reading: WaterReading) -> bool:
     Check if a WaterReading can still be modified.
     Returns False if linked bill already has paid water.
     """
-    return not water_reading.generated_monthly_bills.filter(water_paid__gt=0).exists()
+    if water_reading.generated_monthly_bills.filter(water_paid__gt=0).exists():
+        return False
+    return not BillLineItem.objects.filter(
+        source_water_reading=water_reading,
+        line_type=BillLineItem.LINE_TYPE_WATER,
+        paid_amount__gt=0,
+    ).exists()
 
 
 def get_or_create_reading(

@@ -230,13 +230,15 @@
             <td class="col-tenant px-6 py-5">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-lg bg-slate-100 group-hover:bg-slate-800 group-hover:text-white flex items-center justify-center text-slate-800 font-black text-sm shrink-0 border border-slate-200 transition-colors">
-                  {% if r.lease.tenant.tenantprofile.first_name %}{{ r.lease.tenant.tenantprofile.first_name|first|upper }}{% else %}{{ r.lease.tenant.email|first|upper }}{% endif %}
+                  {% if r.tenant.tenantprofile.first_name %}{{ r.tenant.tenantprofile.first_name|first|upper }}{% else %}{{ r.tenant.email|first|upper }}{% endif %}
                 </div>
                 <div class="min-w-0">
                   <div class="font-black text-slate-900 text-sm truncate max-w-[200px]">
-                    {% if r.lease.tenant.tenantprofile.first_name %}{{ r.lease.tenant.tenantprofile.first_name }} {{ r.lease.tenant.tenantprofile.last_name }}{% else %}{{ r.lease.tenant.email }}{% endif %}
+                    {% if r.tenant.tenantprofile.first_name %}{{ r.tenant.tenantprofile.first_name }} {{ r.tenant.tenantprofile.last_name }}{% else %}{{ r.tenant.email }}{% endif %}
                   </div>
-                  <div class="text-xs font-black text-indigo-600">Unit #{{ r.lease.unit.number }}</div>
+                  <div class="text-xs font-black text-indigo-600">
+                    {% if r.display_unit_number %}Unit #{{ r.display_unit_number }}{% else %}Unit unavailable{% endif %}
+                  </div>
                 </div>
               </div>
             </td>

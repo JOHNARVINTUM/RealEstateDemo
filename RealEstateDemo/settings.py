@@ -111,22 +111,32 @@ WSGI_APPLICATION = 'RealEstateDemo.wsgi.application'
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 # Production database configuration - PostgreSQL (Supabase)
-# For Railway deployment, set DB_PASSWORD and other vars in environment
+# Supports both DB_* and SUPABASE_DB_* env names for local/deployment parity.
+DB_NAME = os.environ.get("DB_NAME") or os.environ.get("SUPABASE_DB_NAME") or "postgres"
+DB_USER = os.environ.get("DB_USER") or os.environ.get("SUPABASE_DB_USER") or ""
+DB_PASSWORD = os.environ.get("DB_PASSWORD") or os.environ.get("SUPABASE_DB_PASSWORD") or ""
+DB_HOST = os.environ.get("DB_HOST") or os.environ.get("SUPABASE_DB_HOST") or ""
+DB_PORT = os.environ.get("DB_PORT") or os.environ.get("SUPABASE_DB_PORT") or "6543"
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("DB_NAME", "postgres"),
-        "USER": os.environ.get("DB_USER", "postgres.ezrxfodgrztlajiiilfz"),
-        "PASSWORD": os.environ.get("DB_PASSWORD", "Ripdemo999-"),
-        "HOST": os.environ.get("DB_HOST", "aws-1-ap-northeast-1.pooler.supabase.com"),
-        "PORT": os.environ.get("DB_PORT", "6543"),
+        "NAME": DB_NAME,
+        "USER": DB_USER,
+        "PASSWORD": DB_PASSWORD,
+        "HOST": DB_HOST,
+        "PORT": DB_PORT,
     }
 }
 
 # Validate database configuration in production
 if IS_PRODUCTION:
-    required_db_vars = ["DB_PASSWORD", "DB_HOST"]
-    missing_db_vars = [var for var in required_db_vars if not os.environ.get(var)]
+    required_db_vars = {
+        "DB_PASSWORD or SUPABASE_DB_PASSWORD": DB_PASSWORD,
+        "DB_HOST or SUPABASE_DB_HOST": DB_HOST,
+        "DB_USER or SUPABASE_DB_USER": DB_USER,
+    }
+    missing_db_vars = [label for label, value in required_db_vars.items() if not value]
     if missing_db_vars:
         raise ImproperlyConfigured(
             f"Production database configuration incomplete. "

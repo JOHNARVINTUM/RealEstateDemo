@@ -10,6 +10,7 @@ from django.urls import reverse
 from billing.services import cleanup_duplicate_monthly_bills_for_lease, ensure_bills_since_move_in
 from payments.models import ManualPayment
 from rentals.models import Lease, Notification, TenantProfile
+from rentals.unit_status import sync_unit_status
 
 from .admin_portal_forms import LeaseForm, _ordinal
 from .admin_portal_views import admin_required, admin_password_verified, render_admin_password_confirm
@@ -57,6 +58,9 @@ def admin_create_lease(request):
     tenant_id = request.GET.get("tenant_id")
     if tenant_id:
         initial["tenant"] = tenant_id
+    unit_id = request.GET.get("unit_id")
+    if unit_id:
+        initial["unit"] = unit_id
 
     form = LeaseForm(request.POST or None, initial=initial)
     schedule_preview = None
@@ -65,27 +69,6 @@ def admin_create_lease(request):
         if form.is_valid():
             try:
                 lease = form.save()
-
-                try:
-                    Notification.create_notification(
-                        title="New Lease Created",
-                        message=(
-                            f"Lease created for {lease.tenant.email} in Unit {lease.unit.number}\n\n"
-                            f"Lease Details:\n"
-                            f"• Monthly Rent: ₱{lease.monthly_rent:,.2f}\n"
-                            f"• Contract Deposit: ₱{lease.contract_deposit:,.2f} ({lease.deposit_multiplier}x monthly rent)\n"
-                            f"• Security Deposit: ₱{lease.security_deposit:,.2f}\n"
-                            f"• Total Move-in Cost: ₱{lease.total_move_in_cost:,.2f}\n"
-                            f"• Lease Start: {lease.start_date.strftime('%B %d, %Y')}\n"
-                            f"• First Rent Due: {lease.first_rent_due_date.strftime('%B %d, %Y')}"
-                        ),
-                        notification_type="LEASE",
-                        recipient_type="ADMIN",
-                        related_tenant=lease.tenant,
-                        related_unit=lease.unit,
-                    )
-                except Exception as exc:
-                    logger.exception("Failed to create lease notification: %s", exc)
 
                 try:
                     welcome_message = (
@@ -204,7 +187,6 @@ def admin_create_lease(request):
             schedule_preview = service.get_payment_schedule_preview(sample_data)
 
     back_url = reverse("admin_tenants")
-    unit_id = request.GET.get("unit_id")
     if unit_id:
         back_url = reverse("admin_unit_detail", args=[unit_id])
 
@@ -255,7 +237,7 @@ def admin_lease_payment(request, lease_id: int):
                         "lease": lease,
                         "total_move_in_cost": lease.total_move_in_cost,
                         "cash_reference": _build_cash_move_in_reference(lease),
-                        "back_url": reverse("admin_create_lease"),
+                        "back_url": reverse("admin_delete_lease", args=[lease.id]) + "?next=unit",
                     },
                 )
             payment_reference = _build_cash_move_in_reference(lease)
@@ -308,7 +290,7 @@ def admin_lease_payment(request, lease_id: int):
             "lease": lease,
             "total_move_in_cost": lease.total_move_in_cost,
             "cash_reference": _build_cash_move_in_reference(lease),
-            "back_url": reverse("admin_create_lease"),
+            "back_url": reverse("admin_delete_lease", args=[lease.id]) + "?next=unit",
         },
     )
 
@@ -350,7 +332,12 @@ def admin_edit_lease(request, lease_id: int):
 
 @admin_required
 def admin_delete_lease(request, lease_id: int):
-    lease = get_object_or_404(Lease.objects.select_related("unit"), pk=lease_id)
+    next_target = request.GET.get("next")
+    lease = Lease.objects.select_related("unit").filter(pk=lease_id).first()
+    if lease is None:
+        messages.info(request, "That lease was already deleted or cancelled.")
+        return redirect("admin_units" if next_target == "unit" else "admin_tenants")
+
     is_pending = lease.status == Lease.STATUS_PENDING_PAYMENT
     action_title = "Cancel Pending Lease" if is_pending else "Delete Lease"
     action_message = (
@@ -359,7 +346,6 @@ def admin_delete_lease(request, lease_id: int):
         if is_pending
         else f"Delete lease for unit {lease.unit.number}? This cannot be undone."
     )
-    next_target = request.GET.get("next")
     back_url = reverse("admin_unit_detail", args=[lease.unit.id]) if next_target == "unit" else reverse("admin_tenants")
     post_url = reverse("admin_delete_lease", args=[lease.id])
     if next_target:
@@ -378,8 +364,7 @@ def admin_delete_lease(request, lease_id: int):
         unit = lease.unit
         unit_number = unit.number
         lease.delete()
-        unit.status = "AVAILABLE"
-        unit.save(update_fields=["status"])
+        sync_unit_status(unit)
         if is_pending:
             messages.success(request, f"Pending lease cancelled and unit {unit_number} remains available.")
         else:

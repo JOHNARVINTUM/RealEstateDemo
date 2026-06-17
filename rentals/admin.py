@@ -4,6 +4,7 @@ from django.utils import timezone
 
 from .models import Unit, TenantProfile, Lease, CalendarEvent
 from billing.models import MonthlyBill
+from rentals.unit_status import sync_unit_status
 
 
 class MonthlyBillInline(admin.TabularInline):
@@ -43,10 +44,19 @@ class CalendarEventInline(admin.TabularInline):
 
 @admin.register(Unit)
 class UnitAdmin(admin.ModelAdmin):
-    list_display = ("number", "is_active")
+    list_display = ("number", "status", "is_active")
     search_fields = ("number",)
-    list_filter = ("is_active",)
+    list_filter = ("status", "is_active")
     ordering = ("number",)
+    actions = ["sync_selected_statuses"]
+
+    @admin.action(description="Sync selected unit statuses from active leases")
+    def sync_selected_statuses(self, request, queryset):
+        updated = 0
+        for unit in queryset:
+            if sync_unit_status(unit):
+                updated += 1
+        self.message_user(request, f"Synced {updated} unit status record(s).")
 
 
 @admin.register(TenantProfile)

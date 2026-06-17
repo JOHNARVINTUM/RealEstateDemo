@@ -126,6 +126,9 @@ function toggleMoveInPaymentMethod() {
                 {% endfor %}
               </select>
               {% if lease %}<input type="hidden" name="tenant" value="{{ lease.tenant_id }}">{% endif %}
+              {% if form.tenant.errors %}
+                <p class="mt-2 text-xs font-bold text-rose-600">{{ form.tenant.errors|striptags }}</p>
+              {% endif %}
             </div>
 
             <div>
@@ -133,12 +136,15 @@ function toggleMoveInPaymentMethod() {
               <select name="unit" id="id_unit" onchange="handleUnitSelection(this)" class="w-full px-4 py-3.5 {% if lease %}bg-slate-100 text-slate-700 cursor-not-allowed border-2 border-slate-200{% else %}bg-slate-50 border-2 border-slate-100 focus:bg-white focus:border-indigo-500{% endif %} rounded-xl text-base font-bold transition-all outline-none cursor-pointer appearance-none" {% if lease %}disabled{% endif %} required>
                 <option value="">Choose an Available Room</option>
                 {% for unit in form.unit.field.queryset %}
-                  <option value="{{ unit.pk }}" {% if form.unit.value == unit.pk|stringformat:"s" or lease and lease.unit_id == unit.pk %}selected{% endif %}>
+                  <option value="{{ unit.pk }}" {% if form.unit.value|stringformat:"s" == unit.pk|stringformat:"s" or lease and lease.unit_id == unit.pk %}selected{% endif %}>
                     Room {{ unit.number }} ({{ unit.get_unit_type_display }}) - ₱{{ unit.monthly_rent|floatformat:0|intcomma }}
                   </option>
                 {% endfor %}
               </select>
               {% if lease %}<input type="hidden" name="unit" value="{{ lease.unit_id }}">{% endif %}
+              {% if form.unit.errors %}
+                <p class="mt-2 text-xs font-bold text-rose-600">{{ form.unit.errors|striptags }}</p>
+              {% endif %}
             </div>
           </div>
         </div>
@@ -218,9 +224,12 @@ function toggleMoveInPaymentMethod() {
             </div>
 
             <div>
-              <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest" for="id_end_date">End Date (Optional)</label>
+              <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest" for="id_end_date">End Date <span class="text-rose-600">*</span></label>
               <input type="text" name="end_date" id="id_end_date" value="{% if lease and lease.end_date %}{{ lease.end_date|date:'Y-m-d' }}{% else %}{{ form.end_date.value|default:'' }}{% endif %}" 
-                     class="flatpickr w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none cursor-pointer" placeholder="No end date">
+                     class="flatpickr w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none cursor-pointer" placeholder="Select End Date" required>
+              {% if form.end_date.errors %}
+                <p class="mt-2 text-xs font-bold text-rose-600">{{ form.end_date.errors|striptags }}</p>
+              {% endif %}
             </div>
 
             <div class="relative group">
@@ -296,13 +305,64 @@ function toggleMoveInPaymentMethod() {
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const startDateInput = document.getElementById('id_start_date');
+    const endDateInput = document.getElementById('id_end_date');
+    const dueDayInput = document.getElementById('id_due_day');
+    const isExistingLease = {{ lease|yesno:"true,false" }};
+    let endDatePicker = null;
+
+    function formatDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    function defaultEndDateFromStart(startDate) {
+        const endDate = new Date(startDate.getTime());
+        endDate.setFullYear(endDate.getFullYear() + 1);
+        return endDate;
+    }
+
     flatpickr(".flatpickr", {
         dateFormat: "Y-m-d",
         {% if not lease %}minDate: "today",{% endif %}
         onChange: function(selectedDates, dateStr, instance) {
+            if (instance.element.id === 'id_end_date') {
+                const startDateValue = startDateInput ? startDateInput.value : '';
+                if (startDateValue && selectedDates.length && selectedDates[0].getDate() !== parseInt(startDateValue.slice(-2), 10)) {
+                    const corrected = new Date(selectedDates[0].getTime());
+                    corrected.setDate(parseInt(startDateValue.slice(-2), 10));
+                    instance.setDate(corrected, false);
+                }
+            }
+            if (instance.element.id === 'id_start_date' && selectedDates.length) {
+                const startDate = selectedDates[0];
+                if (dueDayInput) {
+                    dueDayInput.value = startDate.getDate();
+                }
+                if (endDatePicker && !isExistingLease) {
+                    const defaultEndDate = defaultEndDateFromStart(startDate);
+                    endDatePicker.setDate(defaultEndDate, false);
+                    endDateInput.value = formatDate(defaultEndDate);
+                }
+            }
             instance.element.dispatchEvent(new Event('input', { bubbles: true }));
         }
     });
+
+    if (endDateInput && endDateInput._flatpickr) {
+        endDatePicker = endDateInput._flatpickr;
+    }
+
+    if (startDateInput && startDateInput.value && endDatePicker && !endDateInput.value && !isExistingLease) {
+        const startDate = startDateInput._flatpickr ? startDateInput._flatpickr.selectedDates[0] : new Date(startDateInput.value);
+        if (startDate && !Number.isNaN(startDate.getTime())) {
+            const defaultEndDate = defaultEndDateFromStart(startDate);
+            endDatePicker.setDate(defaultEndDate, false);
+            endDateInput.value = formatDate(defaultEndDate);
+        }
+    }
 
     // Auto-update security deposit from monthly rent only.
     const monthlyRentInput = document.getElementById('id_monthly_rent');
@@ -310,7 +370,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const motorcycleSlotsInput = document.getElementById('id_motorcycle_slots');
     const carSlotsInput = document.getElementById('id_car_slots');
     
-    const isExistingLease = {{ lease|yesno:"true,false" }};
     if (monthlyRentInput && securityDepositInput) {
         function updateSecurityDeposit() {
             if (isExistingLease) return;

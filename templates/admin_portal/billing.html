@@ -95,7 +95,7 @@
       <a href="?tab=active&q={{ q }}&status={{ status_filter }}&month={{ month_filter }}&year={{ year_filter }}"
          class="px-6 py-3.5 text-sm font-bold transition-colors border-b-2 flex items-center gap-2 {% if active_tab == 'active' %}border-slate-900 text-slate-900 bg-white font-extrabold{% else %}border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/60{% endif %}">
         <span>Current Bills</span>
-        <span class="px-2 py-0.5 rounded text-xs {% if active_tab == 'active' %}bg-slate-900 text-white font-bold{% else %}bg-slate-200 text-slate-700{% endif %}">{{ unpaid_count }}</span>
+        <span class="px-2 py-0.5 rounded text-xs {% if active_tab == 'active' %}bg-slate-900 text-white font-bold{% else %}bg-slate-200 text-slate-700{% endif %}">{{ active_count }}</span>
       </a>
       
     </div>

@@ -148,6 +148,7 @@ def _empty_dashboard_billing_context():
         "next_due_date": None,
         "next_billing_month": None,
         "next_bill_preview": None,
+        "partial_bill_alert": None,
     }
 
 
@@ -208,6 +209,14 @@ def _dashboard_billing_context(user, lease, today):
     ensure_bills_since_move_in(lease)
 
     all_bills = list(MonthlyBill.objects.filter(lease=lease).order_by("billing_month"))
+    context["partial_bill_alert"] = next(
+        (
+            bill
+            for bill in all_bills
+            if bill.status == "PARTIALLY_PAID" and bill.total_balance > 0
+        ),
+        None,
+    )
     summary = _bill_balance_summary(all_bills)
     actual_balance_candidate = summary["actual_balance_candidate"]
     actual_balance_index = summary["actual_balance_index"]
@@ -288,6 +297,8 @@ def _filtered_bills_for_statement(lease, billing_month_filter):
     bills_query = MonthlyBill.objects.filter(
         lease=lease
     ).exclude(status="PAID").select_related("source_water_reading").order_by("-billing_month")
+    if lease.end_date:
+        bills_query = bills_query.filter(billing_month__lte=month_start(lease.end_date))
 
     if billing_month_filter:
         try:
@@ -320,6 +331,8 @@ def _selected_contract_bill(lease, billing_month_filter):
         billing_month__year=selected_month.year,
         billing_month__month=selected_month.month,
     ).select_related("source_water_reading").first()
+    if bill and lease.end_date and month_start(bill.billing_month) > month_start(lease.end_date):
+        return None
 
     return bill
 
@@ -352,11 +365,20 @@ def _ongoing_billing_rows(refreshed_bills, today):
     return rows
 
 
-def _approved_payment_transactions(user):
+def _approved_payment_transactions(user, lease=None):
     approved_payments = ManualPayment.objects.filter(
         user=user,
         status="APPROVED",
-    ).only("id", "amount", "bill_ids", "reference_code", "created_at").order_by("-created_at")
+    ).only(
+        "id",
+        "amount",
+        "bill_ids",
+        "reference_code",
+        "created_at",
+        "payment_method",
+        "payment_type",
+        "paid_via",
+    ).order_by("-created_at")
 
     payment_bill_ids = set()
     payment_bill_map = {}
@@ -367,10 +389,12 @@ def _approved_payment_transactions(user):
         payment_bill_ids.update(bill_id_list)
         payment_bill_map[payment.id] = bill_id_list
 
-    bills_by_id = {
-        bill.id: bill
-        for bill in MonthlyBill.objects.filter(id__in=payment_bill_ids)
-    }
+    bills_query = MonthlyBill.objects.filter(id__in=payment_bill_ids)
+    if lease:
+        bills_query = bills_query.filter(lease=lease)
+        if lease.end_date:
+            bills_query = bills_query.filter(billing_month__lte=month_start(lease.end_date))
+    bills_by_id = {bill.id: bill for bill in bills_query}
 
     transactions = []
     for payment in approved_payments:
@@ -379,6 +403,8 @@ def _approved_payment_transactions(user):
             continue
 
         bills_paid = [bills_by_id[bill_id] for bill_id in bill_id_list if bill_id in bills_by_id]
+        if not bills_paid:
+            continue
         total_amount = payment.amount if payment.amount and payment.amount > 0 else sum(
             (bill.total_due or Decimal("0.00")) for bill in bills_paid
         )
@@ -389,6 +415,9 @@ def _approved_payment_transactions(user):
         transactions.append({
             "paid_at": payment.created_at,
             "reference": payment.reference_code,
+            "payment_method": payment.get_payment_method_display(),
+            "payment_type": payment.get_payment_type_display(),
+            "paid_via": (payment.paid_via or "").replace("_", " ").title(),
             "months_paid": len(bills_paid),
             "bill_months": bill_month_labels,
             "bill_months_label": ", ".join(bill_month_labels),
@@ -404,7 +433,10 @@ def _monthly_status_rows(lease, today=None):
     rows = []
     today_month = month_start(today)
     contract_end = month_start(lease.end_date or today)
-    bills = list(MonthlyBill.objects.filter(lease=lease).order_by("billing_month"))
+    bills_query = MonthlyBill.objects.filter(lease=lease)
+    if lease.end_date:
+        bills_query = bills_query.filter(billing_month__lte=month_start(lease.end_date))
+    bills = list(bills_query.order_by("billing_month"))
     bills_by_month = {
         month_start(bill.billing_month): bill
         for bill in bills
@@ -495,6 +527,42 @@ def _parse_months_to_pay(request):
         return 1
 
 
+def _contract_advance_month_cap(lease, today_start):
+    if not lease.end_date:
+        return 12
+
+    contract_end = month_start(lease.end_date)
+    if contract_end < today_start:
+        return 1
+
+    month_diff = (contract_end.year - today_start.year) * 12 + (contract_end.month - today_start.month)
+    return min(max(month_diff + 1, 1), 12)
+
+
+def _clamp_months_to_contract(months_to_pay, lease, today_start):
+    contract_cap = _contract_advance_month_cap(lease, today_start)
+    return min(max(months_to_pay, 1), contract_cap)
+
+
+def _advance_month_options(contract_cap):
+    return list(range(1, max(contract_cap, 0) + 1))
+
+
+def _advance_generation_end_month(lease, today_start, months_to_pay):
+    requested_end = add_months(today_start, months_to_pay + 1)
+    if not lease.end_date:
+        return requested_end
+    contract_end = month_start(lease.end_date)
+    return min(requested_end, contract_end)
+
+
+def _contract_bounded_bills(lease):
+    bills_query = MonthlyBill.objects.filter(lease=lease)
+    if lease.end_date:
+        bills_query = bills_query.filter(billing_month__lte=month_start(lease.end_date))
+    return list(bills_query.order_by("billing_month"))
+
+
 def _water_only_locked(existing_bills):
     oldest_outstanding_bill = next(
         (candidate_bill for candidate_bill in existing_bills if candidate_bill.total_balance > 0),
@@ -552,26 +620,35 @@ def _selected_payment_type(request, water_only_locked, full_bill_available, all_
 
 
 def _bills_for_payment_type(all_bills, payment_type, months_to_pay, today_start):
+    if months_to_pay <= 0:
+        return []
+
+    payable_bills = [bill for bill in all_bills if bill.status != "PAID"]
+
     if payment_type == "rent_only":
-        bills_to_process = [bill for bill in all_bills if _bill_has_rent_due(bill)][:months_to_pay]
+        bills_to_process = [bill for bill in payable_bills if _bill_has_rent_due(bill)][:months_to_pay]
         return bills_to_process or [
-            bill for bill in all_bills if _bill_has_rent_due(bill) or bill.status == "UPCOMING"
+            bill for bill in payable_bills if _bill_has_rent_due(bill) or bill.status == "UPCOMING"
         ][:months_to_pay]
 
     if payment_type == "water_only":
-        bills_to_process = [bill for bill in all_bills if bill.water_balance > 0][:months_to_pay]
+        bills_to_process = [bill for bill in payable_bills if bill.water_balance > 0][:months_to_pay]
         return bills_to_process or [
-            bill for bill in all_bills if bill.water_balance > 0 or bill.status == "UPCOMING"
+            bill for bill in payable_bills if bill.water_balance > 0 or bill.status == "UPCOMING"
         ][:months_to_pay]
 
     bills_to_process = [
-        bill for bill in all_bills
+        bill for bill in payable_bills
         if bill.status in ["UNPAID", "PARTIALLY_PAID"]
     ][:months_to_pay]
     return bills_to_process or [
-        bill for bill in all_bills
+        bill for bill in payable_bills
         if bill.status in ["UNPAID", "UPCOMING"] or bill.billing_month > today_start
     ][:months_to_pay]
+
+
+def _advanceable_bill_count(all_bills, payment_type, today_start):
+    return len(_bills_for_payment_type(all_bills, payment_type, len(all_bills), today_start))
 
 
 def _payment_amounts_for_bill(bill, payment_type):
@@ -665,13 +742,15 @@ def _payment_preview_context(request, lease, months_to_pay):
 
     today = date.today()
     today_start = month_start(today)
-    ensure_bills_up_to(lease, add_months(today_start, months_to_pay + 1))
+    ensure_bills_up_to(lease, _advance_generation_end_month(lease, today_start, _contract_advance_month_cap(lease, today_start)))
 
-    all_bills = list(MonthlyBill.objects.filter(lease=lease).order_by("billing_month"))
+    all_bills = _contract_bounded_bills(lease)
     water_only_locked = _water_only_locked(all_bills)
     full_bill_available = _full_bill_available(all_bills)
     can_pay_full_bill = full_bill_available and not water_only_locked
     payment_type = _selected_payment_type(request, water_only_locked, full_bill_available, all_bills)
+    advanceable_count = _advanceable_bill_count(all_bills, payment_type, today_start)
+    months_to_pay = min(max(months_to_pay, 1), advanceable_count) if advanceable_count else 0
     bills_to_process = _bills_for_payment_type(all_bills, payment_type, months_to_pay, today_start)
     preview_rows = _payment_preview_rows(lease, bills_to_process, payment_type)
     totals = _payment_totals(preview_rows, payment_type)
@@ -694,8 +773,10 @@ def _payment_preview_context(request, lease, months_to_pay):
 
     return {
         "lease": lease,
-        "months_options": [1, 2, 3, 4, 5, 6, 12],
+        "months_options": _advance_month_options(advanceable_count),
         "months_to_pay": months_to_pay,
+        "max_months_to_pay": advanceable_count,
+        "no_advance_available": advanceable_count == 0,
         "payment_type": payment_type,
         "water_only_locked": water_only_locked,
         "full_bill_available": full_bill_available,
@@ -764,7 +845,7 @@ def tenant_billing(request):
     water_reading = current_bill.source_water_reading if current_bill and current_bill.source_water_reading else None
     ongoing_rows = _ongoing_billing_rows(refreshed_bills, date.today())
     monthly_status_rows = _monthly_status_rows(lease, today)
-    transactions = _approved_payment_transactions(user)
+    transactions = _approved_payment_transactions(user, lease)
     contract_month_choices = _contract_month_choices(lease, today)
 
     has_pending_payment = ManualPayment.objects.filter(

@@ -71,6 +71,47 @@ def _total_month_usage_for_leases(lease_ids, reading_date):
     )
 
 
+def _recompute_unpaid_water_readings_for_month(reading_date, computed_by):
+    readings = list(WaterReading.objects.select_related('lease__unit').filter(reading_month=reading_date))
+    if not readings:
+        return 0, 0, 0
+
+    billing_settings = get_water_billing_settings_for_month(reading_date)
+    total_month_consumption = sum((reading.consumption for reading in readings), Decimal("0.00"))
+    fixed_count = 0
+    skipped_count = 0
+    error_count = 0
+
+    for reading in readings:
+        try:
+            existing_bill = MonthlyBill.objects.filter(
+                lease=reading.lease,
+                billing_month=reading_date,
+            ).first()
+            if is_water_bill_locked(existing_bill):
+                skipped_count += 1
+                continue
+
+            compute_water_reading(
+                reading,
+                total_month_consumption=total_month_consumption,
+                shared_pump_total=billing_settings.shared_pump_total,
+                vat_percent=billing_settings.vat_percent,
+                previous_unpaid_water_amount=previous_unpaid_water_balance(reading.lease, reading_date),
+            )
+            reading.save()
+            create_or_update_monthly_bill_from_reading(
+                reading,
+                computed_by=computed_by,
+                force_update=True,
+            )
+            fixed_count += 1
+        except Exception:
+            error_count += 1
+
+    return fixed_count, skipped_count, error_count
+
+
 @admin_required
 def admin_water(request):
     """Water Management dashboard with bulk entry"""
@@ -452,6 +493,7 @@ def admin_water_rate(request):
     shared_pump_total = request.POST.get('shared_pump_total', '0')
     vat_percent = request.POST.get('vat_percent', '12')
     notes = request.POST.get('notes', '')
+    settings_date = None
     
     if not effective_date or not rate_per_cu_m:
         messages.error(request, "Please provide both effective date and rate")
@@ -484,6 +526,20 @@ def admin_water_rate(request):
     except Exception as e:
         messages.error(request, f"Error setting water rate: {e}")
     
+    if settings_date:
+        fixed_count, skipped_count, error_count = _recompute_unpaid_water_readings_for_month(
+            settings_date,
+            request.user,
+        )
+        messages.info(
+            request,
+            f"Recomputed {fixed_count} unpaid water reading(s) for shared pump/VAT, "
+            f"skipped {skipped_count} paid reading(s)."
+        )
+        if error_count:
+            messages.warning(request, f"{error_count} water reading(s) could not be recomputed.")
+        return redirect(f'/admin-portal/water/?month={settings_date.month}&year={settings_date.year}')
+
     return redirect('/admin-portal/water/')
 
 

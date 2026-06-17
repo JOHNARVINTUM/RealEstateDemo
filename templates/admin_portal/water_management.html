@@ -136,6 +136,9 @@
         </div>
 
         <form method="get" class="space-y-4">
+          {% if search %}
+            <input type="hidden" name="search" value="{{ search }}">
+          {% endif %}
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block text-[11px] font-bold text-slate-700 mb-1">Target Month</label>
@@ -185,7 +188,12 @@
         <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50/50">
           <div>
             <h2 class="text-xl font-black text-slate-900">{{ month_name }} {{ year }} Sub-Meter Index</h2>
-            <p class="text-sm text-slate-600 mt-1">Input current total values to automatically project sum dues</p>
+            <p class="text-sm text-slate-600 mt-1">
+              Input current total values to automatically project sum dues
+              {% if search %}
+                <span class="block mt-1 text-xs font-bold text-slate-500">Filtered by: <span class="text-slate-900">{{ search }}</span></span>
+              {% endif %}
+            </p>
           </div>
           
           <div class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
@@ -241,12 +249,18 @@
               <input type="hidden" name="month" value="{{ month }}">
               <input type="hidden" name="year" value="{{ year }}">
               <input type="text" name="search" value="{{ search }}" placeholder="Filter unit identifier or string..." 
-                     class="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 transition-all outline-none">
+                     class="w-full pl-8 {% if search %}pr-20{% else %}pr-3{% endif %} py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 transition-all outline-none">
               <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                 </svg>
               </span>
+              {% if search %}
+                <a href="?month={{ month }}&year={{ year }}"
+                   class="absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-white hover:text-slate-900">
+                  Clear
+                </a>
+              {% endif %}
             </form>
           </div>
         </div>

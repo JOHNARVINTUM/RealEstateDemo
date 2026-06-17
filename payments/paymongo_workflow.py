@@ -70,6 +70,7 @@ def upsert_pending_paymongo_checkout_payment(
     amount,
     checkout_session_id: str,
     checkout_url: str,
+    metadata=None,
 ):
     existing_payment = ManualPayment.objects.filter(
         user=user,
@@ -84,14 +85,18 @@ def upsert_pending_paymongo_checkout_payment(
         existing_payment.checkout_url = checkout_url
         existing_payment.reference_code = f"REF-PM-{checkout_session_id[-8:].upper()}"
         existing_payment.payment_method = "PAYMONGO"
+        existing_payment.payment_type = payment_type
         existing_payment.amount = amount
+        existing_payment.metadata = metadata or {}
         existing_payment.save(
             update_fields=[
                 "checkout_session_id",
                 "checkout_url",
                 "reference_code",
                 "payment_method",
+                "payment_type",
                 "amount",
+                "metadata",
             ]
         )
         return existing_payment
@@ -106,6 +111,7 @@ def upsert_pending_paymongo_checkout_payment(
         checkout_session_id=checkout_session_id,
         checkout_url=checkout_url,
         status="PENDING",
+        metadata=metadata or {},
     )
 
 
@@ -303,6 +309,10 @@ def get_paymongo_session_updates(payment, session_data):
             return False
 
     if session_status == "paid" and payment.status != "APPROVED":
+        if not payment.paymongo_payment_id:
+            payment.paymongo_payment_id = payment.checkout_session_id
+            payment.paid_via = payment.paid_via or "online"
+            payment.save(update_fields=["paymongo_payment_id", "paid_via"])
         try:
             auto_approve_paymongo_payment(payment)
             logger.info(f"Payment {payment.id} auto-approved via session status")
@@ -502,11 +512,14 @@ def auto_approve_paymongo_payment(payment):
         logger.exception(f"Error checking lease activation for payment {payment.id}: {e}")
 
     _approve_regular_paymongo_payment_if_needed(payment, lease_activated)
+    if not lease_activated:
+        payment.refresh_from_db(fields=["status"])
 
     if lease_activated:
         _mark_paymongo_payment_approved(payment)
 
-    _notify_admin_about_paymongo_payment(payment, lease_activated)
+    if lease_activated or payment.status == "APPROVED":
+        _notify_admin_about_paymongo_payment(payment, lease_activated)
 
 
 def process_paymongo_webhook_payload(payload):

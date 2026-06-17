@@ -237,6 +237,7 @@ def admin_lease_payment(request, lease_id: int):
                         "lease": lease,
                         "total_move_in_cost": lease.total_move_in_cost,
                         "cash_reference": _build_cash_move_in_reference(lease),
+                        "gcash_qr_url": getattr(settings, "GCASH_QR_URL", "/static/img/gcash_qr3.jpg"),
                         "back_url": reverse("admin_delete_lease", args=[lease.id]) + "?next=unit",
                     },
                 )
@@ -290,6 +291,7 @@ def admin_lease_payment(request, lease_id: int):
             "lease": lease,
             "total_move_in_cost": lease.total_move_in_cost,
             "cash_reference": _build_cash_move_in_reference(lease),
+            "gcash_qr_url": getattr(settings, "GCASH_QR_URL", "/static/img/gcash_qr3.jpg"),
             "back_url": reverse("admin_delete_lease", args=[lease.id]) + "?next=unit",
         },
     )

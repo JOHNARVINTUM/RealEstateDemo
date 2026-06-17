@@ -318,6 +318,13 @@ document.addEventListener('DOMContentLoaded', function() {
         return `${year}-${month}-${day}`;
     }
 
+    function parseLocalDate(value) {
+        if (!value) return null;
+        const parts = value.split('-').map(Number);
+        if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
+        return new Date(parts[0], parts[1] - 1, parts[2]);
+    }
+
     function defaultEndDateFromStart(startDate) {
         const endDate = new Date(startDate.getTime());
         endDate.setFullYear(endDate.getFullYear() + 1);
@@ -342,9 +349,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     dueDayInput.value = startDate.getDate();
                 }
                 if (endDatePicker && !isExistingLease) {
-                    const defaultEndDate = defaultEndDateFromStart(startDate);
-                    endDatePicker.setDate(defaultEndDate, false);
-                    endDateInput.value = formatDate(defaultEndDate);
+                    const currentEndDate = parseLocalDate(endDateInput.value);
+                    if (!currentEndDate || currentEndDate < startDate) {
+                        const defaultEndDate = defaultEndDateFromStart(startDate);
+                        endDatePicker.setDate(defaultEndDate, false);
+                        endDateInput.value = formatDate(defaultEndDate);
+                    }
                 }
             }
             instance.element.dispatchEvent(new Event('input', { bubbles: true }));
@@ -356,7 +366,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     if (startDateInput && startDateInput.value && endDatePicker && !endDateInput.value && !isExistingLease) {
-        const startDate = startDateInput._flatpickr ? startDateInput._flatpickr.selectedDates[0] : new Date(startDateInput.value);
+        const startDate = startDateInput._flatpickr ? startDateInput._flatpickr.selectedDates[0] : parseLocalDate(startDateInput.value);
         if (startDate && !Number.isNaN(startDate.getTime())) {
             const defaultEndDate = defaultEndDateFromStart(startDate);
             endDatePicker.setDate(defaultEndDate, false);

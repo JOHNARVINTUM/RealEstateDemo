@@ -114,6 +114,13 @@ document.addEventListener('DOMContentLoaded', function() {
         function formatDate(date) {
             return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
         }
+
+        function parseLocalDate(value) {
+            if (!value) return null;
+            const parts = value.split('-').map(Number);
+            if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
+            return new Date(parts[0], parts[1] - 1, parts[2]);
+        }
         
         function calculateDueDate(startDate, monthOffset, dueDay) {
             const date = new Date(startDate);
@@ -180,8 +187,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             if (monthlyRent > 0 && startDateInput && endDateInput) {
-                const startDate = new Date(startDateInput);
-                const endDate = new Date(endDateInput);
+                const startDate = parseLocalDate(startDateInput);
+                const endDate = parseLocalDate(endDateInput);
                 const cycleCount = contractCycleCount(startDate, endDate);
                 if (!cycleCount) {
                     previewContainer.style.display = 'none';

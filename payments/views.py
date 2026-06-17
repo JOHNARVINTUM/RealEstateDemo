@@ -287,6 +287,7 @@ def paymongo_checkout(request):
         amount=amount,
         checkout_session_id=result["checkout_session_id"],
         checkout_url=result["checkout_url"],
+        metadata=metadata,
     )
 
     # Redirect tenant to PayMongo's hosted checkout page

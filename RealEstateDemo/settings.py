@@ -215,7 +215,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 GCASH_NUMBER = "09219429053"
 GCASH_NAME = "John Arvin Tumbagahon"
-GCASH_QR_URL = "/static/img/qr.jpg"
+GCASH_QR_URL = "/static/img/gcash_qr3.jpg"
 
 # PayMongo Checkout API
 PAYMONGO_SECRET_KEY = os.environ.get("PAYMONGO_SECRET_KEY", "")

@@ -605,6 +605,8 @@ def _ensure_bills_for_range(lease, end_month: date, today: date, *, apply_move_i
 
     start = month_start(lease.start_date)
     end = month_start(end_month)
+    if lease.end_date:
+        end = min(end, month_start(lease.end_date))
     if end < start:
         return
 
@@ -800,6 +802,8 @@ def ensure_bills_up_to(lease, end_month: date, today: date | None = None):
         return
 
     end = month_start(end_month)
+    if lease.end_date:
+        end = min(end, month_start(lease.end_date))
 
     # Keep future generation bounded, but align it with the largest UI option.
     current_month = month_start(today)

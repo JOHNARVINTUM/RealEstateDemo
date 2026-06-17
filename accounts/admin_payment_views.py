@@ -297,7 +297,7 @@ def admin_confirm_schedule(request, payment_id: int):
 
             Notification.create_tenant_notification(
                 title="Cash Payment Appointment Confirmed",
-                message=f"Your face-to-face cash payment appointment has been confirmed.\n\nAmount: â‚±{p.amount:,.2f}\nScheduled: {schedule_info}\n\nPlease bring the exact amount. See you then!",
+                message=f"Your face-to-face cash payment appointment has been confirmed.\n\nAmount: \u20b1{p.amount:,.2f}\nScheduled: {schedule_info}\n\nPlease bring the exact amount. See you then!",
                 notification_type='PAYMENT',
                 tenant_user=p.user
             )
@@ -313,7 +313,7 @@ def admin_confirm_schedule(request, payment_id: int):
 
     return render(request, "admin_portal/confirm.html", {
         "title": "Confirm F2F Schedule",
-        "message": f"Confirm cash payment appointment for {p.user.email}?\n\nAmount: â‚±{p.amount:,.2f}\nScheduled: {schedule_info}\n\nTenant will be notified that the appointment is confirmed.",
+        "message": f"Confirm cash payment appointment for {p.user.email}?\n\nAmount: \u20b1{p.amount:,.2f}\nScheduled: {schedule_info}\n\nTenant will be notified that the appointment is confirmed.",
         "post_url": reverse("admin_confirm_schedule", args=[p.id]),
         "back_url": reverse("admin_payments"),
     })

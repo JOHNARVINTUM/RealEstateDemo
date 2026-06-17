@@ -22,19 +22,16 @@
     <!-- Left Workspace Column: Main Studio Form -->
     <div class="flex-1 w-full space-y-6">
       
-      <!-- Premium Studio Header -->
-      <header class="bg-slate-900 border border-slate-800 rounded-2xl p-6 lg:p-8 shadow-xl shadow-slate-900/10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 relative overflow-hidden">
-        <!-- Subtle glow effect -->
-        <div class="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none"></div>
-
+      <!-- Form Header -->
+      <header class="bg-white border border-slate-200 rounded-2xl p-6 lg:p-8 shadow-sm flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 relative overflow-hidden">
         <div class="relative z-10">
           <div class="flex items-center gap-3 mb-2">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-inner border border-white/10">
+            <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 shadow-sm border border-slate-200">
               <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
             </div>
-            <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-white leading-tight">{{ title|default:"Add New Tenant" }}</h1>
+            <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 leading-tight">{{ title|default:"Add New Tenant" }}</h1>
           </div>
-          <p class="text-sm text-slate-400 mt-1 leading-relaxed pl-13 ml-1">
+          <p class="text-sm text-slate-500 mt-1 pl-13 ml-1">
             Enter the details for the new tenant below. Account access will be set up automatically.
           </p>
         </div>

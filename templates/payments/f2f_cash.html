@@ -4,175 +4,195 @@
 {% block meta_description %}Pick a time to pay your rent in cash at the office.{% endblock %}
 
 {% block tenant_content %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12 font-sans">
 
-  <!-- Page Header -->
-  <div class="mb-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 border-b-2 border-slate-100 pb-8">
-    <div>
-      <a href="{{ back_url }}" onclick="if (document.referrer) { window.history.back(); return false; }" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
+  <!-- Navigation: Consistent Back Button -->
+  <nav class="flex items-center pb-6">
+    <a href="{{ back_url }}" onclick="if (document.referrer) { window.history.back(); return false; }" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-sm group">
       <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
       </svg>
       <span>Back</span>
     </a>
-      <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">Pay in Cash</h1>
-      <p class="text-lg text-slate-500 font-bold mt-2">Pick a date and time to visit the office and pay in person.</p>
-    </div>
-    <!-- Method Tag -->
-    <div class="bg-white border-2 border-slate-100 px-6 py-4 rounded-2xl shadow-sm w-fit">
-      <span class="text-xs font-black text-slate-400 block uppercase tracking-widest mb-1">Method</span>
-      <span class="text-lg font-black text-slate-800">Cash</span>
+  </nav>
+
+  <!-- Page Header (Mega-Card Style) -->
+  <div class="mb-10 relative rounded-[3rem] p-1 overflow-hidden shadow-2xl bg-gradient-to-br from-emerald-400 via-emerald-500 to-teal-600">
+    <div class="bg-white rounded-[2.9rem] overflow-hidden flex flex-col lg:flex-row">
+      
+      <!-- Left Side -->
+      <div class="flex-1 p-8 sm:p-12 bg-emerald-50/30">
+        <div class="flex flex-wrap items-center gap-3 mb-6">
+          <span class="text-xs font-black uppercase tracking-widest text-emerald-600">
+            Cash Payment
+          </span>
+          <span class="bg-emerald-100 text-emerald-800 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-200">Face-to-Face</span>
+        </div>
+
+        <h2 class="text-5xl sm:text-6xl font-black tracking-tight text-slate-900 mb-2">
+          Pay in Cash
+        </h2>
+        <p class="text-sm font-bold text-slate-500 max-w-xl">
+          Pick a date and time to visit the office and pay in person.
+        </p>
+      </div>
+
+      <!-- Right Side -->
+      <div class="lg:w-96 flex flex-col justify-center p-8 sm:p-12 bg-emerald-50 border-t lg:border-t-0 lg:border-l border-emerald-100">
+        <span class="text-[10px] font-black uppercase tracking-widest text-emerald-600 block mb-2">
+          Amount to Pay
+        </span>
+        <strong class="text-5xl font-black text-slate-900 tracking-tight block">
+          &#8369;{{ amount_to_pay|floatformat:2|intcomma }}
+        </strong>
+        <p class="mt-4 text-sm font-bold leading-relaxed text-emerald-800/80">
+          Prepare the exact amount in cash before arriving at the office.
+        </p>
+      </div>
+
     </div>
   </div>
 
   {% if error %}
-    <div class="mb-10 bg-rose-50 border-2 border-rose-100 text-rose-700 rounded-[2rem] p-8 flex items-start gap-4 shadow-sm">
-      <div class="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-      </div>
+    <div class="mb-10 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl p-6 flex items-start gap-4 shadow-sm animate-[pulse_2s_ease-in-out_1]">
       <div>
-        <p class="text-sm font-black uppercase tracking-widest text-rose-400 mb-1">Payment Error</p>
-        <p class="text-xl font-black">{{ error }}</p>
+        <p class="text-sm font-black uppercase tracking-widest text-rose-500 mb-1">Scheduling Error</p>
+        <p class="text-lg font-bold text-rose-800">{{ error }}</p>
       </div>
     </div>
   {% endif %}
 
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-10">
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
 
     <!-- Payment Summary -->
-    <div class="tenant-card p-10 h-fit flex flex-col justify-between">
-      <div>
-        <div class="border-b-2 border-slate-50 pb-6 mb-8">
-          <h2 class="text-2xl font-black text-slate-900">Payment Summary</h2>
-          <p class="text-lg text-slate-500 font-bold mt-1">What you are paying today.</p>
-        </div>
-
-        <div class="p-8 rounded-[2rem] bg-slate-900 text-white mb-8 flex justify-between items-center shadow-xl">
-          <div>
-            <span class="text-xs font-black text-slate-400 block uppercase tracking-widest mb-1">Amount to Pay</span>
-            <span class="text-4xl font-black block">₱{{ amount_to_pay|floatformat:2|intcomma }}</span>
+    <div class="lg:col-span-7 flex flex-col gap-6">
+      <div class="bg-white border border-slate-200 rounded-[2.5rem] p-8 sm:p-10 shadow-sm flex flex-col justify-between h-full">
+        <div>
+          <div class="border-b border-slate-100 pb-6 mb-8">
+            <h2 class="text-2xl font-black text-slate-900">Payment Summary</h2>
+            <p class="text-sm font-semibold text-slate-500 mt-1">What you are paying today.</p>
           </div>
-          <div class="text-slate-700 font-black text-2xl select-none hidden sm:block">
-            CASH
-          </div>
-        </div>
 
-        <div class="mb-8">
-          <span class="text-xs font-black text-slate-400 block uppercase tracking-widest mb-2">Payment for</span>
-          <div class="p-4 rounded-2xl bg-slate-50 border-2 border-slate-100 font-black text-lg text-slate-800">
-            {% if payment_type == "full" %}Rent & Water
-            {% elif payment_type == "rent_only" %}Rent Only
-            {% elif payment_type == "water_only" %}Water Only
-            {% else %}Rent & Water{% endif %}
+          <div class="mb-8">
+            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Payment for</span>
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 font-bold text-lg text-slate-800">
+              {% if payment_type == "full" %}Rent & Water
+              {% elif payment_type == "rent_only" %}Rent Only
+              {% elif payment_type == "water_only" %}Water Only
+              {% else %}Rent & Water{% endif %}
+            </div>
           </div>
-        </div>
 
-        <div class="pt-8 border-t-2 border-slate-50">
-          <span class="text-sm font-black text-slate-900 block mb-4 uppercase tracking-widest">How to pay in person</span>
-          <ol class="space-y-4">
-            <li class="flex items-start gap-3">
-              <span class="w-6 h-6 rounded-full bg-slate-100 text-slate-900 font-black text-xs flex items-center justify-center shrink-0 mt-1">1</span>
-              <p class="text-lg text-slate-600 font-bold">Pick a date and time you want to visit.</p>
-            </li>
-            <li class="flex items-start gap-3">
-              <span class="w-6 h-6 rounded-full bg-slate-100 text-slate-900 font-black text-xs flex items-center justify-center shrink-0 mt-1">2</span>
-              <p class="text-lg text-slate-600 font-bold">Send your schedule to our office.</p>
-            </li>
-            <li class="flex items-start gap-3">
-              <span class="w-6 h-6 rounded-full bg-slate-100 text-slate-900 font-black text-xs flex items-center justify-center shrink-0 mt-1">3</span>
-              <p class="text-lg text-slate-600 font-bold">Wait for us to confirm your visit.</p>
-            </li>
-            <li class="flex items-start gap-3">
-              <span class="w-6 h-6 rounded-full bg-slate-100 text-slate-900 font-black text-xs flex items-center justify-center shrink-0 mt-1">4</span>
-              <p class="text-lg text-slate-600 font-bold">Visit the office and pay in cash.</p>
-            </li>
-          </ol>
+          <div class="pt-6 border-t border-slate-100">
+            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-6">How to pay in person</span>
+            <ol class="space-y-4">
+              <li class="flex items-start gap-4">
+                <span class="w-7 h-7 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 font-black text-sm flex items-center justify-center shrink-0">1</span>
+                <p class="text-base text-slate-700 font-medium pt-0.5">Pick a date and time you want to visit.</p>
+              </li>
+              <li class="flex items-start gap-4">
+                <span class="w-7 h-7 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 font-black text-sm flex items-center justify-center shrink-0">2</span>
+                <p class="text-base text-slate-700 font-medium pt-0.5">Send your schedule to our office.</p>
+              </li>
+              <li class="flex items-start gap-4">
+                <span class="w-7 h-7 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 font-black text-sm flex items-center justify-center shrink-0">3</span>
+                <p class="text-base text-slate-700 font-medium pt-0.5">Wait for us to confirm your visit.</p>
+              </li>
+              <li class="flex items-start gap-4">
+                <span class="w-7 h-7 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 font-black text-sm flex items-center justify-center shrink-0">4</span>
+                <p class="text-base text-slate-700 font-medium pt-0.5">Visit the office and pay in cash.</p>
+              </li>
+            </ol>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Scheduling Form -->
-    <div class="tenant-card p-10">
-      <div class="border-b-2 border-slate-50 pb-6 mb-8">
-        <h2 class="text-2xl font-black text-slate-900">Set Your Schedule</h2>
-        <p class="text-lg text-slate-500 font-bold mt-1">Select when you will visit the office.</p>
+    <div class="lg:col-span-5 flex flex-col gap-6">
+      <div class="bg-white border border-slate-200 rounded-[2.5rem] p-8 sm:p-10 shadow-sm flex flex-col justify-between h-full">
+        <div>
+          <div class="border-b border-slate-100 pb-6 mb-8">
+            <h2 class="text-2xl font-black text-slate-900">Set Schedule</h2>
+            <p class="text-sm font-semibold text-slate-500 mt-1">Select when you will visit the office.</p>
+          </div>
+
+          <form method="post" class="space-y-6 flex flex-col h-full">
+            {% csrf_token %}
+            <input type="hidden" name="amount" value="{{ amount_to_pay }}">
+            <input type="hidden" name="bill_ids" value="{{ bill_ids }}">
+            <input type="hidden" name="payment_type" value="{{ payment_type|default:'full' }}">
+
+            <!-- Date -->
+            <div class="space-y-2">
+              <label class="block text-[10px] font-black text-slate-600 uppercase tracking-widest">
+                Date <span class="text-rose-500">*</span>
+              </label>
+              <input type="date" name="preferred_date" required
+                     value="{{ preferred_date }}"
+                     min="{% now 'Y-m-d' %}"
+                     class="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-lg font-bold text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none">
+              <p class="text-xs text-slate-500 font-medium mt-2">* Available {{ office_hours_label }}.</p>
+            </div>
+
+            <!-- Time -->
+            <div class="space-y-2">
+              <label class="block text-[10px] font-black text-slate-600 uppercase tracking-widest">
+                Time <span class="text-slate-400">(Optional)</span>
+              </label>
+              <select name="preferred_time"
+                      class="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-lg font-bold text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none cursor-pointer">
+                <option value="">Any office-hour slot</option>
+                {% for slot in office_time_slots %}
+                  <option value="{{ slot|time:'H:i' }}" {% if preferred_time == slot|time:'H:i' %}selected{% endif %}>
+                    {{ slot|time:"g:i A" }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <!-- Notes -->
+            <div class="space-y-2">
+              <label class="block text-[10px] font-black text-slate-600 uppercase tracking-widest">
+                Notes <span class="text-slate-400">(Optional)</span>
+              </label>
+              <textarea name="tenant_note" rows="3"
+                        class="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-base font-medium text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none resize-none"
+                        placeholder="Any special requests?">{{ tenant_note }}</textarea>
+            </div>
+
+            <div class="bg-amber-50 rounded-2xl p-5 border border-amber-100 mt-6 mb-6">
+              <p class="text-sm font-medium text-slate-700 leading-relaxed">
+                Your payment is only confirmed <strong class="text-slate-900">after</strong> we receive it at the office.
+              </p>
+            </div>
+
+            <button type="submit"
+                    class="w-full bg-slate-900 hover:bg-slate-800 text-white font-black py-4 px-6 rounded-2xl text-lg transition-all shadow-lg hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center mt-auto">
+              Confirm Schedule
+            </button>
+          </form>
+        </div>
       </div>
-
-      <form method="post" class="space-y-8">
-        {% csrf_token %}
-        <input type="hidden" name="amount" value="{{ amount_to_pay }}">
-        <input type="hidden" name="bill_ids" value="{{ bill_ids }}">
-        <input type="hidden" name="payment_type" value="{{ payment_type|default:'full' }}">
-
-        <!-- Date -->
-        <div>
-          <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-4">
-            Date <span class="text-rose-600">*</span>
-          </label>
-          <input type="date" name="preferred_date" required
-                 value="{{ preferred_date }}"
-                 min="{% now 'Y-m-d' %}"
-                 class="w-full border-2 border-slate-100 rounded-2xl px-6 py-4 text-xl font-black text-slate-900 bg-white focus:border-slate-900 transition-all shadow-sm">
-          <p class="text-sm text-slate-400 mt-3 font-bold italic">* Office appointments are available {{ office_hours_label }}.</p>
-        </div>
-
-        <!-- Time -->
-        <div>
-          <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-4">
-            Time <span class="text-slate-400 font-bold">(Optional)</span>
-          </label>
-          <select name="preferred_time"
-                  class="w-full border-2 border-slate-100 rounded-2xl px-6 py-4 text-xl font-black text-slate-900 bg-white focus:border-slate-900 transition-all shadow-sm">
-            <option value="">Any office-hour slot</option>
-            {% for slot in office_time_slots %}
-              <option value="{{ slot|time:'H:i' }}" {% if preferred_time == slot|time:'H:i' %}selected{% endif %}>
-                {{ slot|time:"g:i A" }}
-              </option>
-            {% endfor %}
-          </select>
-          <p class="text-sm text-slate-400 mt-3 font-bold italic">* Non-office hours are unavailable.</p>
-        </div>
-
-        <!-- Notes -->
-        <div>
-          <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-4">
-            Additional Notes <span class="text-slate-400 font-bold">(Optional)</span>
-          </label>
-          <textarea name="tenant_note" rows="3"
-                    class="w-full border-2 border-slate-100 rounded-2xl px-6 py-4 text-lg font-black text-slate-900 bg-white focus:border-slate-900 transition-all shadow-sm resize-none"
-                    placeholder="Tell us if you have any special requests...">{{ tenant_note }}</textarea>
-        </div>
-
-        <div class="p-8 rounded-[2rem] bg-slate-50 border-2 border-slate-100 text-lg text-slate-600 leading-relaxed shadow-sm">
-          <span class="font-black text-slate-900 block mb-2 uppercase tracking-widest text-sm">Wait for confirmation</span>
-          Your payment is only confirmed after we receive it at the office.
-        </div>
-
-        <div class="pt-4">
-          <button type="submit"
-                  class="w-full bg-slate-900 hover:bg-slate-800 text-white font-black py-6 rounded-2xl text-xl transition-all shadow-xl active:scale-95">
-            Confirm Schedule
-          </button>
-        </div>
-      </form>
     </div>
 
   </div>
+</div>
 
-  <script>
-    document.addEventListener("DOMContentLoaded", function () {
-      const dateInput = document.querySelector('input[name="preferred_date"]');
-      if (!dateInput) return;
-      dateInput.addEventListener("change", function () {
-        const selected = new Date(`${dateInput.value}T00:00:00`);
-        const day = selected.getDay();
-        if (day === 0 || day === 6) {
-          dateInput.setCustomValidity("Office cash payments are available Monday to Friday only.");
-          dateInput.reportValidity();
-        } else {
-          dateInput.setCustomValidity("");
-        }
-      });
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const dateInput = document.querySelector('input[name="preferred_date"]');
+    if (!dateInput) return;
+    dateInput.addEventListener("change", function () {
+      const selected = new Date(`${dateInput.value}T00:00:00`);
+      const day = selected.getDay();
+      if (day === 0 || day === 6) {
+        dateInput.setCustomValidity("Office cash payments are available Monday to Friday only.");
+        dateInput.reportValidity();
+      } else {
+        dateInput.setCustomValidity("");
+      }
     });
-  </script>
-
+  });
+</script>
 {% endblock %}

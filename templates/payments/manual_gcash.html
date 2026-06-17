@@ -4,110 +4,142 @@
 {% block meta_description %}Send your payment via GCash easily.{% endblock %}
 
 {% block tenant_content %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12 font-sans">
+  
+  <!-- Navigation: Consistent Back Button -->
+  <nav class="flex items-center pb-6">
+    <a href="{{ back_url }}" onclick="if (document.referrer) { window.history.back(); return false; }" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-sm group">
+      <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
+      </svg>
+      <span>Back</span>
+    </a>
+  </nav>
 
-  <!-- Page Header -->
-  <div class="mb-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 border-b-2 border-slate-100 pb-8">
-    <div>
-      <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">Pay via GCash</h1>
-      <p class="text-lg text-slate-500 font-bold mt-2">Send your payment and enter the receipt details below.</p>
-    </div>
-    <!-- System Status -->
-    <div class="bg-white border-2 border-slate-100 px-6 py-4 rounded-2xl shadow-sm w-fit">
-      <span class="text-xs font-black text-slate-400 block uppercase tracking-widest mb-1">System</span>
-      <span class="text-lg font-black text-slate-800">GCash</span>
+  <!-- Page Header (Mega-Card Style) -->
+  <div class="mb-10 relative rounded-[3rem] p-1 overflow-hidden shadow-2xl bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600">
+    <div class="bg-white rounded-[2.9rem] overflow-hidden flex flex-col lg:flex-row">
+      
+      <!-- Left Side -->
+      <div class="flex-1 p-8 sm:p-12 bg-blue-50/30">
+        <div class="flex flex-wrap items-center gap-3 mb-6">
+          <span class="text-xs font-black uppercase tracking-widest text-blue-600">
+            GCash Payment
+          </span>
+          <span class="bg-blue-100 text-blue-800 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-200">Secure</span>
+        </div>
+
+        <h2 class="text-5xl sm:text-6xl font-black tracking-tight text-slate-900 mb-2">
+          Pay via GCash
+        </h2>
+        <p class="text-sm font-bold text-slate-500 max-w-xl">
+          Scan the QR code or send your payment to the account details below, then verify your receipt.
+        </p>
+      </div>
+
+      <!-- Right Side -->
+      <div class="lg:w-96 flex flex-col justify-center p-8 sm:p-12 bg-blue-50 border-t lg:border-t-0 lg:border-l border-blue-100">
+        <span class="text-[10px] font-black uppercase tracking-widest text-blue-500 block mb-2">
+          Amount Due
+        </span>
+        <strong class="text-5xl font-black text-slate-900 tracking-tight block">
+          &#8369;{{ amount_to_pay|floatformat:2|intcomma }}
+        </strong>
+        <p class="mt-4 text-sm font-bold leading-relaxed text-blue-800/80">
+          Please send the exact amount to complete your payment verification.
+        </p>
+      </div>
+
     </div>
   </div>
 
   {% if error %}
-    <div class="mb-10 bg-rose-50 border-2 border-rose-100 text-rose-700 rounded-[2rem] p-8 flex items-start gap-4 shadow-sm">
-      <div class="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-      </div>
+    <div class="mb-10 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl p-6 flex items-start gap-4 shadow-sm animate-[pulse_2s_ease-in-out_1]">
       <div>
-        <p class="text-sm font-black uppercase tracking-widest text-rose-400 mb-1">Payment Error</p>
-        <p class="text-xl font-black">{{ error }}</p>
+        <p class="text-sm font-black uppercase tracking-widest text-rose-500 mb-1">Payment Verification Failed</p>
+        <p class="text-lg font-bold text-rose-800">{{ error }}</p>
       </div>
     </div>
   {% endif %}
 
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-10">
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
 
-    <!-- Payment Coordinates -->
-    <div class="tenant-card p-10 h-fit flex flex-col justify-between">
-      <div>
-        <div class="border-b-2 border-slate-50 pb-6 mb-8">
-          <h2 class="text-2xl font-black text-slate-900">GCash Details</h2>
-          <p class="text-lg text-slate-500 font-bold mt-1">Send your payment to this account.</p>
-        </div>
+    <!-- Payment Coordinates Column -->
+    <div class="lg:col-span-7 flex flex-col gap-6">
+      <div class="bg-white rounded-[2rem] p-8 sm:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 h-full">
+        <h2 class="text-2xl font-black text-slate-900 mb-2">Account Details</h2>
+        <p class="text-slate-500 font-medium mb-8">Please send the exact amount to the GCash account below.</p>
 
-        <div class="p-8 rounded-[2rem] bg-slate-900 text-white mb-8 flex justify-between items-center shadow-xl">
-          <div>
-            <span class="text-xs font-black text-slate-400 block uppercase tracking-widest mb-1">Amount to Pay</span>
-            <span class="text-4xl font-black block">₱{{ amount_to_pay|floatformat:2|intcomma }}</span>
-          </div>
-          <div class="text-slate-700 font-black text-2xl select-none hidden sm:block">
-            EPAY
-          </div>
-        </div>
-
-        <div class="space-y-4 mb-10">
-          <div class="p-6 rounded-2xl bg-slate-50 border-2 border-slate-100 flex justify-between items-center">
-            <span class="text-sm font-black text-slate-400 uppercase tracking-widest">Send to Number</span>
-            <span class="text-xl font-black text-slate-900">{{ gcash_number }}</span>
+        <!-- Account Info Cards -->
+        <div class="grid sm:grid-cols-2 gap-4 mb-10">
+          <div class="p-6 rounded-2xl bg-blue-50/50 border border-blue-100 hover:border-blue-300 hover:bg-blue-50 transition-colors group">
+            <span class="text-xs font-black text-blue-500 uppercase tracking-widest block mb-2">Send to Number</span>
+            <span class="text-2xl font-black text-slate-900 flex items-center gap-2">
+              {{ gcash_number }}
+            </span>
           </div>
 
-          <div class="p-6 rounded-2xl bg-slate-50 border-2 border-slate-100 flex justify-between items-center">
-            <span class="text-sm font-black text-slate-400 uppercase tracking-widest">Account Name</span>
-            <span class="text-xl font-black text-slate-900">{{ gcash_name }}</span>
+          <div class="p-6 rounded-2xl bg-slate-50 border border-slate-100 hover:border-slate-300 hover:bg-slate-100 transition-colors">
+            <span class="text-xs font-black text-slate-400 uppercase tracking-widest block mb-2">Account Name</span>
+            <span class="text-xl font-bold text-slate-800">{{ gcash_name }}</span>
           </div>
         </div>
 
-        <div class="pt-8 border-t-2 border-slate-50 text-center">
-          <span class="text-sm font-black text-slate-400 uppercase tracking-widest block mb-4">Scan QR Code</span>
-          <div class="p-6 bg-white border-2 border-slate-100 rounded-3xl inline-block shadow-sm">
-            <img src="/static/img/gcash_qr3.jpg" alt="Payment QR" class="w-48 h-48 object-contain mx-auto block">
+        <!-- QR Code Section -->
+        <div class="bg-gradient-to-b from-slate-50 to-white rounded-[2rem] p-8 border border-slate-100 text-center relative overflow-hidden">
+          <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-blue-400 to-transparent opacity-50"></div>
+          <span class="text-sm font-black text-slate-400 uppercase tracking-widest block mb-6">Or Scan to Pay</span>
+          <div class="p-4 bg-white border-2 border-dashed border-blue-200 rounded-3xl inline-block shadow-sm transition-transform hover:scale-105 duration-300">
+            <img src="/static/img/gcash_qr3.jpg" alt="GCash QR Code" class="w-48 h-48 sm:w-56 sm:h-56 object-contain rounded-xl">
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Verification Form -->
-    <div class="tenant-card p-10">
-      <div class="border-b-2 border-slate-50 pb-6 mb-8">
-        <h2 class="text-2xl font-black text-slate-900">Verify My Payment</h2>
-        <p class="text-lg text-slate-500 font-bold mt-1">Enter your GCash reference number.</p>
+    <!-- Verification Form Column -->
+    <div class="lg:col-span-5 flex flex-col gap-6">
+      <div class="bg-white rounded-[2rem] p-8 sm:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 h-full relative overflow-hidden group/form">
+        <!-- Decoration -->
+        <div class="absolute -right-10 -top-10 w-32 h-32 bg-slate-50 rounded-full border border-slate-100 group-hover/form:scale-110 transition-transform duration-700"></div>
+
+        <div class="relative z-10">
+          <div class="mb-8">
+            <h2 class="text-2xl font-black text-slate-900">Verify Payment</h2>
+            <p class="text-slate-500 font-medium mt-2">Enter the reference number from your GCash receipt to complete the transaction.</p>
+          </div>
+
+          <form method="post" class="space-y-6">
+            {% csrf_token %}
+            <input type="hidden" name="amount" value="{{ amount_to_pay }}">
+            <input type="hidden" name="bill_ids" value="{{ bill_ids }}">
+            <input type="hidden" name="payment_type" value="{{ payment_type|default:'full' }}">
+
+            <div class="space-y-3">
+              <label class="block text-xs font-black text-slate-600 uppercase tracking-widest">
+                Reference Number <span class="text-rose-500">*</span>
+              </label>
+              <div class="relative">
+                <input type="text" name="reference_code" required
+                       class="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-xl font-bold tracking-widest text-slate-900 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none"
+                       placeholder="000 000 000 000 0">
+              </div>
+            </div>
+
+            <div class="bg-blue-50/50 rounded-2xl p-5 border border-blue-100 mt-4">
+              <p class="text-sm font-medium text-slate-600 leading-relaxed">
+                Your payment will be reviewed. The status will remain <span class="font-bold text-amber-600">Pending</span> until our admin confirms the receipt.
+              </p>
+            </div>
+
+            <button type="submit"
+                    class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 px-6 rounded-2xl text-lg transition-all shadow-[0_8px_20px_rgba(37,99,235,0.25)] hover:shadow-[0_12px_25px_rgba(37,99,235,0.3)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-md flex items-center justify-center">
+              Submit for Verification
+            </button>
+          </form>
+        </div>
       </div>
-
-      <form method="post" class="space-y-8">
-        {% csrf_token %}
-        <input type="hidden" name="amount" value="{{ amount_to_pay }}">
-        <input type="hidden" name="bill_ids" value="{{ bill_ids }}">
-        <input type="hidden" name="payment_type" value="{{ payment_type|default:'full' }}">
-
-        <div>
-          <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-4">
-            Receipt Reference Number <span class="text-rose-600">*</span>
-          </label>
-          <input type="text" name="reference_code" required
-                 class="w-full border-2 border-slate-100 rounded-2xl px-8 py-5 text-xl font-black tracking-wider text-slate-900 bg-white focus:border-slate-900 transition-all shadow-sm"
-                 placeholder="Enter 13-digit number">
-          <p class="text-sm text-slate-400 mt-4 font-bold italic">* Check your GCash receipt for this number.</p>
-        </div>
-
-        <div class="p-8 rounded-[2rem] bg-slate-50 border-2 border-slate-100 text-lg text-slate-600 leading-relaxed shadow-sm">
-          <span class="font-black text-slate-900 block mb-2 uppercase tracking-widest text-sm">What happens next?</span>
-          We will check your payment details. Your status will show as <span class="font-black text-slate-900">Pending</span> until we confirm the receipt.
-        </div>
-
-        <div class="pt-4">
-          <button type="submit"
-                  class="w-full bg-slate-900 hover:bg-slate-800 text-white font-black py-6 rounded-2xl text-xl transition-all shadow-xl active:scale-95">
-            Submit for Verification
-          </button>
-        </div>
-      </form>
     </div>
 
   </div>
-
+</div>
 {% endblock %}

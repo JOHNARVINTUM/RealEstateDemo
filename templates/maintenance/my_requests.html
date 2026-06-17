@@ -4,293 +4,344 @@
 {% block meta_description %}Check the status of your reported problems.{% endblock %}
 
 {% block tenant_content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12 font-sans">
 
-  <!-- Page Header -->
-  <div class="mb-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 border-b-2 border-slate-100 pb-8">
-    <div>
-      <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">My Repairs</h1>
-      <p class="text-lg text-slate-500 font-bold mt-2">Check the status of your reported problems.</p>
+  <!-- Page Header (Dark Solid Style) -->
+  <div class="mb-10 rounded-[2.5rem] bg-[#0F172A] p-8 sm:p-12 text-white shadow-xl flex flex-col min-[800px]:flex-row min-[800px]:items-center min-[800px]:justify-between gap-8">
+    <div class="flex-1">
+      <div class="flex items-center gap-4 mb-4">
+        <span class="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-slate-800 border border-slate-700 shadow-inner">
+          <svg class="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </span>
+        <h1 class="text-4xl sm:text-5xl font-black tracking-tight text-white">
+          My Repairs
+        </h1>
+      </div>
+      <p class="text-base sm:text-lg text-slate-300 font-medium max-w-2xl leading-relaxed">
+        Need something fixed? Submit a new request or track the status of your existing reports.
+      </p>
+      
+      <div class="mt-8">
+        <a href="{% url 'report_issue' %}"
+           class="inline-flex items-center gap-2 px-6 py-3 bg-white text-slate-900 rounded-xl font-bold hover:bg-slate-100 transition-colors shadow-sm">
+           <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          Report a Problem
+        </a>
+      </div>
     </div>
-    <div class="sm:self-auto w-full sm:w-auto">
-      <a href="{% url 'report_issue' %}"
-         class="bg-slate-900 hover:bg-slate-800 text-white font-black px-6 py-3 sm:px-8 sm:py-4 rounded-2xl text-sm sm:text-lg transition-all flex sm:inline-flex items-center justify-center gap-2 sm:gap-3 shadow-lg active:scale-95 whitespace-nowrap w-full sm:w-auto">
-        <svg class="w-5 h-5 sm:w-6 sm:h-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-        </svg>
-        Report a Problem
-      </a>
+
+    <div class="bg-slate-800 border border-slate-700 px-8 py-5 rounded-[1.5rem] text-center min-w-[180px] shrink-0 self-start min-[800px]:self-center mt-6 min-[800px]:mt-0">
+      <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">
+        Total Requests
+      </span>
+      <strong class="text-3xl font-black text-white block">
+        {{ requests|length }}
+      </strong>
     </div>
   </div>
 
-  <!-- Filters Console -->
-  <div class="tenant-card mb-10 p-8">
-    <div class="flex flex-wrap items-center justify-between gap-8">
-      <div class="flex flex-wrap items-center gap-6 flex-1">
-        <!-- Filter by Type -->
-        <div class="min-w-[200px] flex-1 sm:flex-initial">
-          <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3">Type</label>
-          <select id="filterCategory" class="w-full border-2 border-slate-100 rounded-2xl px-6 py-4 text-lg font-black text-slate-900 bg-white focus:border-slate-900 transition-all cursor-pointer shadow-sm">
-            <option value="ALL">All Types</option>
+  <!-- Filters Area -->
+  <div class="bg-white border border-slate-200 rounded-[2.5rem] p-6 shadow-sm mb-8 flex flex-col md:flex-row md:items-end gap-4">
+    <div class="flex-1 w-full flex flex-col sm:flex-row gap-4">
+      <!-- Filter by Type -->
+      <div class="flex-1">
+        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-2">Filter by Category</label>
+        <div class="relative">
+          <select id="filterCategory" class="w-full appearance-none border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold text-slate-900 bg-slate-50 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all cursor-pointer outline-none">
+            <option value="ALL">All Categories</option>
             <option value="PLUMBING">Plumbing</option>
             <option value="ELECTRICAL">Electrical</option>
             <option value="STRUCTURAL">Structural</option>
             <option value="OTHER">Other</option>
           </select>
+          <div class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-slate-400">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+          </div>
         </div>
+      </div>
 
-        <!-- Filter by Status -->
-        <div class="min-w-[200px] flex-1 sm:flex-initial">
-          <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3">Status</label>
-          <select id="filterStatus" class="w-full border-2 border-slate-100 rounded-2xl px-6 py-4 text-lg font-black text-slate-900 bg-white focus:border-slate-900 transition-all cursor-pointer shadow-sm">
+      <!-- Filter by Status -->
+      <div class="flex-1">
+        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-2">Filter by Status</label>
+        <div class="relative">
+          <select id="filterStatus" class="w-full appearance-none border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold text-slate-900 bg-slate-50 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all cursor-pointer outline-none">
             <option value="ALL">All Statuses</option>
             <option value="OPEN">New</option>
             <option value="IN_PROGRESS">In Progress</option>
             <option value="RESOLVED">Resolved</option>
             <option value="CLOSED">Closed</option>
           </select>
+          <div class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-slate-400">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+          </div>
         </div>
       </div>
+    </div>
 
-      <div class="self-end w-full sm:w-auto">
-        <button type="button" id="resetFiltersBtn" class="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-700 font-black px-8 py-4 rounded-2xl text-lg transition-all inline-flex items-center justify-center">
-          Clear
-        </button>
-      </div>
+    <div class="w-full md:w-auto shrink-0">
+      <button type="button" id="resetFiltersBtn" class="w-full md:w-auto bg-slate-100 hover:bg-slate-200 text-slate-600 font-black px-8 py-4 rounded-2xl text-sm transition-all flex items-center justify-center gap-2">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+        Reset
+      </button>
     </div>
   </div>
 
-  <!-- Service Requests Table -->
-  <div class="bg-white border-2 border-slate-100 rounded-[2.5rem] shadow-sm overflow-hidden mb-10 p-2">
-    <div class="px-8 py-6 border-b-2 border-slate-50 bg-slate-50/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-t-[2rem]">
+  <!-- Service Requests Table Card -->
+  <div class="bg-white border border-slate-200 rounded-[2.5rem] shadow-sm flex flex-col mb-10 overflow-hidden">
+    
+    <div class="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
       <div>
-        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Recent Reports</h2>
-        <p class="text-sm sm:text-lg text-slate-500 font-bold mt-1">A list of all your repair requests.</p>
+        <h2 class="text-2xl font-black text-slate-900">Repair History</h2>
+        <p class="text-sm font-semibold text-slate-500 mt-1">A timeline of your reported issues</p>
       </div>
-      <span class="px-4 py-2 bg-slate-200/50 text-slate-600 text-sm font-black rounded-xl uppercase tracking-widest">Total: <span id="pageTotal">{{ requests|length }}</span></span>
     </div>
 
-    <div class="overflow-x-auto p-4">
-      <table class="w-full text-left border-separate border-spacing-y-3">
-        <thead>
-          <tr class="text-xs font-black text-slate-400 uppercase tracking-widest">
-            <th class="py-3 px-6">Date</th>
-            <th class="py-3 px-6">Issue Category</th>
-            <th class="py-3 px-6">Problem</th>
-            <th class="py-3 px-6">Visit Schedule</th>
-            <th class="py-3 px-6">Priority Level</th>
-            <th class="py-3 px-6">Status</th>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left">
+        <thead class="bg-slate-50 border-b border-slate-100">
+          <tr>
+            <th class="py-4 px-8 text-[10px] font-black uppercase tracking-widest text-slate-400">Date & Category</th>
+            <th class="py-4 px-8 text-[10px] font-black uppercase tracking-widest text-slate-400">Problem</th>
+            <th class="py-4 px-8 text-[10px] font-black uppercase tracking-widest text-slate-400">Schedule & Notes</th>
+            <th class="py-4 px-8 text-[10px] font-black uppercase tracking-widest text-slate-400">Status & Priority</th>
           </tr>
         </thead>
-        <tbody class="text-lg">
+        <tbody class="divide-y divide-slate-100" id="tableBody">
           {% for r in requests %}
-            <tr class="maintenance-row bg-slate-50 hover:bg-white border-2 border-transparent hover:border-slate-100 transition-all rounded-2xl"
+            <tr class="maintenance-row group hover:bg-slate-50 transition-colors"
                 data-category="{{ r.category }}"
                 data-status="{{ r.status }}">
-              <td class="py-6 px-6 font-black text-slate-500 text-base first:rounded-l-2xl whitespace-nowrap">{{ r.created_at|date:"M d, Y" }}</td>
-              <td class="py-6 px-6 whitespace-nowrap">
-                <span class="inline-block px-4 py-1 rounded-xl text-xs font-black bg-slate-200 text-slate-700 uppercase tracking-widest">{{ r.get_category_display }}</span>
+              <!-- Date & Cat -->
+              <td class="py-6 px-8 align-top">
+                <strong class="block text-sm font-black text-slate-900 mb-1">{{ r.created_at|date:"M d, Y" }}</strong>
+                <span class="inline-block px-3 py-1 rounded-lg text-[9px] font-black bg-slate-200 text-slate-700 uppercase tracking-widest">{{ r.get_category_display }}</span>
               </td>
-              <td class="py-6 px-6 font-black text-slate-900">{{ r.title }}</td>
-              <td class="py-6 px-6 whitespace-nowrap">
+              <!-- Problem -->
+              <td class="py-6 px-8 align-top">
+                <strong class="block text-base font-black text-slate-900 max-w-xs truncate" title="{{ r.title }}">{{ r.title }}</strong>
+                <p class="text-xs font-semibold text-slate-500 mt-1 max-w-xs line-clamp-2">{{ r.description|default:"No description provided." }}</p>
+              </td>
+              <!-- Schedule -->
+              <td class="py-6 px-8 align-top">
                 {% if r.admin_scheduled_at %}
-                  <span class="block text-sm font-black text-slate-900">{{ r.admin_scheduled_at|date:"M d, Y" }}</span>
-                  <span class="block text-xs font-bold text-slate-500">{{ r.admin_scheduled_at|date:"h:i A" }}</span>
+                  <div class="flex items-center gap-2 mb-2">
+                    <svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <span class="text-sm font-black text-slate-900">{{ r.admin_scheduled_at|date:"M d, h:i A" }}</span>
+                  </div>
                 {% elif r.requested_schedule_at %}
-                  <span class="block text-sm font-black text-slate-900">{{ r.requested_schedule_at|date:"M d, Y" }}</span>
-                  <span class="block text-xs font-bold text-slate-500">{{ r.requested_schedule_at|date:"h:i A" }}</span>
+                  <div class="flex items-center gap-2 mb-2 opacity-60">
+                    <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span class="text-sm font-bold text-slate-600">Requested: {{ r.requested_schedule_at|date:"M d, h:i A" }}</span>
+                  </div>
                 {% else %}
-                  <span class="text-sm font-bold text-slate-400">Not set</span>
+                  <span class="text-xs font-bold text-slate-400 block mb-2">No schedule set</span>
                 {% endif %}
+
                 {% if r.schedule_decision == "APPROVED" %}
-                  <span class="mt-2 inline-block px-3 py-1 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-700 uppercase tracking-widest">Approved</span>
+                  <span class="inline-block px-2.5 py-0.5 rounded text-[9px] font-black bg-emerald-100 text-emerald-700 uppercase tracking-widest border border-emerald-200">Approved</span>
                 {% elif r.schedule_decision == "RESCHEDULED" %}
-                  <span class="mt-2 inline-block px-3 py-1 rounded-full text-[10px] font-black bg-blue-100 text-blue-700 uppercase tracking-widest">Rescheduled</span>
+                  <span class="inline-block px-2.5 py-0.5 rounded text-[9px] font-black bg-indigo-100 text-indigo-700 uppercase tracking-widest border border-indigo-200">Rescheduled</span>
                 {% elif r.schedule_decision == "DECLINED" %}
-                  <span class="mt-2 inline-block px-3 py-1 rounded-full text-[10px] font-black bg-rose-100 text-rose-700 uppercase tracking-widest">Declined</span>
+                  <span class="inline-block px-2.5 py-0.5 rounded text-[9px] font-black bg-rose-100 text-rose-700 uppercase tracking-widest border border-rose-200">Declined</span>
                 {% elif r.requested_schedule_at %}
-                  <span class="mt-2 inline-block px-3 py-1 rounded-full text-[10px] font-black bg-amber-100 text-amber-700 uppercase tracking-widest">Pending</span>
+                  <span class="inline-block px-2.5 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-700 uppercase tracking-widest border border-amber-200">Pending Review</span>
                 {% endif %}
+                
                 {% if r.schedule_admin_note %}
-                  <span class="mt-2 block max-w-[220px] truncate text-xs font-semibold text-slate-500">{{ r.schedule_admin_note }}</span>
+                  <p class="mt-2 text-[10px] font-bold text-slate-500 max-w-xs italic border-l-2 border-slate-200 pl-2">Admin: {{ r.schedule_admin_note }}</p>
                 {% endif %}
               </td>
-              <td class="py-6 px-6 whitespace-nowrap">
-                {% if r.priority == "URGENT" or r.priority == "HIGH" %}
-                  <span class="inline-block px-4 py-1 rounded-full text-xs font-black bg-rose-100 text-rose-700 uppercase tracking-widest">{{ r.priority }}</span>
-                {% elif r.priority == "MEDIUM" %}
-                  <span class="inline-block px-4 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-700 uppercase tracking-widest">{{ r.priority }}</span>
-                {% else %}
-                  <span class="inline-block px-4 py-1 rounded-full text-xs font-black bg-slate-200 text-slate-600 uppercase tracking-widest">{{ r.priority }}</span>
-                {% endif %}
-              </td>
-              <td class="py-6 px-6 last:rounded-r-2xl whitespace-nowrap">
-                {% if r.status == "OPEN" %}
-                  <span class="inline-block px-4 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-700 uppercase tracking-widest">New</span>
-                {% elif r.status == "IN_PROGRESS" %}
-                  <span class="inline-block px-4 py-1 rounded-full text-xs font-black bg-blue-100 text-blue-700 uppercase tracking-widest">Working on it</span>
-                {% elif r.status == "RESOLVED" %}
-                  <span class="inline-block px-4 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-700 uppercase tracking-widest">Fixed</span>
-                {% else %}
-                  <span class="inline-block px-4 py-1 rounded-full text-xs font-black bg-slate-200 text-slate-600 uppercase tracking-widest">Closed</span>
-                {% endif %}
+              <!-- Status & Priority -->
+              <td class="py-6 px-8 align-top">
+                <div class="flex flex-col gap-2 items-start">
+                  {% if r.status == "OPEN" %}
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 uppercase tracking-widest border border-amber-200">
+                      <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> New
+                    </span>
+                  {% elif r.status == "IN_PROGRESS" %}
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-indigo-100 text-indigo-800 uppercase tracking-widest border border-indigo-200">
+                      <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span> In Progress
+                    </span>
+                  {% elif r.status == "RESOLVED" %}
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 uppercase tracking-widest border border-emerald-200">
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Resolved
+                    </span>
+                  {% else %}
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-slate-100 text-slate-600 uppercase tracking-widest border border-slate-200">
+                      <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Closed
+                    </span>
+                  {% endif %}
+
+                  {% if r.priority == "URGENT" or r.priority == "HIGH" %}
+                    <span class="text-[10px] font-black text-rose-600 uppercase tracking-widest flex items-center gap-1"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> {{ r.priority }} Priority</span>
+                  {% else %}
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">{{ r.priority }} Priority</span>
+                  {% endif %}
+                </div>
               </td>
             </tr>
           {% empty %}
             <tr id="emptyVaultRow">
-              <td colspan="6" class="py-16 sm:py-20 px-4 sm:px-6 text-center text-slate-400 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-100">
-                                <p class="text-base sm:text-lg font-black">No repairs reported yet.</p>
+              <td colspan="4" class="py-20 px-8 text-center text-slate-500">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-50 mb-4 border-2 border-dashed border-slate-200">
+                  <svg class="w-8 h-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                </div>
+                <p class="text-lg font-black text-slate-900 block">No repairs reported yet.</p>
+                <p class="text-sm font-medium mt-1">If something is broken, report it above.</p>
               </td>
             </tr>
           {% endfor %}
           
           <!-- No Results -->
           <tr id="noResultsRow" style="display: none;">
-            <td colspan="6" class="py-20 px-6 text-center text-slate-400 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-100">
-              <p class="text-2xl font-black">Nothing found.</p>
-              <p class="text-lg font-bold mt-2">Try changing your filters.</p>
+            <td colspan="4" class="py-20 px-8 text-center text-slate-500">
+              <p class="text-lg font-black text-slate-900 block">Nothing found.</p>
+              <p class="text-sm font-medium mt-1">Try changing your filters.</p>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- Pagination Controls -->
-    <div class="px-8 py-6 border-t-2 border-slate-50 bg-white flex flex-col sm:flex-row items-center justify-between gap-6" id="paginationWrapper" style="display: none;">
-      <div class="text-sm text-slate-400 font-black uppercase tracking-widest">
+    <!-- Pagination -->
+    <div class="px-8 py-6 border-t border-slate-100 bg-slate-50 flex items-center justify-between" id="paginationWrapper" style="display: none;">
+      <div class="text-[10px] font-black uppercase tracking-widest text-slate-500">
         Showing <span id="pageStart" class="text-slate-900">0</span> - <span id="pageEnd" class="text-slate-900">0</span>
       </div>
-      <div class="flex items-center gap-2" id="pageButtons">
-      </div>
+      <div class="flex items-center gap-2" id="pageButtons"></div>
     </div>
   </div>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      const filterCategory = document.getElementById('filterCategory');
-      const filterStatus = document.getElementById('filterStatus');
-      const resetFiltersBtn = document.getElementById('resetFiltersBtn');
-      const rows = Array.from(document.querySelectorAll('.maintenance-row'));
-      const noResultsRow = document.getElementById('noResultsRow');
-      const emptyVaultRow = document.getElementById('emptyVaultRow');
-      const startSpan = document.getElementById('pageStart');
-      const endSpan = document.getElementById('pageEnd');
-      const totalSpan = document.getElementById('pageTotal');
-      const pageButtonsContainer = document.getElementById('pageButtons');
-      const paginationWrapper = document.getElementById('paginationWrapper');
+</div>
 
-      const pageSize = 5;
-      let currentPage = 1;
-      let filteredRows = [...rows];
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const filterCategory = document.getElementById('filterCategory');
+    const filterStatus = document.getElementById('filterStatus');
+    const resetFiltersBtn = document.getElementById('resetFiltersBtn');
+    const rows = Array.from(document.querySelectorAll('.maintenance-row'));
+    const noResultsRow = document.getElementById('noResultsRow');
+    const emptyVaultRow = document.getElementById('emptyVaultRow');
+    const startSpan = document.getElementById('pageStart');
+    const endSpan = document.getElementById('pageEnd');
+    const pageButtonsContainer = document.getElementById('pageButtons');
+    const paginationWrapper = document.getElementById('paginationWrapper');
 
-      function applyFilters() {
-        const catVal = filterCategory ? filterCategory.value : 'ALL';
-        const statVal = filterStatus ? filterStatus.value : 'ALL';
+    const pageSize = 5;
+    let currentPage = 1;
+    let filteredRows = [...rows];
 
-        filteredRows = rows.filter(r => {
-          const matchCat = (catVal === 'ALL' || r.dataset.category === catVal);
-          const matchStat = (statVal === 'ALL' || r.dataset.status === statVal);
-          return matchCat && matchStat;
-        });
+    function applyFilters() {
+      const catVal = filterCategory ? filterCategory.value : 'ALL';
+      const statVal = filterStatus ? filterStatus.value : 'ALL';
 
-        if (totalSpan) totalSpan.textContent = filteredRows.length;
-
-        if (rows.length > 0) {
-          if (filteredRows.length === 0) {
-            if (noResultsRow) noResultsRow.style.display = '';
-            if (emptyVaultRow) emptyVaultRow.style.display = 'none';
-            if (paginationWrapper) paginationWrapper.style.display = 'none';
-            rows.forEach(r => r.style.display = 'none');
-            return;
-          } else {
-            if (noResultsRow) noResultsRow.style.display = 'none';
-            if (emptyVaultRow) emptyVaultRow.style.display = 'none';
-          }
-        }
-
-        currentPage = 1;
-        renderPage();
-      }
-
-      function renderPage() {
-        const total = filteredRows.length;
-        const totalPages = Math.ceil(total / pageSize);
-
-        rows.forEach(r => r.style.display = 'none');
-
-        if (total === 0) return;
-
-        if (currentPage > totalPages) currentPage = totalPages;
-        if (currentPage < 1) currentPage = 1;
-
-        const start = (currentPage - 1) * pageSize;
-        const end = Math.min(start + pageSize, total);
-
-        filteredRows.forEach((r, idx) => {
-          if (idx >= start && idx < end) {
-            r.style.display = '';
-          }
-        });
-
-        if (startSpan) startSpan.textContent = start + 1;
-        if (endSpan) endSpan.textContent = end;
-
-        if (!pageButtonsContainer) return;
-        pageButtonsContainer.innerHTML = '';
-
-        if (totalPages <= 1) {
-          if (paginationWrapper) paginationWrapper.style.display = 'none';
-          return;
-        } else {
-          if (paginationWrapper) paginationWrapper.style.display = '';
-        }
-
-        // Prev
-        const prevBtn = document.createElement('button');
-        prevBtn.type = 'button';
-        prevBtn.innerHTML = '←';
-        prevBtn.className = 'w-10 h-10 flex items-center justify-center rounded-xl border-2 transition-all ' + 
-          (currentPage === 1 ? 'border-slate-50 text-slate-200 cursor-not-allowed' : 'border-slate-100 text-slate-900 hover:bg-slate-100');
-        prevBtn.disabled = currentPage === 1;
-        prevBtn.onclick = () => { currentPage--; renderPage(); };
-        pageButtonsContainer.appendChild(prevBtn);
-
-        // Numbers
-        for (let i = 1; i <= totalPages; i++) {
-          const pageBtn = document.createElement('button');
-          pageBtn.type = 'button';
-          pageBtn.textContent = i;
-          pageBtn.className = 'w-10 h-10 font-black rounded-xl border-2 transition-all ' + 
-            (i === currentPage ? 'bg-slate-900 text-white border-slate-900 shadow-lg' : 'border-slate-100 text-slate-900 hover:bg-slate-100');
-          pageBtn.onclick = () => { currentPage = i; renderPage(); };
-          pageButtonsContainer.appendChild(pageBtn);
-        }
-
-        // Next
-        const nextBtn = document.createElement('button');
-        nextBtn.type = 'button';
-        nextBtn.innerHTML = '→';
-        nextBtn.className = 'w-10 h-10 flex items-center justify-center rounded-xl border-2 transition-all ' + 
-          (currentPage === totalPages ? 'border-slate-50 text-slate-200 cursor-not-allowed' : 'border-slate-100 text-slate-900 hover:bg-slate-100');
-        nextBtn.disabled = currentPage === totalPages;
-        nextBtn.onclick = () => { currentPage++; renderPage(); };
-        pageButtonsContainer.appendChild(nextBtn);
-      }
-
-      if (filterCategory) filterCategory.addEventListener('change', applyFilters);
-      if (filterStatus) filterStatus.addEventListener('change', applyFilters);
-
-      if (resetFiltersBtn) {
-        resetFiltersBtn.addEventListener('click', function() {
-          if (filterCategory) filterCategory.value = 'ALL';
-          if (filterStatus) filterStatus.value = 'ALL';
-          applyFilters();
-        });
-      }
+      filteredRows = rows.filter(r => {
+        const matchCat = (catVal === 'ALL' || r.dataset.category === catVal);
+        const matchStat = (statVal === 'ALL' || r.dataset.status === statVal);
+        return matchCat && matchStat;
+      });
 
       if (rows.length > 0) {
-        applyFilters();
+        if (filteredRows.length === 0) {
+          if (noResultsRow) noResultsRow.style.display = '';
+          if (emptyVaultRow) emptyVaultRow.style.display = 'none';
+          if (paginationWrapper) paginationWrapper.style.display = 'none';
+          rows.forEach(r => r.style.display = 'none');
+          return;
+        } else {
+          if (noResultsRow) noResultsRow.style.display = 'none';
+          if (emptyVaultRow) emptyVaultRow.style.display = 'none';
+        }
       }
-    });
-  </script>
 
+      currentPage = 1;
+      renderPage();
+    }
+
+    function renderPage() {
+      const total = filteredRows.length;
+      const totalPages = Math.ceil(total / pageSize);
+
+      rows.forEach(r => r.style.display = 'none');
+
+      if (total === 0) return;
+
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+
+      const start = (currentPage - 1) * pageSize;
+      const end = Math.min(start + pageSize, total);
+
+      filteredRows.forEach((r, idx) => {
+        if (idx >= start && idx < end) {
+          r.style.display = '';
+        }
+      });
+
+      if (startSpan) startSpan.textContent = total > 0 ? start + 1 : 0;
+      if (endSpan) endSpan.textContent = end;
+
+      if (!pageButtonsContainer) return;
+      pageButtonsContainer.innerHTML = '';
+
+      if (totalPages <= 1) {
+        if (paginationWrapper) paginationWrapper.style.display = 'none';
+        return;
+      } else {
+        if (paginationWrapper) paginationWrapper.style.display = '';
+      }
+
+      // Prev
+      const prevBtn = document.createElement('button');
+      prevBtn.type = 'button';
+      prevBtn.innerHTML = '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>';
+      prevBtn.className = 'w-8 h-8 flex items-center justify-center rounded-lg border transition-all ' + 
+        (currentPage === 1 ? 'border-transparent text-slate-300 cursor-not-allowed' : 'border-slate-200 text-slate-600 bg-white hover:bg-slate-50');
+      prevBtn.disabled = currentPage === 1;
+      prevBtn.onclick = () => { currentPage--; renderPage(); };
+      pageButtonsContainer.appendChild(prevBtn);
+
+      // Numbers
+      for (let i = 1; i <= totalPages; i++) {
+        const pageBtn = document.createElement('button');
+        pageBtn.type = 'button';
+        pageBtn.textContent = i;
+        pageBtn.className = 'w-8 h-8 font-black text-xs rounded-lg border transition-all ' + 
+          (i === currentPage ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'border-slate-200 text-slate-600 bg-white hover:bg-slate-50');
+        pageBtn.onclick = () => { currentPage = i; renderPage(); };
+        pageButtonsContainer.appendChild(pageBtn);
+      }
+
+      // Next
+      const nextBtn = document.createElement('button');
+      nextBtn.type = 'button';
+      nextBtn.innerHTML = '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>';
+      nextBtn.className = 'w-8 h-8 flex items-center justify-center rounded-lg border transition-all ' + 
+        (currentPage === totalPages ? 'border-transparent text-slate-300 cursor-not-allowed' : 'border-slate-200 text-slate-600 bg-white hover:bg-slate-50');
+      nextBtn.disabled = currentPage === totalPages;
+      nextBtn.onclick = () => { currentPage++; renderPage(); };
+      pageButtonsContainer.appendChild(nextBtn);
+    }
+
+    if (filterCategory) filterCategory.addEventListener('change', applyFilters);
+    if (filterStatus) filterStatus.addEventListener('change', applyFilters);
+
+    if (resetFiltersBtn) {
+      resetFiltersBtn.addEventListener('click', function() {
+        if (filterCategory) filterCategory.value = 'ALL';
+        if (filterStatus) filterStatus.value = 'ALL';
+        applyFilters();
+      });
+    }
+
+    if (rows.length > 0) {
+      applyFilters();
+    }
+  });
+</script>
 {% endblock %}

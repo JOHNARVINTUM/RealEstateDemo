@@ -4,54 +4,82 @@
 
 {% block tenant_content %}
 
-  <!-- Page Header -->
-  <div class="mb-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 border-b-2 border-slate-100 pb-8">
-    <div>
-      <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">Report a Problem</h1>
-      <p class="text-lg text-slate-500 font-bold mt-2">Tell us what needs fixing in your room.</p>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12 font-sans">
+
+  <!-- Navigation: Consistent Back Button -->
+  <nav class="flex items-center pb-6">
+    <a href="{% url 'maintenance_list' %}" onclick="if (document.referrer) { window.history.back(); return false; }" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-sm group">
+      <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
+      </svg>
+      <span>Back</span>
+    </a>
+  </nav>
+
+  <!-- Page Header (Dark Solid Style) -->
+  <div class="mb-10 rounded-[2.5rem] bg-[#0F172A] p-8 sm:p-12 text-white shadow-xl flex flex-col min-[800px]:flex-row min-[800px]:items-center min-[800px]:justify-between gap-8">
+    <div class="flex-1">
+      <div class="flex items-center gap-4 mb-4">
+        <span class="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-slate-800 border border-slate-700 shadow-inner">
+          <svg class="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+        </span>
+        <h1 class="text-4xl sm:text-5xl font-black tracking-tight text-white">
+          Report a Problem
+        </h1>
+      </div>
+      <p class="text-base sm:text-lg text-slate-300 font-medium max-w-2xl leading-relaxed">
+        Tell us exactly what needs fixing in your room, and we'll dispatch our team to resolve it.
+      </p>
     </div>
+
     <!-- Response Standard -->
-    <div class="bg-white border-2 border-slate-100 px-6 py-4 rounded-2xl shadow-sm w-fit self-end text-right sm:text-left sm:self-auto">
-      <span class="text-xs font-black text-slate-400 block uppercase tracking-widest mb-1">Response time</span>
-      <span class="text-xl font-black text-slate-800">Standard</span>
+    <div class="bg-slate-800 border border-slate-700 px-8 py-5 rounded-[1.5rem] text-center min-w-[180px] shrink-0 self-start min-[800px]:self-center mt-6 min-[800px]:mt-0">
+      <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">
+        Response Time
+      </span>
+      <strong class="text-3xl font-black text-emerald-400 block">
+        Standard
+      </strong>
     </div>
   </div>
 
-  <div class="grid grid-cols-1 min-[800px]:grid-cols-3 gap-10 mb-10">
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 mb-10">
 
     <!-- Problem Details -->
-    <div class="min-[800px]:col-span-2">
-      <div class="tenant-card p-10">
-        <div class="border-b-2 border-slate-50 pb-6 mb-8">
+    <div class="lg:col-span-8 flex flex-col gap-6">
+      <div class="bg-white border border-slate-200 rounded-[2.5rem] p-8 sm:p-10 shadow-sm flex flex-col justify-between h-full">
+        <div class="border-b border-slate-100 pb-6 mb-8">
           <h2 class="text-2xl font-black text-slate-900">What's wrong?</h2>
-          <p class="text-lg text-slate-500 font-bold mt-1">Please fill out the form below.</p>
+          <p class="text-sm font-semibold text-slate-500 mt-1">Please fill out the form below.</p>
         </div>
 
-        <form method="post" enctype="multipart/form-data" class="space-y-8 tenant-form" id="maintenanceReportForm">
+        <form method="post" enctype="multipart/form-data" class="space-y-6 tenant-form flex flex-col h-full" id="maintenanceReportForm">
           {% csrf_token %}
           
           <!-- Title -->
-          <div>
-            <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3">Short Title</label>
+          <div class="space-y-2">
+            <label class="block text-[10px] font-black text-slate-600 uppercase tracking-widest">Short Title</label>
             {{ form.title }}
           </div>
 
           <!-- Description -->
-          <div>
-            <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3">Description</label>
+          <div class="space-y-2">
+            <label class="block text-[10px] font-black text-slate-600 uppercase tracking-widest">Description</label>
             {{ form.description }}
-            <p class="text-sm text-slate-400 mt-3 font-bold italic">* Tell us exactly what and where the problem is (e.g. kitchen sink, bedroom light).</p>
+            <p class="text-xs text-slate-500 font-medium mt-2">* Tell us exactly what and where the problem is (e.g. kitchen sink, bedroom light).</p>
           </div>
 
-          <div class="rounded-2xl border-2 border-slate-100 bg-slate-50 px-6 py-5">
-            <p class="text-sm font-black text-slate-700 uppercase tracking-widest mb-1">Issue category</p>
-            <p class="text-base font-bold text-slate-600">Detected automatically from your description.</p>
+          <div class="rounded-2xl border border-slate-200 bg-slate-50 px-6 py-5">
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Issue category</p>
+            <p class="text-sm font-bold text-slate-700">Detected automatically from your description.</p>
           </div>
 
-          <div>
-            <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3">When are you available?</label>
+          <div class="space-y-2">
+            <label class="block text-[10px] font-black text-slate-600 uppercase tracking-widest">When are you available?</label>
             {{ form.requested_schedule_at }}
-            <p class="text-sm text-slate-400 mt-3 font-bold italic">* Choose your preferred visit date and time. Admin will confirm or reschedule it.</p>
+            <p class="text-xs text-slate-500 font-medium mt-2">* Choose your preferred visit date and time. Admin will confirm or reschedule it.</p>
             {% if form.requested_schedule_at.errors %}
               <div class="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">
                 {{ form.requested_schedule_at.errors|striptags }}
@@ -60,17 +88,17 @@
           </div>
 
           <!-- Photo Upload -->
-          <div>
-            <label class="block text-sm font-black text-slate-400 uppercase tracking-widest mb-3">Attach a Photo (Optional)</label>
+          <div class="space-y-2">
+            <label class="block text-[10px] font-black text-slate-600 uppercase tracking-widest">Attach a Photo (Optional)</label>
             {{ form.photo }}
-            <p class="text-sm text-slate-400 mt-3 font-bold italic">* A clear picture helps our maintenance team resolve the issue faster.</p>
+            <p class="text-xs text-slate-500 font-medium mt-2">* A clear picture helps our maintenance team resolve the issue faster.</p>
           </div>
 
-          <!-- Submit & Back -->
-          <div class="pt-4 flex flex-col gap-3">
+          <!-- Submit -->
+          <div class="pt-6 mt-auto">
             <button type="submit"
                     id="maintenanceSubmitButton"
-                    class="w-full bg-slate-900 hover:bg-slate-800 disabled:bg-slate-800 disabled:cursor-wait text-white font-black py-5 rounded-2xl text-xl shadow-lg active:scale-95 transition-all">
+                    class="w-full bg-slate-900 hover:bg-slate-800 disabled:bg-slate-800 disabled:cursor-wait text-white font-black py-5 rounded-2xl text-lg shadow-lg active:translate-y-0 hover:-translate-y-0.5 transition-all flex items-center justify-center">
               <span class="maintenance-submit-idle">Submit Report</span>
               <span class="maintenance-submit-loading hidden items-center justify-center gap-2">
                 <span>Submitting your issue</span>
@@ -81,113 +109,120 @@
                 </span>
               </span>
             </button>
-            <a href="{% url 'maintenance_list' %}" onclick="if (document.referrer) { window.history.back(); return false; }" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
-      <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
-      </svg>
-      <span>Back</span>
-    </a>
           </div>
         </form>
       </div>
     </div>
 
-    <!-- My Room Info -->
-    <div class="space-y-8">
-      <div class="tenant-card p-8">
-        <h2 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-6">My Room</h2>
+    <!-- Right Side Info -->
+    <div class="lg:col-span-4 flex flex-col gap-8">
+      
+      <!-- My Room Info -->
+      <div class="bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm">
+        <h2 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">My Room</h2>
         
         {% if lease %}
-          <div class="p-6 bg-slate-50 rounded-2xl border-2 border-slate-100">
-            <span class="text-xs font-black text-slate-400 block uppercase tracking-widest mb-1">Room Number</span>
+          <div class="p-6 bg-slate-50 rounded-2xl border border-slate-200">
+            <span class="text-[10px] font-black text-slate-400 block uppercase tracking-widest mb-1">Room Number</span>
             <span class="text-3xl font-black text-slate-900 block">Room {{ lease.unit.number }}</span>
             
-            <div class="mt-6 pt-6 border-t-2 border-slate-200/50">
-              <span class="text-xs font-black text-slate-400 block uppercase tracking-widest mb-1">My Email</span>
-              <span class="font-black text-slate-700 block text-base truncate">{{ request.user.email }}</span>
+            <div class="mt-6 pt-6 border-t border-slate-200">
+              <span class="text-[10px] font-black text-slate-400 block uppercase tracking-widest mb-1">My Email</span>
+              <span class="font-bold text-slate-700 block text-sm truncate">{{ request.user.email }}</span>
             </div>
           </div>
         {% else %}
-          <div class="p-6 bg-rose-50 text-rose-700 rounded-2xl border-2 border-rose-100 text-lg font-black">
+          <div class="p-6 bg-rose-50 text-rose-700 rounded-2xl border border-rose-100 text-sm font-bold">
             You can't report a problem yet because you haven't been assigned a room.
           </div>
         {% endif %}
       </div>
 
       <!-- Emergency Notice -->
-      <div class="p-8 rounded-3xl bg-amber-50 border-2 border-amber-100 text-lg text-slate-700 leading-relaxed shadow-sm">
-        <span class="font-black text-slate-900 block mb-2 uppercase tracking-widest text-sm">Emergency</span>
-        For major emergencies like fire, flooding, or live wires, please <span class="font-black text-rose-600 underline">call the front desk</span> immediately.
+      <div class="p-8 rounded-[2.5rem] bg-amber-50 border border-amber-100 shadow-sm flex flex-col gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center border border-amber-200">
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+        </div>
+        <div>
+          <span class="font-black text-slate-900 block mb-1 uppercase tracking-widest text-xs">Emergency</span>
+          <p class="text-sm text-slate-700 leading-relaxed font-medium">
+            For major emergencies like fire, flooding, or live wires, please <span class="font-bold text-rose-600 underline">call the front desk</span> immediately.
+          </p>
+        </div>
       </div>
+      
     </div>
 
   </div>
 
-  <style>
-    .maintenance-loading-dots {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.25rem;
-      min-width: 2rem;
+</div>
+
+<style>
+  .maintenance-loading-dots {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-width: 2rem;
+  }
+
+  .maintenance-loading-dots span {
+    width: 0.38rem;
+    height: 0.38rem;
+    border-radius: 9999px;
+    background: currentColor;
+    animation: maintenanceDotLift 0.8s ease-in-out infinite;
+  }
+
+  .maintenance-loading-dots span:nth-child(2) {
+    animation-delay: 0.12s;
+  }
+
+  .maintenance-loading-dots span:nth-child(3) {
+    animation-delay: 0.24s;
+  }
+
+  @keyframes maintenanceDotLift {
+    0%, 80%, 100% {
+      transform: translateY(0);
+      opacity: 0.55;
     }
-
-    .maintenance-loading-dots span {
-      width: 0.38rem;
-      height: 0.38rem;
-      border-radius: 9999px;
-      background: currentColor;
-      animation: maintenanceDotLift 0.8s ease-in-out infinite;
+    40% {
+      transform: translateY(-0.45rem);
+      opacity: 1;
     }
+  }
+</style>
 
-    .maintenance-loading-dots span:nth-child(2) {
-      animation-delay: 0.12s;
-    }
-
-    .maintenance-loading-dots span:nth-child(3) {
-      animation-delay: 0.24s;
-    }
-
-    @keyframes maintenanceDotLift {
-      0%, 80%, 100% {
-        transform: translateY(0);
-        opacity: 0.55;
-      }
-      40% {
-        transform: translateY(-0.45rem);
-        opacity: 1;
-      }
-    }
-  </style>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      const inputs = document.querySelectorAll('.tenant-form select, .tenant-form input[type="text"], .tenant-form input[type="datetime-local"], .tenant-form textarea');
-      inputs.forEach(el => {
-        el.classList.add('w-full', 'border-2', 'border-slate-100', 'rounded-2xl', 'px-6', 'py-4', 'text-lg', 'font-black', 'text-slate-900', 'bg-white', 'focus:border-slate-900', 'transition-all');
-        if (el.tagName === 'TEXTAREA' && !el.getAttribute('rows')) {
-          el.setAttribute('rows', '5');
-        }
-      });
-
-      const form = document.getElementById('maintenanceReportForm');
-      const submitButton = document.getElementById('maintenanceSubmitButton');
-      if (form && submitButton) {
-        form.addEventListener('submit', function(event) {
-          if (!form.checkValidity()) {
-            return;
-          }
-
-          submitButton.disabled = true;
-          const idle = submitButton.querySelector('.maintenance-submit-idle');
-          const loading = submitButton.querySelector('.maintenance-submit-loading');
-          if (idle && loading) {
-            idle.classList.add('hidden');
-            loading.classList.remove('hidden');
-            loading.classList.add('inline-flex');
-          }
-        });
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Restyle inputs to match the new clean look
+    const inputs = document.querySelectorAll('.tenant-form select, .tenant-form input[type="text"], .tenant-form input[type="datetime-local"], .tenant-form input[type="file"], .tenant-form textarea');
+    inputs.forEach(el => {
+      el.classList.add('w-full', 'border', 'border-slate-200', 'rounded-2xl', 'px-6', 'py-4', 'text-base', 'font-bold', 'text-slate-900', 'bg-slate-50', 'focus:bg-white', 'focus:border-slate-900', 'focus:ring-4', 'focus:ring-slate-900/10', 'transition-all', 'outline-none');
+      if (el.tagName === 'TEXTAREA' && !el.getAttribute('rows')) {
+        el.setAttribute('rows', '4');
       }
     });
-  </script>
+
+    const form = document.getElementById('maintenanceReportForm');
+    const submitButton = document.getElementById('maintenanceSubmitButton');
+    if (form && submitButton) {
+      form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+          return;
+        }
+
+        submitButton.disabled = true;
+        const idle = submitButton.querySelector('.maintenance-submit-idle');
+        const loading = submitButton.querySelector('.maintenance-submit-loading');
+        if (idle && loading) {
+          idle.classList.add('hidden');
+          loading.classList.remove('hidden');
+          loading.classList.add('inline-flex');
+        }
+      });
+    }
+  });
+</script>
 
 {% endblock %}

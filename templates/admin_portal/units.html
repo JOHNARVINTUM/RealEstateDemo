@@ -96,7 +96,16 @@
       
       <!-- Top Image with Gradient Overlay -->
       <div class="relative h-64 bg-slate-100 shrink-0 w-full overflow-hidden rounded-t-[2rem]">
-        <img src="{{ unit.cover_image_url }}" alt="Unit {{ unit.number }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000 ease-out">
+        {% if unit.cover_image_url %}
+          <img src="{{ unit.cover_image_url }}" alt="Unit {{ unit.number }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000 ease-out">
+        {% else %}
+          <div class="w-full h-full bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 flex items-center justify-center px-6 text-center">
+            <div>
+              <span class="block text-[10px] font-black uppercase tracking-[0.28em] text-slate-400 mb-3">Room Type</span>
+              <span class="block text-4xl font-black tracking-tight text-white">{{ unit.cover_image_label }}</span>
+            </div>
+          </div>
+        {% endif %}
         <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent"></div>
         
         <!-- Status Badge Top Right -->

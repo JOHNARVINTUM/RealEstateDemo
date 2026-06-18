@@ -376,11 +376,13 @@ def admin_units(request):
         cover_image = next((image for image in prefetched_images if image.is_primary), None)
         if cover_image is None and prefetched_images:
             cover_image = prefetched_images[0]
-        unit.cover_image_url = (
-            cover_image.image.url
-            if cover_image and cover_image.image
-            else "https://ezrxfodgrztlajiiilfz.supabase.co/storage/v1/object/public/unit-images/placeholders/cdd906739ed64fb78aaf8d41b078feea.jpg"
-        )
+        unit.cover_image_url = cover_image.image.url if cover_image and cover_image.image else ""
+        unit.cover_image_label = ""
+        if not unit.cover_image_url:
+            if unit.unit_type == "1BR":
+                unit.cover_image_url = "https://ezrxfodgrztlajiiilfz.supabase.co/storage/v1/object/public/unit-images/placeholders/cdd906739ed64fb78aaf8d41b078feea.jpg"
+            else:
+                unit.cover_image_label = unit.get_unit_type_display()
         display_leases = getattr(unit, 'admin_display_leases', [])
         active_lease = next(
             (

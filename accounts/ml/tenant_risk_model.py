@@ -2,14 +2,7 @@ import json
 import logging
 from pathlib import Path
 
-import joblib
 from django.conf import settings
-
-from accounts.ml.tenant_risk_features import (
-    FEATURE_COLUMNS,
-    build_prediction_features_for_tenant,
-    risk_probability_to_level,
-)
 
 MODEL_PATH = Path(settings.BASE_DIR) / "exports" / "ml" / "tenant_risk_rf.joblib"
 METRICS_PATH = Path(settings.BASE_DIR) / "exports" / "ml" / "tenant_risk_rf_metrics.json"
@@ -24,6 +17,8 @@ def load_model_bundle():
     if not model_exists():
         return None
     try:
+        import joblib
+
         return joblib.load(MODEL_PATH)
     except Exception as exc:
         logger.warning("Tenant risk model could not be loaded from %s: %s", MODEL_PATH, exc)
@@ -42,6 +37,8 @@ def load_model_metrics():
 
 
 def top_feature_signals(model, X, limit=3):
+    from accounts.ml.tenant_risk_features import FEATURE_COLUMNS
+
     importances = getattr(model, "feature_importances_", None)
     if importances is None:
         return []
@@ -62,6 +59,11 @@ def top_feature_signals(model, X, limit=3):
 
 def predict_tenant_risk(tenant):
     try:
+        from accounts.ml.tenant_risk_features import (
+            build_prediction_features_for_tenant,
+            risk_probability_to_level,
+        )
+
         bundle = load_model_bundle()
         if not bundle:
             return None

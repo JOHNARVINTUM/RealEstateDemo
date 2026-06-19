@@ -756,7 +756,7 @@ def admin_update_tenant_risks(request):
     """Update all tenant risk classifications"""
     if request.method == 'POST':
         try:
-            updated_count = TenantRiskService.update_all_tenant_risks()
+            updated_count = TenantRiskService.update_all_tenant_risks(include_rf=False)
             messages.success(request, f'Successfully updated risk classifications for {updated_count} tenants.')
         except Exception as e:
             logger.exception("Tenant risk refresh failed: %s", e)

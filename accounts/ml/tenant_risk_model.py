@@ -36,15 +36,36 @@ def load_model_metrics():
         return None
 
 
-def top_feature_signals(model, X, limit=3):
-    from accounts.ml.tenant_risk_features import FEATURE_COLUMNS
+def _model_feature_names(bundle, model):
+    bundle_features = bundle.get("features") if isinstance(bundle, dict) else None
+    if bundle_features:
+        return list(bundle_features)
+    model_features = getattr(model, "feature_names_in_", None)
+    if model_features is not None:
+        return [str(feature) for feature in model_features]
+    return []
 
+
+def _align_features_for_model(bundle, model, X):
+    model_features = _model_feature_names(bundle, model)
+    if not model_features:
+        return X, list(X.columns)
+
+    aligned = X.copy()
+    for feature in model_features:
+        if feature not in aligned.columns:
+            aligned[feature] = 0
+    aligned = aligned[model_features]
+    return aligned.fillna(0), model_features
+
+
+def top_feature_signals(model, X, feature_names, limit=3):
     importances = getattr(model, "feature_importances_", None)
     if importances is None:
         return []
     row = X.iloc[0]
     scored = []
-    for feature, importance in zip(FEATURE_COLUMNS, importances):
+    for feature, importance in zip(feature_names, importances):
         value = row.get(feature, 0)
         if value == 0:
             continue
@@ -73,11 +94,12 @@ def predict_tenant_risk(tenant):
         X = build_prediction_features_for_tenant(tenant)
         if X is None or X.empty:
             return None
-        probability = float(model.predict_proba(X)[0][1])
+        aligned_X, feature_names = _align_features_for_model(bundle, model, X)
+        probability = float(model.predict_proba(aligned_X)[0][1])
         return {
             "probability": round(probability, 4),
             "risk_level": risk_probability_to_level(probability),
-            "top_factors": top_feature_signals(model, X),
+            "top_factors": top_feature_signals(model, aligned_X, feature_names),
             "model_version": bundle.get("model_version", ""),
         }
     except Exception as exc:

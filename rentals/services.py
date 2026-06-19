@@ -270,6 +270,25 @@ class TenantRiskService:
         if on_time_percentage >= 20:
             return 30
         return 10
+
+    @staticmethod
+    def _build_risk_factors(tenant):
+        return {
+            'payment_timeliness': TenantRiskService._calculate_payment_timeliness(tenant),
+            'payment_consistency': TenantRiskService._calculate_payment_consistency(tenant),
+            'current_payment_status': TenantRiskService._calculate_current_payment_status(tenant),
+            'payment_method_reliability': TenantRiskService._calculate_payment_method_reliability(tenant),
+        }
+
+    @staticmethod
+    def _score_from_risk_factors(risk_factors):
+        total_score = (
+            risk_factors['payment_timeliness'] * 0.4 +
+            risk_factors['payment_consistency'] * 0.3 +
+            risk_factors['current_payment_status'] * 0.2 +
+            risk_factors['payment_method_reliability'] * 0.1
+        )
+        return max(0, min(100, int(total_score)))
     
     @staticmethod
     def calculate_tenant_risk_score(tenant):
@@ -282,37 +301,9 @@ class TenantRiskService:
             leases = TenantRiskService._current_active_lease_queryset(tenant)
             if not leases:
                 return 50  # Default score for tenants without active leases
-            
-            # Initialize score components
-            payment_timeliness_score = 0
-            payment_consistency_score = 0
-            current_payment_status_score = 0
-            payment_method_score = 0
-            
-            # 1. Payment Timeliness (40% of total score)
-            payment_timeliness_score = TenantRiskService._calculate_payment_timeliness(tenant)
-            
-            # 2. Payment Consistency (30% of total score)
-            payment_consistency_score = TenantRiskService._calculate_payment_consistency(tenant)
-            
-            # 3. Current Payment Status (20% of total score)
-            current_payment_status_score = TenantRiskService._calculate_current_payment_status(tenant)
-            
-            # 4. Payment Method Reliability (10% of total score)
-            payment_method_score = TenantRiskService._calculate_payment_method_reliability(tenant)
-            
-            # Calculate weighted total score
-            total_score = (
-                payment_timeliness_score * 0.4 +
-                payment_consistency_score * 0.3 +
-                current_payment_status_score * 0.2 +
-                payment_method_score * 0.1
-            )
-            
-            # Ensure score is within 0-100 range
-            total_score = max(0, min(100, int(total_score)))
-            
-            return total_score
+
+            risk_factors = TenantRiskService._build_risk_factors(tenant)
+            return TenantRiskService._score_from_risk_factors(risk_factors)
             
         except Exception as e:
             logger.error(f"Error calculating risk score for tenant {tenant.email}: {e}")
@@ -501,11 +492,11 @@ class TenantRiskService:
             return False
     
     @staticmethod
-    def update_tenant_risk_classification(tenant):
+    def update_tenant_risk_classification(tenant, include_rf=True):
         """Update or create tenant risk classification"""
         try:
-            # Calculate risk score
-            risk_score = TenantRiskService.calculate_tenant_risk_score(tenant)
+            risk_factors = TenantRiskService._build_risk_factors(tenant)
+            risk_score = TenantRiskService._score_from_risk_factors(risk_factors)
             
             # Get additional risk factors
             paid_bills_for_late_count = MonthlyBill.objects.filter(
@@ -532,12 +523,14 @@ class TenantRiskService:
             
             # Check if tenant is new (less than 3 months of payment history)
             is_new_tenant = TenantRiskService._is_new_tenant(tenant)
+            existing = TenantRiskClassification.objects.filter(tenant=tenant).first()
             rf_prediction = None
-            try:
-                from accounts.ml.tenant_risk_model import predict_tenant_risk
-                rf_prediction = predict_tenant_risk(tenant)
-            except Exception as e:
-                logger.warning(f"Random Forest tenant risk prediction unavailable for {tenant.email}: {e}")
+            if include_rf:
+                try:
+                    from accounts.ml.tenant_risk_model import predict_tenant_risk
+                    rf_prediction = predict_tenant_risk(tenant)
+                except Exception as e:
+                    logger.warning(f"Random Forest tenant risk prediction unavailable for {tenant.email}: {e}")
             
             # Create or update risk classification
             risk_classification, created = TenantRiskClassification.objects.update_or_create(
@@ -548,16 +541,11 @@ class TenantRiskService:
                     'unpaid_bill_count': unpaid_bills,
                     'last_payment_date': last_payment.paid_at if last_payment else None,
                     'is_new_tenant': is_new_tenant,
-                    'risk_factors': {
-                        'payment_timeliness': TenantRiskService._calculate_payment_timeliness(tenant),
-                        'payment_consistency': TenantRiskService._calculate_payment_consistency(tenant),
-                        'current_payment_status': TenantRiskService._calculate_current_payment_status(tenant),
-                        'payment_method_reliability': TenantRiskService._calculate_payment_method_reliability(tenant)
-                    },
-                    'rf_risk_level': rf_prediction.get('risk_level') if rf_prediction else None,
-                    'rf_risk_probability': rf_prediction.get('probability') if rf_prediction else None,
-                    'rf_top_factors': rf_prediction.get('top_factors') if rf_prediction else [],
-                    'rf_model_version': rf_prediction.get('model_version') if rf_prediction else "",
+                    'risk_factors': risk_factors,
+                    'rf_risk_level': rf_prediction.get('risk_level') if rf_prediction else (existing.rf_risk_level if existing else None),
+                    'rf_risk_probability': rf_prediction.get('probability') if rf_prediction else (existing.rf_risk_probability if existing else None),
+                    'rf_top_factors': rf_prediction.get('top_factors') if rf_prediction else (existing.rf_top_factors if existing else []),
+                    'rf_model_version': rf_prediction.get('model_version') if rf_prediction else (existing.rf_model_version if existing else ""),
                 }
             )
             
@@ -572,7 +560,7 @@ class TenantRiskService:
             return None
     
     @staticmethod
-    def update_all_tenant_risks():
+    def update_all_tenant_risks(include_rf=True):
         """Update risk classifications for all tenants"""
         from accounts.models import User
         
@@ -581,7 +569,7 @@ class TenantRiskService:
         
         for tenant in tenants:
             try:
-                if TenantRiskService.update_tenant_risk_classification(tenant):
+                if TenantRiskService.update_tenant_risk_classification(tenant, include_rf=include_rf):
                     updated_count += 1
             except Exception as exc:
                 logger.exception("Failed to update tenant risk for %s: %s", tenant.email, exc)

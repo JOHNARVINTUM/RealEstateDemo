@@ -4,7 +4,7 @@ from datetime import timedelta, date
 from decimal import Decimal
 from dataclasses import dataclass
 from django.db import transaction
-from django.db.models import Count, Q, Avg, Max, F
+from django.db.models import Count, Q, Avg, Max, F, Min
 from django.conf import settings
 from rentals.models import TenantRiskClassification, Lease, CalendarEvent, Notification
 from billing.models import MonthlyBill
@@ -355,18 +355,22 @@ class TenantRiskService:
             # Get bills from last 12 months
             twelve_months_ago = timezone.now() - timedelta(days=365)
             current_month = TenantRiskService._current_month_start()
-            all_bills = MonthlyBill.objects.filter(
+            bill_counts = MonthlyBill.objects.filter(
                 lease__tenant=tenant,
                 billing_month__gte=twelve_months_ago,
             ).filter(
                 Q(billing_month__lte=current_month) | Q(status="PAID"),
+            ).aggregate(
+                total_count=Count("id"),
+                paid_count=Count("id", filter=Q(status="PAID")),
             )
-            
-            if all_bills.count() == 0:
+
+            total_count = bill_counts["total_count"] or 0
+            if total_count == 0:
                 return 50  # No billing history
-            
-            paid_bills = all_bills.filter(status='PAID')
-            payment_rate = (paid_bills.count() / all_bills.count()) * 100
+
+            paid_count = bill_counts["paid_count"] or 0
+            payment_rate = (paid_count / total_count) * 100
             
             # Score based on payment rate
             if payment_rate >= 80:
@@ -392,26 +396,31 @@ class TenantRiskService:
         try:
             # Get current month bills
             current_month = timezone.now().date().replace(day=1)
-            current_bills = MonthlyBill.objects.filter(
+            current_bill_counts = MonthlyBill.objects.filter(
                 lease__tenant=tenant,
                 billing_month=current_month
+            ).aggregate(
+                total_count=Count("id"),
+                unpaid_count=Count("id", filter=Q(status="UNPAID")),
             )
-            
-            if current_bills.count() == 0:
+
+            total_current = current_bill_counts["total_count"] or 0
+            if total_current == 0:
                 return 70  # No current bills
-            
-            unpaid_current = current_bills.filter(status='UNPAID').count()
-            total_current = current_bills.count()
-            
+
+            unpaid_current = current_bill_counts["unpaid_count"] or 0
+
             # Also check overdue bills
-            overdue_bills = MonthlyBill.objects.filter(
+            overdue_count = MonthlyBill.objects.filter(
                 lease__tenant=tenant,
                 status='UNPAID',
                 due_date__lt=timezone.now().date(),
                 billing_month__lte=current_month,
-            )
-            
-            total_unpaid = unpaid_current + overdue_bills.count()
+            ).exclude(
+                billing_month=current_month,
+            ).count()
+
+            total_unpaid = unpaid_current + overdue_count
             
             # Score based on unpaid bills
             if total_unpaid == 0:
@@ -431,15 +440,16 @@ class TenantRiskService:
     def _calculate_payment_method_reliability(tenant):
         """Calculate payment method reliability score (0-100)"""
         try:
-            # Get manual payments
-            manual_payments = ManualPayment.objects.filter(user=tenant)
-            
-            if manual_payments.count() == 0:
+            payment_counts = ManualPayment.objects.filter(user=tenant).aggregate(
+                total_count=Count("id"),
+                approved_count=Count("id", filter=Q(status="APPROVED")),
+            )
+
+            total_payments = payment_counts["total_count"] or 0
+            if total_payments == 0:
                 return 70  # No manual payment history
-            
-            # Calculate approval rate
-            approved_payments = manual_payments.filter(status='APPROVED').count()
-            total_payments = manual_payments.count()
+
+            approved_payments = payment_counts["approved_count"] or 0
             approval_rate = (approved_payments / total_payments) * 100
             
             # Score based on approval rate
@@ -462,30 +472,33 @@ class TenantRiskService:
     def _is_new_tenant(tenant):
         """Check if tenant is new (less than 3 months of actual payment history)"""
         try:
-            # Get tenant's paid bills sorted by date
-            paid_bills = MonthlyBill.objects.filter(
+            paid_bill_summary = MonthlyBill.objects.filter(
                 lease__tenant=tenant,
                 status='PAID'
-            ).order_by('paid_at')
-            
-            if paid_bills.count() == 0:
+            ).aggregate(
+                total_count=Count("id"),
+                first_paid_at=Min("paid_at"),
+            )
+
+            total_paid_bills = paid_bill_summary["total_count"] or 0
+            first_paid_at = paid_bill_summary["first_paid_at"]
+
+            if total_paid_bills == 0:
                 return False  # No payment history, not considered new
-            
-            # Check first payment date
-            first_payment = paid_bills.first()
-            if not first_payment or not first_payment.paid_at:
+
+            if not first_paid_at:
                 return False
-            
+
             # Calculate months since first payment
-            months_since_first_payment = (timezone.now().date().year - first_payment.paid_at.date().year) * 12 + \
-                                      (timezone.now().date().month - first_payment.paid_at.date().month)
-            
+            months_since_first_payment = (timezone.now().date().year - first_paid_at.date().year) * 12 + \
+                                      (timezone.now().date().month - first_paid_at.date().month)
+
             # Check if less than 3 months of payment history
             if months_since_first_payment < 3:
                 return True
-            
+
             # Also check if they have less than 3 paid bills
-            return paid_bills.count() < 3
+            return total_paid_bills < 3
             
         except Exception as e:
             logger.error(f"Error checking if tenant is new: {e}")
@@ -564,7 +577,7 @@ class TenantRiskService:
         """Update risk classifications for all tenants"""
         from accounts.models import User
         
-        tenants = User.objects.filter(role='TENANT')
+        tenants = User.objects.filter(role='TENANT').only("id", "email")
         updated_count = 0
         
         for tenant in tenants:

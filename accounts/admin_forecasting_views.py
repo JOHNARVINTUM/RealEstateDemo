@@ -40,10 +40,17 @@ def admin_forecasting_data(request):
         "hist_revenue": context["hist_revenue"],
         "forecast_labels": context["forecast_labels"],
         "revenue_forecast": context["revenue_forecast"],
+        "rev_naive_fc": context["rev_naive_fc"],
+        "rev_arima_fc": context["rev_arima_fc"],
         "rev_sarima_fc": context["rev_sarima_fc"],
+        "rev_selected_lower": context["rev_selected_lower"],
+        "rev_selected_upper": context["rev_selected_upper"],
         "rev_sarima_lower": context["rev_sarima_lower"],
         "rev_sarima_upper": context["rev_sarima_upper"],
+        "revenue_naive_metrics": context["revenue_naive_metrics"],
+        "revenue_arima_metrics": context["revenue_arima_metrics"],
         "revenue_sarima_metrics": context["revenue_sarima_metrics"],
+        "selected_model": context["selected_model"],
         "sarima_available": context["sarima_available"],
         "selected_year": context["selected_year"],
         "year_choices": context["year_choices"],
@@ -70,11 +77,15 @@ def _build_forecasting_context(request):
     today = timezone.now().date()
 
     selected_year, year_choices = _forecasting_year_options(request, today)
+    forecast_horizon = 3
+    history_months = 36
+    current_month_first = today.replace(day=1)
+    last_complete_month_start = (current_month_first - timedelta(days=1)).replace(day=1)
 
     if selected_year < today.year:
         current_month_start = datetime(selected_year, 12, 1).date()
     else:
-        current_month_start = today.replace(day=1)
+        current_month_start = last_complete_month_start
 
     def _month_date(i):
         y, m = current_month_start.year, current_month_start.month - i
@@ -89,14 +100,62 @@ def _build_forecasting_context(request):
             s.pop()
         return s
 
-    def _sarima_forecast(series, order=(0, 1, 1), seasonal_order=(1, 1, 1, 12), steps=6):
+    def _metric_dict(actual, preds):
+        import math
+
+        if not actual or not preds or len(actual) != len(preds):
+            return {"rmse": None, "mae": None, "mape": None}
+        errors = [a - p for a, p in zip(actual, preds)]
+        count = len(errors)
+        mae = round(sum(abs(e) for e in errors) / count, 2)
+        rmse = round(math.sqrt(sum(e**2 for e in errors) / count), 2)
+        non_zero = [(a, e) for a, e in zip(actual, errors) if a != 0]
+        mape = (
+            round(sum(abs(e / a) for a, e in non_zero) / len(non_zero) * 100, 2)
+            if non_zero
+            else None
+        )
+        return {"rmse": rmse, "mae": mae, "mape": mape}
+
+    def _minimum_history_required(seasonal_period=None):
+        if seasonal_period and seasonal_period > 1:
+            return max(18, seasonal_period * 2)
+        return 12
+
+    def _naive_forecast(series, steps=6, seasonal_period=None):
+        s = _clean_series(series)
+        if not s:
+            return None
+        if seasonal_period and len(s) >= seasonal_period:
+            base = s[-seasonal_period:]
+            return [round(float(base[i % len(base)]), 2) for i in range(steps)]
+        return [round(float(s[-1]), 2) for _ in range(steps)]
+
+    def _naive_metrics(series, test_steps=6, seasonal_period=None):
+        s = _clean_series(series)
+        n = len(s)
+        minimum_history = max(_minimum_history_required(seasonal_period), test_steps + 1)
+        if n < minimum_history:
+            return {"rmse": None, "mae": None, "mape": None}
+        preds, actual = [], []
+        start_index = max(n - test_steps, minimum_history)
+        for idx in range(start_index, n):
+            pred = _naive_forecast(s[:idx], steps=1, seasonal_period=seasonal_period)
+            if not pred:
+                continue
+            preds.append(float(pred[0]))
+            actual.append(float(s[idx]))
+        return _metric_dict(actual, preds)
+
+    def _sarimax_forecast(series, order=(0, 1, 1), seasonal_order=(0, 0, 0, 0), steps=6):
         try:
             import warnings
             import numpy as np
             from statsmodels.tsa.statespace.sarimax import SARIMAX
 
             s = _clean_series(series)
-            if len(s) < 18:
+            seasonal_period = seasonal_order[3] if seasonal_order and len(seasonal_order) > 3 else None
+            if len(s) < _minimum_history_required(seasonal_period):
                 return None, None, None
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
@@ -109,10 +168,10 @@ def _build_forecasting_context(request):
                 )
                 fit = model.fit(disp=False)
             forecast_obj = fit.get_forecast(steps=steps)
-            mean = [round(float(v), 2) for v in forecast_obj.predicted_mean]
+            mean = [round(max(float(v), 0.0), 2) for v in forecast_obj.predicted_mean]
             ci = np.array(forecast_obj.conf_int(alpha=0.2))
-            lower = [round(float(v), 2) for v in ci[:, 0]]
-            upper = [round(float(v), 2) for v in ci[:, 1]]
+            lower = [round(max(float(v), 0.0), 2) for v in ci[:, 0]]
+            upper = [round(max(float(v), 0.0), 2) for v in ci[:, 1]]
             return mean, lower, upper
         except ImportError:
             return None, None, None
@@ -120,44 +179,85 @@ def _build_forecasting_context(request):
             logger.error("SARIMA forecast error: %s", exc)
             return None, None, None
 
-    def _sarima_metrics(series, order=(0, 1, 1), seasonal_order=(1, 1, 1, 12), test_steps=6):
+    def _sarimax_metrics(series, order=(0, 1, 1), seasonal_order=(0, 0, 0, 0), test_steps=6):
         try:
-            import math
             import warnings
             from statsmodels.tsa.statespace.sarimax import SARIMAX
 
             s = _clean_series(series)
             n = len(s)
-            if n < 18:
+            seasonal_period = seasonal_order[3] if seasonal_order and len(seasonal_order) > 3 else None
+            minimum_history = max(_minimum_history_required(seasonal_period), test_steps + 1)
+            if n < minimum_history:
                 return {"rmse": None, "mae": None, "mape": None}
-            train = s[: n - test_steps]
-            actual = s[n - test_steps :]
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                model = SARIMAX(
-                    train,
-                    order=order,
-                    seasonal_order=seasonal_order,
-                    enforce_stationarity=False,
-                    enforce_invertibility=False,
-                )
-                fit = model.fit(disp=False)
-            preds = [float(v) for v in fit.get_forecast(steps=test_steps).predicted_mean]
-            errors = [a - p for a, p in zip(actual, preds)]
-            mae = round(sum(abs(e) for e in errors) / test_steps, 2)
-            rmse = round(math.sqrt(sum(e**2 for e in errors) / test_steps), 2)
-            non_zero = [(a, e) for a, e in zip(actual, errors) if a != 0]
-            mape = (
-                round(sum(abs(e / a) for a, e in non_zero) / len(non_zero) * 100, 2)
-                if non_zero
-                else None
-            )
-            return {"rmse": rmse, "mae": mae, "mape": mape}
+            preds, actual = [], []
+            start_index = max(n - test_steps, minimum_history)
+            for idx in range(start_index, n):
+                train = s[:idx]
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    model = SARIMAX(
+                        train,
+                        order=order,
+                        seasonal_order=seasonal_order,
+                        enforce_stationarity=False,
+                        enforce_invertibility=False,
+                    )
+                    fit = model.fit(disp=False)
+                preds.append(float(fit.get_forecast(steps=1).predicted_mean[0]))
+                actual.append(float(s[idx]))
+            return _metric_dict(actual, preds)
         except ImportError:
             return {"rmse": None, "mae": None, "mape": None}
         except Exception as exc:
             logger.error("SARIMA metrics error: %s", exc)
             return {"rmse": None, "mae": None, "mape": None}
+
+    def _best_sarimax_config(series, candidates, test_steps=6):
+        ranked = []
+        for candidate in candidates:
+            metrics = _sarimax_metrics(
+                series,
+                order=candidate["order"],
+                seasonal_order=candidate["seasonal_order"],
+                test_steps=test_steps,
+            )
+            if metrics["rmse"] is None and metrics["mae"] is None and metrics["mape"] is None:
+                continue
+            ranked.append({
+                "label": candidate["label"],
+                "order": candidate["order"],
+                "seasonal_order": candidate["seasonal_order"],
+                "metrics": metrics,
+                "rank": (
+                    float("inf") if metrics["mape"] is None else metrics["mape"],
+                    float("inf") if metrics["rmse"] is None else metrics["rmse"],
+                    float("inf") if metrics["mae"] is None else metrics["mae"],
+                ),
+            })
+        if not ranked:
+            return None
+        ranked.sort(key=lambda item: item["rank"])
+        return ranked[0]
+
+    def _best_model_name(metrics_by_model):
+        ranked = []
+        for model_name, metrics in metrics_by_model.items():
+            mape = metrics.get("mape")
+            rmse = metrics.get("rmse")
+            mae = metrics.get("mae")
+            if mape is None and rmse is None and mae is None:
+                continue
+            ranked.append((
+                float("inf") if mape is None else mape,
+                float("inf") if rmse is None else rmse,
+                float("inf") if mae is None else mae,
+                model_name,
+            ))
+        if not ranked:
+            return None
+        ranked.sort()
+        return ranked[0][3]
 
     def _next_month_labels(steps=3):
         labels = []
@@ -171,7 +271,7 @@ def _build_forecasting_context(request):
         return labels
 
     revenue_series, hist_labels = [], []
-    history_start = _month_date(24)
+    history_start = _month_date(history_months)
     history_end = (current_month_start + timedelta(days=32)).replace(day=1)
     monthly_collected_totals = {
         (row["month_bucket"].year, row["month_bucket"].month): float(
@@ -194,20 +294,68 @@ def _build_forecasting_context(request):
         )
     }
 
-    for i in range(24, -1, -1):
+    for i in range(history_months, -1, -1):
         md = _month_date(i)
         rev = monthly_collected_totals.get((md.year, md.month), 0)
         revenue_series.append(rev)
         hist_labels.append(md.strftime("%b %Y"))
 
-    forecast_labels = _next_month_labels(3)
+    forecast_labels = _next_month_labels(forecast_horizon)
 
-    rev_sarima_fc, rev_sarima_lower, rev_sarima_upper = _sarima_forecast(
-        revenue_series, order=(0, 1, 1), seasonal_order=(1, 1, 1, 12), steps=3
-    )
+    arima_candidates = [
+        {"label": "ARIMA", "order": (0, 1, 1), "seasonal_order": (0, 0, 0, 0)},
+        {"label": "ARIMA", "order": (1, 1, 1), "seasonal_order": (0, 0, 0, 0)},
+        {"label": "ARIMA", "order": (1, 1, 0), "seasonal_order": (0, 0, 0, 0)},
+    ]
+    sarima_candidates = [
+        {"label": "SARIMA", "order": (0, 1, 1), "seasonal_order": (1, 1, 1, 12)},
+        {"label": "SARIMA", "order": (1, 1, 1), "seasonal_order": (1, 1, 1, 12)},
+        {"label": "SARIMA", "order": (1, 1, 0), "seasonal_order": (1, 1, 0, 12)},
+    ]
 
-    revenue_sarima_metrics = _sarima_metrics(
-        revenue_series, order=(0, 1, 1), seasonal_order=(1, 1, 1, 12)
+    best_arima = _best_sarimax_config(revenue_series, arima_candidates, test_steps=forecast_horizon)
+    best_sarima = _best_sarimax_config(revenue_series, sarima_candidates, test_steps=forecast_horizon)
+
+    rev_naive_fc = _naive_forecast(revenue_series, steps=forecast_horizon, seasonal_period=12)
+    revenue_naive_metrics = _naive_metrics(revenue_series, test_steps=forecast_horizon, seasonal_period=12)
+
+    if best_arima:
+        rev_arima_fc, _, _ = _sarimax_forecast(
+            revenue_series,
+            order=best_arima["order"],
+            seasonal_order=best_arima["seasonal_order"],
+            steps=forecast_horizon,
+        )
+        revenue_arima_metrics = dict(best_arima["metrics"])
+    else:
+        rev_arima_fc = None
+        revenue_arima_metrics = {"rmse": None, "mae": None, "mape": None}
+
+    if best_sarima:
+        rev_sarima_fc, rev_sarima_lower, rev_sarima_upper = _sarimax_forecast(
+            revenue_series,
+            order=best_sarima["order"],
+            seasonal_order=best_sarima["seasonal_order"],
+            steps=forecast_horizon,
+        )
+        revenue_sarima_metrics = dict(best_sarima["metrics"])
+    else:
+        rev_sarima_fc, rev_sarima_lower, rev_sarima_upper = None, None, None
+        revenue_sarima_metrics = {"rmse": None, "mae": None, "mape": None}
+
+    selected_model = _best_model_name({
+        "Naive": revenue_naive_metrics,
+        "ARIMA": revenue_arima_metrics,
+        "SARIMA": revenue_sarima_metrics,
+    })
+    selected_forecast_map = {
+        "Naive": (rev_naive_fc, None, None),
+        "ARIMA": (rev_arima_fc, None, None),
+        "SARIMA": (rev_sarima_fc, rev_sarima_lower, rev_sarima_upper),
+    }
+    selected_forecast, rev_selected_lower, rev_selected_upper = selected_forecast_map.get(
+        selected_model,
+        (rev_sarima_fc, rev_sarima_lower, rev_sarima_upper),
     )
 
     hist_revenue_last12 = revenue_series[-36:]
@@ -228,27 +376,27 @@ def _build_forecasting_context(request):
         return "stable"
 
     rev_trend = _trend_direction(revenue_series)
-    if not rev_sarima_fc:
+    if not selected_forecast:
         revenue_insight = (
-            "SARIMA forecast is unavailable because there is not enough usable revenue history yet."
+            "Forecast comparison is unavailable because there is not enough usable revenue history yet."
         )
     elif rev_trend == "up":
-        rev_next = rev_sarima_fc[0]
+        rev_next = selected_forecast[0]
         revenue_insight = (
-            f"Revenue is trending upward. Next month's forecast is ₱{rev_next:,.0f}, "
-            "which is higher than recent months. Collection efforts are paying off."
+            f"Revenue is trending upward. The selected model is {selected_model}, forecasting PHP {rev_next:,.0f} next month. "
+            "Recent collections are outperforming the prior period."
         )
     elif rev_trend == "down":
-        rev_next = rev_sarima_fc[0]
+        rev_next = selected_forecast[0]
         revenue_insight = (
-            f"Revenue has been declining. Next month's estimate is ₱{rev_next:,.0f}. "
-            "Consider following up on overdue payments."
+            f"Revenue has been declining. The selected model is {selected_model}, estimating PHP {rev_next:,.0f} next month. "
+            "Collections need closer follow-up."
         )
     else:
-        rev_next = rev_sarima_fc[0]
+        rev_next = selected_forecast[0]
         revenue_insight = (
-            f"Revenue is holding steady. Expect approximately ₱{rev_next:,.0f} "
-            "next month based on historical patterns."
+            f"Revenue is stable. The selected model is {selected_model}, expecting about PHP {rev_next:,.0f} next month "
+            "based on recent history and seasonality checks."
         )
 
     return {
@@ -256,10 +404,17 @@ def _build_forecasting_context(request):
         "hist_revenue": hist_revenue_last12,
         "forecast_labels": forecast_labels,
         "revenue_forecast": [],
+        "rev_naive_fc": rev_naive_fc,
+        "rev_arima_fc": rev_arima_fc,
         "rev_sarima_fc": rev_sarima_fc,
+        "rev_selected_lower": rev_selected_lower,
+        "rev_selected_upper": rev_selected_upper,
         "rev_sarima_lower": rev_sarima_lower,
         "rev_sarima_upper": rev_sarima_upper,
+        "revenue_naive_metrics": revenue_naive_metrics,
+        "revenue_arima_metrics": revenue_arima_metrics,
         "revenue_sarima_metrics": revenue_sarima_metrics,
+        "selected_model": selected_model,
         "sarima_available": rev_sarima_fc is not None,
         "selected_year": selected_year,
         "year_choices": year_choices,

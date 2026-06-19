@@ -6,24 +6,14 @@
 <div class="billing-ledger-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6 py-4 sm:py-6 overflow-x-hidden w-full max-w-full">
   
   <!-- Studio Top Title Block -->
-  <header class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+  <header class="bg-white border border-slate-200 rounded-[1.75rem] p-6 sm:p-7 shadow-sm">
     <div>
-      <div class="flex items-center gap-2 mb-1">
-        <span class="inline-block w-3 h-3 rounded-full bg-slate-700"></span>
-        <span class="text-sm font-semibold text-slate-700">Manage Finances</span>
+      <div class="flex items-center gap-2 mb-2">
+        <span class="inline-block w-2.5 h-2.5 rounded-full bg-slate-900"></span>
+        <span class="text-xs font-black uppercase tracking-[0.22em] text-slate-500">Manage Finances</span>
       </div>
       <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 leading-tight">Rent & Bills</h1>
-      <p class="text-base text-slate-700 mt-1 leading-relaxed">See who has paid rent, check for late payments, and manage bills.</p>
-    </div>
-    <div class="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
-      <a href="{% url 'admin_cleanup_duplicate_bills' %}"
-         class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 text-sm font-black transition-colors">
-        Clean Duplicates
-      </a>
-      <a href="{% url 'admin_repair_late_fees' %}"
-         class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-sm font-black transition-colors">
-        Repair Late Fees
-      </a>
+      <p class="text-sm sm:text-base text-slate-600 mt-2 leading-relaxed max-w-3xl">Review collection status, filter contract months fast, and export the active ledger when needed.</p>
     </div>
   </header>
 
@@ -88,28 +78,27 @@
   </section>
 
   <!-- Filter Shell & Main Data Ledger Card -->
-  <div class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+  <div class="bg-white border border-slate-200 rounded-[1.75rem] shadow-sm overflow-hidden">
     
     <!-- Tab Navigation Strips -->
-    <div class="flex border-b border-slate-200 bg-slate-50">
+    <div class="px-5 sm:px-6 pt-5 sm:pt-6 bg-white border-b border-slate-200">
       <a href="?tab=active&q={{ q }}&status={{ status_filter }}&month={{ month_filter }}&year={{ year_filter }}"
-         class="px-6 py-3.5 text-sm font-bold transition-colors border-b-2 flex items-center gap-2 {% if active_tab == 'active' %}border-slate-900 text-slate-900 bg-white font-extrabold{% else %}border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/60{% endif %}">
+         class="inline-flex items-center gap-2 px-1 pb-3 text-sm font-bold transition-colors border-b-[3px] {% if active_tab == 'active' %}border-slate-900 text-slate-900 font-extrabold{% else %}border-transparent text-slate-600 hover:text-slate-900{% endif %}">
         <span>Current Bills</span>
         <span class="px-2 py-0.5 rounded text-xs {% if active_tab == 'active' %}bg-slate-900 text-white font-bold{% else %}bg-slate-200 text-slate-700{% endif %}">{{ active_count }}</span>
       </a>
-      
     </div>
 
     <!-- Filter Control Row -->
-    <div class="p-5 bg-white border-b border-slate-200 flex flex-col xl:flex-row items-stretch xl:items-center gap-4">
-      <form class="flex flex-col xl:flex-row items-stretch xl:items-center gap-3 w-full" method="get">
+    <div class="p-5 sm:p-6 bg-gradient-to-b from-slate-50/90 to-white border-b border-slate-200">
+      <form class="grid grid-cols-1 xl:grid-cols-[minmax(220px,1.35fr)_minmax(140px,0.8fr)_minmax(140px,0.8fr)_minmax(150px,0.9fr)_minmax(150px,0.9fr)_minmax(160px,1fr)] gap-3 items-stretch" method="get">
         <input type="hidden" name="tab" value="{{ active_tab }}" />
         
         <!-- Filter Search String Input -->
-        <div class="relative w-full xl:flex-1 min-w-[220px]">
-          <input type="text" name="q" value="{{ q }}" placeholder="Search email, unit ID, reference..." 
-                 class="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all outline-none">
-          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+        <div class="relative w-full min-w-[220px]">
+          <input type="text" name="q" value="{{ q }}" placeholder="Search tenant, unit, or reference" 
+                 class="w-full pl-10 pr-3 py-3 bg-white border border-slate-300 rounded-2xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 transition-all outline-none shadow-sm">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 flex h-4 w-4 items-center justify-center text-slate-400 pointer-events-none">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
             </svg>
@@ -117,16 +106,16 @@
         </div>
 
         <!-- Target Month Choice Dropdown -->
-        <select name="month" class="w-full xl:w-auto bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 outline-none cursor-pointer">
-          <option value="">All Filter Months</option>
+        <select name="month" class="w-full bg-white border border-slate-300 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-slate-500/20 outline-none cursor-pointer shadow-sm">
+          <option value="">All Months</option>
           {% for month_num, month_name in month_choices %}
             <option value="{{ month_num }}" {% if month_filter == month_num|stringformat:"s" %}selected{% endif %}>{{ month_name }}</option>
           {% endfor %}
         </select>
 
         <!-- Target Year Choice Dropdown -->
-        <select name="year" class="w-full xl:w-auto bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 outline-none cursor-pointer">
-          <option value="">All Filter Years</option>
+        <select name="year" class="w-full bg-white border border-slate-300 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-slate-500/20 outline-none cursor-pointer shadow-sm">
+          <option value="">All Years</option>
           {% for year in year_choices %}
             <option value="{{ year }}" {% if year_filter == year|stringformat:"s" %}selected{% endif %}>{{ year }}</option>
           {% endfor %}
@@ -134,8 +123,8 @@
 
         <!-- Dynamic Status Choices (Active Mode Only) -->
         {% if active_tab == "active" %}
-        <select name="status" class="w-full xl:w-auto bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500 outline-none cursor-pointer">
-          <option value="">All State Filters</option>
+        <select name="status" class="w-full bg-white border border-slate-300 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-slate-500/20 outline-none cursor-pointer shadow-sm">
+          <option value="">All Statuses</option>
           <option value="UNPAID" {% if status_filter == "UNPAID" %}selected{% endif %}>Unpaid (incl. Partial)</option>
           <option value="OVERDUE" {% if status_filter == "OVERDUE" %}selected{% endif %}>Overdue Target</option>
           <option value="PARTIAL" {% if status_filter == "PARTIAL" %}selected{% endif %}>Partially Settled</option>
@@ -144,26 +133,28 @@
         {% endif %}
 
         <!-- Form Commit Execution Command -->
-        <button type="submit" class="w-full xl:w-auto bg-slate-800 hover:bg-slate-900 text-white px-5 py-2 rounded-lg text-sm font-extrabold transition-colors flex items-center justify-center gap-1.5 shrink-0">
+        <button type="submit" class="w-full bg-slate-900 hover:bg-slate-950 text-white px-5 py-3 rounded-2xl text-sm font-extrabold transition-colors flex items-center justify-center gap-1.5 shadow-sm min-h-[48px]">
           <span>Apply Filters</span>
         </button>
 
-        {% if q or status_filter or month_filter or year_filter %}
-          <a href="?tab={{ active_tab }}" class="text-xs font-extrabold text-slate-600 hover:text-slate-900 px-2 whitespace-nowrap underline">Clear Filters</a>
-        {% endif %}
+        <div class="flex items-center justify-center gap-3 min-h-[48px]">
+          <a href="{% url 'admin_billing_export_csv' %}?month={{ month_filter }}&year={{ year_filter }}&status={{ status_filter }}"
+             data-skip-loader
+             onclick="var loader=document.querySelector('[data-ux-loader]'); if(loader){loader.classList.remove('is-visible'); loader.setAttribute('aria-hidden','true');}"
+             class="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl text-sm font-extrabold transition-colors shadow-sm min-h-[48px]"
+             title="Export current filters to CSV">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+            </svg>
+            <span>Export Report</span>
+          </a>
+        </div>
       </form>
-
-      <!-- CSV Export Button -->
-      <a href="{% url 'admin_billing_export_csv' %}?month={{ month_filter }}&year={{ year_filter }}&status={{ status_filter }}"
-         data-skip-loader
-         onclick="var loader=document.querySelector('[data-ux-loader]'); if(loader){loader.classList.remove('is-visible'); loader.setAttribute('aria-hidden','true');}"
-         class="w-full xl:w-auto inline-flex items-center justify-center gap-2 px-5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-sm font-extrabold transition-colors shrink-0"
-         title="Export current filters to CSV">
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-        </svg>
-        <span>Export Report</span>
-      </a>
+      {% if q or status_filter or month_filter or year_filter %}
+        <div class="mt-3">
+          <a href="?tab={{ active_tab }}" class="text-xs font-extrabold text-slate-600 hover:text-slate-900 whitespace-nowrap underline">Clear Filters</a>
+        </div>
+      {% endif %}
     </div>
 
     <!-- Master Ledger Data Table -->

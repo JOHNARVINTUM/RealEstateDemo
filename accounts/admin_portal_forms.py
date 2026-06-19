@@ -619,6 +619,23 @@ class UnitForm(forms.ModelForm):
             choice for choice in self.fields["status"].choices
             if choice[0] != "RESERVED"
         ]
+        self.fields["unit_type"].choices = [
+            ("1BR", "1 Bedroom"),
+            ("2BR", "2 Bedrooms"),
+        ]
+        current_unit_type = (getattr(self.instance, "unit_type", "") or "").strip().upper()
+        if current_unit_type == "STUDIO":
+            self.initial["unit_type"] = "1BR"
+        elif current_unit_type and current_unit_type != "1BR":
+            self.initial["unit_type"] = "2BR"
+
+    def clean_unit_type(self):
+        value = (self.cleaned_data.get("unit_type") or "").strip().upper()
+        if value == "STUDIO":
+            return "1BR"
+        if value not in {"1BR", "2BR"}:
+            return "2BR"
+        return value
 
 
 class UnitImageForm(forms.ModelForm):

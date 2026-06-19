@@ -44,14 +44,14 @@
         <span class="text-base font-black text-violet-600 uppercase tracking-widest">Predictive Analytics</span>
       </div>
       <h1 class="text-3xl md:text-5xl font-black text-slate-900 mt-1">Forecasting</h1>
-      <p class="text-slate-600 mt-3 text-xl font-medium leading-relaxed">Revenue forecast using the last 2 years of actual collected revenue.</p>
+      <p class="text-slate-600 mt-3 text-xl font-medium leading-relaxed">Revenue forecast using the last 2 years of actual collected revenue, with model comparison across Naive, ARIMA, and SARIMA.</p>
     </div>
     <div class="flex items-center gap-4 flex-wrap">
       <div class="flex items-center gap-2 px-5 py-3 bg-violet-50 border border-violet-200 rounded-xl">
         <svg class="w-5 h-5 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
-        <span class="text-base font-black text-violet-800 uppercase tracking-tight">Revenue SARIMA</span>
+        <span class="text-base font-black text-violet-800 uppercase tracking-tight">Revenue Forecast Models</span>
       </div>
       <form method="get" class="flex items-center gap-2">
         <label for="yearSelect" class="text-sm font-bold text-slate-600 uppercase tracking-widest whitespace-nowrap">Year:</label>
@@ -67,7 +67,7 @@
   <section id="forecastLoading" class="forecast-loading-card" aria-live="polite">
     <p class="text-xs font-black text-slate-500 uppercase tracking-widest">Loading...</p>
     <h2 class="text-2xl font-black text-slate-900 mt-5">Preparing forecast</h2>
-    <p class="text-sm font-bold text-slate-600 mt-3 max-w-md leading-6">The page is available now while revenue history, SARIMA metrics, and chart data load separately.</p>
+    <p class="text-sm font-bold text-slate-600 mt-3 max-w-md leading-6">The page is available now while revenue history, model metrics, and comparison chart data load separately.</p>
     <div class="forecast-progress mt-8" aria-hidden="true"><span id="forecastProgressBar"></span></div>
   </section>
 
@@ -102,7 +102,7 @@
            <div class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center border border-indigo-100">
              <span class="inline-block w-3 h-3 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]"></span>
            </div>
-           <h2 class="text-2xl font-black text-slate-900 tracking-tight">Model Accuracy Metrics</h2>
+           <h2 class="text-2xl font-black text-slate-900 tracking-tight">Model Accuracy Comparison</h2>
         </div>
         <span class="text-xs font-black text-indigo-600 bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-full uppercase tracking-widest shadow-sm">Backtested (Last 3 Months)</span>
       </div>
@@ -110,22 +110,34 @@
         <table class="w-full text-base">
           <thead class="bg-slate-50 border-b border-slate-200">
             <tr>
-              <th class="text-left px-8 sm:px-10 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Performance Metric</th>
-              <th class="text-right px-8 sm:px-10 py-5 text-xs font-black text-indigo-700 uppercase tracking-widest">SARIMA Score</th>
+              <th class="text-left px-8 sm:px-10 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Model</th>
+              <th class="text-right px-4 py-5 text-xs font-black text-slate-500 uppercase tracking-widest">RMSE</th>
+              <th class="text-right px-4 py-5 text-xs font-black text-slate-500 uppercase tracking-widest">MAE</th>
+              <th class="text-right px-4 py-5 text-xs font-black text-slate-500 uppercase tracking-widest">MAPE</th>
+              <th class="text-right px-8 sm:px-10 py-5 text-xs font-black text-slate-500 uppercase tracking-widest">Status</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
             <tr class="hover:bg-slate-50 transition-colors">
-              <td class="px-8 sm:px-10 py-6 font-bold text-slate-700">Root Mean Square Error <span class="text-xs text-slate-400 block mt-1 font-medium">(RMSE)</span></td>
-              <td id="metricRmse" class="px-8 sm:px-10 py-6 text-right font-black text-indigo-700 text-lg">-</td>
+              <td class="px-8 sm:px-10 py-6 font-bold text-slate-700">Naive <span class="text-xs text-slate-400 block mt-1 font-medium">Seasonal baseline</span></td>
+              <td id="metricNaiveRmse" class="px-4 py-6 text-right font-black text-slate-700">-</td>
+              <td id="metricNaiveMae" class="px-4 py-6 text-right font-black text-slate-700">-</td>
+              <td id="metricNaiveMape" class="px-4 py-6 text-right font-black text-slate-700">-</td>
+              <td id="metricNaiveStatus" class="px-8 sm:px-10 py-6 text-right font-black text-slate-500">-</td>
             </tr>
             <tr class="hover:bg-slate-50 transition-colors">
-              <td class="px-8 sm:px-10 py-6 font-bold text-slate-700">Mean Absolute Error <span class="text-xs text-slate-400 block mt-1 font-medium">(MAE)</span></td>
-              <td id="metricMae" class="px-8 sm:px-10 py-6 text-right font-black text-indigo-700 text-lg">-</td>
+              <td class="px-8 sm:px-10 py-6 font-bold text-slate-700">ARIMA <span class="text-xs text-slate-400 block mt-1 font-medium">Non-seasonal time series</span></td>
+              <td id="metricArimaRmse" class="px-4 py-6 text-right font-black text-slate-700">-</td>
+              <td id="metricArimaMae" class="px-4 py-6 text-right font-black text-slate-700">-</td>
+              <td id="metricArimaMape" class="px-4 py-6 text-right font-black text-slate-700">-</td>
+              <td id="metricArimaStatus" class="px-8 sm:px-10 py-6 text-right font-black text-slate-500">-</td>
             </tr>
             <tr class="hover:bg-slate-50 transition-colors">
-              <td class="px-8 sm:px-10 py-6 font-bold text-slate-700">Mean Abs. Percentage Error <span class="text-xs text-slate-400 block mt-1 font-medium">(MAPE)</span></td>
-              <td id="metricMape" class="px-8 sm:px-10 py-6 text-right font-black text-indigo-700 text-lg">-</td>
+              <td class="px-8 sm:px-10 py-6 font-bold text-slate-700">SARIMA <span class="text-xs text-slate-400 block mt-1 font-medium">Seasonal time series</span></td>
+              <td id="metricSarimaRmse" class="px-4 py-6 text-right font-black text-slate-700">-</td>
+              <td id="metricSarimaMae" class="px-4 py-6 text-right font-black text-slate-700">-</td>
+              <td id="metricSarimaMape" class="px-4 py-6 text-right font-black text-slate-700">-</td>
+              <td id="metricSarimaStatus" class="px-8 sm:px-10 py-6 text-right font-black text-slate-500">-</td>
             </tr>
           </tbody>
         </table>
@@ -149,7 +161,7 @@
       <div class="mb-6 pb-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 class="text-2xl font-black text-slate-900 tracking-tight">Revenue Trajectory</h2>
-          <p class="chart-subtitle text-sm text-slate-500 mt-1 font-bold">Historical collected revenue vs. 3-month predictive SARIMA model</p>
+          <p class="chart-subtitle text-sm text-slate-500 mt-1 font-bold">Historical collected revenue with the SARIMA forecast, seasonal baseline, and confidence band for the selected model. ARIMA remains in the comparison table.</p>
         </div>
       </div>
       <div class="h-[450px] w-full relative">
@@ -205,18 +217,34 @@
   }
 
   function renderSummary(data) {
-    var sarima = data.rev_sarima_fc && data.rev_sarima_fc.length;
-    document.getElementById("nextRevenueValue").textContent = sarima ? peso(data.rev_sarima_fc[0]) : "Unavailable";
-    document.getElementById("nextRevenueLabel").textContent = sarima ? "SARIMA forecast" : "SARIMA unavailable";
-    document.getElementById("nextRevenueCi").textContent = sarima
-      ? "CI " + peso(data.rev_sarima_lower[0]) + " - " + peso(data.rev_sarima_upper[0])
+    var selectedModel = data.selected_model || "SARIMA";
+    var selectedForecastMap = {
+      Naive: data.rev_naive_fc || [],
+      ARIMA: data.rev_arima_fc || [],
+      SARIMA: data.rev_sarima_fc || []
+    };
+    var selectedForecast = selectedForecastMap[selectedModel] || [];
+    var selectedLower = data.rev_selected_lower || [];
+    var selectedUpper = data.rev_selected_upper || [];
+
+    document.getElementById("nextRevenueValue").textContent = selectedForecast.length ? peso(selectedForecast[0]) : "Unavailable";
+    document.getElementById("nextRevenueLabel").textContent = selectedForecast.length ? selectedModel + " forecast" : "Forecast unavailable";
+    document.getElementById("nextRevenueCi").textContent = selectedLower.length && selectedUpper.length
+      ? "CI " + peso(selectedLower[0]) + " - " + peso(selectedUpper[0])
       : "";
     document.getElementById("revenueInsight").textContent = data.revenue_insight || "";
 
-    var metrics = data.revenue_sarima_metrics || {};
-    document.getElementById("metricRmse").textContent = metrics.rmse ? peso(metrics.rmse) : "-";
-    document.getElementById("metricMae").textContent = metrics.mae ? peso(metrics.mae) : "-";
-    document.getElementById("metricMape").textContent = metrics.mape ? percent(metrics.mape) : "-";
+    function renderMetricRow(prefix, metrics, modelName) {
+      document.getElementById(prefix + "Rmse").textContent = metrics.rmse ? peso(metrics.rmse) : "-";
+      document.getElementById(prefix + "Mae").textContent = metrics.mae ? peso(metrics.mae) : "-";
+      document.getElementById(prefix + "Mape").textContent = metrics.mape ? percent(metrics.mape) : "-";
+      document.getElementById(prefix + "Status").textContent = selectedModel === modelName ? "Selected" : "Compared";
+      document.getElementById(prefix + "Status").className = "px-8 sm:px-10 py-6 text-right font-black " + (selectedModel === modelName ? "text-emerald-600" : "text-slate-500");
+    }
+
+    renderMetricRow("metricNaive", data.revenue_naive_metrics || {}, "Naive");
+    renderMetricRow("metricArima", data.revenue_arima_metrics || {}, "ARIMA");
+    renderMetricRow("metricSarima", data.revenue_sarima_metrics || {}, "SARIMA");
   }
 
   function nullPad(arr, totalLen) {
@@ -229,9 +257,12 @@
     var rawHistLabels = forecastData.hist_labels || [];
     var rawHistRevenue = forecastData.hist_revenue || [];
     var fcLabels = forecastData.forecast_labels || [];
+    var naiveFcRev = forecastData.rev_naive_fc || [];
+    var arimaFcRev = forecastData.rev_arima_fc || [];
     var sarFcRev = forecastData.rev_sarima_fc || [];
-    var sarLowRev = forecastData.rev_sarima_lower || [];
-    var sarUpRev = forecastData.rev_sarima_upper || [];
+    var selectedModel = forecastData.selected_model || "SARIMA";
+    var selectedLowRev = forecastData.rev_selected_lower || [];
+    var selectedUpRev = forecastData.rev_selected_upper || [];
 
     var filterIdx = Math.max(0, rawHistLabels.length - parseInt(months || "24", 10));
     var histLabels = rawHistLabels.slice(filterIdx);
@@ -251,30 +282,41 @@
       }
     ];
 
-    if (sarFcRev.length) {
+    if (naiveFcRev.length || arimaFcRev.length || sarFcRev.length) {
       datasets.push({
         label: "SARIMA Forecast",
         data: nullPad(sarFcRev, labels.length),
-        borderColor: "#f59e0b",
+        borderColor: "#7c3aed",
         borderDash: [3, 3],
         borderWidth: 2.5,
         pointRadius: 5,
         tension: 0.25
       });
       datasets.push({
-        label: "SARIMA Upper CI",
-        data: nullPad(sarUpRev, labels.length),
-        borderColor: "transparent",
-        backgroundColor: "rgba(245, 158, 11, 0.12)",
-        pointRadius: 0,
-        fill: "+1"
+        label: "Naive Baseline",
+        data: nullPad(naiveFcRev, labels.length),
+        borderColor: "#64748b",
+        borderDash: [2, 5],
+        borderWidth: 2,
+        pointRadius: 3,
+        tension: 0.2
       });
-      datasets.push({
-        label: "SARIMA Lower CI",
-        data: nullPad(sarLowRev, labels.length),
-        borderColor: "transparent",
-        pointRadius: 0
-      });
+      if (selectedLowRev.length && selectedUpRev.length) {
+        datasets.push({
+          label: selectedModel + " Upper CI",
+          data: nullPad(selectedUpRev, labels.length),
+          borderColor: "transparent",
+          backgroundColor: selectedModel === "SARIMA" ? "rgba(124, 58, 237, 0.12)" : "rgba(37, 99, 235, 0.10)",
+          pointRadius: 0,
+          fill: "+1"
+        });
+        datasets.push({
+          label: selectedModel + " Lower CI",
+          data: nullPad(selectedLowRev, labels.length),
+          borderColor: "transparent",
+          pointRadius: 0
+        });
+      }
     }
 
     if (chart) chart.destroy();

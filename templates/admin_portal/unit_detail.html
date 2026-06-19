@@ -9,14 +9,14 @@
   
   <!-- Navigation: Consistent Back Button -->
   <nav class="flex items-center justify-between gap-4 pt-4 sm:pt-6">
-    <a href="{% url 'admin_units' %}" onclick="if (document.referrer) { window.history.back(); return false; }" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
+    <a href="{{ back_url }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
       <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
       </svg>
       <span>Back</span>
     </a>
 
-    <a href="{% url 'admin_edit_unit' unit.id %}" class="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-sm font-extrabold transition-colors shadow-xs">
+    <a href="{{ edit_url }}" class="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-sm font-extrabold transition-colors shadow-xs">
       Edit Details
     </a>
   </nav>
@@ -51,7 +51,7 @@
               </div>
               <span class="text-lg font-black text-slate-600 block">No photos yet</span>
               <p class="text-sm text-slate-500 mt-2 font-medium">Add photos to help tenants visualize the room.</p>
-              <a href="{% url 'admin_edit_unit' unit.id %}" class="mt-4 text-blue-600 font-bold hover:underline">Add Photos Now</a>
+              <a href="{{ edit_url }}" class="mt-4 text-blue-600 font-bold hover:underline">Add Photos Now</a>
             </div>
           {% endif %}
 

@@ -52,11 +52,8 @@
             </label>
             <select name="unit_type" id="id_unit_type" class="form-control" required>
               <option value="">Select Unit Type</option>
-              <option value="STUDIO" {% if form.unit_type.value == 'STUDIO' %}selected{% endif %}>Studio</option>
-              <option value="1BR" {% if form.unit_type.value == '1BR' %}selected{% endif %}>1 Bedroom</option>
-              <option value="2BR" {% if form.unit_type.value == '2BR' %}selected{% endif %}>2 Bedrooms</option>
-              <option value="3BR" {% if form.unit_type.value == '3BR' %}selected{% endif %}>3 Bedrooms</option>
-              <option value="PENTHOUSE" {% if form.unit_type.value == 'PENTHOUSE' %}selected{% endif %}>Penthouse</option>
+              <option value="1BR" {% if form.unit_type.value == '1BR' or form.instance.unit_type == 'STUDIO' %}selected{% endif %}>1 Bedroom</option>
+              <option value="2BR" {% if form.unit_type.value == '2BR' or form.instance.unit_type == '3BR' or form.instance.unit_type == 'PENTHOUSE' %}selected{% endif %}>2 Bedrooms</option>
             </select>
             {% if form.unit_type.errors %}
               <div class="text-red-600 text-sm mt-1">

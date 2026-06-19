@@ -1,6 +1,7 @@
 from datetime import date, datetime, timedelta, timezone
 import logging
 import os
+from urllib.parse import quote
 
 from django.conf import settings
 from django.db.models import Sum, Q, F, ExpressionWrapper, DecimalField, Exists, OuterRef, Subquery, Count, Prefetch
@@ -12,6 +13,7 @@ from django.urls import reverse
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods, require_GET
 from django.core.paginator import Paginator
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.timezone import now
 import json
 from django.utils import timezone
@@ -73,6 +75,17 @@ def render_admin_password_confirm(request, *, title, message, post_url, back_url
     )
 
 
+def _get_safe_next_url(request, default_url: str) -> str:
+    candidate = (request.POST.get("next") or request.GET.get("next") or "").strip()
+    if candidate and url_has_allowed_host_and_scheme(
+        candidate,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return candidate
+    return default_url
+
+
 def _admin_visible_units():
     active_lease_exists = Lease.objects.filter(unit_id=OuterRef('pk'), is_active=True)
     return Unit.objects.annotate(
@@ -94,6 +107,15 @@ def _sync_unit_active_state(unit, *, previous_status=None, previous_is_active=Tr
 
 
 logger = logging.getLogger(__name__)
+
+
+def _admin_display_unit_type(unit_type: str) -> str:
+    normalized = (unit_type or "").strip().upper()
+    if normalized == "1BR" or normalized == "STUDIO":
+        return "1 Bedroom"
+    if normalized in {"2BR", "3BR", "PENTHOUSE"}:
+        return "2 Bedrooms"
+    return unit_type or ""
 
 
 @admin_required
@@ -377,12 +399,13 @@ def admin_units(request):
         if cover_image is None and prefetched_images:
             cover_image = prefetched_images[0]
         unit.cover_image_url = cover_image.image.url if cover_image and cover_image.image else ""
+        unit.display_unit_type = _admin_display_unit_type(unit.unit_type)
         unit.cover_image_label = ""
         if not unit.cover_image_url:
             if unit.unit_type == "1BR":
                 unit.cover_image_url = "https://ezrxfodgrztlajiiilfz.supabase.co/storage/v1/object/public/unit-images/placeholders/cdd906739ed64fb78aaf8d41b078feea.jpg"
             else:
-                unit.cover_image_label = unit.get_unit_type_display()
+                unit.cover_image_label = unit.display_unit_type
         display_leases = getattr(unit, 'admin_display_leases', [])
         active_lease = next(
             (
@@ -425,6 +448,9 @@ def admin_units(request):
 def admin_unit_detail(request, unit_id):
     """Admin portal: view unit details."""
     unit = get_object_or_404(_admin_visible_units(), id=unit_id)
+    default_back_url = reverse("admin_units")
+    back_url = _get_safe_next_url(request, default_back_url)
+    edit_url = f"{reverse('admin_edit_unit', args=[unit.id])}?next={quote(back_url, safe='')}"
     active_lease = (
         Lease.objects.filter(unit=unit, status=Lease.STATUS_ACTIVE, is_active=True)
         .select_related('tenant__tenantprofile')
@@ -447,6 +473,7 @@ def admin_unit_detail(request, unit_id):
         display_status_label = "Under Maintenance"
     else:
         display_status_label = "Available"
+    unit.display_unit_type = _admin_display_unit_type(unit.unit_type)
     
     return render(request, "admin_portal/unit_detail.html", {
         'unit': unit,
@@ -456,6 +483,8 @@ def admin_unit_detail(request, unit_id):
         'display_status_label': display_status_label,
         'unit_images': unit_images,
         'amenities_list': unit.get_amenities_list(),
+        'back_url': back_url,
+        'edit_url': edit_url,
     })
 
 
@@ -508,6 +537,8 @@ def admin_create_unit(request):
 def admin_edit_unit(request, unit_id):
     """Admin portal: edit a Unit row."""
     unit = get_object_or_404(_admin_visible_units(), id=unit_id)
+    default_back_url = reverse("admin_units")
+    back_url = _get_safe_next_url(request, default_back_url)
     
     if request.method == "POST":
         previous_status = unit.status
@@ -527,9 +558,10 @@ def admin_edit_unit(request, unit_id):
                 # Handle image uploads and deletions
                 handle_image_uploads(request, unit)
                 handle_image_deletions(request, unit)
-                
+
                 messages.success(request, f'Unit {unit.number} has been updated successfully!')
-                return redirect("admin_unit_detail", unit_id=unit.id)
+                detail_url = f"{reverse('admin_unit_detail', args=[unit.id])}?next={quote(back_url, safe='')}"
+                return redirect(detail_url)
             except Exception as e:
                 messages.error(request, f'Error updating unit: {str(e)}')
                 logger.exception("Error updating unit")
@@ -542,7 +574,8 @@ def admin_edit_unit(request, unit_id):
         "title": "Edit Unit",
         "action": "Edit",
         "form": form,
-        "back_url": reverse("admin_unit_detail", args=[unit.id]),
+        "back_url": back_url,
+        "next_url": back_url,
         "unit_images": unit.get_all_images(),
     })
 
@@ -661,7 +694,10 @@ def admin_tenant_risk(request):
     risk_filter = request.GET.get("risk", "").strip()
     
     # Get all tenant risk classifications
-    risk_classifications = TenantRiskClassification.objects.select_related('tenant').all()
+    risk_classifications = TenantRiskClassification.objects.select_related(
+        'tenant',
+        'tenant__tenantprofile',
+    ).all()
     
     # Apply filters
     if risk_filter in ("LOW", "MEDIUM", "HIGH"):
@@ -685,11 +721,6 @@ def admin_tenant_risk(request):
     paginator = Paginator(risk_classifications, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    refreshed_rows = []
-    for classification in page_obj.object_list:
-        refreshed = TenantRiskService.update_tenant_risk_classification(classification.tenant)
-        refreshed_rows.append(refreshed or classification)
-    page_obj.object_list = refreshed_rows
     
     # Calculate statistics
     total_tenants = risk_classifications.count()

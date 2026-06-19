@@ -368,6 +368,38 @@ class TenantRiskClassification(models.Model):
             self.risk_level = 'HIGH'
         self.save()
 
+    @property
+    def payment_timeliness_factor(self):
+        return int((self.risk_factors or {}).get("payment_timeliness", 0) or 0)
+
+    @property
+    def payment_consistency_factor(self):
+        return int((self.risk_factors or {}).get("payment_consistency", 0) or 0)
+
+    @property
+    def current_payment_status_factor(self):
+        return int((self.risk_factors or {}).get("current_payment_status", 0) or 0)
+
+    @property
+    def payment_method_reliability_factor(self):
+        return int((self.risk_factors or {}).get("payment_method_reliability", 0) or 0)
+
+    @property
+    def payment_timeliness_points(self):
+        return round(self.payment_timeliness_factor * 0.4, 1)
+
+    @property
+    def payment_consistency_points(self):
+        return round(self.payment_consistency_factor * 0.3, 1)
+
+    @property
+    def current_payment_status_points(self):
+        return round(self.current_payment_status_factor * 0.2, 1)
+
+    @property
+    def payment_method_reliability_points(self):
+        return round(self.payment_method_reliability_factor * 0.1, 1)
+
 class UnitImage(models.Model):
     """Model for unit gallery images"""
     unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='images')

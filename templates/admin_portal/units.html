@@ -139,7 +139,7 @@
             <h3 class="text-2xl font-black text-slate-900 tracking-tight leading-none mb-2">Room #{{ unit.number }}</h3>
             <p class="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
               <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-              {{ unit.get_unit_type_display }}
+              {{ unit.display_unit_type }}
             </p>
           </div>
           <div class="px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-lg flex items-center gap-1.5">
@@ -207,10 +207,10 @@
 
         <!-- Action Bar Spacer -->
         <div class="mt-auto grid grid-cols-[auto_1fr] gap-3">
-          <a href="{% url 'admin_unit_detail' unit.id %}" class="flex items-center justify-center w-12 h-12 bg-white border-2 border-slate-200 hover:border-slate-800 hover:bg-slate-50 text-slate-700 hover:text-slate-900 rounded-xl transition-all group/btn" title="View Details">
+          <a href="{% url 'admin_unit_detail' unit.id %}?next={{ request.get_full_path|urlencode }}" class="flex items-center justify-center w-12 h-12 bg-white border-2 border-slate-200 hover:border-slate-800 hover:bg-slate-50 text-slate-700 hover:text-slate-900 rounded-xl transition-all group/btn" title="View Details">
             <svg class="w-5 h-5 group-hover/btn:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
           </a>
-          <a href="{% url 'admin_edit_unit' unit.id %}" class="flex items-center justify-center h-12 bg-slate-900 hover:bg-black text-white rounded-xl font-extrabold text-sm transition-all shadow-md hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm">
+          <a href="{% url 'admin_edit_unit' unit.id %}?next={{ request.get_full_path|urlencode }}" class="flex items-center justify-center h-12 bg-slate-900 hover:bg-black text-white rounded-xl font-extrabold text-sm transition-all shadow-md hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm">
             Edit Room
           </a>
         </div>

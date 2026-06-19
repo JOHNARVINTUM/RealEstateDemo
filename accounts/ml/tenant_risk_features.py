@@ -25,14 +25,18 @@ FEATURE_COLUMNS = [
     "months_with_bill_history",
     "unit_floor_level",
     "unit_size_sqm",
-    "unit_type_STUDIO",
     "unit_type_1BR",
     "unit_type_2BR",
-    "unit_type_3BR",
-    "unit_type_PENTHOUSE",
 ]
 
-UNIT_TYPES = ["STUDIO", "1BR", "2BR", "3BR", "PENTHOUSE"]
+UNIT_TYPES = ["1BR", "2BR"]
+
+
+def normalize_unit_type(unit_type):
+    value = (unit_type or "").strip()
+    if not value:
+        return ""
+    return value.upper()
 
 
 def month_diff(start, end):
@@ -111,8 +115,9 @@ def build_features_for_bill(lease, bill):
         "unit_floor_level": int(unit.floor_level or 0),
         "unit_size_sqm": float(unit.size_sqm or 0),
     }
+    normalized_unit_type = normalize_unit_type(unit.unit_type)
     for unit_type in UNIT_TYPES:
-        row[f"unit_type_{unit_type}"] = 1 if unit.unit_type == unit_type else 0
+        row[f"unit_type_{unit_type}"] = 1 if normalized_unit_type == unit_type else 0
     return row
 
 

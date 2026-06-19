@@ -264,35 +264,50 @@
                       <div class="space-y-1">
                         <div class="flex justify-between text-[11px] font-bold text-slate-400 uppercase">
                           <span>Timeliness</span>
-                          <span class="text-white">{{ r.risk_factors.payment_timeliness|default:0 }}%</span>
+                          <span class="text-white">{{ r.payment_timeliness_factor }}%</span>
                         </div>
-                        <div class="w-full bg-slate-700 h-1 rounded-full overflow-hidden"><div class="h-full bg-slate-300" style="width: {{ r.risk_factors.payment_timeliness|default:0 }}%"></div></div>
+                        <div class="w-full bg-slate-700 h-1 rounded-full overflow-hidden"><div class="h-full bg-slate-300" style="width: {{ r.payment_timeliness_factor }}%"></div></div>
+                        <p class="text-[10px] font-bold text-slate-500">40% weight = {{ r.payment_timeliness_points }} pts</p>
                       </div>
                       <div class="space-y-1">
                         <div class="flex justify-between text-[11px] font-bold text-slate-400 uppercase">
                           <span>Consistency</span>
-                          <span class="text-white">{{ r.risk_factors.payment_consistency|default:0 }}%</span>
+                          <span class="text-white">{{ r.payment_consistency_factor }}%</span>
                         </div>
-                        <div class="w-full bg-slate-700 h-1 rounded-full overflow-hidden"><div class="h-full bg-slate-300" style="width: {{ r.risk_factors.payment_consistency|default:0 }}%"></div></div>
+                        <div class="w-full bg-slate-700 h-1 rounded-full overflow-hidden"><div class="h-full bg-slate-300" style="width: {{ r.payment_consistency_factor }}%"></div></div>
+                        <p class="text-[10px] font-bold text-slate-500">30% weight = {{ r.payment_consistency_points }} pts</p>
                       </div>
                       <div class="space-y-1">
                         <div class="flex justify-between text-[11px] font-bold text-slate-400 uppercase">
                           <span>Status Vector</span>
-                          <span class="text-white">{{ r.risk_factors.current_payment_status|default:0 }}%</span>
+                          <span class="text-white">{{ r.current_payment_status_factor }}%</span>
                         </div>
-                        <div class="w-full bg-slate-700 h-1 rounded-full overflow-hidden"><div class="h-full bg-slate-300" style="width: {{ r.risk_factors.current_payment_status|default:0 }}%"></div></div>
+                        <div class="w-full bg-slate-700 h-1 rounded-full overflow-hidden"><div class="h-full bg-slate-300" style="width: {{ r.current_payment_status_factor }}%"></div></div>
+                        <p class="text-[10px] font-bold text-slate-500">20% weight = {{ r.current_payment_status_points }} pts</p>
                       </div>
                       <div class="space-y-1">
                         <div class="flex justify-between text-[11px] font-bold text-slate-400 uppercase">
-                          <span>Recency</span>
-                          <span class="text-white">{% if r.last_payment_date %}Good{% else %}Low{% endif %}</span>
+                          <span>Approval Rate</span>
+                          <span class="text-white">{{ r.payment_method_reliability_factor }}%</span>
                         </div>
-                        <div class="w-full bg-slate-700 h-1 rounded-full overflow-hidden"><div class="h-full bg-slate-300" style="width: {% if r.last_payment_date %}100{% else %}20{% endif %}%"></div></div>
+                        <div class="w-full bg-slate-700 h-1 rounded-full overflow-hidden"><div class="h-full bg-slate-300" style="width: {{ r.payment_method_reliability_factor }}%"></div></div>
+                        <p class="text-[10px] font-bold text-slate-500">10% weight = {{ r.payment_method_reliability_points }} pts</p>
                       </div>
                     {% else %}
                       <p class="text-xs text-slate-400 italic col-span-2">Factor analysis currently unavailable.</p>
                     {% endif %}
                   </div>
+                  {% if r.risk_factors %}
+                    <div class="mt-5 pt-4 border-t border-slate-700">
+                      <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">How {{ r.payment_score }} Was Computed</p>
+                      <p class="text-xs font-bold text-slate-300 leading-6">
+                        {{ r.payment_score }} = ({{ r.payment_timeliness_factor }} x 40%) + ({{ r.payment_consistency_factor }} x 30%) + ({{ r.current_payment_status_factor }} x 20%) + ({{ r.payment_method_reliability_factor }} x 10%)
+                      </p>
+                      <p class="text-[11px] font-bold text-slate-500 mt-1">
+                        = {{ r.payment_timeliness_points }} + {{ r.payment_consistency_points }} + {{ r.current_payment_status_points }} + {{ r.payment_method_reliability_points }} points
+                      </p>
+                    </div>
+                  {% endif %}
                 </div>
               </div>
 

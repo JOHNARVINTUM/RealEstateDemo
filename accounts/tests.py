@@ -1,6 +1,7 @@
 from datetime import date, time, timedelta
 from decimal import Decimal
 from unittest.mock import patch
+from dateutil.relativedelta import relativedelta
 
 from django.test import TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -1379,6 +1380,37 @@ class AdminForecastingRevenueTests(TestCase):
         payload = response.json()
         month_index = payload["hist_labels"].index(target_label)
         self.assertEqual(payload["hist_revenue"][month_index], 114000.0)
+
+    def test_forecasting_payload_includes_model_comparison_fields(self):
+        target_month = timezone.now().date().replace(day=1)
+        for offset in range(1, 20):
+            month = (target_month.replace(day=1) - relativedelta(months=offset))
+            MonthlyBill.objects.create(
+                lease=self.lease,
+                billing_month=month,
+                due_date=month.replace(day=5),
+                base_rent=Decimal("300000.00"),
+                water_amount=Decimal("0.00"),
+                parking_fee=Decimal("0.00"),
+                interest=Decimal("0.00"),
+                total_due=Decimal("300000.00"),
+                rent_paid=Decimal(str(100000 + (offset * 1000))),
+                status="PAID",
+            )
+
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse("admin_forecasting_data"))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("rev_naive_fc", payload)
+        self.assertIn("rev_arima_fc", payload)
+        self.assertIn("rev_sarima_fc", payload)
+        self.assertIn("revenue_naive_metrics", payload)
+        self.assertIn("revenue_arima_metrics", payload)
+        self.assertIn("revenue_sarima_metrics", payload)
+        self.assertIn("selected_model", payload)
+        self.assertIn(payload["selected_model"], ["Naive", "ARIMA", "SARIMA", None])
 
 
 class AdminTenantPaymentHistoryTests(TestCase):

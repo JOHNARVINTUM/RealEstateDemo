@@ -9,7 +9,7 @@
   
   <!-- Navigation: Consistent Back Button -->
   <nav class="flex items-center pt-4 sm:pt-6">
-    <a href="{{ back_url }}" onclick="if (document.referrer) { window.history.back(); return false; }" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
+    <a href="{{ back_url }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
       <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
       </svg>
@@ -45,6 +45,7 @@
 
       <form method="post" enctype="multipart/form-data" class="space-y-6">
         {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next_url }}">
         
         <!-- Section 1: Room Information -->
         <div class="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow p-6 sm:p-8 space-y-6">
@@ -67,9 +68,8 @@
             <div>
               <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Room Type</label>
               <select name="unit_type" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none cursor-pointer">
-                {% for value, label in form.fields.unit_type.choices %}
-                  <option value="{{ value }}" {% if form.unit_type.value == value %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
+                <option value="1BR" {% if form.unit_type.value == '1BR' or form.instance.unit_type == 'STUDIO' %}selected{% endif %}>1 Bedroom</option>
+                <option value="2BR" {% if form.unit_type.value == '2BR' or form.instance.unit_type == '3BR' or form.instance.unit_type == 'PENTHOUSE' %}selected{% endif %}>2 Bedrooms</option>
               </select>
             </div>
 
@@ -209,7 +209,7 @@
 
         <!-- Form Submission Controls -->
         <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 flex flex-col sm:flex-row items-center gap-3 justify-end mt-8">
-          <a href="{{ back_url }}" onclick="if (document.referrer) { window.history.back(); return false; }" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
+          <a href="{{ back_url }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
       <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
       </svg>

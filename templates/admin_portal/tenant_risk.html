@@ -16,10 +16,14 @@
     </div>
 
     <div class="w-full sm:w-auto shrink-0">
-      <form method="post" action="{% url 'admin_update_tenant_risks' %}" class="confirm-action" data-confirm="Update all tenant risk classifications? This analysis uses real-time payment history and may take a few moments to complete.">
+      <form method="post" action="{% url 'admin_update_tenant_risks' %}" class="confirm-action" data-confirm="Refresh all tenants still marked as checking in the current filtered results? This only fills missing RF results and skips already-classified rows.">
         {% csrf_token %}
+        <input type="hidden" name="q" value="{{ q }}">
+        <input type="hidden" name="risk" value="{{ risk }}">
+        <input type="hidden" name="sort" value="{{ sort }}">
+        <input type="hidden" name="page" value="{{ page_obj.number }}">
         <button type="submit" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white font-extrabold px-5 py-2.5 rounded-lg text-sm transition-colors text-center shadow-xs">
-          Refresh Payment Risk Scores
+          Refresh Checking RF Results
         </button>
       </form>
     </div>

@@ -1,7 +1,7 @@
 from datetime import date, datetime, timedelta, timezone
 import logging
 import os
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 from django.conf import settings
 from django.db.models import Sum, Q, F, ExpressionWrapper, DecimalField, Exists, OuterRef, Subquery, Count, Prefetch
@@ -692,23 +692,8 @@ def admin_tenant_risk(request):
     """Tenant Risk Classification view"""
     q = request.GET.get("q", "").strip()
     risk_filter = request.GET.get("risk", "").strip()
-    
-    # Get all tenant risk classifications
-    risk_classifications = TenantRiskClassification.objects.select_related(
-        'tenant',
-        'tenant__tenantprofile',
-    ).all()
-    
-    # Apply filters
-    if risk_filter in ("LOW", "MEDIUM", "HIGH"):
-        risk_classifications = risk_classifications.filter(risk_level=risk_filter)
-    
-    if q:
-        risk_classifications = risk_classifications.filter(
-            Q(tenant__email__icontains=q) |
-            Q(tenant__tenantprofile__first_name__icontains=q) |
-            Q(tenant__tenantprofile__last_name__icontains=q)
-        )
+
+    risk_classifications = _admin_tenant_risk_queryset(q=q, risk_filter=risk_filter)
 
     # Sorting
     sort = request.GET.get("sort", "score_desc").strip()
@@ -751,20 +736,66 @@ def admin_tenant_risk(request):
     return render(request, "admin_portal/tenant_risk.html", context)
 
 
+def _admin_tenant_risk_queryset(*, q="", risk_filter=""):
+    """Base queryset for tenant risk listing and bounded refresh."""
+    risk_classifications = TenantRiskClassification.objects.select_related(
+        'tenant',
+        'tenant__tenantprofile',
+    ).all()
+
+    if risk_filter in ("LOW", "MEDIUM", "HIGH"):
+        risk_classifications = risk_classifications.filter(risk_level=risk_filter)
+
+    if q:
+        risk_classifications = risk_classifications.filter(
+            Q(tenant__email__icontains=q) |
+            Q(tenant__tenantprofile__first_name__icontains=q) |
+            Q(tenant__tenantprofile__last_name__icontains=q)
+        )
+
+    return risk_classifications
+
+
 @admin_required
 def admin_update_tenant_risks(request):
-    """Update all tenant risk classifications"""
+    """Refresh RF predictions for rows still showing checking state within the current filters."""
     if request.method == 'POST':
+        q = request.POST.get("q", "").strip()
+        risk_filter = request.POST.get("risk", "").strip()
+        sort = request.POST.get("sort", "score_desc").strip()
+        page_number = request.POST.get("page", "").strip()
         try:
-            updated_count = TenantRiskService.update_all_tenant_risks(include_rf=False)
-            messages.success(request, f'Successfully updated risk classifications for {updated_count} tenants.')
+            risk_classifications = _admin_tenant_risk_queryset(q=q, risk_filter=risk_filter)
+            checking_classifications = risk_classifications.filter(
+                Q(rf_risk_level__isnull=True) | Q(rf_risk_level="")
+            )
+            updated_count = TenantRiskService.refresh_missing_rf_predictions(checking_classifications)
+
+            messages.success(
+                request,
+                f"Successfully refreshed RF risk results for {updated_count} tenant(s) still marked as checking."
+            )
         except Exception as e:
             logger.exception("Tenant risk refresh failed: %s", e)
             messages.warning(
                 request,
                 "Risk refresh could not fully complete. The rule-based fallback remains available; check server logs for details.",
             )
-    
+
+        redirect_url = reverse('admin_tenant_risk')
+        query_params = {}
+        if q:
+            query_params["q"] = q
+        if risk_filter:
+            query_params["risk"] = risk_filter
+        if sort:
+            query_params["sort"] = sort
+        if page_number:
+            query_params["page"] = page_number
+        if query_params:
+            redirect_url = f"{redirect_url}?{urlencode(query_params)}"
+        return redirect(redirect_url)
+
     return redirect('admin_tenant_risk')
 
 

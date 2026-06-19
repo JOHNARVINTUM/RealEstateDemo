@@ -590,6 +590,41 @@ class TenantRiskService:
         logger.info(f"Updated risk classifications for {updated_count} tenants")
         return updated_count
 
+    @staticmethod
+    def refresh_missing_rf_predictions(classifications):
+        """Fill RF predictions only for classifications that are still in checking state."""
+        try:
+            from accounts.ml.tenant_risk_model import predict_tenant_risk
+        except Exception as exc:
+            logger.warning("Random Forest tenant risk model unavailable during RF-only refresh: %s", exc)
+            return 0
+
+        updated_count = 0
+        for classification in classifications.select_related("tenant"):
+            try:
+                prediction = predict_tenant_risk(classification.tenant)
+                if not prediction:
+                    continue
+                classification.rf_risk_level = prediction.get("risk_level")
+                classification.rf_risk_probability = prediction.get("probability")
+                classification.rf_top_factors = prediction.get("top_factors") or []
+                classification.rf_model_version = prediction.get("model_version") or ""
+                classification.save(update_fields=[
+                    "rf_risk_level",
+                    "rf_risk_probability",
+                    "rf_top_factors",
+                    "rf_model_version",
+                    "updated_at",
+                ])
+                updated_count += 1
+            except Exception as exc:
+                logger.warning(
+                    "RF-only tenant risk refresh failed for tenant %s: %s",
+                    getattr(classification.tenant, "email", None),
+                    exc,
+                )
+        return updated_count
+
 
 def generate_tenant_password(first_name, last_name):
     """

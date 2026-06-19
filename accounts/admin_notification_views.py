@@ -8,6 +8,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from maintenance.models import MaintenanceRequest
 from payments.models import ManualPayment
@@ -157,6 +158,7 @@ def admin_notifications(request):
 
 
 @admin_required
+@require_POST
 def admin_mark_notification_read(request, notification_id):
     """Admin portal: mark notification as read."""
     notification = get_object_or_404(
@@ -177,6 +179,7 @@ def admin_mark_notification_read(request, notification_id):
 
 
 @admin_required
+@require_POST
 def admin_mark_all_notifications_read(request):
     """Admin portal: mark all notifications as read."""
     unread_notifications = Notification.objects.filter(

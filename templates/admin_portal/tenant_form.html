@@ -92,7 +92,7 @@
               </label>
               <input type="email" name="email" value="{{ form.email.value|default:'' }}" 
                      class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none placeholder:text-slate-400 hover:border-slate-400 shadow-sm" 
-                     placeholder="e.g. alice@example.com" required>
+                     placeholder="e.g. alice@gmail.com" required>
               {% if form.email.errors %}
                 <p class="text-sm font-bold text-rose-600 mt-2">{{ form.email.errors.0 }}</p>
               {% endif %}

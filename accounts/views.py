@@ -202,5 +202,6 @@ def account_profile_attachment(request, attachment_id: int):
         raise Http404("Attachment file is not available.")
 
     response = FileResponse(attachment.file, content_type=content_type)
-    response["Content-Disposition"] = f'inline; filename="{attachment.filename}"'
+    response["Content-Disposition"] = f'attachment; filename="{attachment.filename}"'
+    response["X-Content-Type-Options"] = "nosniff"
     return response

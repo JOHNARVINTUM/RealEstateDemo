@@ -41,6 +41,14 @@ def _active_water_leases(reading_date):
     ).select_related('tenant', 'tenant__tenantprofile', 'unit').order_by('unit__number')
 
 
+
+def _safe_csv_value(value):
+    if not isinstance(value, str):
+        return value
+    if value and value[0] in ("=", "+", "-", "@"):
+        return f"'{value}"
+    return value
+
 def _tenant_display_name(user):
     profile = getattr(user, "tenantprofile", None)
     if profile:
@@ -337,8 +345,8 @@ def admin_water_export_csv(request):
         status = "Water Paid" if is_water_bill_locked(bill) else ("Completed" if reading else "Pending")
         writer.writerow([
             reading_date.strftime("%B %Y"),
-            lease.unit.number,
-            tenant_name,
+            _safe_csv_value(lease.unit.number),
+            _safe_csv_value(tenant_name),
             reading.previous_reading if reading else "",
             reading.current_reading if reading else "",
             usage if reading else "",

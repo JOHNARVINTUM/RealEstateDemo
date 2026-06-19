@@ -309,7 +309,7 @@ class Command(BaseCommand):
             
             # Create tenant
             first_name, last_name = tenant_name.rsplit(' ', 1) if ' ' in tenant_name else (tenant_name, '')
-            email = f"{first_name.lower().replace(' ', '.')}.{last_name.lower().replace(' ', '')}@example.com"
+            email = f"{first_name.lower().replace(' ', '.')}.{last_name.lower().replace(' ', '')}@gmail.com"
             
             # Ensure unique email
             counter = 1

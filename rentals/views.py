@@ -10,6 +10,7 @@ from django.db.models import F, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from announcements.models import Announcement
 from billing.models import MonthlyBill
@@ -971,6 +972,7 @@ def notification_has_read_at_column() -> bool:
 
 
 @tenant_required
+@require_POST
 def mark_notification_read(request, notification_id):
     """
     Mark a specific notification as read.
@@ -1003,10 +1005,9 @@ def mark_notification_read(request, notification_id):
 
 
 @tenant_required
+@require_POST
 def mark_all_notifications_read(request):
     """Mark all tenant notifications as read for the current user."""
-    if request.method != "POST":
-        return redirect("tenant_notifications")
 
     read_time = timezone.now()
     unread_notifications = Notification.objects.filter(

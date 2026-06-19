@@ -25,13 +25,13 @@ from water.models import WaterBill, WaterBillingSettings, WaterRate, WaterReadin
 class BillingWorkflowTests(TestCase):
     def setUp(self):
         self.tenant = User.objects.create_user(
-            email="tenant@example.com",
+            email="tenant@gmail.com",
             username="tenant",
             password="password123",
             role=User.Role.TENANT,
         )
         self.other_tenant = User.objects.create_user(
-            email="other@example.com",
+            email="other@gmail.com",
             username="other",
             password="password123",
             role=User.Role.TENANT,
@@ -620,7 +620,7 @@ class LeaseActivationTimezoneTests(TestCase):
 
     def setUp(self):
         self.tenant = User.objects.create_user(
-            email="tz_tenant@example.com",
+            email="tz_tenant@gmail.com",
             username="tz_tenant",
             password="password123",
             role=User.Role.TENANT,
@@ -681,7 +681,7 @@ class MoveInFirstMonthPaidTests(TestCase):
 
     def setUp(self):
         self.tenant = User.objects.create_user(
-            email="movein_tenant@example.com",
+            email="movein_tenant@gmail.com",
             username="movein_tenant",
             password="password123",
             role=User.Role.TENANT,

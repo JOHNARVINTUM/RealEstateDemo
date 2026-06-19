@@ -21,7 +21,7 @@ from rentals.models import Lease, TenantProfile, Unit
 class AdvancePaymentRelabelTests(TestCase):
     def setUp(self):
         self.tenant = User.objects.create_user(
-            email="tenant@example.com",
+            email="tenant@gmail.com",
             username="tenant",
             password="password123",
             role=User.Role.TENANT,
@@ -88,7 +88,7 @@ class MoveInPaymentNotificationTests(TestCase):
             role=User.Role.ADMIN,
         )
         self.tenant = User.objects.create_user(
-            email="john.constantine@example.com",
+            email="john.constantine@gmail.com",
             username="johnconstantine",
             password="password123",
             role=User.Role.TENANT,
@@ -138,7 +138,7 @@ class MoveInPaymentNotificationTests(TestCase):
         kwargs = notify_mock.call_args.kwargs
         self.assertEqual(kwargs["related_tenant"], self.tenant)
         self.assertIn("John Constantine", kwargs["message"])
-        self.assertNotIn("john.constantine@example.com", kwargs["message"])
+        self.assertNotIn("john.constantine@gmail.com", kwargs["message"])
         self.assertNotIn("stamaria@admin.com", kwargs["message"])
 
     def test_admin_generated_paymongo_checkout_is_owned_by_tenant(self):
@@ -245,7 +245,7 @@ class MoveInPaymentNotificationTests(TestCase):
 class F2FCashScheduleTests(TestCase):
     def setUp(self):
         self.tenant = User.objects.create_user(
-            email="cash.tenant@example.com",
+            email="cash.tenant@gmail.com",
             username="cashtenant",
             password="password123",
             role=User.Role.TENANT,

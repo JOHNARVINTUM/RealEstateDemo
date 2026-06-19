@@ -29,7 +29,7 @@ from water.models import WaterBill
 class TenantViewWorkflowTests(TestCase):
     def setUp(self):
         self.tenant = User.objects.create_user(
-            email="tenant-view@example.com",
+            email="tenant-view@gmail.com",
             username="tenantview",
             password="password123",
             role=User.Role.TENANT,
@@ -610,7 +610,7 @@ class TenantViewWorkflowTests(TestCase):
 class MoveInRepairWorkflowTests(TestCase):
     def setUp(self):
         self.tenant = User.objects.create_user(
-            email="repair@example.com",
+            email="repair@gmail.com",
             username="repair",
             password="password123",
             role=User.Role.TENANT,
@@ -677,7 +677,7 @@ class LeaseSchedulePreviewTests(TestCase):
 class TenantRiskTimelinessTests(TestCase):
     def _create_lease_with_tenant(self):
         tenant = User.objects.create_user(
-            email="risk@example.com",
+            email="risk@gmail.com",
             username="risk",
             password="password123",
             role=User.Role.TENANT,
@@ -868,7 +868,7 @@ class TenantPasswordTests(TestCase):
 
     def test_create_tenant_with_credentials_supports_legacy_call_shape(self):
         uploader = User.objects.create_user(
-            email="admin@example.com",
+            email="admin@gmail.com",
             username="adminuser",
             password="password123",
             role=User.Role.ADMIN,
@@ -879,7 +879,7 @@ class TenantPasswordTests(TestCase):
             profile, password, email_sent = create_tenant_with_credentials(
                 "John",
                 "Doe",
-                "john.doe@example.com",
+                "john.doe@gmail.com",
                 "09171234567",
                 uploader,
             )
@@ -892,7 +892,7 @@ class TenantPasswordTests(TestCase):
 
     def test_activation_welcome_does_not_reset_password_or_resend_credentials(self):
         tenant = User.objects.create_user(
-            email="activation.tenant@example.com",
+            email="activation.tenant@gmail.com",
             username="activationtenant",
             password="original-password",
             role=User.Role.TENANT,

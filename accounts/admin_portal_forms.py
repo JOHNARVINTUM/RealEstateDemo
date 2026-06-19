@@ -1,8 +1,10 @@
 import logging
+from io import BytesIO
 from django import forms
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from PIL import Image, UnidentifiedImageError
 from rentals.models import TenantProfile, Lease, Unit, UnitImage, TenantAttachment, validate_tenant_attachment_upload
 from rentals.services import generate_tenant_password, send_tenant_credentials_email
 from announcements.models import Announcement
@@ -68,10 +70,11 @@ class TenantProfileForm(forms.ModelForm):
         # Email is required
         if not email:
             raise ValidationError("Email address is required.")
-        
-        # Email must be unique
-        if User.objects.filter(email=email).exists():
-            raise ValidationError({"email": "A user with that email already exists."})
+
+        try:
+            cleaned["email"] = User.validate_email_constraints(email)
+        except ValidationError as exc:
+            raise ValidationError({"email": exc.message_dict.get("email", exc.messages)})
 
         return cleaned
 
@@ -273,9 +276,10 @@ class ComprehensiveTenantEditForm(forms.Form):
     
     def clean_email(self):
         email = self.cleaned_data.get('email')
-        if User.objects.exclude(pk=self.user.pk).filter(email=email).exists():
-            raise forms.ValidationError("A user with this email already exists.")
-        return email
+        try:
+            return User.validate_email_constraints(email, exclude_pk=self.user.pk)
+        except ValidationError as exc:
+            raise forms.ValidationError(exc.message_dict.get("email", exc.messages))
     
     def clean_username(self):
         username = self.cleaned_data.get('username')
@@ -666,6 +670,13 @@ class UnitImageForm(forms.ModelForm):
             file_extension = image.name.split('.')[-1].lower()
             if file_extension not in valid_extensions:
                 raise ValidationError("Invalid file type. Please upload JPG, PNG, GIF, or WebP images.")
+
+            header = image.read(8192)
+            image.seek(0)
+            try:
+                Image.open(BytesIO(header)).verify()
+            except (UnidentifiedImageError, OSError):
+                raise ValidationError("Invalid image file. Please upload a real image.")
         
         return image
 

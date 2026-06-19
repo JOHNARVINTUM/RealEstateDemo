@@ -4,13 +4,14 @@ from unittest.mock import patch
 from dateutil.relativedelta import relativedelta
 
 from django.test import TestCase
+from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import User
 from accounts.admin_notification_views import resolve_notification_target_url
-from accounts.admin_portal_forms import LeaseForm, TenantProfileForm
+from accounts.admin_portal_forms import ComprehensiveTenantEditForm, LeaseForm, TenantProfileForm
 from billing.models import MonthlyBill
 from maintenance.models import MaintenanceRequest
 from payments.models import ManualPayment
@@ -21,13 +22,13 @@ from water.models import WaterRate, WaterReading
 class AccountProfileTests(TestCase):
     def setUp(self):
         self.admin = User.objects.create_superuser(
-            email="profile-admin@example.com",
+            email="profile-admin@gmail.com",
             username="profileadmin",
             password="password123",
             role=User.Role.ADMIN,
         )
         self.tenant = User.objects.create_user(
-            email="profile-tenant@example.com",
+            email="profile-tenant@gmail.com",
             username="profiletenant",
             password="password123",
             role=User.Role.TENANT,
@@ -91,7 +92,7 @@ class AccountProfileTests(TestCase):
 
     def test_attachment_view_rejects_other_tenant(self):
         other_tenant = User.objects.create_user(
-            email="other-profile-tenant@example.com",
+            email="other-profile-tenant@gmail.com",
             username="otherprofiletenant",
             password="password123",
             role=User.Role.TENANT,
@@ -125,7 +126,7 @@ class AccountProfileTests(TestCase):
     def test_tenant_profile_form_accepts_iphone_heic_attachment(self):
         form = TenantProfileForm(
             data={
-                "email": "heic-tenant@example.com",
+                "email": "heic-tenant@gmail.com",
                 "first_name": "Heic",
                 "last_name": "Tenant",
                 "contact_no": "09170000001",
@@ -140,7 +141,7 @@ class AccountProfileTests(TestCase):
     def test_tenant_profile_form_rejects_unsupported_attachment_type(self):
         form = TenantProfileForm(
             data={
-                "email": "docx-tenant@example.com",
+                "email": "docx-tenant@gmail.com",
                 "first_name": "Docx",
                 "last_name": "Tenant",
                 "contact_no": "09170000002",
@@ -161,12 +162,12 @@ class AccountProfileTests(TestCase):
 class AdminPaymentTypeEditTests(TestCase):
     def setUp(self):
         self.admin = User.objects.create_superuser(
-            email="admin@example.com",
+            email="admin@gmail.com",
             username="admin",
             password="password123",
         )
         self.tenant = User.objects.create_user(
-            email="tenant@example.com",
+            email="tenant@gmail.com",
             username="tenant",
             password="password123",
             role=User.Role.TENANT,
@@ -489,12 +490,12 @@ class AdminPaymentTypeEditTests(TestCase):
 class AdminWaterSaveBehaviorTests(TestCase):
     def setUp(self):
         self.admin = User.objects.create_superuser(
-            email="water-admin@example.com",
+            email="water-admin@gmail.com",
             username="wateradmin",
             password="password123",
         )
         self.tenant = User.objects.create_user(
-            email="water-tenant@example.com",
+            email="water-tenant@gmail.com",
             username="watertenant",
             password="password123",
             role=User.Role.TENANT,
@@ -562,7 +563,7 @@ class AdminWaterSaveBehaviorTests(TestCase):
 
     def test_water_filter_keeps_shared_pump_percentage_denominator_global(self):
         other_tenant = User.objects.create_user(
-            email="water-other@example.com",
+            email="water-other@gmail.com",
             username="waterother",
             password="password123",
             role=User.Role.TENANT,
@@ -628,7 +629,7 @@ class AdminWaterSaveBehaviorTests(TestCase):
 
     def test_water_page_starts_occupied_mid_month_lease_on_next_water_month(self):
         tenant = User.objects.create_user(
-            email="sophia.sinco.water@example.com",
+            email="sophia.sinco.water@gmail.com",
             username="sophiasincowater",
             password="password123",
             role=User.Role.TENANT,
@@ -666,7 +667,7 @@ class AdminWaterSaveBehaviorTests(TestCase):
 
     def test_water_page_includes_advance_paid_contract_month_even_with_stale_lifecycle(self):
         tenant = User.objects.create_user(
-            email="advance.sinco.water@example.com",
+            email="advance.sinco.water@gmail.com",
             username="advancesincowater",
             password="password123",
             role=User.Role.TENANT,
@@ -713,12 +714,12 @@ class AdminWaterSaveBehaviorTests(TestCase):
 class AdminBillingSettlementWarningTests(TestCase):
     def setUp(self):
         self.admin = User.objects.create_superuser(
-            email="billing-admin@example.com",
+            email="billing-admin@gmail.com",
             username="billingadmin",
             password="password123",
         )
         self.tenant = User.objects.create_user(
-            email="billing-tenant@example.com",
+            email="billing-tenant@gmail.com",
             username="billingtenant",
             password="password123",
             role=User.Role.TENANT,
@@ -972,12 +973,12 @@ class AdminBillingSettlementWarningTests(TestCase):
 class AdminNotificationBehaviorTests(TestCase):
     def setUp(self):
         self.admin = User.objects.create_superuser(
-            email="admin-notify@example.com",
+            email="admin-notify@gmail.com",
             username="adminnotify",
             password="password123",
         )
         self.tenant = User.objects.create_user(
-            email="notify-tenant@example.com",
+            email="notify-tenant@gmail.com",
             username="notifytenant",
             password="password123",
             role=User.Role.TENANT,
@@ -1128,13 +1129,13 @@ class AdminNotificationBehaviorTests(TestCase):
 class TenantPortalBoundaryTests(TestCase):
     def setUp(self):
         self.admin = User.objects.create_superuser(
-            email="boundary-admin@example.com",
+            email="boundary-admin@gmail.com",
             username="boundaryadmin",
             password="password123",
             role=User.Role.ADMIN,
         )
         self.tenant = User.objects.create_user(
-            email="boundary-tenant@example.com",
+            email="boundary-tenant@gmail.com",
             username="boundarytenant",
             password="password123",
             role=User.Role.TENANT,
@@ -1180,7 +1181,7 @@ class TenantPortalBoundaryTests(TestCase):
 class TenantNotificationBehaviorTests(TestCase):
     def setUp(self):
         self.tenant = User.objects.create_user(
-            email="tenant-notify@example.com",
+            email="tenant-notify@gmail.com",
             username="tenantnotify",
             password="password123",
             role=User.Role.TENANT,
@@ -1256,13 +1257,13 @@ class TenantNotificationBehaviorTests(TestCase):
 class AdminMaintenanceDisplayTests(TestCase):
     def setUp(self):
         self.admin = User.objects.create_superuser(
-            email="maintenance-admin@example.com",
+            email="maintenance-admin@gmail.com",
             username="maintenanceadmin",
             password="password123",
             role=User.Role.ADMIN,
         )
         self.tenant = User.objects.create_user(
-            email="sophia.sinco@example.com",
+            email="sophia.sinco@gmail.com",
             username="sophiasinco",
             password="password123",
             role=User.Role.TENANT,
@@ -1329,12 +1330,12 @@ class AdminMaintenanceDisplayTests(TestCase):
 class AdminForecastingRevenueTests(TestCase):
     def setUp(self):
         self.admin = User.objects.create_superuser(
-            email="forecast-admin@example.com",
+            email="forecast-admin@gmail.com",
             username="forecastadmin",
             password="password123",
         )
         self.tenant = User.objects.create_user(
-            email="forecast-tenant@example.com",
+            email="forecast-tenant@gmail.com",
             username="forecasttenant",
             password="password123",
             role=User.Role.TENANT,
@@ -1416,12 +1417,12 @@ class AdminForecastingRevenueTests(TestCase):
 class AdminTenantPaymentHistoryTests(TestCase):
     def test_tenant_detail_payment_history_excludes_future_unpaid_bills_but_keeps_paid_future(self):
         admin = User.objects.create_superuser(
-            email="history-admin@example.com",
+            email="history-admin@gmail.com",
             username="historyadmin",
             password="password123",
         )
         tenant_user = User.objects.create_user(
-            email="history-tenant@example.com",
+            email="history-tenant@gmail.com",
             username="historytenant",
             password="password123",
             role=User.Role.TENANT,
@@ -1489,12 +1490,12 @@ class AdminTenantPaymentHistoryTests(TestCase):
 class AdminTenantAndUnitSearchTests(TestCase):
     def setUp(self):
         self.admin = User.objects.create_superuser(
-            email="admin-search@example.com",
+            email="admin-search@gmail.com",
             username="adminsearch",
             password="password123",
         )
         self.tenant_john = User.objects.create_user(
-            email="john.constantine@example.com",
+            email="john.constantine@gmail.com",
             username="johnconstantine",
             password="password123",
             role=User.Role.TENANT,
@@ -1508,7 +1509,7 @@ class AdminTenantAndUnitSearchTests(TestCase):
             created_by=None,
         )
         self.tenant_mary = User.objects.create_user(
-            email="mary.sue@example.com",
+            email="mary.sue@gmail.com",
             username="marysue",
             password="password123",
             role=User.Role.TENANT,
@@ -1775,7 +1776,7 @@ class AdminTenantAndUnitSearchTests(TestCase):
     def test_new_lease_form_blocks_occupied_units(self):
         occupied_unit = Unit.objects.create(number="701", monthly_rent=Decimal("12000.00"), status="OCCUPIED")
         tenant = User.objects.create_user(
-            email="tenant.form@example.com",
+            email="tenant.form@gmail.com",
             username="tenantform",
             password="password123",
             role=User.Role.TENANT,
@@ -1807,19 +1808,19 @@ class AdminTenantAndUnitSearchTests(TestCase):
 
     def test_new_lease_form_excludes_tenants_with_active_or_pending_leases(self):
         available_tenant = User.objects.create_user(
-            email="available.tenant@example.com",
+            email="available.tenant@gmail.com",
             username="availabletenant",
             password="password123",
             role=User.Role.TENANT,
         )
         active_tenant = User.objects.create_user(
-            email="active.tenant@example.com",
+            email="active.tenant@gmail.com",
             username="activetenant",
             password="password123",
             role=User.Role.TENANT,
         )
         pending_tenant = User.objects.create_user(
-            email="pending.tenant@example.com",
+            email="pending.tenant@gmail.com",
             username="pendingtenant",
             password="password123",
             role=User.Role.TENANT,
@@ -1863,13 +1864,13 @@ class AdminTenantAndUnitSearchTests(TestCase):
 class TenantCreationEmailTests(TestCase):
     def test_tenant_form_sends_credentials_immediately_after_creation(self):
         admin = User.objects.create_superuser(
-            email="admin-create-tenant@example.com",
+            email="admin-create-tenant@gmail.com",
             username="admincreatetenant",
             password="password123",
         )
         form = TenantProfileForm(
             data={
-                "email": "instant.tenant@example.com",
+                "email": "instant.tenant@gmail.com",
                 "first_name": "Instant",
                 "last_name": "Tenant",
                 "contact_no": "09170000000",
@@ -1881,23 +1882,106 @@ class TenantCreationEmailTests(TestCase):
             profile = form.save(uploaded_by=admin)
 
         send_email.assert_called_once_with(
-            tenant_email="instant.tenant@example.com",
+            tenant_email="instant.tenant@gmail.com",
             tenant_name="Instant Tenant",
             password="ITenant",
         )
         self.assertTrue(profile.credentials_email_sent)
         self.assertTrue(profile.user.check_password("ITenant"))
 
+    def test_tenant_form_blocks_duplicate_email_case_insensitively(self):
+        User.objects.create_user(
+            email="duplicate.base@gmail.com",
+            username="duplicatebase",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        form = TenantProfileForm(
+            data={
+                "email": "Duplicate.Base@GMAIL.com",
+                "first_name": "Duplicate",
+                "last_name": "Tenant",
+                "contact_no": "09170000000",
+            }
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("email", form.errors)
+
+    def test_tenant_form_blocks_gmail_plus_alias(self):
+        form = TenantProfileForm(
+            data={
+                "email": "johnarvint999+2@gmail.com",
+                "first_name": "John",
+                "last_name": "Alias",
+                "contact_no": "09170000000",
+            }
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("email", form.errors)
+        self.assertIn("without a '+' alias", form.errors["email"][0])
+
+
+class TenantEmailConstraintTests(TestCase):
+    def test_user_save_blocks_gmail_plus_alias(self):
+        with self.assertRaisesMessage(ValidationError, "Please use the main Gmail address without a '+' alias."):
+            User.objects.create_user(
+                email="johnarvint999+2@gmail.com",
+                username="johnplusalias",
+                password="password123",
+                role=User.Role.TENANT,
+            )
+
+    def test_edit_form_blocks_canonical_duplicate_email(self):
+        existing = User.objects.create_user(
+            email="johnarvint999@gmail.com",
+            username="existingjohn",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        TenantProfile.objects.create(user=existing, first_name="Existing", last_name="John")
+
+        editable = User.objects.create_user(
+            email="other.person@gmail.com",
+            username="otherperson",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        editable_profile = TenantProfile.objects.create(
+            user=editable,
+            first_name="Other",
+            last_name="Person",
+        )
+
+        form = ComprehensiveTenantEditForm(
+            editable_profile,
+            data={
+                "email": "JohnArvint999@Gmail.com",
+                "username": editable.username,
+                "role": editable.role,
+                "is_active": "on",
+                "first_name": editable_profile.first_name,
+                "last_name": editable_profile.last_name,
+                "contact_no": editable_profile.contact_no,
+                "new_password": "",
+                "confirm_password": "",
+            },
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("email", form.errors)
+
 
 class AdminCashMoveInNotificationTests(TestCase):
     def setUp(self):
         self.admin = User.objects.create_superuser(
-            email="admin-cash@example.com",
+            email="admin-cash@gmail.com",
             username="admincash",
             password="password123",
         )
         self.tenant = User.objects.create_user(
-            email="john.constantine@example.com",
+            email="john.constantine@gmail.com",
             username="johncash",
             password="password123",
             role=User.Role.TENANT,
@@ -1945,12 +2029,12 @@ class AdminCashMoveInNotificationTests(TestCase):
         ).latest("created_at")
         self.assertIn("John Constantine", notification.message)
         self.assertIn("Face-to-Face Cash", notification.message)
-        self.assertNotIn("admin-cash@example.com", notification.message)
+        self.assertNotIn("admin-cash@gmail.com", notification.message)
 
     def test_new_lease_keeps_unit_available_until_move_in_payment(self):
         self.client.force_login(self.admin)
         tenant = User.objects.create_user(
-            email="pending-create@example.com",
+            email="pending-create@gmail.com",
             username="pendingcreate",
             password="password123",
             role=User.Role.TENANT,
@@ -2019,12 +2103,12 @@ class AdminCashMoveInNotificationTests(TestCase):
 class AdminTenantDeleteArchiveTests(TestCase):
     def setUp(self):
         self.admin = User.objects.create_superuser(
-            email="admin-delete@example.com",
+            email="admin-delete@gmail.com",
             username="admindelete",
             password="password123",
         )
         self.tenant = User.objects.create_user(
-            email="archive.tenant@example.com",
+            email="archive.tenant@gmail.com",
             username="archivetenant",
             password="password123",
             role=User.Role.TENANT,

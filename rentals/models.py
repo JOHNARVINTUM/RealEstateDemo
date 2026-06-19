@@ -2,6 +2,8 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
+from PIL import Image, UnidentifiedImageError
+from io import BytesIO
 import os
 
 
@@ -505,6 +507,26 @@ def validate_tenant_attachment_upload(uploaded_file, *, label="File"):
         raise ValidationError(
             f"Invalid {label.lower()} type. Accepted formats: {TenantAttachment.ALLOWED_FORMATS_LABEL}."
         )
+
+    header = uploaded_file.read(8192)
+    uploaded_file.seek(0)
+
+    if extension == ".pdf":
+        if not header.startswith(b"%PDF-"):
+            raise ValidationError(f"{label} must be a valid PDF file.")
+        return uploaded_file
+
+    if extension in {".jpg", ".jpeg", ".png"}:
+        try:
+            Image.open(BytesIO(header)).verify()
+        except (UnidentifiedImageError, OSError):
+            raise ValidationError(f"{label} must be a valid image file.")
+        return uploaded_file
+
+    if extension in {".heic", ".heif"}:
+        content_type = (getattr(uploaded_file, "content_type", "") or "").lower()
+        if content_type not in {"image/heic", "image/heif", "application/octet-stream"}:
+            raise ValidationError(f"{label} must be a valid HEIC/HEIF image.")
 
     return uploaded_file
 

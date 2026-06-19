@@ -25,6 +25,14 @@ from rentals import services as rental_services
 from .admin_portal_views import admin_required, admin_password_verified, render_admin_password_confirm
 
 
+def _safe_csv_value(value):
+    if not isinstance(value, str):
+        return value
+    if value and value[0] in ("=", "+", "-", "@"):
+        return f"'{value}"
+    return value
+
+
 def _bill_balance_amount(bill):
     if bill.total_balance > 0:
         return bill.total_balance
@@ -261,9 +269,9 @@ def admin_billing_export_csv(request):
         except Exception:
             name = b.lease.tenant.email
         writer.writerow([
-            name,
-            b.lease.tenant.email,
-            b.lease.unit.number,
+            _safe_csv_value(name),
+            _safe_csv_value(b.lease.tenant.email),
+            _safe_csv_value(b.lease.unit.number),
             b.billing_month.strftime("%B %Y"),
             b.due_date.strftime("%Y-%m-%d") if b.due_date else "",
             peso(b.base_rent),
@@ -273,8 +281,8 @@ def admin_billing_export_csv(request):
             peso(b.rent_paid),
             peso(b.water_paid),
             peso(b.total_balance),
-            b.get_status_display(),
-            b.payment_reference or "",
+            _safe_csv_value(b.get_status_display()),
+            _safe_csv_value(b.payment_reference or ""),
             b.paid_at.strftime("%Y-%m-%d %H:%M") if b.paid_at else "",
         ])
 

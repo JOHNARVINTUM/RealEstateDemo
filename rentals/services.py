@@ -31,11 +31,11 @@ def _repair_candidate_leases(payment, lease_id=None):
     if lease:
         return lease
 
-    lease = lease_qs.filter(status=Lease.STATUS_PENDING_PAYMENT).order_by("-created_at").first()
+    lease = lease_qs.filter(status=Lease.STATUS_PENDING_PAYMENT).order_by("-start_date", "-id").first()
     if lease:
         return lease
 
-    return lease_qs.order_by("-start_date", "-created_at").first()
+    return lease_qs.order_by("-start_date", "-id").first()
 
 
 def _repair_activate_pending_lease(lease, payment):
@@ -1303,6 +1303,7 @@ class LeaseActivationService:
         except Exception as e:
             logger.exception(f"Failed to activate lease {lease_id}: {e}")
             return False, f"Activation failed: {str(e)}"
+
 
 
 

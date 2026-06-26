@@ -215,6 +215,61 @@ class MoveInPaymentNotificationTests(TestCase):
         self.assertEqual(first_bill.status, "PAID")
         self.assertEqual(first_bill.payment_reference, "REF-PM-ACTIVE")
 
+    def test_stale_move_in_lease_id_falls_back_to_current_pending_lease(self):
+        self.lease.status = Lease.STATUS_TERMINATED
+        self.lease.is_active = False
+        self.lease.save(update_fields=["status", "is_active"])
+
+        stale_lease = Lease.objects.create(
+            tenant=self.tenant,
+            unit=self.unit,
+            monthly_rent=Decimal("12000.00"),
+            due_day=5,
+            start_date=date(2026, 6, 1),
+            status=Lease.STATUS_PENDING_PAYMENT,
+            is_active=False,
+        )
+        stale_lease_id = stale_lease.id
+        stale_lease.delete()
+
+        replacement_unit = Unit.objects.create(number="P-203")
+        replacement_lease = Lease.objects.create(
+            tenant=self.tenant,
+            unit=replacement_unit,
+            monthly_rent=Decimal("12000.00"),
+            due_day=5,
+            start_date=date(2026, 6, 1),
+            status=Lease.STATUS_PENDING_PAYMENT,
+            is_active=False,
+        )
+
+        payment = ManualPayment.objects.create(
+            user=self.tenant,
+            payment_type="move_in",
+            payment_method="PAYMONGO",
+            amount=Decimal("36000.00"),
+            reference_code="REF-PM-STALE",
+            status="PENDING",
+            checkout_session_id="cs_test_stale_movein",
+            metadata={
+                "generated_by_admin": str(self.admin.id),
+                "tenant_id": str(self.tenant.id),
+                "lease_id": str(stale_lease_id),
+            },
+        )
+
+        with patch("payments.paymongo_workflow.Notification.create_notification"), patch("rentals.services.send_email_via_resend", return_value=True):
+            auto_approve_paymongo_payment(payment)
+
+        payment.refresh_from_db()
+        replacement_lease.refresh_from_db()
+        first_bill = MonthlyBill.objects.get(lease=replacement_lease, billing_month=date(2026, 6, 1))
+        self.assertEqual(payment.status, "APPROVED")
+        self.assertEqual(payment.metadata["lease_id"], str(replacement_lease.id))
+        self.assertEqual(replacement_lease.status, Lease.STATUS_ACTIVE)
+        self.assertTrue(replacement_lease.is_active)
+        self.assertEqual(payment.bill_ids, str(first_bill.id))
+        self.assertEqual(first_bill.status, "PAID")
     def test_admin_payment_queryset_excludes_unpaid_paymongo_checkout_drafts(self):
         draft = ManualPayment.objects.create(
             user=self.tenant,
@@ -275,3 +330,4 @@ class F2FCashScheduleTests(TestCase):
         self.assertEqual(out_of_hours_response.status_code, 200)
         self.assertContains(out_of_hours_response, "office hours")
         self.assertEqual(ManualPayment.objects.filter(payment_method="CASH").count(), 0)
+

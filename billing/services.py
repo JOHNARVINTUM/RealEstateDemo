@@ -689,7 +689,7 @@ def get_or_update_monthly_bill(lease, billing_month: date, today: date | None = 
     - Water is included in total_due (but no interest yet).
     """
     if today is None:
-        today = date.today()
+        today = timezone.localdate()
 
     billing_month = month_start(billing_month)
     due_date = due_date_for_month(billing_month.year, billing_month.month, lease.due_day)
@@ -745,7 +745,7 @@ def ensure_bills_since_move_in(lease, today: date | None = None):
     if lease is None:
         return
     if today is None:
-        today = date.today()
+        today = timezone.localdate()
     _ensure_bills_for_range(lease, month_start(today), today, apply_move_in=True)
 
 
@@ -797,7 +797,7 @@ def ensure_bills_up_to(lease, end_month: date, today: date | None = None):
     if lease is None:
         return
     if today is None:
-        today = date.today()
+        today = timezone.localdate()
     if not _lease_is_billable_today(lease, today):
         return
 
@@ -821,7 +821,7 @@ def badge_for_bill(bill: MonthlyBill, today: date | None = None) -> str:
     Returns: OVERDUE, DUE_TODAY, NEAR_DUE, UPCOMING
     """
     if today is None:
-        today = date.today()
+        today = timezone.localdate()
 
     if bill.due_date < today:
         return "OVERDUE"
@@ -1428,3 +1428,4 @@ def remove_bill_references_from_payment_history(bill_id: int):
         remaining_ids = [current_id for current_id in current_ids if current_id != bill_id]
         payment.bill_ids = serialize_bill_ids(remaining_ids)
         payment.save(update_fields=["bill_ids"])
+

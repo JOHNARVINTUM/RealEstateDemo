@@ -128,10 +128,9 @@ class MonthlyBill(models.Model):
     @property
     def billing_state(self):
         """Computed billing state for ledger display. No DB column."""
-        from datetime import date as _date
         if self.status == "PAID" or (self.total_balance == 0 and self.status not in ("UNPAID", "PARTIALLY_PAID")):
             return "PAID"
-        today = _date.today()
+        today = timezone.localdate()
         current_month = today.replace(day=1)
         bill_month = self.billing_month.replace(day=1)
         if bill_month > current_month:
@@ -241,4 +240,6 @@ class BillingInvoice(models.Model):
 
     def __str__(self):
         return f"{self.invoice_number} - {self.tenant.email}"
+
+
 

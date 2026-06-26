@@ -741,7 +741,7 @@ def _payment_totals(preview_rows, payment_type):
 def _payment_preview_context(request, lease, months_to_pay):
     reconcile_approved_payments_for_tenant(request.user)
 
-    today = date.today()
+    today = timezone.localdate()
     today_start = month_start(today)
     ensure_bills_up_to(lease, _advance_generation_end_month(lease, today_start, _contract_advance_month_cap(lease, today_start)))
 
@@ -844,7 +844,7 @@ def tenant_billing(request):
         refreshed_bills = _filtered_bills_for_statement(lease, billing_month_filter)
         current_bill = refreshed_bills[0] if refreshed_bills else None
     water_reading = current_bill.source_water_reading if current_bill and current_bill.source_water_reading else None
-    ongoing_rows = _ongoing_billing_rows(refreshed_bills, date.today())
+    ongoing_rows = _ongoing_billing_rows(refreshed_bills, today)
     monthly_status_rows = _monthly_status_rows(lease, today)
     transactions = _approved_payment_transactions(user, lease)
     contract_month_choices = _contract_month_choices(lease, today)
@@ -1076,5 +1076,6 @@ def purge_read_notifications_for_tenant(user):
         is_read=True,
         read_at__lte=cutoff,
     ).delete()
+
 
 

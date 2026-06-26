@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.db import models
-from rentals.models import Lease
+from rentals.models import Lease, get_user_files_storage
 
 
 class MaintenanceRequest(models.Model):
@@ -39,7 +39,12 @@ class MaintenanceRequest(models.Model):
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
     title = models.CharField(max_length=120)
     description = models.TextField()
-    photo = models.ImageField(upload_to="maintenance_photos/", null=True, blank=True)
+    photo = models.ImageField(
+        upload_to="maintenance/",
+        storage=get_user_files_storage(),
+        null=True,
+        blank=True,
+    )
     requested_schedule_at = models.DateTimeField(
         null=True,
         blank=True,
@@ -74,3 +79,4 @@ class MaintenanceRequest(models.Model):
 
     def __str__(self):
         return f"{self.title} ({self.get_status_display()})"
+

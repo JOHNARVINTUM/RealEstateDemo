@@ -2170,3 +2170,45 @@ class AdminTenantDeleteArchiveTests(TestCase):
         self.assertIsInstance(summary["leases"][0]["start_date"], str)
         self.assertIsInstance(summary["payments_sample"][0]["created_at"], str)
         self.assertIsInstance(summary["maintenance_sample"][0]["created_at"], str)
+
+
+class LeaseFormCompatibilityTests(TestCase):
+    def test_lease_form_save_populates_legacy_renewal_status(self):
+        tenant = User.objects.create_user(
+            email="lease.compat@gmail.com",
+            username="leasecompat",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        TenantProfile.objects.create(
+            user=tenant,
+            first_name="Lease",
+            last_name="Compat",
+            password_change_required=False,
+            created_by=None,
+        )
+        unit = Unit.objects.create(
+            number="LC-101",
+            monthly_rent=Decimal("12000.00"),
+            status="AVAILABLE",
+        )
+
+        form = LeaseForm(
+            data={
+                "tenant": tenant.id,
+                "unit": unit.id,
+                "monthly_rent": "12000.00",
+                "due_day": "27",
+                "start_date": "2026-06-27",
+                "end_date": "2027-06-27",
+                "security_deposit": "24000.00",
+                "motorcycle_slots": "0",
+                "car_slots": "0",
+            }
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        lease = form.save()
+
+        self.assertEqual(lease.status, Lease.STATUS_PENDING_PAYMENT)
+        self.assertEqual(lease.renewal_status, "")

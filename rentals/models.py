@@ -152,6 +152,9 @@ class Lease(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING_PAYMENT, help_text="Lease lifecycle status")
     is_active = models.BooleanField(default=False, help_text="Whether lease is currently active (backward compatibility)")
     activated_at = models.DateTimeField(null=True, blank=True, help_text="When lease was activated after payment")
+    renewal_requested_at = models.DateTimeField(null=True, blank=True, help_text="Legacy renewal request timestamp")
+    renewal_status = models.CharField(max_length=20, default="", blank=True, help_text="Legacy renewal workflow state")
+    requested_renewal_end_date = models.DateField(null=True, blank=True, help_text="Legacy requested lease end date")
     
     motorcycle_slots = models.PositiveSmallIntegerField(default=0, help_text="Number of motorcycle parking slots (₱350 each/mo)")
     car_slots = models.PositiveSmallIntegerField(default=0, help_text="Number of car parking slots (₱2,500 each/mo)")
@@ -721,3 +724,4 @@ class ArchivedTenant(models.Model):
             'deleted_by': self.deleted_by.get_full_name() if self.deleted_by else 'System',
             'is_restorable': self.is_restorable,
         }
+

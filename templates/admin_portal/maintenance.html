@@ -64,7 +64,7 @@
         <div class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">{{ total_count }}</div>
       </div>
       <div class="text-xs font-bold text-slate-500 mt-3 flex items-center gap-1.5">
-        <span class="text-slate-400">●</span> All reports ever made
+        <span class="text-slate-400">&bull;</span> All reports ever made
       </div>
     </div>
 
@@ -75,7 +75,7 @@
         <div class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">{{ pending_count }}</div>
       </div>
       <div class="text-xs font-bold text-slate-500 mt-3 flex items-center gap-1.5">
-        <span class="text-amber-500">●</span> Needs attention
+        <span class="text-amber-500">&bull;</span> Needs attention
       </div>
     </div>
 
@@ -86,7 +86,7 @@
         <div class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">{{ in_progress_count }}</div>
       </div>
       <div class="text-xs font-bold text-slate-500 mt-3 flex items-center gap-1.5">
-        <span class="text-indigo-600">●</span> Worker is busy fixing
+        <span class="text-indigo-600">&bull;</span> Worker is busy fixing
       </div>
     </div>
 
@@ -97,7 +97,7 @@
         <div class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">{{ resolved_count }}</div>
       </div>
       <div class="text-xs font-bold text-slate-500 mt-3 flex items-center gap-1.5">
-        <span class="text-emerald-500">●</span> Successfully repaired
+        <span class="text-emerald-500">&bull;</span> Successfully repaired
       </div>
     </div>
 
@@ -138,6 +138,7 @@
           <option value="OPEN" {% if status == "OPEN" %}selected{% endif %}>Waiting</option>
           <option value="IN_PROGRESS" {% if status == "IN_PROGRESS" %}selected{% endif %}>Being Fixed</option>
           <option value="RESOLVED" {% if status == "RESOLVED" %}selected{% endif %}>Fixed</option>
+          <option value="CLOSED" {% if status == "CLOSED" %}selected{% endif %}>Archived</option>
         </select>
       </form>
 
@@ -292,7 +293,7 @@
                   {% endif %}
                 </div>
               {% else %}
-                <span class="text-[10px] text-slate-300 font-bold">—</span>
+                <span class="text-[10px] text-slate-300 font-bold">&mdash;</span>
               {% endif %}
             </td>
 
@@ -315,6 +316,15 @@
                   <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-3 py-2 bg-slate-900 text-white rounded-lg shadow-xl text-xs font-medium opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-300 z-50 pointer-events-none border border-slate-700 text-center delay-[150ms]">
                     <strong class="text-indigo-400 block mb-1">Created</strong>
                     {{ r.created_at|date:"M d, Y" }}
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-slate-900"></div>
+                  </div>
+                {% elif r.status == 'CLOSED' %}
+                  <span class="cursor-help inline-flex px-3 py-1 rounded-lg bg-slate-100 text-slate-700 font-black text-[11px] uppercase tracking-wider border border-dashed border-slate-300">
+                    Archived
+                  </span>
+                  <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[240px] px-3 py-2 bg-slate-900 text-white rounded-lg shadow-xl text-xs font-medium opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-300 z-50 pointer-events-none border border-slate-700 text-center delay-[150ms] whitespace-normal">
+                    <strong class="text-slate-300 block mb-1">Archived</strong>
+                    {{ r.schedule_admin_note|default:"Linked lease or unit is no longer available." }}
                     <div class="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-slate-900"></div>
                   </div>
                 {% else %}

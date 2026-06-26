@@ -124,3 +124,58 @@ class MaintenanceSubmissionTests(TestCase):
         self.assertRedirects(response, reverse("maintenance_list"))
         request_obj = MaintenanceRequest.objects.latest("id")
         self.assertEqual(request_obj.lease_id, self.lease.id)
+
+
+class MaintenanceAdminArchiveTests(TestCase):
+    def setUp(self):
+        self.admin_user = User.objects.create_user(
+            email="admin@example.com",
+            username="adminuser",
+            password="password123",
+            role=User.Role.ADMIN,
+            is_staff=True,
+        )
+        self.tenant_user = User.objects.create_user(
+            email="tenant-archive@example.com",
+            username="tenantarchive",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        self.client.force_login(self.admin_user)
+
+    def test_admin_maintenance_archives_orphaned_requests(self):
+        request_obj = MaintenanceRequest.objects.create(
+            tenant=self.tenant_user,
+            lease=None,
+            category="OTHER",
+            title="Old request",
+            description="Unit was deleted after this request was created.",
+            status="OPEN",
+        )
+
+        response = self.client.get(reverse("admin_maintenance"))
+
+        self.assertEqual(response.status_code, 200)
+        request_obj.refresh_from_db()
+        self.assertEqual(request_obj.status, "CLOSED")
+        self.assertIsNotNone(request_obj.resolved_at)
+        self.assertIn("linked lease or unit is no longer available", request_obj.schedule_admin_note.lower())
+        self.assertNotContains(response, "Old request")
+
+    def test_admin_maintenance_can_filter_archived_requests(self):
+        request_obj = MaintenanceRequest.objects.create(
+            tenant=self.tenant_user,
+            lease=None,
+            category="OTHER",
+            title="Archived request",
+            description="Archived because the unit is no longer linked.",
+            status="OPEN",
+        )
+
+        response = self.client.get(reverse("admin_maintenance"), {"status": "CLOSED"})
+
+        self.assertEqual(response.status_code, 200)
+        request_obj.refresh_from_db()
+        self.assertEqual(request_obj.status, "CLOSED")
+        self.assertContains(response, "Archived request")
+        self.assertContains(response, "Archived")

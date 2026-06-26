@@ -18,6 +18,29 @@ from .admin_portal_views import admin_required
 logger = logging.getLogger(__name__)
 
 
+ARCHIVED_ORPHAN_NOTE = "Archived automatically because the linked lease or unit is no longer available."
+
+
+def _archive_orphaned_requests(queryset=None):
+    archived_at = dj_timezone.now()
+    base_queryset = queryset if queryset is not None else MaintenanceRequest.objects.all()
+    orphaned_reqs = base_queryset.filter(Q(lease__isnull=True) | Q(lease__unit__isnull=True)).exclude(status="CLOSED")
+
+    archived_ids = []
+    for req in orphaned_reqs.only("id", "status", "resolved_at", "schedule_admin_note"):
+        notes = (req.schedule_admin_note or "").strip()
+        if ARCHIVED_ORPHAN_NOTE not in notes:
+            notes = f"{notes}\n{ARCHIVED_ORPHAN_NOTE}".strip()
+
+        req.status = "CLOSED"
+        req.resolved_at = req.resolved_at or archived_at
+        req.schedule_admin_note = notes
+        req.save(update_fields=["status", "resolved_at", "schedule_admin_note"])
+        archived_ids.append(req.id)
+
+    return archived_ids
+
+
 def _current_active_leases_by_tenant(tenant_ids, today=None):
     if today is None:
         today = timezone.localdate()
@@ -53,6 +76,11 @@ def _current_active_leases_by_tenant(tenant_ids, today=None):
 @admin_required
 def admin_update_maintenance(request, req_id: int):
     req = get_object_or_404(MaintenanceRequest, pk=req_id)
+    if req.lease_id is None:
+        archived_ids = _archive_orphaned_requests(MaintenanceRequest.objects.filter(pk=req.pk))
+        if archived_ids:
+            req.refresh_from_db()
+
     if request.method == "POST":
         old_status = req.status
         old_schedule_decision = req.schedule_decision
@@ -158,6 +186,8 @@ def admin_maintenance(request):
     status = request.GET.get("status", "").strip()
     priority = request.GET.get("priority", "").strip()
 
+    _archive_orphaned_requests()
+
     reqs = MaintenanceRequest.objects.select_related(
         "tenant",
         "tenant__tenantprofile",
@@ -169,6 +199,8 @@ def admin_maintenance(request):
 
     if status:
         reqs = reqs.filter(status=status)
+    else:
+        reqs = reqs.exclude(status="CLOSED")
 
     if priority:
         reqs = reqs.filter(priority=priority)

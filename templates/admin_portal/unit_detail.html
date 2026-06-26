@@ -268,37 +268,20 @@
         </div>
       </div>
 
-      {% if unit.is_active %}
-        <!-- Danger Zone -->
-        <div class="bg-rose-50 border-2 border-rose-100 rounded-[2rem] p-8 space-y-4">
-          <h3 class="text-xs font-black uppercase tracking-widest text-rose-800">Hide from List</h3>
-          <p class="text-sm text-rose-700 font-bold leading-relaxed">
-            Hiding this room will remove it from the main list, but we'll still keep its records in our system.
-          </p>
-
-          <form method="POST" action="{% url 'admin_delete_unit' unit.id %}" class="confirm-action" 
-                data-confirm="Hide this room from the list? You can still see its history later.">
-            {% csrf_token %}
-            <button type="submit" 
-                    class="w-full px-8 py-3.5 bg-white hover:bg-rose-600 text-rose-600 hover:text-white border-2 border-rose-200 rounded-xl font-black text-center transition-all shadow-sm select-none active:scale-95">
-              Hide this Room
-            </button>
-          </form>
-        </div>
-      {% else %}
-        <!-- Restore Room -->
+      {% if not unit.is_active %}
+        <!-- Restore Unit -->
         <div class="bg-emerald-50 border-2 border-emerald-100 rounded-[2rem] p-8 space-y-4">
           <h3 class="text-xs font-black uppercase tracking-widest text-emerald-800">Show in List</h3>
           <p class="text-sm text-emerald-700 font-bold leading-relaxed">
-            This room is currently hidden. Showing it again will return it to the active room lists.
+            This unit is currently hidden. Showing it again will return it to the active list.
           </p>
 
           <form method="POST" action="{% url 'admin_restore_unit' unit.id %}" class="confirm-action"
-                data-confirm="Show this room in the active list again?">
+                data-confirm="Show this unit in the active list again?">
             {% csrf_token %}
             <button type="submit"
                     class="w-full px-8 py-3.5 bg-white hover:bg-emerald-600 text-emerald-700 hover:text-white border-2 border-emerald-200 rounded-xl font-black text-center transition-all shadow-sm select-none active:scale-95">
-              Show this Room
+              Show this Unit
             </button>
           </form>
         </div>

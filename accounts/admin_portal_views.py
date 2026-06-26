@@ -577,6 +577,7 @@ def admin_edit_unit(request, unit_id):
         "back_url": back_url,
         "next_url": back_url,
         "unit_images": unit.get_all_images(),
+        "unit": unit,
     })
 
 

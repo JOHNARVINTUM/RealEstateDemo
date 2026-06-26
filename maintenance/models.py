@@ -80,3 +80,17 @@ class MaintenanceRequest(models.Model):
     def __str__(self):
         return f"{self.title} ({self.get_status_display()})"
 
+    @property
+    def photo_url(self):
+        """Return a browser-ready URL for the maintenance request photo."""
+        if not self.photo or not getattr(self.photo, 'name', None):
+            return ""
+
+        try:
+            return self.photo.url
+        except Exception:
+            try:
+                return self.photo.storage.url(self.photo.name)
+            except Exception:
+                return ""
+

@@ -34,6 +34,19 @@ URGENCY_KEYWORDS = {
     ],
 }
 
+SYNTHETIC_PRIORITY_EXAMPLES = [
+    ("Water is leaking from the ceiling and spreading fast", "HIGH"),
+    ("Outlet sparks when plugging in any device", "HIGH"),
+    ("Bathroom faucet drips constantly but still works", "MEDIUM"),
+    ("Living room light flickers sometimes after turning on", "MEDIUM"),
+    ("Bedroom paint peeling and wall looks worn", "LOW"),
+    ("Minor crack on kitchen cabinet door", "LOW"),
+    ("Gas smell in the kitchen, please check immediately", "HIGH"),
+    ("Toilet is clogged and overflowing", "HIGH"),
+    ("Air conditioner is blowing warm air intermittently", "MEDIUM"),
+    ("Small stain on the hallway carpet that is not urgent", "LOW"),
+]
+
 
 def _rule_based_label(description):
     """
@@ -52,10 +65,11 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         from sklearn.feature_extraction.text import TfidfVectorizer
+        from sklearn.ensemble import RandomForestClassifier
         from sklearn.linear_model import LogisticRegression
         from sklearn.model_selection import train_test_split, cross_val_score
         from sklearn.metrics import classification_report, accuracy_score
-        from sklearn.pipeline import Pipeline
+        from sklearn.pipeline import FeatureUnion, Pipeline
         import numpy as np
         import joblib
 
@@ -71,15 +85,23 @@ class Command(BaseCommand):
             if not desc:
                 continue
             rule_label = _rule_based_label(desc)
-            if rule_label:
-                labels.append(rule_label)
+            if rule_label and r["priority"] != rule_label:
+                labels.append(r["priority"])
                 rule_overrides += 1
             else:
                 labels.append(r["priority"])
             texts.append(desc)
 
         self.stdout.write(f"  Total samples: {len(texts)}")
-        self.stdout.write(f"  Rule-based re-labels applied: {rule_overrides}")
+        self.stdout.write(f"  Rule-based re-labels identified: {rule_overrides}")
+
+        synthetic_added = 0
+        for text, label in SYNTHETIC_PRIORITY_EXAMPLES:
+            texts.append(text)
+            labels.append(label)
+            synthetic_added += 1
+
+        self.stdout.write(f"  Synthetic examples added: {synthetic_added}")
 
         from collections import Counter
         dist = Counter(labels)
@@ -95,42 +117,89 @@ class Command(BaseCommand):
         )
         self.stdout.write(f"\nTrain: {len(X_train)}  Test: {len(X_test)}")
 
-        vectorizer = TfidfVectorizer(
-            ngram_range=(1, 2),
-            max_features=3000,
-            sublinear_tf=True,
-            min_df=1,
-        )
-        classifier = LogisticRegression(
-            max_iter=1000,
-            class_weight="balanced",
-            random_state=42,
-            C=1.0,
-        )
+        features = FeatureUnion([
+            ("word_tfidf", TfidfVectorizer(
+                ngram_range=(1, 3),
+                max_features=3000,
+                sublinear_tf=True,
+                min_df=1,
+                max_df=0.9,
+                stop_words=None,
+            )),
+            ("char_tfidf", TfidfVectorizer(
+                analyzer="char_wb",
+                ngram_range=(3, 5),
+                max_features=2000,
+                sublinear_tf=True,
+                min_df=1,
+                max_df=0.9,
+            )),
+        ])
 
-        self.stdout.write("\nFitting TF-IDF vectorizer...")
-        X_train_vec = vectorizer.fit_transform(X_train)
-        X_test_vec = vectorizer.transform(X_test)
+        candidates = {
+            "LogisticRegression": LogisticRegression(
+                max_iter=2000,
+                class_weight="balanced",
+                random_state=42,
+                C=1.0,
+                solver="lbfgs",
+            ),
+            "RandomForest": RandomForestClassifier(
+                n_estimators=150,
+                class_weight="balanced",
+                random_state=42,
+                n_jobs=-1,
+            ),
+        }
 
-        self.stdout.write("Training Logistic Regression classifier...")
-        classifier.fit(X_train_vec, y_train)
+        best_model = None
+        best_accuracy = -1.0
+        best_report = None
+        best_name = None
+        best_classes = None
 
-        y_pred = classifier.predict(X_test_vec)
-        accuracy = accuracy_score(y_test, y_pred)
-        report = classification_report(y_test, y_pred, output_dict=True)
-        report_str = classification_report(y_test, y_pred)
+        for name, classifier in candidates.items():
+            pipeline = Pipeline([
+                ("features", features),
+                ("classifier", classifier),
+            ])
 
-        self.stdout.write(f"\n{'='*50}")
-        self.stdout.write(f"Test Accuracy: {accuracy*100:.1f}%")
-        self.stdout.write(f"\nClassification Report:\n{report_str}")
+            self.stdout.write(f"\nRunning cross-validation for {name}...")
+            cv_scores = cross_val_score(pipeline, X_train, y_train, cv=4, scoring="accuracy", n_jobs=-1)
+            self.stdout.write(f"  CV accuracy ({name}): {cv_scores.mean()*100:.1f}% (+/- {cv_scores.std()*100:.1f}%)")
 
-        classes = list(classifier.classes_)
+            self.stdout.write(f"Training {name} pipeline on the full training set...")
+            pipeline.fit(X_train, y_train)
+
+            y_pred = pipeline.predict(X_test)
+            accuracy = accuracy_score(y_test, y_pred)
+            report = classification_report(y_test, y_pred, output_dict=True)
+            report_str = classification_report(y_test, y_pred)
+
+            self.stdout.write(f"\n{'='*50}")
+            self.stdout.write(f"{name} Test Accuracy: {accuracy*100:.1f}%")
+            self.stdout.write(f"\n{name} Classification Report:\n{report_str}")
+
+            if accuracy > best_accuracy:
+                best_accuracy = accuracy
+                best_model = pipeline
+                best_report = report
+                best_name = name
+                best_classes = list(pipeline.named_steps["classifier"].classes_)
+
+        if best_model is None:
+            self.stderr.write("Failed to train any model.")
+            return
+
+        self.stdout.write(f"\nBest model selected: {best_name} with accuracy {best_accuracy*100:.1f}%")
+
+        classes = best_classes
         output_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "exports", "ml")
         output_dir = os.path.normpath(output_dir)
         os.makedirs(output_dir, exist_ok=True)
 
         model_path = os.path.join(output_dir, "maintenance_nlp.joblib")
-        joblib.dump({"vectorizer": vectorizer, "classifier": classifier, "classes": classes}, model_path)
+        joblib.dump({"pipeline": best_model, "classes": classes, "model_name": best_name}, model_path)
         self.stdout.write(f"\nModel saved to: {model_path}")
 
         metrics = {

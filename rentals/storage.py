@@ -62,9 +62,8 @@ class SupabaseStorage(Storage):
         file_bytes = content.read()
         
         # Upload to Supabase
-        try:
-            content_type = getattr(content, 'content_type', None) or mimetypes.guess_type(name)[0] or 'application/octet-stream'
-            result = self.client.storage.from_(self.bucket_name).upload(
+        def upload_with_bucket(bucket_name):
+            return self.client.storage.from_(bucket_name).upload(
                 path=unique_name,
                 file=file_bytes,
                 file_options={
@@ -72,23 +71,21 @@ class SupabaseStorage(Storage):
                     'upsert': 'false'
                 }
             )
-            
-            # Return the public URL path
+
+        content_type = getattr(content, 'content_type', None) or mimetypes.guess_type(name)[0] or 'application/octet-stream'
+        try:
+            result = upload_with_bucket(self.bucket_name)
             return unique_name
-            
         except Exception as e:
-            # If file exists, try with different UUID
-            if "already exists" in str(e).lower():
+            error_text = str(e).lower()
+            if self.bucket_name == 'user-files' and 'bucket not found' in error_text:
+                self.bucket_name = 'uesr-files'
+                result = upload_with_bucket(self.bucket_name)
+                return unique_name
+            if 'already exists' in error_text:
                 unique_filename = f"{uuid.uuid4().hex}{ext}"
                 unique_name = f"{folder}/{unique_filename}" if folder else unique_filename
-                result = self.client.storage.from_(self.bucket_name).upload(
-                    path=unique_name,
-                    file=file_bytes,
-                    file_options={
-                        'content-type': content_type,
-                        'upsert': 'false'
-                    }
-                )
+                result = upload_with_bucket(self.bucket_name)
                 return unique_name
             raise
     
@@ -113,13 +110,26 @@ class SupabaseStorage(Storage):
         """Return the public URL for the file."""
         if not name:
             return None
-        
-        # Get public URL from Supabase
+
+        bucket = self.client.storage.from_(self.bucket_name)
+        signed_bucket_name = os.environ.get('SUPABASE_USER_FILES_BUCKET', 'user-files')
+        if self.bucket_name == signed_bucket_name:
+            try:
+                signed_response = bucket.create_signed_url(name, 86400)
+                if isinstance(signed_response, dict):
+                    return (
+                        signed_response.get('signedURL')
+                        or signed_response.get('signedUrl')
+                        or signed_response.get('signed_url')
+                    )
+                return signed_response
+            except Exception:
+                pass
+
         try:
-            public_url = self.client.storage.from_(self.bucket_name).get_public_url(name)
-            return public_url
+            return bucket.get_public_url(name)
         except Exception:
-            # Fallback: construct URL manually
+            # Fallback: construct URL manually using the configured bucket.
             return f"{self.supabase_url}/storage/v1/object/public/{self.bucket_name}/{name}"
     
     def size(self, name):

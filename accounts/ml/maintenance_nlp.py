@@ -16,6 +16,12 @@ MODEL_PATH = os.path.normpath(MODEL_PATH)
 
 _model_cache = None
 
+EMERGENCY_KEYWORDS = [
+    "sparks", "fire", "flood", "flooding", "burst", "danger", "emergency",
+    "electric shock", "gas leak", "no electricity", "severe leak", "burning smell",
+    "smoke", "exposed wire",
+]
+
 ISSUE_CATEGORY_KEYWORDS = {
     "PLUMBING": [
         "leak", "leaking", "water", "faucet", "sink", "toilet", "flush", "drain",
@@ -36,13 +42,24 @@ def _normalize_text(text):
     return re.sub(r"\s+", " ", (text or "").strip().lower())
 
 
+def _clean_text(text):
+    if not text:
+        return ""
+
+    normalized = text.lower()
+    normalized = re.sub(r"[\r\n\t]+", " ", normalized)
+    normalized = re.sub(r"[^a-z0-9\s]", " ", normalized)
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+    return normalized
+
+
 def classify_issue_category(text):
     """
     Rule-based maintenance issue category classifier.
     Returns dict: {category, confidence, matched_keywords}
     - category: PLUMBING / ELECTRICAL / STRUCTURAL / OTHER
     """
-    normalized = _normalize_text(text)
+    normalized = _clean_text(text)
     if not normalized:
         return {"category": "OTHER", "confidence": 0.0, "matched_keywords": []}
 
@@ -95,21 +112,38 @@ def predict_priority(text):
         return {"priority": None, "confidence": None, "available": False}
 
     try:
-        vectorizer = model["vectorizer"]
-        classifier = model["classifier"]
-        classes = model["classes"]
+        cleaned_text = _clean_text(text)
+        if not cleaned_text:
+            return {"priority": None, "confidence": None, "available": False}
 
-        X = vectorizer.transform([text])
-        proba = classifier.predict_proba(X)[0]
+        if "pipeline" in model:
+            proba = model["pipeline"].predict_proba([cleaned_text])[0]
+            classes = list(model["pipeline"].named_steps["classifier"].classes_)
+        else:
+            vectorizer = model["vectorizer"]
+            classifier = model["classifier"]
+            classes = model["classes"]
+            X = vectorizer.transform([cleaned_text])
+            proba = classifier.predict_proba(X)[0]
+
         idx = proba.argmax()
         priority = classes[idx]
         confidence = round(float(proba[idx]), 4)
+        all_scores = {cls: round(float(p), 4) for cls, p in zip(classes, proba)}
+
+        if priority != "URGENT" and any(keyword in cleaned_text for keyword in EMERGENCY_KEYWORDS):
+            return {
+                "priority": "URGENT",
+                "confidence": 0.92,
+                "available": True,
+                "all_scores": all_scores,
+            }
 
         return {
             "priority": priority,
             "confidence": confidence,
             "available": True,
-            "all_scores": {cls: round(float(p), 4) for cls, p in zip(classes, proba)},
+            "all_scores": all_scores,
         }
     except Exception as e:
         logger.error(f"NLP priority prediction error: {e}")

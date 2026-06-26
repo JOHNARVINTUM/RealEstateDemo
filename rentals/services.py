@@ -21,7 +21,11 @@ def _repair_get_lease_id_from_payment(payment):
 
 
 def _repair_candidate_leases(payment, lease_id=None):
-    lease_qs = Lease.objects.select_for_update().filter(tenant=payment.user).select_related("unit")
+    tenant_id = payment.user_id
+    if isinstance(payment.metadata, dict):
+        tenant_id = payment.metadata.get("tenant_id") or tenant_id
+
+    lease_qs = Lease.objects.select_for_update().filter(tenant_id=tenant_id).select_related("unit")
     if lease_id:
         lease = lease_qs.filter(id=lease_id).first()
         if lease:
@@ -1303,6 +1307,7 @@ class LeaseActivationService:
         except Exception as e:
             logger.exception(f"Failed to activate lease {lease_id}: {e}")
             return False, f"Activation failed: {str(e)}"
+
 
 
 

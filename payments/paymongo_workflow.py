@@ -411,8 +411,12 @@ def apply_paymongo_payment_source(payment, payments_list):
 def get_pending_move_in_lease(payment, *, exclude_lease_id=None):
     from rentals.models import Lease
 
+    tenant_user = resolve_payment_tenant_user(payment)
+    if not tenant_user:
+        return None
+
     leases = Lease.objects.filter(
-        tenant=payment.user,
+        tenant=tenant_user,
         status=Lease.STATUS_PENDING_PAYMENT,
     )
     if exclude_lease_id:
@@ -580,5 +584,6 @@ def process_paymongo_webhook_payload(payload):
         logger.info(f"PayMongo webhook auto-approved payment {payment.id}")
 
     return JsonResponse({"status": "ok"})
+
 
 

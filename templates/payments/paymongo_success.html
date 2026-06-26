@@ -52,17 +52,19 @@
       </div>
 
       <h2 class="text-3xl font-black text-slate-900 mb-4">
-        {% if payment.status == 'APPROVED' %}Thank You!{% else %}Processing Your Payment{% endif %}
+        {% if payment.status == 'APPROVED' %}Thank You!{% elif payment_confirmed %}Payment Received{% else %}Processing Your Payment{% endif %}
       </h2>
       <p class="text-lg text-slate-500 font-bold mb-8">
         {% if payment.status == 'APPROVED' %}
           Your payment has been automatically verified and applied to your account.
+        {% elif payment_confirmed %}
+          Your payment was confirmed by PayMongo. If your billing is not updated yet, the system is still finishing the move-in activation.
         {% else %}
           We're confirming your payment with PayMongo. This usually takes just a few seconds...
         {% endif %}
       </p>
 
-      {% if payment.status != 'APPROVED' %}
+      {% if auto_refresh %}
         <!-- Auto-refresh notice for pending payments -->
         <div class="bg-amber-50 border-2 border-amber-100 rounded-xl p-4 mb-6">
           <p class="text-sm text-amber-800">
@@ -88,6 +90,14 @@
             }
           }, 1000);
         </script>
+      {% endif %}
+
+      {% if payment_confirmed and payment.status != 'APPROVED' %}
+        <div class="bg-blue-50 border-2 border-blue-100 rounded-xl p-4 mb-6">
+          <p class="text-sm text-blue-800">
+            PayMongo already confirmed this payment. Auto-refresh was stopped to avoid a loop while the move-in activation finishes in the background.
+          </p>
+        </div>
       {% endif %}
 
       {% if payment %}
@@ -151,3 +161,6 @@
   </div>
 
 {% endblock %}
+
+
+

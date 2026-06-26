@@ -597,13 +597,23 @@ def _legacy_water_totals_by_month(unit, start: date, end: date) -> dict[tuple[in
     return totals
 
 
-def _ensure_bills_for_range(lease, end_month: date, today: date, *, apply_move_in: bool = False):
+def _ensure_bills_for_range(
+    lease,
+    end_month: date,
+    today: date,
+    *,
+    apply_move_in: bool = False,
+    start_month: date | None = None,
+):
     if lease is None:
         return
     if not _lease_is_billable_today(lease, today):
         return
 
-    start = month_start(lease.start_date)
+    lease_start = month_start(lease.start_date)
+    start = month_start(start_month or lease.start_date)
+    if start < lease_start:
+        start = lease_start
     end = month_start(end_month)
     if lease.end_date:
         end = min(end, month_start(lease.end_date))
@@ -679,7 +689,7 @@ def _ensure_bills_for_range(lease, end_month: date, today: date, *, apply_move_i
             ensure_bill_line_items_from_legacy(bill)
 
     if apply_move_in:
-        _apply_approved_move_in_payment_if_needed(lease, start)
+        _apply_approved_move_in_payment_if_needed(lease)
 
 
 def get_or_update_monthly_bill(lease, billing_month: date, today: date | None = None) -> MonthlyBill:
@@ -749,8 +759,26 @@ def ensure_bills_since_move_in(lease, today: date | None = None):
     _ensure_bills_for_range(lease, month_start(today), today, apply_move_in=True)
 
 
-def _apply_approved_move_in_payment_if_needed(lease, start: date):
-    first_bill = MonthlyBill.objects.filter(lease=lease, billing_month=start).first()
+def _advance_generation_start_month(lease, today: date) -> date:
+    lease_start = month_start(lease.start_date)
+    current_month = month_start(today)
+    earliest_open_bill_month = (
+        MonthlyBill.objects.filter(lease=lease)
+        .exclude(status="PAID")
+        .order_by("billing_month")
+        .values_list("billing_month", flat=True)
+        .first()
+    )
+
+    if earliest_open_bill_month:
+        current_month = min(current_month, month_start(earliest_open_bill_month))
+
+    return max(lease_start, current_month)
+
+
+def _apply_approved_move_in_payment_if_needed(lease):
+    first_bill_month = month_start(lease.start_date)
+    first_bill = MonthlyBill.objects.filter(lease=lease, billing_month=first_bill_month).first()
     if first_bill and first_bill.status != "PAID":
         from payments.models import ManualPayment
         has_approved_movein = ManualPayment.objects.filter(
@@ -812,7 +840,13 @@ def ensure_bills_up_to(lease, end_month: date, today: date | None = None):
     if end > max_date:
         end = max_date
 
-    _ensure_bills_for_range(lease, end, today, apply_move_in=True)
+    _ensure_bills_for_range(
+        lease,
+        end,
+        today,
+        apply_move_in=True,
+        start_month=_advance_generation_start_month(lease, today),
+    )
 
 
 def badge_for_bill(bill: MonthlyBill, today: date | None = None) -> str:

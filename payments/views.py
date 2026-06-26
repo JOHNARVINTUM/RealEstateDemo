@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
+from uuid import uuid4
 import logging
 
 from django.conf import settings
@@ -45,10 +46,27 @@ def _f2f_cash_context(**overrides):
     return context
 
 
+def _checkout_request_value(request, key, default=""):
+    if request.method == "POST":
+        return request.POST.get(key, default)
+    return request.GET.get(key, default)
+
+
+def _manual_gcash_submission(request):
+    return request.method == "POST" and "reference_code" in request.POST
+
+
+def _f2f_schedule_submission(request):
+    return request.method == "POST" and any(
+        key in request.POST
+        for key in ["preferred_date", "preferred_time", "tenant_note"]
+    )
+
+
 @tenant_required
 @require_http_methods(["GET", "POST"])
 def manual_gcash_payment(request):
-    if request.method == "POST":
+    if _manual_gcash_submission(request):
         # 1. Catch ALL the data submitted by the form (including the hidden fields)
         reference_code = (request.POST.get("reference_code") or "").strip()
         amount_to_pay = request.POST.get("amount", "0.00")
@@ -104,10 +122,10 @@ def manual_gcash_payment(request):
         messages.success(request, "Payment submitted! Please wait for admin verification.")
         return redirect("tenant_dashboard")
 
-    # 4. Handle the initial page load (GET request)
-    amount_to_pay = request.GET.get("amount", "0.00")
-    bill_ids = request.GET.get("bill_ids", "")
-    payment_type = request.GET.get("payment_type", "full")
+    # Initial handoff from the payment preview can arrive via GET or POST.
+    amount_to_pay = _checkout_request_value(request, "amount", "0.00")
+    bill_ids = _checkout_request_value(request, "bill_ids", "")
+    payment_type = _checkout_request_value(request, "payment_type", "full")
 
     return render(request, "payments/manual_gcash.html", {
         "gcash_number": getattr(settings, "GCASH_NUMBER", "09XX-XXX-XXXX"),
@@ -122,7 +140,7 @@ def manual_gcash_payment(request):
 @require_http_methods(["GET", "POST"])
 def f2f_cash_payment(request):
     """Face-to-Face cash payment scheduling view."""
-    if request.method == "POST":
+    if _f2f_schedule_submission(request):
         amount_to_pay = request.POST.get("amount", "0.00")
         bill_ids = request.POST.get("bill_ids", "")
         payment_type = request.POST.get("payment_type", "full")
@@ -208,10 +226,10 @@ def f2f_cash_payment(request):
         messages.success(request, "Cash payment request submitted! Please wait for admin to confirm your schedule.")
         return redirect("tenant_dashboard")
 
-    # GET request - show form
-    amount_to_pay = request.GET.get("amount", "0.00")
-    bill_ids = request.GET.get("bill_ids", "")
-    payment_type = request.GET.get("payment_type", "full")
+    # Initial handoff from the payment preview can arrive via GET or POST.
+    amount_to_pay = _checkout_request_value(request, "amount", "0.00")
+    bill_ids = _checkout_request_value(request, "bill_ids", "")
+    payment_type = _checkout_request_value(request, "payment_type", "full")
 
     return render(request, "payments/f2f_cash.html", _f2f_cash_context(
         amount_to_pay=amount_to_pay,
@@ -225,15 +243,15 @@ def f2f_cash_payment(request):
 # ─────────────────────────────────────────────────────────────────────────────
 
 @tenant_required
-@require_http_methods(["GET"])
+@require_http_methods(["GET", "POST"])
 def paymongo_checkout(request):
     """
     Create a PayMongo Checkout Session and redirect tenant to the hosted page.
-    Query params: amount, bill_ids, payment_type
+    Accepts checkout payload via GET or POST.
     """
-    amount_str = request.GET.get("amount", "0")
-    bill_ids = request.GET.get("bill_ids", "")
-    payment_type = request.GET.get("payment_type", "full")
+    amount_str = _checkout_request_value(request, "amount", "0")
+    bill_ids = _checkout_request_value(request, "bill_ids", "")
+    payment_type = _checkout_request_value(request, "payment_type", "full")
 
     try:
         amount = Decimal(amount_str)
@@ -254,17 +272,17 @@ def paymongo_checkout(request):
     # Add cancelled flag so we can detect when user returns without paying
     cancel_url = base_url + reverse("tenant_pay_advance") + "?cancelled=1"
 
+    checkout_token = uuid4().hex
     metadata = build_paymongo_checkout_metadata(
         user=request.user,
         bill_ids=bill_ids,
         payment_type=payment_type,
         amount=amount,
+        extra={"checkout_token": checkout_token},
     )
 
-    # First pass: create session with a placeholder success_url
-    # PayMongo does NOT template-substitute variables in success_url,
-    # so we embed the session ID ourselves after creation.
-    placeholder_success = build_paymongo_success_url(base_url)
+    # Use a stable checkout token in the success URL so production does not guess the latest pending payment.
+    placeholder_success = build_paymongo_success_url(base_url, checkout_token=checkout_token)
 
     result, error_message = create_paymongo_checkout_session_or_error(
         amount=amount,
@@ -306,7 +324,8 @@ def paymongo_success(request):
     is_admin = getattr(request.user, "role", "") == "ADMIN" or request.user.is_superuser
     
     session_id = request.GET.get("session_id", "").strip()
-    payment = get_pending_paymongo_payment(request.user, session_id)
+    checkout_token = request.GET.get("checkout_token", "").strip()
+    payment = get_pending_paymongo_payment(request.user, session_id, checkout_token=checkout_token)
 
     if not payment:
         if is_admin:
@@ -374,6 +393,7 @@ def admin_paymongo_checkout_generate(request):
     else:
         cancel_url = base_url + reverse("admin_dashboard")
 
+    checkout_token = uuid4().hex
     metadata = build_paymongo_checkout_metadata(
         user=tenant_user,
         bill_ids="",
@@ -383,6 +403,7 @@ def admin_paymongo_checkout_generate(request):
             "generated_by_admin": str(request.user.id),
             "tenant_id": str(tenant_user.id),
             "lease_id": str(lease.id),
+            "checkout_token": checkout_token,
         },
     )
 
@@ -390,7 +411,7 @@ def admin_paymongo_checkout_generate(request):
         amount=amount,
         description="REALESTATE360+ Move-in Payment",
         metadata=metadata,
-        success_url=build_paymongo_success_url(base_url),
+        success_url=build_paymongo_success_url(base_url, checkout_token=checkout_token),
         cancel_url=cancel_url,
     )
 
@@ -452,3 +473,4 @@ def paymongo_webhook(request):
         return payload_error
 
     return process_paymongo_webhook_payload(payload)
+

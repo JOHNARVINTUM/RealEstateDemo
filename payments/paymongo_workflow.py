@@ -29,6 +29,9 @@ def _payment_lease_id(payment):
     return _payment_metadata(payment).get("lease_id")
 
 
+def _payment_checkout_token(payment):
+    return _payment_metadata(payment).get("checkout_token")
+
 def _display_name_for_user(user):
     try:
         tenant_profile = user.tenantprofile
@@ -187,8 +190,11 @@ def create_paymongo_checkout_session_or_error(
     return result, None
 
 
-def build_paymongo_success_url(base_url: str):
-    return base_url + reverse("paymongo_success")
+def build_paymongo_success_url(base_url: str, checkout_token: str = ""):
+    url = base_url + reverse("paymongo_success")
+    if checkout_token:
+        return f"{url}?checkout_token={checkout_token}"
+    return url
 
 
 def validate_paymongo_webhook_request(payload_body, signature_header: str, webhook_secret: str, is_production: bool):
@@ -236,31 +242,54 @@ def resolve_payment_display_name(payment):
     return _display_name_for_user(resolve_payment_tenant_user(payment))
 
 
-def get_pending_paymongo_payment(request_user, session_id):
+def _is_admin_like_user(user):
+    return (
+        getattr(user, "role", "") == "ADMIN"
+        or getattr(user, "is_staff", False)
+        or getattr(user, "is_superuser", False)
+    )
+
+
+def _payment_visible_to_request_user(payment, request_user):
+    metadata = _payment_metadata(payment)
+    generated_by_admin = metadata.get("generated_by_admin")
+    request_user_is_admin = _is_admin_like_user(request_user)
+    if payment.user_id == request_user.id:
+        return True
+    if request_user_is_admin and generated_by_admin == str(request_user.id):
+        return True
+    return False
+
+
+def _find_paymongo_payment_by_checkout_token(checkout_token):
+    if not checkout_token:
+        return None
+
+    candidates = ManualPayment.objects.filter(
+        payment_method="PAYMONGO",
+    ).order_by("-created_at")[:50]
+    for payment in candidates:
+        if str(_payment_checkout_token(payment) or "") == str(checkout_token):
+            return payment
+    return None
+
+
+def get_pending_paymongo_payment(request_user, session_id, checkout_token=""):
     if session_id and session_id != "{checkout_session_id}":
         payment = ManualPayment.objects.filter(
             checkout_session_id=session_id,
         ).first()
         if not payment:
             return None
-        metadata = _payment_metadata(payment)
-        generated_by_admin = metadata.get("generated_by_admin")
-        request_user_is_admin = (
-            getattr(request_user, "role", "") == "ADMIN"
-            or getattr(request_user, "is_staff", False)
-            or getattr(request_user, "is_superuser", False)
-        )
-        if payment.user_id == request_user.id:
-            return payment
-        if request_user_is_admin and generated_by_admin == str(request_user.id):
-            return payment
-        return None
+        return payment if _payment_visible_to_request_user(payment, request_user) else None
 
-    request_user_is_admin = (
-        getattr(request_user, "role", "") == "ADMIN"
-        or getattr(request_user, "is_staff", False)
-        or getattr(request_user, "is_superuser", False)
-    )
+    if checkout_token:
+        payment = _find_paymongo_payment_by_checkout_token(checkout_token)
+        if not payment:
+            return None
+        return payment if _payment_visible_to_request_user(payment, request_user) else None
+
+    request_user_is_admin = _is_admin_like_user(request_user)
     if request_user_is_admin:
         admin_generated = [
             payment
@@ -324,6 +353,10 @@ def get_paymongo_session_updates(payment, session_data):
     return False
 
 
+def _should_auto_refresh_paymongo_success(payment):
+    return payment.status != "APPROVED" and not bool(payment.paymongo_payment_id)
+
+
 def get_paymongo_admin_success_context(payment):
     lease = None
     tenant_name = ""
@@ -341,7 +374,8 @@ def get_paymongo_admin_success_context(payment):
     return {
         "payment": payment,
         "payment_approved": payment.status == "APPROVED",
-        "auto_refresh": payment.status != "APPROVED",
+        "payment_confirmed": bool(payment.paymongo_payment_id),
+        "auto_refresh": _should_auto_refresh_paymongo_success(payment),
         "lease": lease,
         "tenant_name": tenant_name,
     }
@@ -362,7 +396,8 @@ def render_paymongo_tenant_success(request, payment, payment_approved):
     return render(request, "payments/paymongo_success.html", {
         "payment": payment,
         "payment_approved": payment.status == "APPROVED",
-        "auto_refresh": payment.status != "APPROVED",
+        "payment_confirmed": bool(payment.paymongo_payment_id),
+        "auto_refresh": _should_auto_refresh_paymongo_success(payment),
     })
 
 
@@ -584,6 +619,10 @@ def process_paymongo_webhook_payload(payload):
         logger.info(f"PayMongo webhook auto-approved payment {payment.id}")
 
     return JsonResponse({"status": "ok"})
+
+
+
+
 
 
 

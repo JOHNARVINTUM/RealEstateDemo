@@ -237,7 +237,6 @@ def admin_lease_payment(request, lease_id: int):
                         "lease": lease,
                         "total_move_in_cost": lease.total_move_in_cost,
                         "cash_reference": _build_cash_move_in_reference(lease),
-                        "gcash_qr_url": getattr(settings, "GCASH_QR_URL", "/static/img/gcash_qr3.jpg"),
                         "back_url": reverse("admin_delete_lease", args=[lease.id]) + "?next=unit",
                     },
                 )
@@ -274,9 +273,8 @@ def admin_lease_payment(request, lease_id: int):
             messages.error(request, f"Activation failed: {message}")
 
         elif payment_method == "GCASH":
-            return HttpResponseRedirect(
-                f"/payments/manual-gcash/?amount={lease.total_move_in_cost}&lease_id={lease.id}&payment_type=move_in"
-            )
+            messages.error(request, "GCash QR is no longer available for move-in payments. Please use PayMongo or Cash instead.")
+            return redirect("admin_lease_payment", lease_id=lease.id)
 
         elif payment_method == "PAYMONGO":
             return HttpResponseRedirect(

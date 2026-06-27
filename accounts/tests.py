@@ -2099,6 +2099,21 @@ class AdminCashMoveInNotificationTests(TestCase):
             is_active=False,
         )
 
+    def test_gcash_move_in_redirect_is_blocked(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.post(
+            f"/admin-portal/leases/{self.lease.id}/payment/",
+            {
+                "payment_method": "GCASH",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "GCash QR is no longer available for move-in payments")
+        self.assertContains(response, "Select Payment Method")
+
     def test_cash_move_in_activation_creates_admin_notification_for_tenant(self):
         self.client.force_login(self.admin)
 

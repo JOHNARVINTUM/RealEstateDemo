@@ -1922,6 +1922,32 @@ class TenantCreationEmailTests(TestCase):
         self.assertIn("email", form.errors)
         self.assertIn("without a '+' alias", form.errors["email"][0])
 
+    def test_tenant_form_blocks_numbers_in_first_name(self):
+        form = TenantProfileForm(
+            data={
+                "email": "valid.tenant@gmail.com",
+                "first_name": "John123",
+                "last_name": "Alias",
+                "contact_no": "09170000000",
+            }
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("first_name", form.errors)
+
+    def test_tenant_form_blocks_invalid_contact_number_characters(self):
+        form = TenantProfileForm(
+            data={
+                "email": "valid.tenant@gmail.com",
+                "first_name": "John",
+                "last_name": "Alias",
+                "contact_no": "0917-ABC-000",
+            }
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("contact_no", form.errors)
+
 
 class TenantEmailConstraintTests(TestCase):
     def test_user_save_blocks_gmail_plus_alias(self):
@@ -1971,6 +1997,70 @@ class TenantEmailConstraintTests(TestCase):
 
         self.assertFalse(form.is_valid())
         self.assertIn("email", form.errors)
+
+    def test_edit_form_blocks_numbers_in_last_name(self):
+        editable = User.objects.create_user(
+            email="edit.person@gmail.com",
+            username="editperson",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        editable_profile = TenantProfile.objects.create(
+            user=editable,
+            first_name="Edit",
+            last_name="Person",
+            contact_no="09170000000",
+        )
+
+        form = ComprehensiveTenantEditForm(
+            editable_profile,
+            data={
+                "email": editable.email,
+                "username": editable.username,
+                "role": editable.role,
+                "is_active": "on",
+                "first_name": "Edit",
+                "last_name": "Person9",
+                "contact_no": "09170000000",
+                "new_password": "",
+                "confirm_password": "",
+            },
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("last_name", form.errors)
+
+    def test_edit_form_blocks_too_short_contact_number(self):
+        editable = User.objects.create_user(
+            email="short.contact@gmail.com",
+            username="shortcontact",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        editable_profile = TenantProfile.objects.create(
+            user=editable,
+            first_name="Short",
+            last_name="Contact",
+            contact_no="09170000000",
+        )
+
+        form = ComprehensiveTenantEditForm(
+            editable_profile,
+            data={
+                "email": editable.email,
+                "username": editable.username,
+                "role": editable.role,
+                "is_active": "on",
+                "first_name": "Short",
+                "last_name": "Contact",
+                "contact_no": "12345",
+                "new_password": "",
+                "confirm_password": "",
+            },
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("contact_no", form.errors)
 
 
 class AdminCashMoveInNotificationTests(TestCase):
@@ -2170,6 +2260,15 @@ class AdminTenantDeleteArchiveTests(TestCase):
         self.assertIsInstance(summary["leases"][0]["start_date"], str)
         self.assertIsInstance(summary["payments_sample"][0]["created_at"], str)
         self.assertIsInstance(summary["maintenance_sample"][0]["created_at"], str)
+
+    def test_delete_page_resolves_tenant_by_user_id_for_backward_compatibility(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.get(f"/admin-portal/tenants/{self.tenant.id}/delete/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Security Verification Required")
+        self.assertContains(response, self.profile.full_name)
 
 
 class LeaseFormCompatibilityTests(TestCase):

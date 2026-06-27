@@ -62,6 +62,20 @@ def tenant_has_records(tenant):
     )
 
 
+def _get_tenant_profile_or_404(tenant_id: int, *, with_risk: bool = False):
+    related = ["user"]
+    if with_risk:
+        related.append("user__tenantriskclassification")
+    queryset = TenantProfile.objects.select_related(*related)
+    tenant = queryset.filter(pk=tenant_id).first()
+    if tenant:
+        return tenant
+    tenant = queryset.filter(user_id=tenant_id).first()
+    if tenant:
+        return tenant
+    raise Http404("No TenantProfile matches the given query.")
+
+
 def _tenant_display_lease(leases):
     today = timezone.localdate()
     for lease in leases:
@@ -186,15 +200,9 @@ def admin_tenants(request):
 
 @admin_required
 def admin_tenant_detail(request, tenant_id: int):
-    tenant = get_object_or_404(
-        TenantProfile.objects.select_related("user", "user__tenantriskclassification"),
-        pk=tenant_id,
-    )
+    tenant = _get_tenant_profile_or_404(tenant_id, with_risk=True)
     TenantRiskService.update_tenant_risk_classification(tenant.user)
-    tenant = get_object_or_404(
-        TenantProfile.objects.select_related("user", "user__tenantriskclassification"),
-        pk=tenant_id,
-    )
+    tenant = _get_tenant_profile_or_404(tenant_id, with_risk=True)
     leases = list(
         Lease.objects.select_related("unit", "tenant").filter(tenant=tenant.user).order_by("-start_date")
     )
@@ -309,7 +317,7 @@ def admin_create_tenant_profile(request):
 
 @admin_required
 def admin_edit_tenant(request, tenant_id: int):
-    tenant = get_object_or_404(TenantProfile.objects.select_related("user"), pk=tenant_id)
+    tenant = _get_tenant_profile_or_404(tenant_id)
     attachments = list(
         TenantAttachment.objects.filter(tenant=tenant.user)
         .select_related("uploaded_by")
@@ -376,7 +384,7 @@ def admin_delete_tenant(request, tenant_id: int):
     """
     from rentals.models import ArchivedTenant
 
-    tenant = get_object_or_404(TenantProfile.objects.select_related("user"), pk=tenant_id)
+    tenant = _get_tenant_profile_or_404(tenant_id)
     user = tenant.user
     has_records = tenant_has_records(tenant)
 
@@ -558,7 +566,7 @@ def admin_delete_tenant(request, tenant_id: int):
 @admin_required
 def admin_tenant_attachments(request, tenant_id: int):
     """Admin portal: view and manage tenant attachments with image preview"""
-    tenant = get_object_or_404(TenantProfile.objects.select_related("user"), pk=tenant_id)
+    tenant = _get_tenant_profile_or_404(tenant_id)
     attachments = TenantAttachment.objects.filter(tenant=tenant.user).select_related("uploaded_by").order_by("-uploaded_at")
 
     return render(

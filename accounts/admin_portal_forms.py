@@ -1,4 +1,5 @@
 import logging
+import re
 from io import BytesIO
 from django import forms
 from django.core.exceptions import ValidationError
@@ -20,6 +21,38 @@ def _ordinal(n):
     if 11 <= (n % 100) <= 13:
         return f"{n}th"
     return f"{n}{['th','st','nd','rd','th'][min(n % 10, 4)]}"
+
+
+_NAME_RE = re.compile(r"^[A-Za-z][A-Za-z .'-]*$")
+_CONTACT_ALLOWED_RE = re.compile(r"^[0-9+()\-\s]+$")
+
+
+def _clean_person_name(value: str, *, label: str) -> str:
+    value = (value or "").strip()
+    if not value:
+        raise forms.ValidationError(f"{label} is required.")
+    if not _NAME_RE.fullmatch(value):
+        raise forms.ValidationError(
+            f"{label} may contain letters, spaces, periods, apostrophes, and hyphens only."
+        )
+    if not re.search(r"[A-Za-z]", value):
+        raise forms.ValidationError(f"{label} must contain at least one letter.")
+    return re.sub(r"\s+", " ", value)
+
+
+
+def _clean_contact_number(value: str) -> str:
+    value = (value or "").strip()
+    if not value:
+        return ""
+    if not _CONTACT_ALLOWED_RE.fullmatch(value):
+        raise forms.ValidationError(
+            "Contact number may contain digits, spaces, plus sign, parentheses, and hyphens only."
+        )
+    digits_only = re.sub(r"\D", "", value)
+    if len(digits_only) < 7 or len(digits_only) > 15:
+        raise forms.ValidationError("Contact number must contain between 7 and 15 digits.")
+    return value
 
 
 class TenantProfileForm(forms.ModelForm):
@@ -54,6 +87,15 @@ class TenantProfileForm(forms.ModelForm):
     class Meta:
         model = TenantProfile
         fields = ["first_name", "last_name", "contact_no"]
+
+    def clean_first_name(self):
+        return _clean_person_name(self.cleaned_data.get("first_name"), label="First name")
+
+    def clean_last_name(self):
+        return _clean_person_name(self.cleaned_data.get("last_name"), label="Last name")
+
+    def clean_contact_no(self):
+        return _clean_contact_number(self.cleaned_data.get("contact_no"))
 
     def clean_contract_file(self):
         contract_file = self.cleaned_data.get('contract_file')
@@ -294,6 +336,15 @@ class ComprehensiveTenantEditForm(forms.Form):
         if User.objects.exclude(pk=self.user.pk).filter(username=username).exists():
             raise forms.ValidationError("A user with this username already exists.")
         return username
+
+    def clean_first_name(self):
+        return _clean_person_name(self.cleaned_data.get("first_name"), label="First name")
+
+    def clean_last_name(self):
+        return _clean_person_name(self.cleaned_data.get("last_name"), label="Last name")
+
+    def clean_contact_no(self):
+        return _clean_contact_number(self.cleaned_data.get("contact_no"))
     
     def clean_contract_file(self):
         contract_file = self.cleaned_data.get('contract_file')
@@ -361,6 +412,15 @@ class TenantProfileEditForm(forms.ModelForm):
     class Meta:
         model = TenantProfile
         fields = ["first_name", "last_name", "contact_no"]
+
+    def clean_first_name(self):
+        return _clean_person_name(self.cleaned_data.get("first_name"), label="First name")
+
+    def clean_last_name(self):
+        return _clean_person_name(self.cleaned_data.get("last_name"), label="Last name")
+
+    def clean_contact_no(self):
+        return _clean_contact_number(self.cleaned_data.get("contact_no"))
 
 
 class LeaseForm(forms.ModelForm):

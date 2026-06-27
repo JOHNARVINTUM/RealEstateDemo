@@ -319,6 +319,50 @@ class TenantViewWorkflowTests(TestCase):
         )
         self.assertFalse(MonthlyBill.objects.filter(lease=lease, billing_month=date(2026, 11, 1)).exists())
 
+    def test_advance_payment_preview_caps_open_contract_to_six_months(self):
+        lease = self.create_active_lease(
+            start_date=date(2026, 6, 18),
+            end_date=date(2027, 6, 18),
+            due_day=18,
+        )
+        MonthlyBill.objects.create(
+            lease=lease,
+            billing_month=date(2026, 6, 1),
+            due_date=date(2026, 6, 18),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("0.00"),
+            parking_fee=Decimal("350.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("10350.00"),
+            status="PAID",
+        )
+
+        with patch("rentals.views.timezone.localdate", return_value=date(2026, 6, 18)):
+            with patch("rentals.views.date") as view_date:
+                view_date.today.return_value = date(2026, 6, 18)
+                view_date.fromisoformat.side_effect = date.fromisoformat
+                view_date.side_effect = lambda *args, **kwargs: date(*args, **kwargs)
+                with patch("billing.services.date") as service_date:
+                    service_date.today.return_value = date(2026, 6, 18)
+                    service_date.side_effect = lambda *args, **kwargs: date(*args, **kwargs)
+                    response = self.client.get("/tenant/pay/?months_to_pay=12&payment_type=rent_only")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["months_options"], [1, 2, 3, 4, 5, 6])
+        self.assertEqual(response.context["months_to_pay"], 6)
+        self.assertEqual(response.context["max_months_to_pay"], 6)
+        self.assertEqual(
+            [row["month_label"] for row in response.context["preview_rows"]],
+            [
+                "July 2026",
+                "August 2026",
+                "September 2026",
+                "October 2026",
+                "November 2026",
+                "December 2026",
+            ],
+        )
+
     def test_payment_preview_locks_to_water_only_when_only_water_remains(self):
         lease = self.create_active_lease()
         WaterBill.objects.create(

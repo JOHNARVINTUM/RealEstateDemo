@@ -13,6 +13,8 @@ from django.views.decorators.http import require_http_methods, require_POST
 from django.contrib import messages
 
 from accounts.decorators import tenant_required
+from billing.models import MonthlyBill
+from billing.services import parse_bill_ids
 from .models import ManualPayment
 from .paymongo import retrieve_checkout_session
 logger = logging.getLogger(__name__)
@@ -34,6 +36,40 @@ from .paymongo_workflow import (
 )
 from .scheduling import OFFICE_HOURS_LABEL, f2f_time_slots, is_office_schedule
 from rentals.models import Lease, Notification
+
+MAX_ADVANCE_PAYMENT_MONTHS = 6
+
+
+def _selected_bills_for_tenant(user, raw_bill_ids):
+    bill_ids = parse_bill_ids(raw_bill_ids)
+    if not bill_ids:
+        return [], bill_ids
+
+    bill_map = {
+        bill.id: bill
+        for bill in MonthlyBill.objects.filter(pk__in=bill_ids, lease__tenant=user)
+    }
+    ordered_bills = [bill_map[bill_id] for bill_id in bill_ids if bill_id in bill_map]
+    return ordered_bills, bill_ids
+
+
+def _validate_advance_payment_selection(user, raw_bill_ids):
+    bills, requested_ids = _selected_bills_for_tenant(user, raw_bill_ids)
+    if not requested_ids:
+        return 'No valid billing months were selected for this payment.'
+
+    if len(bills) != len(requested_ids):
+        return 'Some selected billing months are invalid or no longer available. Please refresh the payment preview and try again.'
+
+    covered_months = {
+        (bill.billing_month.year, bill.billing_month.month)
+        for bill in bills
+        if bill.billing_month
+    }
+    if len(covered_months) > MAX_ADVANCE_PAYMENT_MONTHS:
+        return f'Advance payments are currently limited to {MAX_ADVANCE_PAYMENT_MONTHS} months per transaction. Please split longer payments into smaller batches.'
+
+    return None
 
 
 def _f2f_cash_context(**overrides):
@@ -82,8 +118,19 @@ def manual_gcash_payment(request):
                 "bill_ids": bill_ids,
             })
 
-        # 3. FIX: Save the transaction WITH the required bill_ids and payment_type
         payment_type = request.POST.get("payment_type", "full")
+        selection_error = _validate_advance_payment_selection(request.user, bill_ids)
+        if selection_error:
+            return render(request, "payments/manual_gcash.html", {
+                "error": selection_error,
+                "gcash_number": getattr(settings, "GCASH_NUMBER", "09XX-XXX-XXXX"),
+                "gcash_name": getattr(settings, "GCASH_NAME", "STA. MARIA REALTY"),
+                "amount_to_pay": amount_to_pay,
+                "bill_ids": bill_ids,
+                "payment_type": payment_type,
+            })
+
+        # 3. FIX: Save the transaction WITH the required bill_ids and payment_type
 
         # Prevent duplicate submissions (same user + bills within 2 minutes)
         if get_recent_pending_manual_payment(
@@ -191,6 +238,18 @@ def f2f_cash_payment(request):
                 tenant_note=tenant_note,
             ))
 
+        selection_error = _validate_advance_payment_selection(request.user, bill_ids)
+        if selection_error:
+            return render(request, "payments/f2f_cash.html", _f2f_cash_context(
+                error=selection_error,
+                amount_to_pay=amount_to_pay,
+                bill_ids=bill_ids,
+                payment_type=payment_type,
+                preferred_date=preferred_date,
+                preferred_time=preferred_time,
+                tenant_note=tenant_note,
+            ))
+
         payment, duplicate_reason = create_f2f_cash_payment_request(
             user=request.user,
             amount=amount_to_pay,
@@ -261,6 +320,11 @@ def paymongo_checkout(request):
 
     if amount <= 0:
         messages.error(request, "Payment amount must be greater than zero.")
+        return redirect("tenant_pay_advance")
+
+    selection_error = _validate_advance_payment_selection(request.user, bill_ids)
+    if selection_error:
+        messages.error(request, selection_error)
         return redirect("tenant_pay_advance")
 
     # Build description

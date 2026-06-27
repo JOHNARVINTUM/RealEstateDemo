@@ -30,6 +30,8 @@ from accounts.decorators import tenant_required
 
 from .models import Lease, Notification, TenantProfile, Unit
 
+MAX_ADVANCE_PAYMENT_MONTHS = 6
+
 
 def _unpaid_paymongo_checkout_filter():
     return Q(payment_method="PAYMONGO", status="PENDING", paymongo_payment_id="")
@@ -530,14 +532,14 @@ def _parse_months_to_pay(request):
 
 def _contract_advance_month_cap(lease, today_start):
     if not lease.end_date:
-        return 12
+        return MAX_ADVANCE_PAYMENT_MONTHS
 
     contract_end = month_start(lease.end_date)
     if contract_end < today_start:
         return 1
 
     month_diff = (contract_end.year - today_start.year) * 12 + (contract_end.month - today_start.month)
-    return min(max(month_diff + 1, 1), 12)
+    return min(max(month_diff + 1, 1), MAX_ADVANCE_PAYMENT_MONTHS)
 
 
 def _clamp_months_to_contract(months_to_pay, lease, today_start):
@@ -751,7 +753,8 @@ def _payment_preview_context(request, lease, months_to_pay):
     can_pay_full_bill = full_bill_available and not water_only_locked
     payment_type = _selected_payment_type(request, water_only_locked, full_bill_available, all_bills)
     advanceable_count = _advanceable_bill_count(all_bills, payment_type, today_start)
-    months_to_pay = min(max(months_to_pay, 1), advanceable_count) if advanceable_count else 0
+    capped_advanceable_count = min(advanceable_count, MAX_ADVANCE_PAYMENT_MONTHS)
+    months_to_pay = min(max(months_to_pay, 1), capped_advanceable_count) if capped_advanceable_count else 0
     bills_to_process = _bills_for_payment_type(all_bills, payment_type, months_to_pay, today_start)
     preview_rows = _payment_preview_rows(lease, bills_to_process, payment_type)
     totals = _payment_totals(preview_rows, payment_type)
@@ -774,10 +777,10 @@ def _payment_preview_context(request, lease, months_to_pay):
 
     return {
         "lease": lease,
-        "months_options": _advance_month_options(advanceable_count),
+        "months_options": _advance_month_options(capped_advanceable_count),
         "months_to_pay": months_to_pay,
-        "max_months_to_pay": advanceable_count,
-        "no_advance_available": advanceable_count == 0,
+        "max_months_to_pay": capped_advanceable_count,
+        "no_advance_available": capped_advanceable_count == 0,
         "payment_type": payment_type,
         "water_only_locked": water_only_locked,
         "full_bill_available": full_bill_available,

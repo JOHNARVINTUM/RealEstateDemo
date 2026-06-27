@@ -305,6 +305,71 @@ class F2FCashScheduleTests(TestCase):
             password="password123",
             role=User.Role.TENANT,
         )
+        self.unit = Unit.objects.create(number="C-101")
+        self.lease = Lease.objects.create(
+            tenant=self.tenant,
+            unit=self.unit,
+            monthly_rent=Decimal("10000.00"),
+            due_day=5,
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 12, 31),
+            status=Lease.STATUS_ACTIVE,
+            is_active=True,
+        )
+
+    def _create_bills(self, count=7):
+        bills = []
+        for month in range(1, count + 1):
+            bills.append(
+                MonthlyBill.objects.create(
+                    lease=self.lease,
+                    billing_month=date(2026, month, 1),
+                    due_date=date(2026, month, 5),
+                    base_rent=Decimal("10000.00"),
+                    water_amount=Decimal("0.00"),
+                    parking_fee=Decimal("0.00"),
+                    interest=Decimal("0.00"),
+                    total_due=Decimal("10000.00"),
+                    status="UNPAID",
+                )
+            )
+        return bills
+
+    def test_f2f_cash_rejects_more_than_six_months(self):
+        self.client.force_login(self.tenant)
+        bills = self._create_bills()
+        url = reverse("f2f_cash_payment")
+
+        response = self.client.post(url, {
+            "amount": "70000.00",
+            "bill_ids": ",".join(str(bill.id) for bill in bills),
+            "payment_type": "rent_only",
+            "preferred_date": "2026-06-05",
+            "preferred_time": "10:00",
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "currently limited to 6 months")
+        self.assertEqual(ManualPayment.objects.filter(payment_method="CASH").count(), 0)
+
+    def test_paymongo_checkout_rejects_more_than_six_months(self):
+        self.client.force_login(self.tenant)
+        bills = self._create_bills()
+
+        with patch("payments.views.create_paymongo_checkout_session_or_error") as checkout_mock:
+            response = self.client.post(reverse("paymongo_checkout"), {
+                "amount": "70000.00",
+                "bill_ids": ",".join(str(bill.id) for bill in bills),
+                "payment_type": "rent_only",
+            })
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("tenant_pay_advance"))
+        checkout_mock.assert_not_called()
+        self.assertEqual(
+            ManualPayment.objects.filter(user=self.tenant, payment_method="PAYMONGO").count(),
+            0,
+        )
 
     def test_f2f_cash_rejects_weekend_and_outside_office_hours(self):
         self.client.force_login(self.tenant)

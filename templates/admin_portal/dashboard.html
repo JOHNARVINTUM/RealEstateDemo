@@ -40,7 +40,7 @@
   </header>
 
   <!-- Key Metrics Counters (Highly Readable & High Contrast) -->
-  <section class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
     
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-blue-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
       <div>
@@ -52,22 +52,11 @@
       </div>
     </div>
 
-    <!-- Occupied Assets -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-emerald-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
-      <div>
-        <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Filled Units</span>
-        <div class="text-3xl font-black text-slate-900 tracking-tight">{{ occupied_units|intcomma }}</div>
-      </div>
-      <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
-        <span class="text-emerald-600 font-bold">●</span> Active contracts
-      </div>
-    </div>
-
     <!-- Available Units -->
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-purple-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
       <div>
         <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Empty Units</span>
-        <div class="text-3xl font-black text-slate-900 tracking-tight">{{ available_units|intcomma }}</div>
+        <div class="text-3xl font-black text-slate-900 tracking-tight">{{ available_units|intcomma }}<span class="text-xl text-slate-400 font-medium"> / {{ total_units }}</span></div>
       </div>
       <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
         <span class="text-purple-600 font-bold">●</span> Ready for intake
@@ -99,26 +88,6 @@
         </div>
       </div>
     </a>
-
-    <!-- Total Revenue Breakdown -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-indigo-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
-      <div>
-        <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Total Collected</span>
-        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight dashboard-amount-full" title="₱{{ total_collected|floatformat:0|intcomma }}">
-          ₱{{ total_collected|floatformat:0|intcomma }}
-        </div>
-      </div>
-      <div class="mt-2 space-y-1 text-xs">
-        <div class="flex justify-between text-slate-600">
-          <span>Rent: ₱{{ base_rent_collected|floatformat:0|intcomma }}</span>
-          <span>Water: ₱{{ water_collected|floatformat:0|intcomma }}</span>
-        </div>
-        <div class="flex justify-between text-slate-600">
-          <span>Parking: ₱{{ parking_collected|floatformat:0|intcomma }}</span>
-          <span>Late Fees: ₱{{ interest_collected|floatformat:0|intcomma }}</span>
-        </div>
-      </div>
-    </div>
 
   </section>
 

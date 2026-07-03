@@ -19,10 +19,10 @@
     <div>
       <div class="flex items-center gap-2 mb-1">
         <span class="inline-block w-3 h-3 rounded-full bg-emerald-600"></span>
-        <span class="text-sm font-semibold text-slate-700">System Overview</span>
+        <span class="text-sm font-semibold text-slate-700">{% if is_staff_portal %}Operations Overview{% else %}System Overview{% endif %}</span>
       </div>
       <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 mt-1">Dashboard</h1>
-      <p class="text-base text-slate-700 mt-1 leading-relaxed">A quick look at your properties, tenants, and bills.</p>
+      <p class="text-base text-slate-700 mt-1 leading-relaxed">{% if is_staff_portal %}A focused view of maintenance, payment review, water logging, and notifications.{% else %}A quick look at your properties, tenants, and bills.{% endif %}</p>
     </div>
     
     <div class="flex items-center gap-3 w-full md:w-auto">
@@ -39,6 +39,125 @@
     </div>
   </header>
 
+  {% if is_staff_portal %}
+  <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-rose-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+      <div>
+        <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Open Repairs</span>
+        <div class="text-3xl font-black text-slate-900 tracking-tight">{{ open_maintenance_count|intcomma }}</div>
+      </div>
+      <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
+        <span class="text-rose-600 font-bold">?</span> New requests waiting for action
+      </div>
+    </div>
+
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-amber-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+      <div>
+        <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Pending Payments</span>
+        <div class="text-3xl font-black text-slate-900 tracking-tight">{{ pending_payment_reviews|intcomma }}</div>
+      </div>
+      <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
+        <span class="text-amber-600 font-bold">?</span> Submissions awaiting review
+      </div>
+    </div>
+
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-cyan-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+      <div>
+        <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Missing Water Logs</span>
+        <div class="text-3xl font-black text-slate-900 tracking-tight">{{ missing_water_readings|intcomma }}</div>
+      </div>
+      <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
+        <span class="text-cyan-600 font-bold">?</span> Current month readings not yet entered
+      </div>
+    </div>
+
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-indigo-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+      <div>
+        <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Confirmed Cash Schedules</span>
+        <div class="text-3xl font-black text-slate-900 tracking-tight">{{ pending_cash_schedules|intcomma }}</div>
+      </div>
+      <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
+        <span class="text-indigo-600 font-bold">?</span> F2F cash appointments in the queue
+      </div>
+    </div>
+  </section>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div class="lg:col-span-2 space-y-6">
+      <section class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
+        <div class="mb-4 pb-3 border-b border-slate-100">
+          <h2 class="text-xl font-bold text-slate-900">Operational Shortcuts</h2>
+          <p class="text-sm text-slate-600 mt-1">Staff can work only on the daily operational modules shown below.</p>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <a href="{% url 'admin_maintenance' %}" class="rounded-xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-slate-300 p-5 transition-all">
+            <p class="text-xs font-black uppercase tracking-wider text-slate-500">Maintenance</p>
+            <h3 class="mt-2 text-lg font-black text-slate-900">Review Repair Requests</h3>
+            <p class="mt-2 text-sm text-slate-600">Open submitted issues, update status, and coordinate progress.</p>
+          </a>
+          <a href="{% url 'admin_payments' %}" class="rounded-xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-slate-300 p-5 transition-all">
+            <p class="text-xs font-black uppercase tracking-wider text-slate-500">Payments</p>
+            <h3 class="mt-2 text-lg font-black text-slate-900">Verify Payment Queue</h3>
+            <p class="mt-2 text-sm text-slate-600">Approve, reject, confirm schedules, and inspect payment submissions.</p>
+          </a>
+          <a href="{% url 'admin_water' %}" class="rounded-xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-slate-300 p-5 transition-all">
+            <p class="text-xs font-black uppercase tracking-wider text-slate-500">Water</p>
+            <h3 class="mt-2 text-lg font-black text-slate-900">Enter Water Readings</h3>
+            <p class="mt-2 text-sm text-slate-600">Record monthly readings and generate water charges from the current rate.</p>
+          </a>
+          <a href="{% url 'admin_notifications' %}" class="rounded-xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-slate-300 p-5 transition-all">
+            <p class="text-xs font-black uppercase tracking-wider text-slate-500">Notifications</p>
+            <h3 class="mt-2 text-lg font-black text-slate-900">Monitor System Alerts</h3>
+            <p class="mt-2 text-sm text-slate-600">Track the latest payment, maintenance, and lease-related updates.</p>
+          </a>
+        </div>
+      </section>
+
+      <section class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs">
+        <h2 class="text-xl font-bold text-slate-900">Current Operations Snapshot</h2>
+        <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="rounded-xl bg-slate-50 border border-slate-200 p-4">
+            <p class="text-xs font-black uppercase tracking-widest text-slate-500">Repairs In Progress</p>
+            <p class="mt-2 text-2xl font-black text-slate-900">{{ maintenance_in_progress_count|intcomma }}</p>
+          </div>
+          <div class="rounded-xl bg-slate-50 border border-slate-200 p-4">
+            <p class="text-xs font-black uppercase tracking-widest text-slate-500">Unread Notifications</p>
+            <p class="mt-2 text-2xl font-black text-slate-900">{{ unread_count|intcomma }}</p>
+          </div>
+          <div class="rounded-xl bg-slate-50 border border-slate-200 p-4">
+            <p class="text-xs font-black uppercase tracking-widest text-slate-500">Cash Appointments</p>
+            <p class="mt-2 text-2xl font-black text-slate-900">{{ pending_cash_schedules|intcomma }}</p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="space-y-8">
+      <!-- Recent Notifications List -->
+      <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col max-h-[460px]">
+        <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100 shrink-0">
+          <h3 class="text-lg font-bold text-slate-900">Notifications</h3>
+          <a href="{% url 'admin_notifications' %}" class="text-sm font-bold text-slate-800 hover:text-slate-900 underline">View All</a>
+        </div>
+        <div class="space-y-4 overflow-y-auto pr-1 flex-1">
+          {% for notification in notifications %}
+            <div class="p-4 rounded-lg border transition-colors {% if not notification.is_read %}bg-slate-50 border-slate-300 border-l-4 border-l-slate-800{% else %}bg-white border-slate-200{% endif %}">
+              <div class="mb-1">
+                <span class="text-sm font-extrabold text-slate-900 block leading-snug truncate">{{ notification.title }}</span>
+                <span class="text-xs text-slate-500 font-semibold block mt-0.5">{{ notification.created_at|timesince }} ago</span>
+              </div>
+              <p class="text-sm text-slate-800 leading-relaxed mt-1.5 line-clamp-2">{{ notification.message }}</p>
+            </div>
+          {% empty %}
+            <div class="text-center py-10 text-slate-500">
+              <p class="text-sm font-semibold">Everything is normal.</p>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
   <!-- Key Metrics Counters (Highly Readable & High Contrast) -->
   <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
     
@@ -48,7 +167,7 @@
         <div class="text-3xl font-black text-slate-900 tracking-tight">{{ total_tenants|intcomma }}<span class="text-xl text-slate-400 font-medium"> / {{ total_units }}</span></div>
       </div>
       <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
-        <span class="text-blue-600 font-bold">●</span> {{ available_units|default:vacant_units }} slots available
+        <span class="text-blue-600 font-bold">&bull;</span> {{ available_units|default:vacant_units }} slots available
       </div>
     </div>
 
@@ -59,7 +178,7 @@
         <div class="text-3xl font-black text-slate-900 tracking-tight">{{ available_units|intcomma }}<span class="text-xl text-slate-400 font-medium"> / {{ total_units }}</span></div>
       </div>
       <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
-        <span class="text-purple-600 font-bold">●</span> Ready for intake
+        <span class="text-purple-600 font-bold">&bull;</span> Ready for intake
       </div>
     </div>
 
@@ -72,10 +191,10 @@
       <div>
         <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Collected This Month</span>
         <div class="mt-1 space-y-1">
-          <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight dashboard-amount-full" title="₱{{ total_collected|floatformat:0|intcomma }}">
-            ₱{{ total_collected|floatformat:0|intcomma }}
+          <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight dashboard-amount-full" title="PHP {{ total_collected|floatformat:0|intcomma }}">
+            PHP {{ total_collected|floatformat:0|intcomma }}
           </div>
-          <div class="text-sm text-slate-500 font-medium">Rent Target: ₱{{ expected_monthly_rent|floatformat:0|intcomma }}</div>
+          <div class="text-sm text-slate-500 font-medium">Rent Target: PHP {{ expected_monthly_rent|floatformat:0|intcomma }}</div>
         </div>
       </div>
       <div class="mt-3">
@@ -101,7 +220,7 @@
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h2 class="text-xl font-bold text-slate-900">Reports</h2>
-          <p class="text-sm text-slate-600 mt-0.5">Revenue, water usage, and repairs — all in one place.</p>
+          <p class="text-sm text-slate-600 mt-0.5">Revenue, water usage, and repairs all in one place.</p>
         </div>
         <select id="monthFilter" class="bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-slate-500 focus:border-slate-500 block p-2.5 font-bold w-full sm:w-auto">
           <option value="12">Past 12 Months</option>
@@ -138,7 +257,7 @@
               <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Water Usage</h2>
               <p class="text-sm text-slate-700 mt-0.5">This tracks the total water used across all units. Use the table to see the exact cubic meters used.</p>
             </div>
-            <span class="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded">m³</span>
+            <span class="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded">m3</span>
           </div>
           <div id="waterTableContainer" class="mb-6 overflow-x-auto max-h-[250px] overflow-y-auto"></div>
           <div class="h-[300px] w-full">
@@ -196,6 +315,7 @@
     </div>
 
   </div>
+  {% endif %}</div>
 
 </div>
 

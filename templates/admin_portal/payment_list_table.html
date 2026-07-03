@@ -163,9 +163,11 @@
                   </button>
                 </form>
               {% endif %}
+              {% if request.user.role != "STAFF" %}
               <a href="{% url 'admin_delete_payment' p.id %}" class="px-2 py-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors text-xs font-bold ml-1" title="Drop File Row">
                 Delete
               </a>
+              {% endif %}
             </div>
           </td>
         </tr>

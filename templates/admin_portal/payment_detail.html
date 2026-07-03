@@ -128,7 +128,7 @@
       {% endif %}
     </div>
 
-    {% if payment.payment_type != "move_in" %}
+    {% if payment.payment_type != "move_in" and not is_staff_portal %}
     <div class="px-6 pb-6 lg:px-8">
       <div class="bg-slate-50 border border-slate-200 rounded-lg p-4">
         <form method="post" class="flex flex-col sm:flex-row sm:items-end gap-3">
@@ -270,7 +270,7 @@
       </form>
     {% endif %}
 
-    {% if payment.status == "REJECTED" and payment.payment_type == "move_in" and payment.payment_method == "PAYMONGO" %}
+    {% if payment.status == "REJECTED" and payment.payment_type == "move_in" and payment.payment_method == "PAYMONGO" and not is_staff_portal %}
       <form method="post" action="{% url 'admin_repair_move_in_payment' payment.id %}" class="inline-block" data-loading-form>
         {% csrf_token %}
         <button type="submit" data-loading-button data-loading-text="Repairing..." class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-indigo-600/30 hover:-translate-y-0.5 flex items-center gap-2">
@@ -284,9 +284,11 @@
     
     <div class="flex-1"></div>
     
+    {% if not is_staff_portal %}
     <a href="{% url 'admin_delete_payment' payment.id %}" class="px-4 py-2.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 rounded-xl font-bold text-sm transition-all">
       Delete Record
     </a>
+    {% endif %}
   </div>
 
 </div>

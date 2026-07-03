@@ -15,12 +15,6 @@ from .admin_portal_views import admin_required
 
 logger = logging.getLogger(__name__)
 
-SARIMA_BACKTEST_OVERRIDES = {
-    "2026-03": {"actual": 415109.0, "sarima": 455511.0},
-    "2026-04": {"actual": 455588.0, "sarima": 390522.0},
-    "2026-05": {"actual": 517228.0, "sarima": 506497.0},
-}
-
 
 @admin_required
 def admin_forecasting(request):
@@ -62,6 +56,14 @@ def admin_forecasting_data(request):
         "year_choices": context["year_choices"],
         "revenue_insight": context["revenue_insight"],
         "sarima_backtest_rows": context["sarima_backtest_rows"],
+        "history_month_count": context["history_month_count"],
+        "history_range_label": context["history_range_label"],
+        "forecast_horizon": context["forecast_horizon"],
+        "selected_model_order": context["selected_model_order"],
+        "selected_model_seasonal_order": context["selected_model_seasonal_order"],
+        "sarima_order": context["sarima_order"],
+        "sarima_seasonal_order": context["sarima_seasonal_order"],
+        "arima_order": context["arima_order"],
     }
     return JsonResponse(payload)
 
@@ -106,6 +108,23 @@ def _build_forecasting_context(request):
         while s and s[-1] == 0:
             s.pop()
         return s
+
+    def _sanitize_forecast_point(value):
+        import math
+
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError):
+            return None
+        if not math.isfinite(numeric) or numeric < 0:
+            return None
+        return round(numeric, 2)
+
+    def _sanitize_forecast_series(values):
+        if values is None:
+            return None
+        sanitized = [_sanitize_forecast_point(value) for value in values]
+        return sanitized if any(value is not None for value in sanitized) else None
 
     def _metric_dict(actual, preds):
         import math
@@ -175,10 +194,10 @@ def _build_forecasting_context(request):
                 )
                 fit = model.fit(disp=False)
             forecast_obj = fit.get_forecast(steps=steps)
-            mean = [round(max(float(v), 0.0), 2) for v in forecast_obj.predicted_mean]
+            mean = _sanitize_forecast_series(forecast_obj.predicted_mean)
             ci = np.array(forecast_obj.conf_int(alpha=0.2))
-            lower = [round(max(float(v), 0.0), 2) for v in ci[:, 0]]
-            upper = [round(max(float(v), 0.0), 2) for v in ci[:, 1]]
+            lower = _sanitize_forecast_series(ci[:, 0])
+            upper = _sanitize_forecast_series(ci[:, 1])
             return mean, lower, upper
         except ImportError:
             return None, None, None
@@ -248,7 +267,9 @@ def _build_forecasting_context(request):
                     fit = model.fit(disp=False)
                 month_date = month_dates[idx]
                 actual_value = round(float(s[idx]), 2)
-                forecast_value = round(max(float(fit.get_forecast(steps=1).predicted_mean[0]), 0.0), 2)
+                forecast_value = _sanitize_forecast_point(fit.get_forecast(steps=1).predicted_mean[0])
+                if forecast_value is None:
+                    continue
                 rows.append({
                     "month_key": month_date.strftime("%Y-%m"),
                     "month_label": month_date.strftime("%B %Y"),
@@ -262,26 +283,6 @@ def _build_forecasting_context(request):
         except Exception as exc:
             logger.error("SARIMA backtest rows error: %s", exc)
             return []
-
-    def _apply_sarima_backtest_overrides(rows):
-        if not rows:
-            rows = []
-
-        rows_by_key = {row["month_key"]: row for row in rows}
-        for month_key, override in SARIMA_BACKTEST_OVERRIDES.items():
-            month_year = datetime.strptime(month_key, "%Y-%m")
-            row = rows_by_key.get(month_key, {
-                "month_key": month_key,
-                "month_label": month_year.strftime("%B %Y"),
-            })
-            row["actual"] = round(float(override["actual"]), 2)
-            row["sarima"] = round(float(override["sarima"]), 2)
-            row["difference"] = round(row["actual"] - row["sarima"], 2)
-            rows_by_key[month_key] = row
-
-        merged_rows = list(rows_by_key.values())
-        merged_rows.sort(key=lambda row: row["month_key"])
-        return merged_rows[-3:]
 
     def _best_sarimax_config(series, candidates, test_steps=6):
         ranked = []
@@ -309,25 +310,6 @@ def _build_forecasting_context(request):
             return None
         ranked.sort(key=lambda item: item["rank"])
         return ranked[0]
-
-    def _best_model_name(metrics_by_model):
-        ranked = []
-        for model_name, metrics in metrics_by_model.items():
-            mape = metrics.get("mape")
-            rmse = metrics.get("rmse")
-            mae = metrics.get("mae")
-            if mape is None and rmse is None and mae is None:
-                continue
-            ranked.append((
-                float("inf") if mape is None else mape,
-                float("inf") if rmse is None else rmse,
-                float("inf") if mae is None else mae,
-                model_name,
-            ))
-        if not ranked:
-            return None
-        ranked.sort()
-        return ranked[0][3]
 
     def _next_month_labels(steps=3):
         labels = []
@@ -420,7 +402,6 @@ def _build_forecasting_context(request):
         rev_sarima_fc, rev_sarima_lower, rev_sarima_upper = None, None, None
         sarima_backtest_rows = []
 
-    sarima_backtest_rows = _apply_sarima_backtest_overrides(sarima_backtest_rows)
     if sarima_backtest_rows:
         revenue_sarima_metrics = _metric_dict(
             [row["actual"] for row in sarima_backtest_rows],
@@ -429,20 +410,17 @@ def _build_forecasting_context(request):
     else:
         revenue_sarima_metrics = {"rmse": None, "mae": None, "mape": None}
 
-    selected_model = _best_model_name({
-        "Naive": revenue_naive_metrics,
-        "ARIMA": revenue_arima_metrics,
-        "SARIMA": revenue_sarima_metrics,
-    })
-    selected_forecast_map = {
-        "Naive": (rev_naive_fc, None, None),
-        "ARIMA": (rev_arima_fc, None, None),
-        "SARIMA": (rev_sarima_fc, rev_sarima_lower, rev_sarima_upper),
-    }
-    selected_forecast, rev_selected_lower, rev_selected_upper = selected_forecast_map.get(
-        selected_model,
-        (rev_sarima_fc, rev_sarima_lower, rev_sarima_upper),
-    )
+    selected_model = "SARIMA"
+    history_month_count = len(revenue_series)
+    history_range_label = f"{hist_labels[0]} to {hist_labels[-1]}" if hist_labels else "No history"
+    arima_order = list(best_arima["order"]) if best_arima else None
+    sarima_order = list(best_sarima["order"]) if best_sarima else None
+    sarima_seasonal_order = list(best_sarima["seasonal_order"]) if best_sarima else None
+    selected_model_order = sarima_order
+    selected_model_seasonal_order = sarima_seasonal_order
+    selected_forecast = rev_sarima_fc
+    rev_selected_lower = rev_sarima_lower
+    rev_selected_upper = rev_sarima_upper
 
     hist_revenue_last12 = revenue_series[-36:]
     hist_labels_last12 = hist_labels[-36:]
@@ -462,26 +440,30 @@ def _build_forecasting_context(request):
         return "stable"
 
     rev_trend = _trend_direction(revenue_series)
-    if not selected_forecast:
+    first_selected_forecast = None
+    if selected_forecast:
+        first_selected_forecast = next((value for value in selected_forecast if value is not None), None)
+
+    if first_selected_forecast is None:
         revenue_insight = (
-            "Forecast comparison is unavailable because there is not enough usable revenue history yet."
+            "SARIMA forecast is unavailable because there is not enough usable revenue history yet or the forecast output was invalid. Naive and ARIMA remain visible for comparison metrics only."
         )
     elif rev_trend == "up":
-        rev_next = selected_forecast[0]
+        rev_next = first_selected_forecast
         revenue_insight = (
-            f"Revenue is trending upward. The selected model is {selected_model}, forecasting PHP {rev_next:,.0f} next month. "
+            f"Revenue is trending upward. The SARIMA forecast estimates PHP {rev_next:,.0f} next month. "
             "Recent collections are outperforming the prior period."
         )
     elif rev_trend == "down":
-        rev_next = selected_forecast[0]
+        rev_next = first_selected_forecast
         revenue_insight = (
-            f"Revenue has been declining. The selected model is {selected_model}, estimating PHP {rev_next:,.0f} next month. "
+            f"Revenue has been declining. The SARIMA forecast estimates PHP {rev_next:,.0f} next month. "
             "Collections need closer follow-up."
         )
     else:
-        rev_next = selected_forecast[0]
+        rev_next = first_selected_forecast
         revenue_insight = (
-            f"Revenue is stable. The selected model is {selected_model}, expecting about PHP {rev_next:,.0f} next month "
+            f"Revenue is stable. The SARIMA forecast expects about PHP {rev_next:,.0f} next month "
             "based on recent history and seasonality checks."
         )
 
@@ -506,6 +488,14 @@ def _build_forecasting_context(request):
         "year_choices": year_choices,
         "revenue_insight": revenue_insight,
         "sarima_backtest_rows": sarima_backtest_rows,
+        "history_month_count": history_month_count,
+        "history_range_label": history_range_label,
+        "forecast_horizon": forecast_horizon,
+        "selected_model_order": selected_model_order,
+        "selected_model_seasonal_order": selected_model_seasonal_order,
+        "sarima_order": sarima_order,
+        "sarima_seasonal_order": sarima_seasonal_order,
+        "arima_order": arima_order,
     }
 
 

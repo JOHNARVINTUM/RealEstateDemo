@@ -10,10 +10,10 @@
     <div>
       <div class="flex items-center gap-2 mb-1">
         <span class="inline-block w-3 h-3 rounded-full bg-cyan-600"></span>
-        <span class="text-sm font-semibold text-slate-700">Manage Water</span>
+        <span class="text-sm font-semibold text-slate-700">{% if is_staff_portal %}Water Readings{% else %}Manage Water{% endif %}</span>
       </div>
       <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 leading-tight">Water Usage</h1>
-      <p class="text-base text-slate-700 mt-1 leading-relaxed">Track how much water units use, set the price per cubic meter, and record meter readings.</p>
+      <p class="text-base text-slate-700 mt-1 leading-relaxed">{% if is_staff_portal %}Record water usage and generate reading-based charges for the selected month.{% else %}Track how much water units use, set the price per cubic meter, and record meter readings.{% endif %}</p>
     </div>
   </header>
 
@@ -71,6 +71,7 @@
   <!-- Configuration & Timeline Top Row -->
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
       
+      {% if not is_staff_portal %}
       <!-- Water Rate Settings Box -->
       <details class="bg-white border border-slate-200 rounded-xl shadow-xs group">
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 p-6">
@@ -127,6 +128,7 @@
           </button>
         </form>
       </details>
+      {% endif %}
 
       <!-- Scope Timeline Selection Box -->
       <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-4">
@@ -399,9 +401,11 @@
               Consumptions scale automatically relative to the currently active valuation baseline factor.
             </span>
             <div class="w-full sm:w-auto flex flex-col sm:flex-row gap-2">
+              {% if not is_staff_portal %}
               <a href="{% url 'admin_water_export_csv' %}?month={{ month }}&year={{ year }}&search={{ search|urlencode }}" data-skip-loader download class="w-full sm:w-auto bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 font-extrabold px-6 py-2.5 rounded-lg text-sm transition-colors text-center shadow-xs shrink-0">
                 Export CSV
               </a>
+              {% endif %}
               <button type="submit" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white font-extrabold px-6 py-2.5 rounded-lg text-sm transition-colors text-center shadow-xs shrink-0" {% if not current_rate %}disabled{% endif %}>
                 Save & Create Bills
               </button>
@@ -411,6 +415,7 @@
         </form>
       </div>
 
+      {% if not is_staff_portal %}
       <!-- Advanced Recomputation Execution Link -->
       <div class="flex justify-end pt-2">
         <form method="post" action="{% url 'admin_water_recompute' %}" class="confirm-action inline-block" data-confirm="Recompute all water readings for {{ month_name }} {{ year }}? This will recalculate usage and amounts based on the latest rate.">
@@ -422,6 +427,7 @@
           </button>
         </form>
       </div>
+      {% endif %}
 
     </div>
 

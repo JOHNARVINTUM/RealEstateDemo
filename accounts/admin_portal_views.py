@@ -7,6 +7,7 @@ from django.conf import settings
 from django.db.models import Sum, Q, F, ExpressionWrapper, DecimalField, Exists, OuterRef, Subquery, Count, Prefetch
 from django.db.models.functions import Coalesce, TruncMonth
 from django.db import transaction
+from django.db.utils import OperationalError, ProgrammingError
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.urls import reverse
@@ -21,38 +22,21 @@ from rentals.models import Lease, Unit, UnitImage, TenantProfile, Notification, 
 from billing.models import MonthlyBill
 from billing.services import ensure_bills_since_move_in, set_bill_status, approve_manual_payment, reject_manual_payment, cleanup_duplicate_monthly_bills_for_lease
 from maintenance.models import MaintenanceRequest
+from payments.models import ManualPayment
 from water.models import WaterReading
 from accounts.admin_portal_forms import _ordinal
 
 
-def debug_lease_form(request):
-    """Debug view for testing lease form JavaScript"""
-    from django.template import loader
-    
-    # Get available units for testing
-    units = Unit.objects.filter(is_active=True)
-    
-    # Get tenants for testing
-    tenants = TenantProfile.objects.select_related('user')
-    
-    return render(request, 'admin_portal/debug_lease_form.html', {
-        'units': units,
-        'tenants': tenants
-    })
-
-def simple_debug(request):
-    """Simple debug view without Django template inheritance"""
-    return render(request, 'admin_portal/simple_debug.html')
-from announcements.models import Announcement
+from announcements.models import Announcement, HomepageBanner, BusinessProfile
 from rentals.services import TenantRiskService, repair_historical_move_in_payment
 
-from .admin_portal_forms import TenantProfileForm, AnnouncementForm, LeaseForm
+from .admin_portal_forms import TenantProfileForm, AnnouncementForm, HomepageBannerForm, BusinessProfileForm, LeaseForm
 from .admin_portal_forms import TenantProfileEditForm
 from .admin_portal_forms import ComprehensiveTenantEditForm
 from .admin_portal_forms import UnitForm
 from rentals.models import UnitImage
 from django.contrib import messages
-from .decorators import admin_required
+from .decorators import admin_required, staff_or_admin_required
 
 
 def admin_password_verified(request) -> bool:
@@ -74,6 +58,50 @@ def render_admin_password_confirm(request, *, title, message, post_url, back_url
         },
     )
 
+
+
+
+def _safe_homepage_banner_queryset():
+    try:
+        return HomepageBanner.objects.select_related("created_by").order_by("-is_active", "-updated_at", "-created_at")
+    except (ProgrammingError, OperationalError):
+        return HomepageBanner.objects.none()
+
+
+def _safe_active_homepage_banner():
+    try:
+        return HomepageBanner.objects.filter(is_active=True).order_by("-updated_at", "-created_at").first()
+    except (ProgrammingError, OperationalError):
+        return None
+
+
+def _safe_homepage_banner_count():
+    try:
+        return HomepageBanner.objects.count()
+    except (ProgrammingError, OperationalError):
+        return 0
+
+
+
+def _safe_business_profile_queryset():
+    try:
+        return BusinessProfile.objects.select_related("updated_by").order_by("-is_active", "-updated_at", "-created_at")
+    except (ProgrammingError, OperationalError):
+        return BusinessProfile.objects.none()
+
+
+def _safe_active_business_profile():
+    try:
+        return BusinessProfile.objects.filter(is_active=True).order_by("-updated_at", "-created_at").first()
+    except (ProgrammingError, OperationalError):
+        return None
+
+
+def _safe_business_profile_count():
+    try:
+        return BusinessProfile.objects.count()
+    except (ProgrammingError, OperationalError):
+        return 0
 
 def _get_safe_next_url(request, default_url: str) -> str:
     candidate = (request.POST.get("next") or request.GET.get("next") or "").strip()
@@ -118,7 +146,7 @@ def _admin_display_unit_type(unit_type: str) -> str:
     return unit_type or ""
 
 
-@admin_required
+@staff_or_admin_required
 def admin_dashboard(request):
     active_leases = Lease.objects.filter(status=Lease.STATUS_ACTIVE)
     lease_counts = active_leases.aggregate(
@@ -280,13 +308,40 @@ def admin_dashboard(request):
     maintenance_trend_data.reverse()
     months_labels.reverse()
 
-    # Get notifications for admin only (exclude tenant notifications)
-    all_notifications = Notification.objects.filter(
-        recipient_type__in=['ADMIN', 'SPECIFIC_USER']
-    ).order_by('-created_at')
+    is_staff_portal = getattr(request.user, "role", "") == "STAFF"
+    if is_staff_portal:
+        all_notifications = Notification.objects.filter(
+            recipient_type='SPECIFIC_USER',
+            user=request.user,
+        ).order_by('-created_at')
+    else:
+        all_notifications = Notification.objects.filter(
+            Q(recipient_type='ADMIN') | Q(recipient_type='SPECIFIC_USER', user=request.user)
+        ).order_by('-created_at')
     unread_notifications = all_notifications.filter(is_read=False)
-    notifications = all_notifications[:5]  # Quick panel shows latest admin notifications
+    notifications = all_notifications[:5]
     unread_count = unread_notifications.count()
+
+    open_maintenance_count = MaintenanceRequest.objects.filter(status="OPEN").count()
+    maintenance_in_progress_count = MaintenanceRequest.objects.filter(status="IN_PROGRESS").count()
+    pending_payment_reviews = ManualPayment.objects.filter(
+        user__role="TENANT",
+        user__is_staff=False,
+        user__is_superuser=False,
+        status="PENDING",
+    ).exclude(
+        payment_method="PAYMONGO",
+        paymongo_payment_id="",
+    ).count()
+    pending_cash_schedules = ManualPayment.objects.filter(
+        user__role="TENANT",
+        user__is_staff=False,
+        user__is_superuser=False,
+        payment_method="CASH",
+        status="PENDING",
+    ).count()
+    completed_water_readings = WaterReading.objects.filter(reading_month=current_month_start).values("lease_id").distinct().count()
+    missing_water_readings = max(active_leases.count() - completed_water_readings, 0)
 
     return render(request, "admin_portal/dashboard.html", {
         "total_tenants": total_tenants,
@@ -310,6 +365,12 @@ def admin_dashboard(request):
         "notifications": notifications,
         "unread_notifications": unread_notifications,
         "unread_count": unread_count,
+        "is_staff_portal": is_staff_portal,
+        "open_maintenance_count": open_maintenance_count,
+        "maintenance_in_progress_count": maintenance_in_progress_count,
+        "pending_payment_reviews": pending_payment_reviews,
+        "pending_cash_schedules": pending_cash_schedules,
+        "missing_water_readings": missing_water_readings,
         "monthly_income_data": monthly_income_data,
         "water_usage_data": water_usage_data,
         "maintenance_trend_data": maintenance_trend_data,
@@ -822,13 +883,114 @@ def admin_announcements(request):
         created_at__month=now.month
     ).count()
 
+    active_banner = _safe_active_homepage_banner()
+    banner_count = _safe_homepage_banner_count()
+    active_business_profile = _safe_active_business_profile()
+
     return render(request, "admin_portal/announcements.html", {
         "items": items, 
         "q": q,
         "total_count": total_count,
         "active_count": active_count,
-        "this_month_count": this_month_count
+        "this_month_count": this_month_count,
+        "active_banner": active_banner,
+        "banner_count": banner_count,
+        "active_business_profile": active_business_profile,
     })
+
+
+@admin_required
+def admin_business_profile(request):
+    profile = _safe_active_business_profile() or _safe_business_profile_queryset().first()
+    form = BusinessProfileForm(request.POST or None, instance=profile)
+
+    if request.method == "POST" and form.is_valid():
+        form.save(user=request.user)
+        messages.success(request, "Business profile saved successfully.")
+        return redirect("admin_business_profile")
+
+    return render(request, "admin_portal/business_profile_form.html", {
+        "title": "Business Profile",
+        "form": form,
+        "profile": profile,
+        "banner_count": _safe_homepage_banner_count(),
+        "profile_count": _safe_business_profile_count(),
+        "active_banner": _safe_active_homepage_banner(),
+    })
+
+
+@admin_required
+def admin_homepage_banners(request):
+    banners = _safe_homepage_banner_queryset()
+    active_banner = next((banner for banner in banners if banner.is_active), None)
+    return render(request, "admin_portal/homepage_banners.html", {
+        "items": banners,
+        "active_banner": active_banner,
+        "total_count": banners.count(),
+    })
+
+
+@admin_required
+def admin_create_homepage_banner(request):
+    form = HomepageBannerForm(request.POST or None)
+
+    if request.method == "POST" and form.is_valid():
+        form.save(user=request.user)
+        messages.success(request, "Homepage banner saved successfully.")
+        return redirect("admin_homepage_banners")
+
+    recent_items = _safe_homepage_banner_queryset()[:3]
+    return render(request, "admin_portal/homepage_banner_form.html", {
+        "title": "Create Homepage Banner",
+        "form": form,
+        "recent_items": recent_items,
+        "back_url": reverse("admin_homepage_banners"),
+    })
+
+
+@admin_required
+def admin_edit_homepage_banner(request, banner_id: int):
+    banner = get_object_or_404(HomepageBanner, pk=banner_id)
+    form = HomepageBannerForm(request.POST or None, instance=banner)
+
+    if request.method == "POST" and form.is_valid():
+        form.save(user=request.user)
+        messages.success(request, "Homepage banner updated successfully.")
+        return redirect("admin_homepage_banners")
+
+    recent_items = _safe_homepage_banner_queryset()[:3]
+    return render(request, "admin_portal/homepage_banner_form.html", {
+        "title": "Edit Homepage Banner",
+        "form": form,
+        "banner": banner,
+        "recent_items": recent_items,
+        "back_url": reverse("admin_homepage_banners"),
+    })
+
+
+@admin_required
+def admin_delete_homepage_banner(request, banner_id: int):
+    banner = get_object_or_404(HomepageBanner, pk=banner_id)
+    if request.method == "POST":
+        if not admin_password_verified(request):
+            return render_admin_password_confirm(
+                request,
+                title="Delete Homepage Banner",
+                message=f"Delete homepage banner {banner.title}?",
+                post_url=reverse("admin_delete_homepage_banner", args=[banner.id]),
+                back_url=reverse("admin_homepage_banners"),
+                error="Incorrect admin password. Homepage banner deletion was not completed.",
+            )
+        banner.delete()
+        messages.success(request, "Homepage banner deleted successfully.")
+        return redirect("admin_homepage_banners")
+    return render_admin_password_confirm(
+        request,
+        title="Delete Homepage Banner",
+        message=f"Delete homepage banner {banner.title}?",
+        post_url=reverse("admin_delete_homepage_banner", args=[banner.id]),
+        back_url=reverse("admin_homepage_banners"),
+    )
 
 
 @admin_required

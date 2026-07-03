@@ -1,0 +1,110 @@
+{% extends "admin_portal/base.html" %}
+{% block title %}Business Profile | Real Estate Administration{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6 py-6 sm:py-8">
+  <nav class="flex items-center">
+    <a href="{% url 'admin_announcements' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
+      <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
+      </svg>
+      <span>Back</span>
+    </a>
+  </nav>
+
+  <header class="bg-white border border-slate-200 rounded-2xl p-6 lg:p-8 shadow-sm flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+    <div>
+      <div class="flex items-center gap-3 mb-2">
+        <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 shadow-sm border border-slate-200">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h10"></path></svg>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 leading-tight">Business Profile</h1>
+      </div>
+      <p class="text-sm text-slate-500 mt-1">Control the public-facing business identity and inquiry details without editing landing-page code.</p>
+    </div>
+    <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+      <a href="{% url 'admin_homepage_banners' %}" class="inline-flex items-center justify-center px-5 py-3 rounded-xl border-2 border-slate-200 bg-white text-slate-700 font-black text-sm hover:bg-slate-50 transition-all">Manage Banners</a>
+      <a href="{% url 'admin_announcements' %}" class="inline-flex items-center justify-center px-5 py-3 rounded-xl border-2 border-slate-200 bg-white text-slate-700 font-black text-sm hover:bg-slate-50 transition-all">Announcements</a>
+    </div>
+  </header>
+
+  <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm border-l-8 border-l-blue-600 flex flex-col justify-between">
+      <div>
+        <span class="text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest block mb-2">Saved Profiles</span>
+        <div class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">{{ profile_count }}</div>
+      </div>
+      <div class="text-sm text-slate-500 mt-4 font-bold flex items-center gap-2"><span class="text-blue-600 font-black text-lg">&bull;</span> Business identity records</div>
+    </div>
+    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm border-l-8 border-l-emerald-500 flex flex-col justify-between md:col-span-2">
+      <div>
+        <span class="text-xs sm:text-sm font-black text-slate-400 uppercase tracking-widest block mb-2">Live Landing Identity</span>
+        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ profile.business_name|default:'RealEstate360+' }}</div>
+        <p class="text-sm text-slate-500 font-bold mt-3">{{ profile.tagline|default:'Elevating Urban Living' }}</p>
+      </div>
+      <div class="text-sm text-slate-500 mt-4 font-bold flex items-center gap-2"><span class="text-emerald-500 font-black text-lg">&bull;</span> Updates the landing page, inquiry section, and footer copy</div>
+    </div>
+  </section>
+
+  <div class="bg-white border border-slate-200 rounded-[2rem] shadow-sm hover:shadow-md transition-shadow p-6 sm:p-10">
+    <form method="post" class="space-y-8">
+      {% csrf_token %}
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="space-y-2">
+          <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Business Name</label>
+          <input type="text" name="business_name" value="{{ form.business_name.value|default:'' }}" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none">
+          {% if form.business_name.errors %}<span class="block text-sm font-bold text-rose-600 mt-1">{{ form.business_name.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="space-y-2">
+          <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Tagline</label>
+          <input type="text" name="tagline" value="{{ form.tagline.value|default:'' }}" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none">
+          {% if form.tagline.errors %}<span class="block text-sm font-bold text-rose-600 mt-1">{{ form.tagline.errors.0 }}</span>{% endif %}
+        </div>
+      </div>
+
+      <div class="space-y-2">
+        <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">About Text</label>
+        <textarea name="about_text" rows="5" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 leading-relaxed focus:bg-white focus:border-indigo-500 transition-all outline-none">{{ form.about_text.value|default:'' }}</textarea>
+        {% if form.about_text.errors %}<span class="block text-sm font-bold text-rose-600 mt-1">{{ form.about_text.errors.0 }}</span>{% endif %}
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="space-y-2">
+          <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Contact Email</label>
+          <input type="email" name="contact_email" value="{{ form.contact_email.value|default:'' }}" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none">
+          {% if form.contact_email.errors %}<span class="block text-sm font-bold text-rose-600 mt-1">{{ form.contact_email.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="space-y-2">
+          <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Contact Phone</label>
+          <input type="text" name="contact_phone" value="{{ form.contact_phone.value|default:'' }}" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none">
+          {% if form.contact_phone.errors %}<span class="block text-sm font-bold text-rose-600 mt-1">{{ form.contact_phone.errors.0 }}</span>{% endif %}
+        </div>
+      </div>
+
+      <div class="space-y-2">
+        <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Address</label>
+        <input type="text" name="address" value="{{ form.address.value|default:'' }}" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none">
+        {% if form.address.errors %}<span class="block text-sm font-bold text-rose-600 mt-1">{{ form.address.errors.0 }}</span>{% endif %}
+      </div>
+
+      <div class="space-y-2">
+        <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Inquiry Text</label>
+        <textarea name="inquiry_text" rows="4" class="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 leading-relaxed focus:bg-white focus:border-indigo-500 transition-all outline-none">{{ form.inquiry_text.value|default:'' }}</textarea>
+        {% if form.inquiry_text.errors %}<span class="block text-sm font-bold text-rose-600 mt-1">{{ form.inquiry_text.errors.0 }}</span>{% endif %}
+      </div>
+
+      <div class="flex items-center pt-2">
+        <label class="inline-flex items-center gap-3 cursor-pointer group">
+          <input type="checkbox" name="is_active" {% if form.is_active.value %}checked{% endif %} class="w-5 h-5 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer transition-all">
+          <span class="text-sm font-extrabold text-slate-800 select-none uppercase tracking-wider group-hover:text-slate-900">Use this profile on the public landing page</span>
+        </label>
+      </div>
+
+      <div class="pt-8 border-t border-slate-100 flex flex-col sm:flex-row items-center gap-3 justify-end">
+        <button type="submit" class="w-full sm:w-auto px-8 py-3.5 bg-slate-900 hover:bg-black text-white rounded-xl font-extrabold text-sm transition-all shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-md text-center">Save Business Profile</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,15 +1,16 @@
-from datetime import date, time, timedelta
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from unittest.mock import patch
 from dateutil.relativedelta import relativedelta
 
-from django.test import TestCase
+from django.test import RequestFactory, TestCase
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import User
+from accounts.admin_forecasting_views import _build_forecasting_context
 from accounts.admin_notification_views import resolve_notification_target_url
 from accounts.admin_portal_forms import ComprehensiveTenantEditForm, LeaseForm, TenantProfileForm
 from billing.models import MonthlyBill
@@ -157,6 +158,193 @@ class AccountProfileTests(TestCase):
 
         self.assertFalse(form.is_valid())
         self.assertIn("Accepted formats", str(form.errors))
+
+
+class StaffRoleFoundationTests(TestCase):
+    def setUp(self):
+        self.staff = User.objects.create_user(
+            email="staff@gmail.com",
+            username="staffuser",
+            password="password123",
+            role=User.Role.STAFF,
+        )
+        self.tenant = User.objects.create_user(
+            email="staff-tenant@gmail.com",
+            username="stafftenant",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        self.admin = User.objects.create_superuser(
+            email="staff-admin@gmail.com",
+            username="staffadmin",
+            password="password123",
+            role=User.Role.ADMIN,
+        )
+        self.tenant_profile = TenantProfile.objects.create(
+            user=self.tenant,
+            first_name="Test",
+            last_name="Tenant",
+            contact_no="09170000003",
+            password_change_required=False,
+            created_by=self.admin,
+        )
+
+    def test_staff_login_redirects_to_admin_dashboard(self):
+        response = self.client.post(
+            reverse("login"),
+            {"username": self.staff.email, "password": "password123"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("admin_dashboard"))
+
+    def test_comprehensive_tenant_edit_form_accepts_staff_role(self):
+        form = ComprehensiveTenantEditForm(
+            self.tenant_profile,
+            data={
+                "email": self.tenant.email,
+                "username": self.tenant.username,
+                "role": User.Role.STAFF,
+                "is_active": True,
+                "new_password": "",
+                "confirm_password": "",
+                "first_name": self.tenant_profile.first_name,
+                "last_name": self.tenant_profile.last_name,
+                "contact_no": self.tenant_profile.contact_no,
+            },
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.fields["role"].help_text, "Assign user role (Tenant, Staff, or Admin)")
+
+
+class StaffPortalRestrictionTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            email="staff-portal-admin@gmail.com",
+            username="staffportaladmin",
+            password="password123",
+            role=User.Role.ADMIN,
+        )
+        self.staff = User.objects.create_user(
+            email="staff-portal@gmail.com",
+            username="staffportal",
+            password="password123",
+            role=User.Role.STAFF,
+        )
+        self.tenant = User.objects.create_user(
+            email="staff-portal-tenant@gmail.com",
+            username="staffportaltenant",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        TenantProfile.objects.create(
+            user=self.tenant,
+            first_name="Portal",
+            last_name="Tenant",
+            password_change_required=False,
+            created_by=self.admin,
+        )
+        self.unit = Unit.objects.create(number="SP-101", monthly_rent=Decimal("10000.00"), status="AVAILABLE")
+        self.lease = Lease.objects.create(
+            tenant=self.tenant,
+            unit=self.unit,
+            monthly_rent=Decimal("10000.00"),
+            due_day=5,
+            start_date=date(2026, 6, 1),
+            status=Lease.STATUS_ACTIVE,
+            is_active=True,
+        )
+        self.payment = ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="REF-STAFF-PORTAL",
+            bill_ids="",
+            payment_type="full",
+            payment_method="CASH",
+            amount=Decimal("10000.00"),
+            status="PENDING",
+            preferred_date=date(2026, 7, 5),
+        )
+
+    def test_staff_can_access_allowed_operational_pages(self):
+        self.client.force_login(self.staff)
+
+        for url_name in [
+            "admin_dashboard",
+            "admin_maintenance",
+            "admin_payments",
+            "admin_payment_calendar",
+            "admin_notifications",
+            "admin_water",
+        ]:
+            with self.subTest(url_name=url_name):
+                response = self.client.get(reverse(url_name))
+                self.assertEqual(response.status_code, 200)
+
+    def test_staff_dashboard_hides_admin_only_sidebar_items(self):
+        self.client.force_login(self.staff)
+
+        response = self.client.get(reverse("admin_dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Operations Overview")
+        self.assertContains(response, "Notifications")
+        self.assertContains(response, "Repair Requests")
+        self.assertContains(response, "Payments")
+        self.assertContains(response, "Water")
+        self.assertNotContains(response, "Tenants")
+        self.assertNotContains(response, "Rent & Bills")
+        self.assertNotContains(response, "Risk Check")
+        self.assertNotContains(response, "Units")
+        self.assertNotContains(response, "News & Updates")
+        self.assertNotContains(response, "Future Estimates")
+        self.assertNotContains(response, "Edit Business Profile")
+        self.assertNotContains(response, reverse("admin_business_profile"))
+
+    def test_staff_is_redirected_from_admin_only_routes(self):
+        self.client.force_login(self.staff)
+
+        blocked_urls = [
+            reverse("admin_tenants"),
+            reverse("admin_units"),
+            reverse("admin_forecasting"),
+            reverse("admin_tenant_risk"),
+            reverse("admin_announcements"),
+            reverse("admin_business_profile"),
+            reverse("admin_delete_payment", args=[self.payment.id]),
+            reverse("admin_water_rate"),
+        ]
+
+        for blocked_url in blocked_urls:
+            with self.subTest(blocked_url=blocked_url):
+                response = self.client.get(blocked_url)
+                self.assertEqual(response.status_code, 302)
+                self.assertIn(reverse("login"), response.url)
+
+    def test_staff_cannot_change_payment_type_label(self):
+        self.client.force_login(self.staff)
+
+        response = self.client.post(
+            reverse("admin_payment_detail", args=[self.payment.id]),
+            {
+                "action": "update_payment_type",
+                "payment_type": "rent_only",
+            },
+            follow=True,
+        )
+
+        self.payment.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.payment.payment_type, "full")
+        self.assertContains(response, "Staff cannot change payment type labels.")
+
+    def test_admin_still_has_access_to_admin_only_pages(self):
+        self.client.force_login(self.admin)
+
+        for url_name in ["admin_tenants", "admin_units", "admin_forecasting", "admin_announcements", "admin_business_profile"]:
+            with self.subTest(url_name=url_name):
+                response = self.client.get(reverse(url_name))
+                self.assertEqual(response.status_code, 200)
 
 
 class AdminPaymentTypeEditTests(TestCase):
@@ -1411,7 +1599,49 @@ class AdminForecastingRevenueTests(TestCase):
         self.assertIn("revenue_arima_metrics", payload)
         self.assertIn("revenue_sarima_metrics", payload)
         self.assertIn("selected_model", payload)
-        self.assertIn(payload["selected_model"], ["Naive", "ARIMA", "SARIMA", None])
+        self.assertIn("history_month_count", payload)
+        self.assertIn("history_range_label", payload)
+        self.assertIn("forecast_horizon", payload)
+        self.assertIn("selected_model_order", payload)
+        self.assertIn("selected_model_seasonal_order", payload)
+        self.assertEqual(payload["selected_model"], "SARIMA")
+
+    @patch("accounts.admin_forecasting_views.timezone.now")
+    def test_forecasting_uses_last_complete_month_and_starts_forecast_after_it(self, mocked_now):
+        mocked_now.return_value = timezone.make_aware(datetime(2026, 7, 3, 10, 0, 0))
+        june_month = date(2026, 6, 1)
+        july_month = date(2026, 7, 1)
+        MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=june_month,
+            due_date=date(2026, 6, 5),
+            base_rent=Decimal("300000.00"),
+            water_amount=Decimal("0.00"),
+            parking_fee=Decimal("0.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("300000.00"),
+            rent_paid=Decimal("234567.00"),
+            status="PAID",
+        )
+        MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=july_month,
+            due_date=date(2026, 7, 5),
+            base_rent=Decimal("300000.00"),
+            water_amount=Decimal("0.00"),
+            parking_fee=Decimal("0.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("300000.00"),
+            rent_paid=Decimal("99999.00"),
+            status="PARTIALLY_PAID",
+        )
+        request = RequestFactory().get(reverse("admin_forecasting"), {"year": "2026"})
+        context = _build_forecasting_context(request)
+
+        self.assertEqual(context["hist_labels"][-1], "Jun 2026")
+        self.assertEqual(context["hist_revenue"][-1], 234567.0)
+        self.assertEqual(context["forecast_labels"][0], "Jul 2026")
+        self.assertNotIn("Jul 2026", context["hist_labels"])
 
 
 class AdminTenantPaymentHistoryTests(TestCase):

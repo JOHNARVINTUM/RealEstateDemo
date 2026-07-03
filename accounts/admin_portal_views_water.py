@@ -12,7 +12,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.views.decorators.http import require_http_methods
 
-from .decorators import admin_required
+from .decorators import admin_required, staff_or_admin_required
 from water.models import WaterBillingSettings, WaterReading, WaterRate
 from water.services import (
     compute_water_reading,
@@ -120,7 +120,7 @@ def _recompute_unpaid_water_readings_for_month(reading_date, computed_by):
     return fixed_count, skipped_count, error_count
 
 
-@admin_required
+@staff_or_admin_required
 def admin_water(request):
     """Water Management dashboard with bulk entry"""
     
@@ -275,12 +275,13 @@ def admin_water(request):
         'missing_count': missing_count,
         'readings_data': readings_data,
         'search': search,
+        'is_staff_portal': getattr(request.user, 'role', '') == 'STAFF',
     }
     
     return render(request, "admin_portal/water_management.html", context)
 
 
-@admin_required
+@staff_or_admin_required
 def admin_water_export_csv(request):
     today = date.today()
     month = int(request.GET.get('month', today.month))

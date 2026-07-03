@@ -1,11 +1,11 @@
 {% load static %}
-<div class="lp-wrapper">
+<div class="lp-wrapper{% if active_banner %} has-cms-banner{% endif %}">
   
   <!-- Navigation -->
   <nav class="lp-nav">
     <a href="/" class="lp-logo">
       <img src="{% static 'img/accounts/RealEstate360+ Logo2 jpg.jpg' %}" alt="RealEstate360+ Logo">
-      <span style="font-family: 'Outfit', sans-serif; font-weight: 600;">RealEstate360<span style="color: #3b82f6;">+</span></span>
+      <span style="font-family: 'Outfit', sans-serif; font-weight: 600;">{{ business_profile.business_name }}</span>
     </a>
     <div class="lp-nav-links" id="navLinks">
       <a href="#about" class="lp-nav-item">Our Story</a>
@@ -21,10 +21,27 @@
     </button>
   </nav>
 
+  {% if active_banner %}
+  <section class="lp-banner-strip">
+    <div class="lp-container">
+      <div class="lp-banner-card" data-reveal="fade">
+        <div class="lp-banner-copy">
+          {% if active_banner.eyebrow %}<span class="lp-banner-eyebrow">{{ active_banner.eyebrow }}</span>{% endif %}
+          <h2>{{ active_banner.title }}</h2>
+          <p>{{ active_banner.body }}</p>
+        </div>
+        {% if active_banner.button_text %}
+          <a href="{{ active_banner.button_url|default:'#about' }}" class="lp-banner-btn">{{ active_banner.button_text }}</a>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
   <!-- Hero Section -->
   <section class="lp-hero">
-    <div class="lp-watermark" data-reveal="fade">STA MARIA</div>
-    <div class="lp-vertical-text">ELEVATING URBAN LIVING</div>
+    <div class="lp-watermark" data-reveal="fade">{{ business_profile.business_name|upper }}</div>
+    <div class="lp-vertical-text">{{ business_profile.tagline|upper }}</div>
     
     <div class="lp-container lp-hero-layout">
       <!-- Carousel Visual Layer -->
@@ -42,7 +59,7 @@
         
         <div class="lp-glass-badge">
           <span class="badge-title">Affordable spaces</span>
-          <span class="badge-sub">Mandaluyong City</span>
+          <span class="badge-sub">{{ business_profile.tagline }}</span>
         </div>
 
         <button class="lp-carousel-btn prev" id="carouselPrev">&#10094;</button>
@@ -62,8 +79,8 @@
       <!-- Text Content Layer (Overlaps visual) -->
       <div class="lp-hero-text" data-reveal="up">
         <h1>Spaces<br>Designed<br>For <i>You</i>.</h1>
-        <p>A masterclass in modern living. Affordable, pristine, and perfectly located in the heart of Mandaluyong. We provide a space you can truly call home.</p>
-        <a href="#about" class="lp-btn-primary">Explore Sta. Maria</a>
+        <p>{{ business_profile.about_text }}</p>
+        <a href="#about" class="lp-btn-primary">Explore {{ business_profile.business_name }}</a>
       </div>
     </div>
   </section>
@@ -78,7 +95,7 @@
         <div class="lp-bento-card col-span-2 row-span-1 bg-navy" data-reveal="up">
           <span class="lp-section-subtitle text-light-blue">Our Heritage</span>
           <h2 class="text-white">A Foundation Built on Trust</h2>
-          <p class="text-light-blue">Sta. Maria started as a small family endeavor with a simple belief: everyone deserves a high-quality, affordable place to live without compromising on comfort or modern design.</p>
+          <p class="text-light-blue">{{ business_profile.about_text }}</p>
         </div>
 
         <!-- Vertical Image Card -->
@@ -97,7 +114,7 @@
         <div class="lp-bento-card col-span-1 row-span-1 bg-white border-card" data-reveal="up" style="transition-delay: 0.2s;">
           <span class="lp-section-subtitle">The Future</span>
           <h2>Growing With You</h2>
-          <p>Exciting plans for future site expansions mean our community continues to thrive, providing seamless access to lease management via RealEstate360+.</p>
+          <p>The platform can scale across different properties by updating public-facing business content directly from the admin CMS instead of editing code.</p>
         </div>
 
       </div>
@@ -114,7 +131,7 @@
             <span class="modern-text">Ready to</span>
             <span class="elegant-text">come home?</span>
           </h2>
-          <p>Join the RealEstate360+ platform to explore properties, manage your lease, and become part of our thriving Sta. Maria community today.</p>
+          <p>Join {{ business_profile.business_name }} through RealEstate360+ to explore properties, manage your lease, and stay connected with the community.</p>
           <a href="{% url 'login' %}" class="lp-btn-cta">Join Our Community</a>
         </div>
       </div>
@@ -128,31 +145,31 @@
         <div class="inquiry-text">
           <span class="lp-section-subtitle text-light-blue">Get in Touch</span>
           <h2 class="text-white">Looking to Inquire?</h2>
-          <p class="text-white">We'd love to hear from you. Reach out to our team to learn more about available spaces, schedule a viewing, or ask any questions.</p>
+          <p class="text-white">{{ business_profile.inquiry_text }}</p>
           <div class="contact-details">
             <div class="contact-item">
               <div>
                 <strong>Location</strong>
-                <p>91 Coronado, Mandaluyong City, 1550 Metro Manila</p>
+                <p>{{ business_profile.address }}</p>
               </div>
             </div>
             <div class="contact-item">
               <div>
                 <strong>Email</strong>
-                <p>lod.bituin@yahoo.com</p>
+                <p>{{ business_profile.contact_email }}</p>
               </div>
             </div>
             <div class="contact-item">
               <div>
                 <strong>Office</strong>
-                <p>09178255935</p>
+                <p>{{ business_profile.contact_phone }}</p>
               </div>
             </div>
           </div>
         </div>
         <div class="inquiry-image">
           <iframe 
-            src="https://maps.google.com/maps?q=91%20Coronado,%20Mandaluyong%20City,%201550%20Metro%20Manila&t=&z=16&ie=UTF8&iwloc=&output=embed" 
+            src="https://maps.google.com/maps?q={{ business_profile.address|urlencode }}&t=&z=16&ie=UTF8&iwloc=&output=embed" 
             width="100%" 
             height="100%" 
             style="border:0; position:absolute; top:0; left:0;" 
@@ -173,9 +190,9 @@
         <div>
           <a href="/" class="lp-footer-logo">
             <img src="{% static 'img/accounts/RealEstate360+ Logo2 jpg.jpg' %}" alt="Logo">
-            <span style="font-family: 'Outfit', sans-serif; font-weight: 600;">RealEstate360<span style="color: #3b82f6;">+</span></span>
+            <span style="font-family: 'Outfit', sans-serif; font-weight: 600;">{{ business_profile.business_name }}</span>
           </a>
-          <p>Your trusted real estate partner in Mandaluyong. Providing quality, affordable apartment living that feels just like home.</p>
+          <p>{{ business_profile.tagline }}. {{ business_profile.about_text }}</p>
         </div>
         <div>
           <h4>Discover</h4>
@@ -187,20 +204,99 @@
         <div>
           <h4>Connect</h4>
           <ul class="lp-footer-links">
-            <li>91 Coronado, Mandaluyong City, 1550 Metro Manila</li>
-            <li>lod.bituin@yahoo.com</li>
-            <li>09178255935</li>
+            <li>{{ business_profile.address }}</li>
+            <li>{{ business_profile.contact_email }}</li>
+            <li>{{ business_profile.contact_phone }}</li>
           </ul>
         </div>
       </div>
       <div class="lp-footer-bottom">
-        &copy; {% now "Y" %} Sta. Maria RealEstate360+. Crafted with care.
+        &copy; {% now "Y" %} {{ business_profile.business_name }}. Crafted with care.
       </div>
     </div>
   </footer>
 </div>
 
 <style>
+.lp-banner-strip {
+  position: relative;
+  z-index: 8;
+  padding-top: 108px;
+  margin-bottom: 18px;
+}
+
+.has-cms-banner .lp-hero {
+  padding-top: 56px;
+}
+
+.lp-banner-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 16px 24px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.92), rgba(59, 130, 246, 0.92));
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 18px 42px rgba(30, 58, 138, 0.16);
+}
+
+.lp-banner-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lp-banner-eyebrow {
+  display: inline-flex;
+  width: fit-content;
+  padding: 6px 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #dbeafe;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.lp-banner-card h2 {
+  margin: 0;
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(1.1rem, 1.7vw, 1.45rem);
+  font-weight: 800;
+  color: #fff;
+}
+
+.lp-banner-card p {
+  margin: 0;
+  max-width: 860px;
+  color: rgba(255, 255, 255, 0.84);
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.lp-banner-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 20px;
+  border-radius: 999px;
+  background: #fff;
+  color: #1E3A8A;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.lp-banner-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(255, 255, 255, 0.2);
+}
+
 .cta-content h2 {
   text-align: center;
   margin-bottom: 30px;
@@ -241,6 +337,10 @@
 }
 
 @media (max-width: 768px) {
+  .lp-banner-strip { padding-top: 86px; margin-bottom: 12px; }
+  .has-cms-banner .lp-hero { padding-top: 24px; }
+  .lp-banner-card { flex-direction: column; align-items: flex-start; padding: 14px 16px; border-radius: 20px; }
+  .lp-banner-btn { width: 100%; }
   .cta-content h2 .modern-text { font-size: 3.5rem; }
   .cta-content h2 .elegant-text { font-size: 4rem; margin-top: -5px; }
 }

@@ -29,6 +29,7 @@ def gmail_plus_alias_used(email: str) -> bool:
 class User(AbstractUser):
     class Role(models.TextChoices):
         ADMIN = "ADMIN", "Admin"
+        STAFF = "STAFF", "Staff"
         TENANT = "TENANT", "Tenant"
 
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.TENANT)

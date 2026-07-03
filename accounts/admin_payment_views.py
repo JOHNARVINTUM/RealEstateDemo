@@ -18,6 +18,7 @@ from rentals.models import Lease, Notification
 from rentals.services import repair_historical_move_in_payment, send_email_via_resend
 
 from .admin_portal_views import admin_required, admin_password_verified, render_admin_password_confirm
+from .decorators import staff_or_admin_required
 
 logger = logging.getLogger(__name__)
 
@@ -219,7 +220,7 @@ def _payment_record_fallback_amounts(payment, bill, remaining_amount):
     return pay_rent, pay_water, pay_parking, pay_penalty
 
 
-@admin_required
+@staff_or_admin_required
 def admin_approve_payment(request, payment_id: int):
     p = get_object_or_404(ManualPayment.objects.select_related("user", "user__tenantprofile"), pk=payment_id)
     if request.method == "POST":
@@ -265,7 +266,7 @@ def admin_repair_move_in_payment(request, payment_id: int):
     })
 
 
-@admin_required
+@staff_or_admin_required
 def admin_reject_payment(request, payment_id: int):
     p = get_object_or_404(ManualPayment.objects.select_related("user", "user__tenantprofile"), pk=payment_id)
     if request.method == "POST":
@@ -280,7 +281,7 @@ def admin_reject_payment(request, payment_id: int):
     })
 
 
-@admin_required
+@staff_or_admin_required
 def admin_confirm_schedule(request, payment_id: int):
     """Confirm F2F cash payment schedule - notifies tenant that time is confirmed"""
     p = get_object_or_404(ManualPayment.objects.select_related("user", "user__tenantprofile"), pk=payment_id)
@@ -319,7 +320,7 @@ def admin_confirm_schedule(request, payment_id: int):
     })
 
 
-@admin_required
+@staff_or_admin_required
 def admin_payments(request):
     q = request.GET.get("q", "").strip()
     status = request.GET.get("status", "").strip()
@@ -447,7 +448,7 @@ def admin_payments(request):
     return render(request, "admin_portal/payments.html", context)
 
 
-@admin_required
+@staff_or_admin_required
 def admin_payment_calendar(request):
     context = _build_cash_calendar_context(request, reverse("admin_payment_calendar"))
     return render(request, "admin_portal/payment_calendar.html", context)
@@ -478,7 +479,7 @@ def admin_delete_payment(request, payment_id: int):
     )
 
 
-@admin_required
+@staff_or_admin_required
 def admin_payment_detail(request, payment_id: int):
     """
     Display complete payment details including breakdown of bills and amounts.
@@ -496,6 +497,9 @@ def admin_payment_detail(request, payment_id: int):
     ]
 
     if request.method == "POST" and request.POST.get("action") == "update_payment_type":
+        if getattr(request.user, "role", "") == "STAFF":
+            messages.error(request, "Staff cannot change payment type labels.")
+            return redirect("admin_payment_detail", payment_id=payment.id)
         if payment.payment_type != "move_in":
             new_payment_type = (request.POST.get("payment_type") or "").strip()
             valid_types = {value for value, _ in payment_type_choices}
@@ -589,6 +593,7 @@ def admin_payment_detail(request, payment_id: int):
 
     context = {
         "payment": payment,
+        "is_staff_portal": getattr(request.user, "role", "") == "STAFF",
         "tenant_display_name": tenant_display_name,
         "payment_method_label": payment.get_payment_method_display() if hasattr(payment, "get_payment_method_display") else payment.payment_method,
         "paymongo_method_label": (payment.paid_via or "").replace("_", " ").title(),
@@ -605,7 +610,7 @@ def admin_payment_detail(request, payment_id: int):
     return render(request, "admin_portal/payment_detail.html", context)
 
 
-@admin_required
+@staff_or_admin_required
 def admin_reschedule_cash_payment(request, payment_id: int):
     payment = get_object_or_404(_admin_payment_queryset(), pk=payment_id)
     if payment.payment_method != "CASH":

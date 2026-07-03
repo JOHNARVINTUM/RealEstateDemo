@@ -20,7 +20,7 @@
     <div class="brand-text transition-all duration-300 overflow-hidden">
       <div class="space-y-1 mt-2">
         <p class="text-[10px] font-bold text-blue-100 uppercase tracking-[0.2em]">{% now "l, F j" %}</p>
-        <h3 class="text-2xl font-semibold text-white leading-tight font-display">Welcome back,<br>Admin!</h3>
+        <h3 class="text-2xl font-semibold text-white leading-tight font-display">Welcome back,<br>{% if request.user.role == "STAFF" %}Staff{% else %}Admin{% endif %}!</h3>
       </div>
     </div>
   </div>
@@ -44,6 +44,7 @@
       <span class="nav-text ml-3 whitespace-nowrap transition-all duration-300">Home</span>
     </a>
 
+    {% if request.user.role != "STAFF" %}
     <a href="{% url 'admin_tenants' %}"
        aria-current="{% if request.resolver_match.url_name in 'admin_tenants,admin_tenant_detail,admin_create_tenant_profile,admin_create_lease,admin_edit_tenant,admin_edit_lease' %}page{% endif %}"
        class="nav-link flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 overflow-hidden
@@ -59,7 +60,9 @@
       </div>
       <span class="nav-text ml-3 whitespace-nowrap transition-all duration-300">Tenants</span>
     </a>
+    {% endif %}
 
+    {% if request.user.role != "STAFF" %}
     <a href="{% url 'admin_billing' %}"
        aria-current="{% if request.resolver_match.url_name == 'admin_billing' or request.resolver_match.url_name == 'admin_mark_bill_paid' or request.resolver_match.url_name == 'admin_mark_bill_unpaid' or request.resolver_match.url_name == 'admin_delete_bill' %}page{% endif %}"
        class="nav-link flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 overflow-hidden
@@ -75,6 +78,7 @@
       </div>
       <span class="nav-text ml-3 whitespace-nowrap transition-all duration-300">Rent & Bills</span>
     </a>
+    {% endif %}
 
     <a href="{% url 'admin_water' %}"
        aria-current="{% if request.resolver_match.url_name == 'admin_water' %}page{% endif %}"
@@ -108,6 +112,7 @@
       <span class="nav-text ml-3 whitespace-nowrap transition-all duration-300">Payments</span>
     </a>
 
+    {% if request.user.role != "STAFF" %}
     <a href="{% url 'admin_tenant_risk' %}"
        aria-current="{% if request.resolver_match.url_name == 'admin_tenant_risk' or request.resolver_match.url_name == 'admin_update_tenant_risks' %}page{% endif %}"
        class="nav-link flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 overflow-hidden
@@ -123,6 +128,7 @@
       </div>
       <span class="nav-text ml-3 whitespace-nowrap transition-all duration-300">Risk Check</span>
     </a>
+    {% endif %}
 
     <a href="{% url 'admin_maintenance' %}"
        aria-current="{% if request.resolver_match.url_name == 'admin_maintenance' or request.resolver_match.url_name == 'admin_update_maintenance' %}page{% endif %}"
@@ -141,6 +147,23 @@
       <span class="nav-text ml-3 whitespace-nowrap transition-all duration-300">Repair Requests</span>
     </a>
 
+    <a href="{% url 'admin_notifications' %}"
+       aria-current="{% if request.resolver_match.url_name == 'admin_notifications' %}page{% endif %}"
+       class="nav-link flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 overflow-hidden
+              {% if request.resolver_match.url_name == 'admin_notifications' %}
+                bg-[#262B33]/60 border-l-4 border-[#3B7CE6] font-semibold text-white shadow-xs
+              {% else %}
+                text-slate-300 hover:bg-[#262B33]/30 hover:text-white
+              {% endif %}">
+      <div class="w-6 flex justify-center shrink-0">
+        <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+      </div>
+      <span class="nav-text ml-3 whitespace-nowrap transition-all duration-300">Notifications</span>
+    </a>
+
+    {% if request.user.role != "STAFF" %}
     <a href="{% url 'admin_units' %}"
        aria-current="{% if request.resolver_match.url_name == 'admin_units' or request.resolver_match.url_name == 'admin_unit_detail' or request.resolver_match.url_name == 'admin_create_unit' or request.resolver_match.url_name == 'admin_edit_unit' or request.resolver_match.url_name == 'admin_delete_unit' %}page{% endif %}"
        class="nav-link flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 overflow-hidden
@@ -173,6 +196,22 @@
       <span class="nav-text ml-3 whitespace-nowrap transition-all duration-300">News & Updates</span>
     </a>
 
+    <a href="{% url 'admin_business_profile' %}"
+       aria-current="{% if request.resolver_match.url_name == 'admin_business_profile' or request.resolver_match.url_name == 'admin_homepage_banners' or request.resolver_match.url_name == 'admin_create_homepage_banner' or request.resolver_match.url_name == 'admin_edit_homepage_banner' or request.resolver_match.url_name == 'admin_delete_homepage_banner' %}page{% endif %}"
+       class="nav-link flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 overflow-hidden
+              {% if request.resolver_match.url_name == 'admin_business_profile' or request.resolver_match.url_name == 'admin_homepage_banners' or request.resolver_match.url_name == 'admin_create_homepage_banner' or request.resolver_match.url_name == 'admin_edit_homepage_banner' or request.resolver_match.url_name == 'admin_delete_homepage_banner' %}
+                bg-[#262B33]/60 border-l-4 border-[#3B7CE6] font-semibold text-white shadow-xs
+              {% else %}
+                text-slate-300 hover:bg-[#262B33]/30 hover:text-white
+              {% endif %}">
+      <div class="w-6 flex justify-center shrink-0">
+        <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h10" />
+        </svg>
+      </div>
+      <span class="nav-text ml-3 whitespace-nowrap transition-all duration-300">Content</span>
+    </a>
+
     <a href="{% url 'admin_forecasting' %}"
        aria-current="{% if request.resolver_match.url_name == 'admin_forecasting' %}page{% endif %}"
        class="nav-link flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 overflow-hidden
@@ -188,6 +227,7 @@
       </div>
       <span class="nav-text ml-3 whitespace-nowrap transition-all duration-300">Future Estimates</span>
     </a>
+    {% endif %}
 
   </nav>
 

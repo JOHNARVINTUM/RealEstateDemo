@@ -1,6 +1,6 @@
 {% extends "admin_portal/base.html" %}
 {% load humanize %}
-{% block title %}Resolve Issue #{{ req.id }} | Real Estate Administration{% endblock %}
+{% block title %}{% if is_staff_portal %}Update Assigned Issue #{{ req.id }}{% else %}{% if is_staff_portal %}Update Assigned Issue #{{ req.id }}{% else %}Resolve Issue #{{ req.id }}{% endif %}{% endif %} | Real Estate Administration{% endblock %}
 
 {% block content %}
 <div class="tenant-form-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6 py-4 sm:py-6">
@@ -31,10 +31,10 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
               </svg>
             </div>
-            <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 leading-tight">Resolve Issue #{{ req.id }}</h1>
+            <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 leading-tight">{% if is_staff_portal %}Update Assigned Issue #{{ req.id }}{% else %}Resolve Issue #{{ req.id }}{% endif %}</h1>
           </div>
           <p class="text-sm text-slate-500 mt-1 pl-13 ml-1">
-            Update the status or assign a worker to fix this maintenance request.
+            {% if is_staff_portal %}Update the progress of this assigned maintenance request.{% else %}Review this request, decide whether to accept or reject it, and assign staff after acceptance.{% endif %}
           </p>
         </div>
       </header>
@@ -130,7 +130,7 @@
       <!-- Current Status Bar -->
       <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
         <div>
-          <span class="text-[11px] font-black text-slate-500 uppercase tracking-wide block mb-1">Status</span>
+          <span class="text-[11px] font-black text-slate-500 uppercase tracking-wide block mb-1">Work Status</span>
           <div class="text-xl font-black text-slate-900">
             {% if req.status == 'RESOLVED' %}
               <span class="text-emerald-700 flex items-center gap-2">
@@ -148,6 +148,24 @@
                 Waiting to start
               </span>
             {% endif %}
+          </div>
+        </div>
+
+        <span class="hidden sm:block w-px h-10 bg-slate-200"></span>
+
+        <div>
+          <span class="text-[11px] font-black text-slate-500 uppercase tracking-wide block mb-1">Review</span>
+          <div class="text-base font-black">
+            {% if req.review_status == 'ACCEPTED' %}
+              <span class="text-emerald-700 uppercase tracking-wider">Accepted</span>
+            {% elif req.review_status == 'REJECTED' %}
+              <span class="text-rose-700 uppercase tracking-wider">Rejected</span>
+            {% else %}
+              <span class="text-amber-700 uppercase tracking-wider">Pending Review</span>
+            {% endif %}
+          </div>
+          <div class="text-xs font-bold text-slate-500 mt-1">
+            {% if req.assigned_staff %}Assigned to {{ req.assigned_staff.tenantprofile.full_name|default:req.assigned_staff.email }}{% else %}No staff assigned yet{% endif %}
           </div>
         </div>
 
@@ -173,10 +191,10 @@
     <div class="w-full lg:w-96 shrink-0">
       <div class="bg-white border border-slate-200 rounded-xl p-8 shadow-xs sticky top-6">
         
-        <h2 class="text-lg font-black text-slate-900">Update Status</h2>
-        <p class="text-sm text-slate-500 mt-1 mb-6 font-bold leading-relaxed">Change the status or assign a worker to fix this.</p>
+        <h2 class="text-lg font-black text-slate-900">{% if is_staff_portal %}Update Progress{% else %}Review & Assignment{% endif %}</h2>
+        <p class="text-sm text-slate-500 mt-1 mb-6 font-bold leading-relaxed">{% if is_staff_portal %}You can update only the work progress for this request.{% else %}Accept or reject the request first, then assign a staff member for accepted work.{% endif %}</p>
 
-        <form method="post" class="space-y-5" id="maintenanceUpdateForm" data-requested-schedule='{% if req.requested_schedule_at %}{{ req.requested_schedule_at|date:"Y-m-d\TH:i" }}{% endif %}'>
+        <form method="post" class="space-y-5" id="maintenanceUpdateForm" data-requested-schedule='{% if req.requested_schedule_at %}{{ req.requested_schedule_at|date:"Y-m-d\TH:i" }}{% endif %}' data-assigned-staff-name='{% if req.assigned_staff %}{{ req.assigned_staff.tenantprofile.full_name|default:req.assigned_staff.username }}{% endif %}'>
           {% csrf_token %}
           
           {% for field in form %}
@@ -206,7 +224,7 @@
             </label>
             
             <div class="relative">
-              {% if field.name == 'category' or field.name == 'status' or field.name == 'priority' or field.name == 'schedule_decision' %}
+              {% if field.name == 'category' or field.name == 'status' or field.name == 'priority' or field.name == 'schedule_decision' or field.name == 'review_status' or field.name == 'assigned_staff' or field.name == 'fixed_by' %}
                 <select name="{{ field.name }}" id="{{ field.id_for_label }}" 
                         class="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 hover:border-slate-400 shadow-sm transition-all outline-none cursor-pointer appearance-none">
                   {% for val, label in field.field.choices %}
@@ -250,7 +268,7 @@
           <!-- Buttons -->
           <div class="pt-6 space-y-3">
             <button type="submit" class="w-full py-4 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-extrabold text-base transition-colors text-white rounded-lg font-extrabold text-sm transition-all text-center shadow-lg active:scale-95">
-              Save Changes
+              {% if is_staff_portal %}Save Progress{% else %}Save Review{% endif %}
             </button>
             <a href="{{ back_url }}" onclick="if (document.referrer) { window.history.back(); return false; }" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
       <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -274,18 +292,43 @@
     if (!form) return;
 
     const requestedSchedule = form.dataset.requestedSchedule || '';
+    const existingAssignedStaffName = form.dataset.assignedStaffName || '';
     const decisionSelect = form.querySelector('[name="schedule_decision"]');
     const approvedTimeInput = form.querySelector('[name="admin_scheduled_at"]');
-    if (!decisionSelect || !approvedTimeInput || !requestedSchedule) return;
+    const assignedStaffSelect = form.querySelector('[name="assigned_staff"]');
+    const fixedBySelect = form.querySelector('[name="fixed_by"]');
+    const previousFixedByValue = fixedBySelect ? fixedBySelect.value : '';
 
     function syncApprovedVisitTime() {
-      if (decisionSelect.value === 'APPROVED' && !approvedTimeInput.value) {
+      if (decisionSelect && approvedTimeInput && requestedSchedule && decisionSelect.value === 'APPROVED' && !approvedTimeInput.value) {
         approvedTimeInput.value = requestedSchedule;
       }
     }
 
-    decisionSelect.addEventListener('change', syncApprovedVisitTime);
-    syncApprovedVisitTime();
+    function syncCompletedBy(forceUpdate = false) {
+      if (!assignedStaffSelect || !fixedBySelect) return;
+      const selectedText = assignedStaffSelect.options[assignedStaffSelect.selectedIndex] ? assignedStaffSelect.options[assignedStaffSelect.selectedIndex].text.trim() : '';
+      const currentFixedBy = fixedBySelect.value || '';
+      const canAutoFill = !currentFixedBy || currentFixedBy === existingAssignedStaffName || currentFixedBy === previousFixedByValue;
+      if ((forceUpdate || canAutoFill) && selectedText) {
+        const matchingOption = Array.from(fixedBySelect.options).find(option => option.value === selectedText);
+        if (matchingOption) {
+          fixedBySelect.value = selectedText;
+        }
+      }
+    }
+
+    if (decisionSelect) {
+      decisionSelect.addEventListener('change', syncApprovedVisitTime);
+      syncApprovedVisitTime();
+    }
+
+    if (assignedStaffSelect && fixedBySelect) {
+      assignedStaffSelect.addEventListener('change', function () {
+        syncCompletedBy(true);
+      });
+      syncCompletedBy(false);
+    }
   });
 </script>
 {% endblock %}

@@ -101,5 +101,5 @@ def report_issue(request):
 @tenant_required
 def maintenance_list(request):
     user = request.user
-    qs = MaintenanceRequest.objects.filter(tenant=user).order_by("-created_at")
+    qs = MaintenanceRequest.objects.filter(tenant=user).select_related("assigned_staff", "lease__unit").order_by("-created_at")
     return render(request, "maintenance/my_requests.html", {"requests": qs})

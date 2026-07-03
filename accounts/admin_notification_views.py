@@ -15,9 +15,12 @@ from payments.models import ManualPayment
 from rentals.models import Notification
 
 from .admin_portal_views import admin_required, admin_password_verified, render_admin_password_confirm
+from .decorators import staff_or_admin_required
 
 
 def _admin_notification_scope(user):
+    if getattr(user, "role", "") == "STAFF":
+        return Q(recipient_type="SPECIFIC_USER", user=user)
     return Q(recipient_type="ADMIN") | Q(recipient_type="SPECIFIC_USER", user=user)
 
 
@@ -90,7 +93,7 @@ def purge_read_admin_notifications():
     ).delete()[0]
 
 
-@admin_required
+@staff_or_admin_required
 def admin_notifications(request):
     """Admin portal: view admin notifications only."""
     purge_read_admin_notifications()
@@ -157,7 +160,7 @@ def admin_notifications(request):
     })
 
 
-@admin_required
+@staff_or_admin_required
 @require_POST
 def admin_mark_notification_read(request, notification_id):
     """Admin portal: mark notification as read."""
@@ -178,7 +181,7 @@ def admin_mark_notification_read(request, notification_id):
     return redirect("admin_notifications")
 
 
-@admin_required
+@staff_or_admin_required
 @require_POST
 def admin_mark_all_notifications_read(request):
     """Admin portal: mark all notifications as read."""
@@ -197,7 +200,7 @@ def admin_mark_all_notifications_read(request):
     return redirect("admin_notifications")
 
 
-@admin_required
+@staff_or_admin_required
 def admin_delete_all_read_notifications(request):
     """Delete all read admin notifications."""
     if request.method != "POST":
@@ -211,7 +214,7 @@ def admin_delete_all_read_notifications(request):
     return redirect("admin_notifications")
 
 
-@admin_required
+@staff_or_admin_required
 def admin_delete_notification(request, notification_id):
     """Admin portal: delete notification."""
     notification = get_object_or_404(

@@ -1,10 +1,13 @@
 from django.urls import path
 from .admin_portal_views import (
     admin_dashboard,
-    debug_lease_form,
-    simple_debug,
     admin_announcements,
     admin_create_announcement,
+    admin_homepage_banners,
+    admin_business_profile,
+    admin_create_homepage_banner,
+    admin_edit_homepage_banner,
+    admin_delete_homepage_banner,
     admin_create_unit,
     admin_edit_announcement,
     admin_delete_announcement,
@@ -110,6 +113,8 @@ urlpatterns = [
     path("maintenance/", admin_maintenance, name="admin_maintenance"),
     path("maintenance/<int:req_id>/update/", admin_update_maintenance, name="admin_update_maintenance"),
     path("announcements/", admin_announcements, name="admin_announcements"),
+    path("content/profile/", admin_business_profile, name="admin_business_profile"),
+    path("content/banners/", admin_homepage_banners, name="admin_homepage_banners"),
     
     # Tenant Risk Classification
     path("tenant-risk/", admin_tenant_risk, name="admin_tenant_risk"),
@@ -131,8 +136,6 @@ urlpatterns = [
     path("units/<int:unit_id>/toggle-status/", admin_toggle_unit_status, name="admin_toggle_unit_status"),
     path("api/unit/<str:unit_number>/", api_get_unit_data, name="api_get_unit_data"),
     path("api/unit/by-id/<int:unit_id>/", api_get_unit_data_by_id, name="api_get_unit_data_by_id"),
-    path("debug-lease-form/", debug_lease_form, name="debug_lease_form"),
-    path("simple-debug/", simple_debug, name="simple_debug"),
     
     # Create pages
     path("tenants/add/", admin_create_tenant_profile, name="admin_create_tenant_profile"),
@@ -144,6 +147,9 @@ urlpatterns = [
     path("announcements/add/", admin_create_announcement, name="admin_create_announcement"),
     path("announcements/<int:ann_id>/edit/", admin_edit_announcement, name="admin_edit_announcement"),
     path("announcements/<int:ann_id>/delete/", admin_delete_announcement, name="admin_delete_announcement"),
+    path("content/banners/add/", admin_create_homepage_banner, name="admin_create_homepage_banner"),
+    path("content/banners/<int:banner_id>/edit/", admin_edit_homepage_banner, name="admin_edit_homepage_banner"),
+    path("content/banners/<int:banner_id>/delete/", admin_delete_homepage_banner, name="admin_delete_homepage_banner"),
 
     # Forecasting
     path("forecasting/", admin_forecasting, name="admin_forecasting"),

@@ -12,54 +12,6 @@ import os
 from django.core.management.base import BaseCommand
 
 
-URGENCY_KEYWORDS = {
-    "URGENT": [
-        "sparks", "fire", "flood", "flooding", "burst", "danger", "emergency",
-        "electric shock", "gas leak", "no electricity", "completely flooded",
-        "severe leak", "burning smell", "smoke", "exposed wire",
-    ],
-    "HIGH": [
-        "broken", "not working", "no water", "tripping", "damaged", "collapsed",
-        "crack", "ceiling leak", "power outage", "outlet not working",
-        "completely broken", "major", "serious", "bad",
-    ],
-    "MEDIUM": [
-        "low pressure", "slow drain", "flickering", "noisy", "unstable",
-        "intermittent", "sometimes", "occasional", "leaking", "dripping",
-        "minor crack", "loose", "running", "keeps",
-    ],
-    "LOW": [
-        "faded", "cosmetic", "paint", "slight", "small", "minor",
-        "aesthetic", "worn", "scratched", "stain", "discolored",
-    ],
-}
-
-SYNTHETIC_PRIORITY_EXAMPLES = [
-    ("Water is leaking from the ceiling and spreading fast", "HIGH"),
-    ("Outlet sparks when plugging in any device", "HIGH"),
-    ("Bathroom faucet drips constantly but still works", "MEDIUM"),
-    ("Living room light flickers sometimes after turning on", "MEDIUM"),
-    ("Bedroom paint peeling and wall looks worn", "LOW"),
-    ("Minor crack on kitchen cabinet door", "LOW"),
-    ("Gas smell in the kitchen, please check immediately", "HIGH"),
-    ("Toilet is clogged and overflowing", "HIGH"),
-    ("Air conditioner is blowing warm air intermittently", "MEDIUM"),
-    ("Small stain on the hallway carpet that is not urgent", "LOW"),
-]
-
-
-def _rule_based_label(description):
-    """
-    Assign a training label based on urgency keywords in description.
-    Used to ensure clean, consistent labels from synthetic data.
-    """
-    text = description.lower()
-    for priority in ("URGENT", "HIGH", "MEDIUM", "LOW"):
-        if any(kw in text for kw in URGENCY_KEYWORDS[priority]):
-            return priority
-    return None
-
-
 class Command(BaseCommand):
     help = "Train TF-IDF + Logistic Regression NLP model for maintenance priority prediction"
 
@@ -79,29 +31,15 @@ class Command(BaseCommand):
         records = MaintenanceRequest.objects.values("description", "priority")
         texts, labels = [], []
 
-        rule_overrides = 0
         for r in records:
-            desc = r["description"].strip()
-            if not desc:
+            desc = (r["description"] or "").strip()
+            priority = (r["priority"] or "").strip()
+            if not desc or not priority:
                 continue
-            rule_label = _rule_based_label(desc)
-            if rule_label and r["priority"] != rule_label:
-                labels.append(r["priority"])
-                rule_overrides += 1
-            else:
-                labels.append(r["priority"])
             texts.append(desc)
+            labels.append(priority)
 
         self.stdout.write(f"  Total samples: {len(texts)}")
-        self.stdout.write(f"  Rule-based re-labels identified: {rule_overrides}")
-
-        synthetic_added = 0
-        for text, label in SYNTHETIC_PRIORITY_EXAMPLES:
-            texts.append(text)
-            labels.append(label)
-            synthetic_added += 1
-
-        self.stdout.write(f"  Synthetic examples added: {synthetic_added}")
 
         from collections import Counter
         dist = Counter(labels)

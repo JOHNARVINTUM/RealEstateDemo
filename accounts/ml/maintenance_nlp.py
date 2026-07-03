@@ -16,11 +16,6 @@ MODEL_PATH = os.path.normpath(MODEL_PATH)
 
 _model_cache = None
 
-EMERGENCY_KEYWORDS = [
-    "sparks", "fire", "flood", "flooding", "burst", "danger", "emergency",
-    "electric shock", "gas leak", "no electricity", "severe leak", "burning smell",
-    "smoke", "exposed wire",
-]
 
 ISSUE_CATEGORY_KEYWORDS = {
     "PLUMBING": [
@@ -130,14 +125,6 @@ def predict_priority(text):
         priority = classes[idx]
         confidence = round(float(proba[idx]), 4)
         all_scores = {cls: round(float(p), 4) for cls, p in zip(classes, proba)}
-
-        if priority != "URGENT" and any(keyword in cleaned_text for keyword in EMERGENCY_KEYWORDS):
-            return {
-                "priority": "URGENT",
-                "confidence": 0.92,
-                "available": True,
-                "all_scores": all_scores,
-            }
 
         return {
             "priority": priority,

@@ -8,7 +8,7 @@ from django.db import transaction
 from PIL import Image, UnidentifiedImageError
 from rentals.models import TenantProfile, Lease, Unit, UnitImage, TenantAttachment, validate_tenant_attachment_upload
 from rentals.services import generate_tenant_password, send_tenant_credentials_email
-from announcements.models import Announcement
+from announcements.models import Announcement, HomepageBanner, BusinessProfile
 from billing.models import MonthlyBill
 
 User = get_user_model()
@@ -238,7 +238,7 @@ class ComprehensiveTenantEditForm(forms.Form):
     role = forms.ChoiceField(
         label="User Role",
         choices=User.Role.choices,
-        help_text="Assign user role (Tenant or Admin)"
+        help_text="Assign user role (Tenant, Staff, or Admin)"
     )
     is_active = forms.BooleanField(
         label="Account Active",
@@ -776,6 +776,54 @@ class AnnouncementForm(forms.ModelForm):
         instance = super().save(commit=False)
         if user:
             instance.created_by = user
+        if commit:
+            instance.save()
+        return instance
+
+
+class HomepageBannerForm(forms.ModelForm):
+    class Meta:
+        model = HomepageBanner
+        fields = ["eyebrow", "title", "body", "button_text", "button_url", "is_active"]
+        widgets = {
+            "body": forms.Textarea(attrs={"rows": 5}),
+        }
+
+    def clean_button_url(self):
+        url = (self.cleaned_data.get("button_url") or "").strip()
+        return url or "#about"
+
+    def save(self, commit=True, user=None):
+        instance = super().save(commit=False)
+        if user and not instance.created_by_id:
+            instance.created_by = user
+        if commit:
+            instance.save()
+        return instance
+
+
+class BusinessProfileForm(forms.ModelForm):
+    class Meta:
+        model = BusinessProfile
+        fields = [
+            "business_name",
+            "tagline",
+            "about_text",
+            "contact_email",
+            "contact_phone",
+            "address",
+            "inquiry_text",
+            "is_active",
+        ]
+        widgets = {
+            "about_text": forms.Textarea(attrs={"rows": 5}),
+            "inquiry_text": forms.Textarea(attrs={"rows": 4}),
+        }
+
+    def save(self, commit=True, user=None):
+        instance = super().save(commit=False)
+        if user:
+            instance.updated_by = user
         if commit:
             instance.save()
         return instance

@@ -82,6 +82,23 @@
   </section>
 
   {% if rf_metrics %}
+  <details class="bg-white border border-slate-200 rounded-xl shadow-xs group [&_summary::-webkit-details-marker]:hidden mb-6">
+    <summary class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-5 cursor-pointer list-none">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 font-black text-xs">AI</span>
+          <span class="text-sm font-black text-slate-900">Random Forest Payment Risk</span>
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 hidden md:inline-block">Random Forest Classifier</span>
+        </div>
+        <p class="text-xs text-slate-500 font-medium">Reviews billing and payment history to generate RF risk tags, probability, and trained-signal metrics for admin decision support.</p>
+      </div>
+      <div class="flex items-center gap-4 shrink-0 text-slate-400 group-open:text-indigo-600 transition-colors">
+        <span class="text-xs font-bold uppercase tracking-widest hidden sm:block group-open:hidden">View Metrics</span>
+        <span class="text-xs font-bold uppercase tracking-widest hidden sm:group-open:block">Hide Metrics</span>
+        <svg class="w-5 h-5 transform group-open:rotate-180 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
+      </div>
+    </summary>
+    <div class="px-5 pb-5 border-t border-slate-100 pt-4 space-y-5">
   <section class="bg-white border border-indigo-200 rounded-[1.75rem] p-6 sm:p-7 shadow-sm overflow-hidden">
     <div class="flex flex-col xl:flex-row xl:items-stretch gap-6">
       <div class="xl:flex-1 min-w-0">
@@ -129,6 +146,75 @@
     </div>
   </section>
   {% endif %}
+
+  <section class="grid grid-cols-1 xl:grid-cols-[1.35fr_1fr] gap-5">
+    <div class="bg-white border border-slate-200 rounded-[1.75rem] p-6 shadow-sm overflow-hidden">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 font-black text-xs">AI</div>
+        <div>
+          <h2 class="text-2xl font-black text-slate-900 tracking-tight">Random Forest Proof Panel</h2>
+          <p class="text-sm font-bold text-slate-500 mt-1">What the model reads, predicts, and stores for admin review.</p>
+        </div>
+      </div>
+      <p class="text-sm text-slate-600 leading-7 font-medium">
+        Feature inputs come from <span class="font-black text-slate-800">MonthlyBill</span>, <span class="font-black text-slate-800">Lease</span>, <span class="font-black text-slate-800">Unit</span>, and tenant profile/payment history. The model predicts a payment-risk probability, converts it to a level, and saves the supporting RF fields for admin monitoring.
+      </p>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5">
+        <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+          <span class="text-[11px] uppercase tracking-[0.14em] font-black text-slate-500 block">Feature Sources</span>
+          <strong class="block mt-3 text-lg font-black text-slate-900">Bills, Lease, Unit</strong>
+          <span class="block mt-1 text-xs font-bold text-slate-400">Late counts, unpaid counts, delay, payment rate, rent, unit data</span>
+        </div>
+        <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+          <span class="text-[11px] uppercase tracking-[0.14em] font-black text-slate-500 block">Saved RF Outputs</span>
+          <strong class="block mt-3 text-lg font-black text-slate-900">Level, Probability</strong>
+          <span class="block mt-1 text-xs font-bold text-slate-400">Also stores top factors and model version per tenant</span>
+        </div>
+        <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+          <span class="text-[11px] uppercase tracking-[0.14em] font-black text-slate-500 block">Admin Safety</span>
+          <strong class="block mt-3 text-lg font-black text-slate-900">Decision Support</strong>
+          <span class="block mt-1 text-xs font-bold text-slate-400">Risk tags prioritize reminders and review, not automatic penalties</span>
+        </div>
+      </div>
+      {% if rf_metrics and rf_metrics.feature_importance %}
+      <div class="mt-5 rounded-[1.5rem] border border-indigo-100 bg-indigo-50/40 px-5 py-5">
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <div class="text-[11px] uppercase tracking-[0.14em] font-black text-indigo-600">Top Trained Signals</div>
+            <p class="text-sm font-medium text-slate-600 mt-1">Highest global feature importances from the saved Random Forest metrics file.</p>
+          </div>
+          <span class="text-xs font-black text-indigo-600 bg-white border border-indigo-100 px-3 py-1 rounded-full">Model version {{ rf_metrics.model_version }}</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 mt-4">
+          {% for feature in rf_metrics.feature_importance|slice:":6" %}
+          <div class="rounded-2xl border border-white bg-white px-4 py-3 shadow-2xs">
+            <div class="text-[11px] uppercase tracking-[0.14em] font-black text-slate-400 truncate">{{ feature.feature }}</div>
+            <div class="mt-2 text-lg font-black text-slate-900 font-mono">{{ feature.importance|floatformat:4 }}</div>
+            <div class="text-xs font-bold text-slate-400 mt-1">Importance weight</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    <div class="bg-white border border-slate-200 rounded-[1.75rem] p-6 shadow-sm">
+      <div class="flex items-center gap-3 mb-5">
+        <div class="w-10 h-10 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 font-black">4</div>
+        <div>
+          <h2 class="text-2xl font-black text-slate-900 tracking-tight">AI Integration Flow</h2>
+          <p class="text-sm font-bold text-slate-500 mt-1">How payment history becomes a risk label in the table.</p>
+        </div>
+      </div>
+      <div class="space-y-4">
+        <div class="rounded-2xl border border-slate-200 px-4 py-4"><div class="text-[11px] uppercase tracking-[0.14em] font-black text-indigo-600">1. Billing History</div><p class="text-sm font-medium text-slate-600 mt-2">The system builds numeric features from bills, delays, unpaid counts, and recent payment behavior.</p></div>
+        <div class="rounded-2xl border border-slate-200 px-4 py-4"><div class="text-[11px] uppercase tracking-[0.14em] font-black text-indigo-600">2. Random Forest</div><p class="text-sm font-medium text-slate-600 mt-2">The trained model predicts the probability that the tenant belongs to the late-or-unpaid risk class.</p></div>
+        <div class="rounded-2xl border border-slate-200 px-4 py-4"><div class="text-[11px] uppercase tracking-[0.14em] font-black text-indigo-600">3. Saved Classification</div><p class="text-sm font-medium text-slate-600 mt-2">The system stores rf_risk_level, rf_risk_probability, rf_top_factors, and rf_model_version.</p></div>
+        <div class="rounded-2xl border border-emerald-200 bg-emerald-50/60 px-4 py-4"><div class="text-[11px] uppercase tracking-[0.14em] font-black text-emerald-700">4. Admin Decision Support</div><p class="text-sm font-medium text-emerald-800 mt-2">Admins use the tag to prioritize follow-up and review trends, while retaining final human judgment.</p></div>
+      </div>
+    </div>
+  </section>
+    </div>
+  </details>
 
   <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
     <div class="w-full md:flex-1 md:max-w-md">

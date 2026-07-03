@@ -18,6 +18,12 @@ class MaintenanceRequest(models.Model):
         ("CLOSED", "Closed"),
     ]
 
+    REVIEW_STATUS_CHOICES = [
+        ("PENDING", "Pending Admin Review"),
+        ("ACCEPTED", "Accepted"),
+        ("REJECTED", "Rejected"),
+    ]
+
     SCHEDULE_DECISION_CHOICES = [
         ("PENDING", "Pending Admin Review"),
         ("APPROVED", "Approved"),
@@ -35,6 +41,15 @@ class MaintenanceRequest(models.Model):
 
     tenant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="maintenance_requests")
     lease = models.ForeignKey(Lease, on_delete=models.SET_NULL, null=True, blank=True, related_name="maintenance_requests")
+    assigned_staff = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assigned_maintenance_requests",
+        limit_choices_to={"role": "STAFF"},
+        help_text="Staff member assigned after admin acceptance.",
+    )
 
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
     title = models.CharField(max_length=120)
@@ -62,6 +77,7 @@ class MaintenanceRequest(models.Model):
     )
     schedule_admin_note = models.TextField(blank=True, default="")
 
+    review_status = models.CharField(max_length=20, choices=REVIEW_STATUS_CHOICES, default="PENDING")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="OPEN")
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default="MEDIUM")
 

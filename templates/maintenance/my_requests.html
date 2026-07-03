@@ -108,7 +108,7 @@
             <th class="py-4 px-8 text-[10px] font-black uppercase tracking-widest text-slate-400">Date & Category</th>
             <th class="py-4 px-8 text-[10px] font-black uppercase tracking-widest text-slate-400">Problem</th>
             <th class="py-4 px-8 text-[10px] font-black uppercase tracking-widest text-slate-400">Schedule & Notes</th>
-            <th class="py-4 px-8 text-[10px] font-black uppercase tracking-widest text-slate-400">Status & Priority</th>
+            <th class="py-4 px-8 text-[10px] font-black uppercase tracking-widest text-slate-400">Review, Status & Priority</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100" id="tableBody">
@@ -159,6 +159,16 @@
               <!-- Status & Priority -->
               <td class="py-6 px-8 align-top">
                 <div class="flex flex-col gap-2 items-start">
+                  {% if r.review_status == "PENDING" %}
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-amber-50 text-amber-800 uppercase tracking-widest border border-amber-200">
+                      <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Pending Admin Review
+                    </span>
+                  {% elif r.review_status == "REJECTED" %}
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 uppercase tracking-widest border border-rose-200">
+                      <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Rejected
+                    </span>
+                  {% endif %}
+
                   {% if r.status == "OPEN" %}
                     <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 uppercase tracking-widest border border-amber-200">
                       <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> New
@@ -175,6 +185,10 @@
                     <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-slate-100 text-slate-600 uppercase tracking-widest border border-slate-200">
                       <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Closed
                     </span>
+                  {% endif %}
+
+                  {% if r.assigned_staff %}
+                    <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Assigned: {{ r.assigned_staff.tenantprofile.full_name|default:r.assigned_staff.username }}</span>
                   {% endif %}
 
                   {% if r.priority == "URGENT" or r.priority == "HIGH" %}

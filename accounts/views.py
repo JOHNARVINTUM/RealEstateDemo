@@ -6,17 +6,69 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordChangeForm
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.db.utils import OperationalError, ProgrammingError
 from django.urls import reverse, reverse_lazy
 from django.contrib import messages
 
+from announcements.models import HomepageBanner, BusinessProfile
 from rentals.models import Lease, TenantAttachment, TenantProfile
 
 logger = logging.getLogger(__name__)
 
 
+def _default_business_profile():
+    return {
+        "business_name": "RealEstate360+",
+        "tagline": "Elevating Urban Living",
+        "about_text": "A masterclass in modern living. Affordable, pristine, and perfectly located in the heart of Mandaluyong. We provide a space you can truly call home.",
+        "contact_email": "lod.bituin@yahoo.com",
+        "contact_phone": "09178255935",
+        "address": "91 Coronado, Mandaluyong City, 1550 Metro Manila",
+        "inquiry_text": "We'd love to hear from you. Reach out to our team to learn more about available spaces, schedule a viewing, or ask any questions.",
+    }
+
+
+def _get_public_business_profile():
+    defaults = _default_business_profile()
+    try:
+        profile = (
+            BusinessProfile.objects.filter(is_active=True)
+            .order_by("-updated_at", "-created_at")
+            .first()
+        ) or BusinessProfile.objects.order_by("-updated_at", "-created_at").first()
+    except (ProgrammingError, OperationalError):
+        profile = None
+
+    if profile is None:
+        return defaults
+
+    return {
+        "business_name": profile.business_name or defaults["business_name"],
+        "tagline": profile.tagline or defaults["tagline"],
+        "about_text": profile.about_text or defaults["about_text"],
+        "contact_email": profile.contact_email or defaults["contact_email"],
+        "contact_phone": profile.contact_phone or defaults["contact_phone"],
+        "address": profile.address or defaults["address"],
+        "inquiry_text": profile.inquiry_text or defaults["inquiry_text"],
+    }
+
+
 class RoleBasedLoginView(LoginView):
     template_name = "accounts/login.html"
     redirect_authenticated_user = True
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        try:
+            context["active_banner"] = (
+                HomepageBanner.objects.filter(is_active=True)
+                .order_by("-updated_at", "-created_at")
+                .first()
+            )
+        except (ProgrammingError, OperationalError):
+            context["active_banner"] = None
+        context["business_profile"] = _get_public_business_profile()
+        return context
 
     def get_success_url(self):
         # If someone hit a protected page, honor ?next=...
@@ -25,7 +77,7 @@ class RoleBasedLoginView(LoginView):
             return next_url
 
         user = self.request.user
-        if getattr(user, "role", "") == "ADMIN" or user.is_superuser:
+        if getattr(user, "role", "") in {"ADMIN", "STAFF"} or user.is_superuser:
             return reverse("admin_dashboard")   # /admin-portal/dashboard/
         return reverse("tenant_dashboard")      # change if your tenant view name is different
 
@@ -111,7 +163,7 @@ class TenantPasswordChangeView(PasswordChangeView):
 
 
 def _is_admin_user(user):
-    return getattr(user, "role", "") == "ADMIN" or user.is_superuser or user.is_staff
+    return getattr(user, "role", "") in {"ADMIN", "STAFF"} or user.is_superuser or user.is_staff
 
 
 def _styled_password_form(user, data=None):

@@ -44,7 +44,7 @@
         <span class="text-base font-black text-violet-600 uppercase tracking-widest">Predictive Analytics</span>
       </div>
       <h1 class="text-3xl md:text-5xl font-black text-slate-900 mt-1">Forecasting</h1>
-      <p class="text-slate-600 mt-3 text-xl font-medium leading-relaxed">Revenue forecast using the last 3 years of actual collected revenue, with model comparison across Naive, ARIMA, and SARIMA.</p>
+      <p class="text-slate-600 mt-3 text-xl font-medium leading-relaxed">Revenue forecasting always presents SARIMA as the active forecast, while Naive and ARIMA remain visible as comparison metrics.</p>
     </div>
     <div class="flex items-center gap-4 flex-wrap">
       <div class="flex items-center gap-2 px-5 py-3 bg-violet-50 border border-violet-200 rounded-xl">
@@ -93,6 +93,90 @@
           <span class="text-sm font-black text-slate-700 uppercase tracking-wider">Revenue Insight</span>
         </div>
         <p id="revenueInsight" class="text-sm font-medium text-slate-600 leading-relaxed"></p>
+      </div>
+    </section>
+
+
+    <details class="bg-white border border-slate-200 rounded-xl shadow-xs group [&_summary::-webkit-details-marker]:hidden mb-6">
+      <summary class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-5 cursor-pointer list-none">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-violet-100 text-violet-700 font-black text-xs">AI</span>
+            <span class="text-sm font-black text-slate-900">SARIMA Revenue Forecast</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-violet-50 text-violet-700 border border-violet-200 hidden md:inline-block">SARIMA + Comparison Metrics</span>
+          </div>
+          <p class="text-xs text-slate-500 font-medium">Builds the active SARIMA forecast from collected revenue history while keeping Naive and ARIMA visible as comparison metrics only.</p>
+        </div>
+        <div class="flex items-center gap-4 shrink-0 text-slate-400 group-open:text-violet-600 transition-colors">
+          <span class="text-xs font-bold uppercase tracking-widest hidden sm:block group-open:hidden">View Metrics</span>
+          <span class="text-xs font-bold uppercase tracking-widest hidden sm:group-open:block">Hide Metrics</span>
+          <svg class="w-5 h-5 transform group-open:rotate-180 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
+        </div>
+      </summary>
+      <div class="px-5 pb-5 border-t border-slate-100 pt-4 space-y-6">
+    <section class="grid grid-cols-1 xl:grid-cols-[1.45fr_1fr] gap-6">
+      <div class="bg-white border border-slate-200 rounded-[2rem] p-6 sm:p-8 shadow-sm space-y-5">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-2xl bg-violet-50 border border-violet-100 flex items-center justify-center">
+            <span class="text-violet-700 font-black text-xs">AI</span>
+          </div>
+          <div>
+            <h2 class="text-2xl font-black text-slate-900 tracking-tight">Forecast Model Basis</h2>
+            <p class="text-sm font-bold text-slate-500 mt-1">How the SARIMA decision-support forecast is built and compared against the other models.</p>
+          </div>
+        </div>
+        <p class="text-sm text-slate-600 leading-7 font-medium">
+          Source history comes from actual collected revenue in <span class="font-black text-slate-800">MonthlyBill</span> using rent, water, parking, and paid-interest totals grouped by month. The system computes Naive, ARIMA, and SARIMA results from the same monthly collection history, but the dashboard always presents <span class="font-black text-slate-800">SARIMA</span> as the active forecast while the other two remain comparison baselines.
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-4 gap-4">
+          <div class="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-5 py-4">
+            <span class="text-[11px] uppercase tracking-[0.14em] font-black text-slate-500 block">Selected Model</span>
+            <strong id="proofSelectedModel" class="block mt-3 text-2xl font-black text-slate-900">-</strong>
+            <span class="block mt-1 text-xs font-bold text-slate-400">Always used for display</span>
+          </div>
+          <div class="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-5 py-4">
+            <span class="text-[11px] uppercase tracking-[0.14em] font-black text-slate-500 block">History Window</span>
+            <strong id="proofHistoryWindow" class="block mt-3 text-lg font-black text-slate-900">-</strong>
+            <span id="proofHistoryRange" class="block mt-1 text-xs font-bold text-slate-400">-</span>
+          </div>
+          <div class="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-5 py-4">
+            <span class="text-[11px] uppercase tracking-[0.14em] font-black text-slate-500 block">Order (p,d,q)</span>
+            <strong id="proofOrder" class="block mt-3 text-lg font-black text-slate-900 font-mono">-</strong>
+            <span class="block mt-1 text-xs font-bold text-slate-400">Chosen from tested configs</span>
+          </div>
+          <div class="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-5 py-4">
+            <span class="text-[11px] uppercase tracking-[0.14em] font-black text-slate-500 block">Seasonal Order</span>
+            <strong id="proofSeasonalOrder" class="block mt-3 text-lg font-black text-slate-900 font-mono">-</strong>
+            <span id="proofBacktestCount" class="block mt-1 text-xs font-bold text-slate-400">-</span>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white border border-slate-200 rounded-[2rem] p-6 sm:p-8 shadow-sm">
+        <div class="flex items-center gap-3 mb-5">
+          <div class="w-11 h-11 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 font-black">4</div>
+          <div>
+            <h2 class="text-2xl font-black text-slate-900 tracking-tight">AI Integration Flow</h2>
+            <p class="text-sm font-bold text-slate-500 mt-1">What happens from billing history to dashboard output.</p>
+          </div>
+        </div>
+        <div class="space-y-4">
+          <div class="rounded-2xl border border-slate-200 px-4 py-4">
+            <div class="text-[11px] uppercase tracking-[0.14em] font-black text-violet-600">1. Historical Revenue</div>
+            <p class="text-sm font-medium text-slate-600 mt-2">Collected MonthlyBill amounts are grouped by month to create the time-series input.</p>
+          </div>
+          <div class="rounded-2xl border border-slate-200 px-4 py-4">
+            <div class="text-[11px] uppercase tracking-[0.14em] font-black text-violet-600">2. Model Comparison</div>
+            <p class="text-sm font-medium text-slate-600 mt-2">Naive, ARIMA, and SARIMA are backtested on the latest completed months and scored using RMSE, MAE, and MAPE.</p>
+          </div>
+          <div class="rounded-2xl border border-slate-200 px-4 py-4">
+            <div class="text-[11px] uppercase tracking-[0.14em] font-black text-violet-600">3. Forecast Output</div>
+            <p class="text-sm font-medium text-slate-600 mt-2">SARIMA returns the next three monthly forecasts plus a confidence band when available.</p>
+          </div>
+          <div class="rounded-2xl border border-emerald-200 bg-emerald-50/60 px-4 py-4">
+            <div class="text-[11px] uppercase tracking-[0.14em] font-black text-emerald-700">4. Admin Decision Support</div>
+            <p class="text-sm font-medium text-emerald-800 mt-2">Forecast values support planning and monitoring only. They do not override actual billing, payment, or administrative judgment.</p>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -175,6 +259,8 @@
         </table>
       </div>
     </div>
+      </div>
+    </details>
 
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mt-12 mb-8">
       <h2 class="text-3xl font-black text-slate-900 tracking-tight">Forecast Visualizations</h2>
@@ -193,7 +279,7 @@
       <div class="mb-6 pb-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 class="text-2xl font-black text-slate-900 tracking-tight">Revenue Trajectory</h2>
-          <p class="chart-subtitle text-sm text-slate-500 mt-1 font-bold">Historical collected revenue with the SARIMA forecast, seasonal baseline, and confidence band for the selected model. ARIMA remains in the comparison table.</p>
+          <p class="chart-subtitle text-sm text-slate-500 mt-1 font-bold">Historical collected revenue with the SARIMA forecast, seasonal baseline, and confidence band. ARIMA remains in the comparison table only.</p>
         </div>
       </div>
       <div class="h-[450px] w-full relative">
@@ -274,31 +360,46 @@
     });
   }
 
+  function firstRenderableValue(values) {
+    if (!Array.isArray(values)) return null;
+    for (var i = 0; i < values.length; i += 1) {
+      var value = values[i];
+      if (typeof value === "number" && Number.isFinite(value)) {
+        return value;
+      }
+    }
+    return null;
+  }
+
   function renderSummary(data) {
-    var selectedModel = data.selected_model || "SARIMA";
-    var selectedForecastMap = {
-      Naive: data.rev_naive_fc || [],
-      ARIMA: data.rev_arima_fc || [],
-      SARIMA: data.rev_sarima_fc || []
-    };
-    var selectedForecast = selectedForecastMap[selectedModel] || [];
+    var selectedModel = "SARIMA";
+    var selectedForecast = data.rev_sarima_fc || [];
     var selectedLower = data.rev_selected_lower || [];
     var selectedUpper = data.rev_selected_upper || [];
+    var firstForecastValue = firstRenderableValue(selectedForecast);
+    var firstLowerValue = firstRenderableValue(selectedLower);
+    var firstUpperValue = firstRenderableValue(selectedUpper);
 
-    document.getElementById("nextRevenueValue").textContent = selectedForecast.length ? peso(selectedForecast[0]) : "Unavailable";
-    document.getElementById("nextRevenueLabel").textContent = selectedForecast.length ? selectedModel + " forecast" : "Forecast unavailable";
-    document.getElementById("nextRevenueCi").textContent = selectedLower.length && selectedUpper.length
-      ? "CI " + peso(selectedLower[0]) + " - " + peso(selectedUpper[0])
+    document.getElementById("nextRevenueValue").textContent = firstForecastValue !== null ? peso(firstForecastValue) : "Unavailable";
+    document.getElementById("nextRevenueLabel").textContent = firstForecastValue !== null ? selectedModel + " forecast" : "Forecast unavailable";
+    document.getElementById("nextRevenueCi").textContent = firstLowerValue !== null && firstUpperValue !== null
+      ? "CI " + peso(firstLowerValue) + " - " + peso(firstUpperValue)
       : "";
     document.getElementById("revenueInsight").textContent = data.revenue_insight || "";
+    document.getElementById("proofSelectedModel").textContent = selectedModel || "Unavailable";
+    document.getElementById("proofHistoryWindow").textContent = (data.history_month_count || 0) + " month(s)";
+    document.getElementById("proofHistoryRange").textContent = data.history_range_label || "No history window";
+    document.getElementById("proofOrder").textContent = data.selected_model_order ? "(" + data.selected_model_order.join(", ") + ")" : "Not applicable";
+    document.getElementById("proofSeasonalOrder").textContent = data.selected_model_seasonal_order ? "(" + data.selected_model_seasonal_order.join(", ") + ")" : "Not seasonal";
+    document.getElementById("proofBacktestCount").textContent = (data.sarima_backtest_rows || []).length + " backtest month(s) scored";
     renderBacktestRows(data.sarima_backtest_rows || []);
 
     function renderMetricRow(prefix, metrics, modelName) {
       document.getElementById(prefix + "Rmse").textContent = metrics.rmse ? peso(metrics.rmse) : "-";
       document.getElementById(prefix + "Mae").textContent = metrics.mae ? peso(metrics.mae) : "-";
       document.getElementById(prefix + "Mape").textContent = metrics.mape ? percent(metrics.mape) : "-";
-      document.getElementById(prefix + "Status").textContent = selectedModel === modelName ? "Selected" : "Compared";
-      document.getElementById(prefix + "Status").className = "px-8 sm:px-10 py-6 text-right font-black " + (selectedModel === modelName ? "text-emerald-600" : "text-slate-500");
+      document.getElementById(prefix + "Status").textContent = modelName === "SARIMA" ? "Primary Forecast" : "Comparison";
+      document.getElementById(prefix + "Status").className = "px-8 sm:px-10 py-6 text-right font-black " + (modelName === "SARIMA" ? "text-emerald-600" : "text-slate-500");
     }
 
     renderMetricRow("metricNaive", data.revenue_naive_metrics || {}, "Naive");
@@ -319,9 +420,9 @@
     var naiveFcRev = forecastData.rev_naive_fc || [];
     var arimaFcRev = forecastData.rev_arima_fc || [];
     var sarFcRev = forecastData.rev_sarima_fc || [];
-    var selectedModel = forecastData.selected_model || "SARIMA";
-    var selectedLowRev = forecastData.rev_selected_lower || [];
-    var selectedUpRev = forecastData.rev_selected_upper || [];
+    var selectedModel = "SARIMA";
+    var selectedLowRev = forecastData.rev_sarima_lower || forecastData.rev_selected_lower || [];
+    var selectedUpRev = forecastData.rev_sarima_upper || forecastData.rev_selected_upper || [];
 
     var filterIdx = Math.max(0, rawHistLabels.length - parseInt(months || "24", 10));
     var histLabels = rawHistLabels.slice(filterIdx);
@@ -365,7 +466,7 @@
           label: selectedModel + " Upper CI",
           data: nullPad(selectedUpRev, labels.length),
           borderColor: "transparent",
-          backgroundColor: selectedModel === "SARIMA" ? "rgba(124, 58, 237, 0.12)" : "rgba(37, 99, 235, 0.10)",
+          backgroundColor: "rgba(124, 58, 237, 0.12)",
           pointRadius: 0,
           fill: "+1"
         });

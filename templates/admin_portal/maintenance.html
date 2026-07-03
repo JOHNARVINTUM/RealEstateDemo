@@ -10,10 +10,10 @@
     <div>
       <div class="flex items-center gap-2 mb-1">
         <span class="inline-block w-3 h-3 rounded-full bg-rose-600"></span>
-        <span class="text-sm font-semibold text-slate-700">Manage Repairs</span>
+        <span class="text-sm font-semibold text-slate-700">{% if is_staff_portal %}Assigned Repairs{% else %}Manage Repairs{% endif %}</span>
       </div>
-      <h1 class="text-3xl md:text-4xl font-black tracking-tight text-slate-900 leading-tight">Maintenance</h1>
-      <p class="text-base text-slate-600 mt-2 font-bold leading-relaxed">Keep track of repairs, see what's being fixed, and check completed jobs.</p>
+      <h1 class="text-3xl md:text-4xl font-black tracking-tight text-slate-900 leading-tight">{% if is_staff_portal %}Assigned Maintenance{% else %}Maintenance{% endif %}</h1>
+      <p class="text-base text-slate-600 mt-2 font-bold leading-relaxed">{% if is_staff_portal %}Review only the maintenance work assigned to you and keep the progress updated.{% else %}Keep track of repairs, review new requests, assign staff, and check completed jobs.{% endif %}</p>
     </div>
   </header>
 
@@ -35,7 +35,7 @@
         <svg class="w-5 h-5 transform group-open:rotate-180 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
       </div>
     </summary>
-    <div class="px-5 pb-5 border-t border-slate-100 pt-4">
+    <div class="px-5 pb-5 border-t border-slate-100 pt-4 space-y-5">
       <div class="flex flex-wrap items-center gap-6">
         <div class="text-center">
           <div class="text-xl font-black text-slate-900">{{ nlp_metrics.accuracy_pct }}%</div>
@@ -48,6 +48,51 @@
         <div class="text-center">
           <div class="text-xl font-black text-slate-900">{{ nlp_metrics.total_samples }}</div>
           <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Trained On</div>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 xl:grid-cols-[1.35fr_1fr] gap-4">
+        <div class="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5 space-y-4">
+          <div>
+            <div class="text-[11px] uppercase tracking-[0.14em] font-black text-indigo-600">NLP Proof Panel</div>
+            <p class="text-sm text-slate-600 leading-7 font-medium mt-2">Category tagging is rule-based through keyword matching, while priority suggestion uses TF-IDF text features and a trained classifier. The output is stored for admin review, not automatic enforcement.</p>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="rounded-2xl border border-white bg-white px-4 py-4 shadow-2xs">
+              <span class="text-[11px] uppercase tracking-[0.14em] font-black text-slate-500 block">Category Engine</span>
+              <strong class="block mt-3 text-lg font-black text-slate-900">Rule-Based Keywords</strong>
+              <span class="block mt-1 text-xs font-bold text-slate-400">PLUMBING, ELECTRICAL, STRUCTURAL, or OTHER from matched words</span>
+            </div>
+            <div class="rounded-2xl border border-white bg-white px-4 py-4 shadow-2xs">
+              <span class="text-[11px] uppercase tracking-[0.14em] font-black text-slate-500 block">Priority Engine</span>
+              <strong class="block mt-3 text-lg font-black text-slate-900">TF-IDF + {{ nlp_metrics.model_name|default:"Logistic Regression" }}</strong>
+              <span class="block mt-1 text-xs font-bold text-slate-400">Classes: {{ nlp_metrics.classes|join:", " }}</span>
+            </div>
+            <div class="rounded-2xl border border-white bg-white px-4 py-4 shadow-2xs">
+              <span class="text-[11px] uppercase tracking-[0.14em] font-black text-slate-500 block">Saved Outputs</span>
+              <strong class="block mt-3 text-lg font-black text-slate-900">category, priority</strong>
+              <span class="block mt-1 text-xs font-bold text-slate-400">Also saves nlp_priority and nlp_priority_confidence per request</span>
+            </div>
+            <div class="rounded-2xl border border-emerald-200 bg-emerald-50/60 px-4 py-4 shadow-2xs">
+              <span class="text-[11px] uppercase tracking-[0.14em] font-black text-emerald-700 block">Admin Safety</span>
+              <strong class="block mt-3 text-lg font-black text-slate-900">Human Override</strong>
+              <span class="block mt-1 text-xs font-bold text-emerald-700">Admins still review, assign, change status, and resolve the final maintenance action.</span>
+            </div>
+          </div>
+        </div>
+        <div class="rounded-[1.5rem] border border-slate-200 bg-white p-5">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 font-black">4</div>
+            <div>
+              <h3 class="text-xl font-black text-slate-900 tracking-tight">AI Integration Flow</h3>
+              <p class="text-xs font-bold text-slate-500 mt-1">How tenant text becomes an admin-side suggestion.</p>
+            </div>
+          </div>
+          <div class="space-y-3">
+            <div class="rounded-2xl border border-slate-200 px-4 py-3"><div class="text-[11px] uppercase tracking-[0.14em] font-black text-indigo-600">1. Tenant Description</div><p class="text-sm font-medium text-slate-600 mt-1.5">Tenant submits a title, description, schedule preference, and optional photo.</p></div>
+            <div class="rounded-2xl border border-slate-200 px-4 py-3"><div class="text-[11px] uppercase tracking-[0.14em] font-black text-indigo-600">2. Category + Priority</div><p class="text-sm font-medium text-slate-600 mt-1.5">Keyword rules classify the issue category, then TF-IDF features are passed to the priority classifier.</p></div>
+            <div class="rounded-2xl border border-slate-200 px-4 py-3"><div class="text-[11px] uppercase tracking-[0.14em] font-black text-indigo-600">3. Saved Suggestion</div><p class="text-sm font-medium text-slate-600 mt-1.5">The suggested priority and confidence appear in the maintenance table beside the admin-set priority.</p></div>
+            <div class="rounded-2xl border border-emerald-200 bg-emerald-50/60 px-4 py-3"><div class="text-[11px] uppercase tracking-[0.14em] font-black text-emerald-700">4. Admin Decision Support</div><p class="text-sm font-medium text-emerald-800 mt-1.5">The suggestion helps triage urgency faster, but the admin can still override it before assignment or resolution.</p></div>
+          </div>
         </div>
       </div>
     </div>
@@ -71,7 +116,7 @@
     <!-- Waiting -->
     <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs border-l-4 border-l-amber-500 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
       <div>
-        <span class="text-sm font-black text-slate-500 uppercase tracking-wider block mb-1">Waiting</span>
+        <span class="text-sm font-black text-slate-500 uppercase tracking-wider block mb-1">{% if is_staff_portal %}Assigned Open{% else %}Waiting{% endif %}</span>
         <div class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">{{ pending_count }}</div>
       </div>
       <div class="text-xs font-bold text-slate-500 mt-3 flex items-center gap-1.5">
@@ -135,7 +180,7 @@
         
         <select name="status" onchange="this.form.submit()" class="bg-white border-2 border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-800 focus:border-slate-800 transition-all outline-none cursor-pointer w-full md:w-[150px] appearance-none">
           <option value="">All Statuses</option>
-          <option value="OPEN" {% if status == "OPEN" %}selected{% endif %}>Waiting</option>
+          <option value="OPEN" {% if status == "OPEN" %}selected{% endif %}>{% if is_staff_portal %}Assigned Open{% else %}Waiting{% endif %}</option>
           <option value="IN_PROGRESS" {% if status == "IN_PROGRESS" %}selected{% endif %}>Being Fixed</option>
           <option value="RESOLVED" {% if status == "RESOLVED" %}selected{% endif %}>Fixed</option>
           <option value="CLOSED" {% if status == "CLOSED" %}selected{% endif %}>Archived</option>
@@ -157,7 +202,7 @@
     <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50/50">
       <div>
         <h2 class="text-xl font-black text-slate-900">Maintenance Records</h2>
-        <p class="text-sm text-slate-600 mt-1">Manage and track all repair requests</p>
+        <p class="text-sm text-slate-600 mt-1">{% if is_staff_portal %}Only your assigned maintenance requests are shown here{% else %}Manage and track all repair requests{% endif %}</p>
       </div>
       <div class="flex items-center gap-3 w-full sm:w-auto">
         <div class="relative group w-full sm:w-auto">
@@ -216,10 +261,10 @@
             <th class="col-category px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-center">Issue Category</th>
             <th class="col-priority px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-center">Priority Level</th>
             <th class="col-nlp px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-center">NLP Suggest</th>
-            <th class="col-status px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-center">Status</th>
+            <th class="col-status px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-center">Review & Status</th>
             <th class="col-visit px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Requested Visit</th>
             <th class="col-problem px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Problem</th>
-            <th class="col-solution px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Solution</th>
+            <th class="col-solution px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Assignment / Solution</th>
             <th class="col-action px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-right">Action</th>
           </tr>
         </thead>
@@ -300,7 +345,15 @@
             <!-- Status -->
             <td class="col-status px-6 py-5 text-center">
               <div class="relative group/tooltip inline-block">
-                {% if r.status == 'RESOLVED' %}
+                {% if r.review_status == 'REJECTED' %}
+                  <span class="cursor-help inline-flex px-3 py-1 rounded-lg bg-rose-50 text-rose-700 font-black text-[11px] uppercase tracking-wider border border-dashed border-rose-300">
+                    Rejected
+                  </span>
+                {% elif r.review_status == 'PENDING' %}
+                  <span class="cursor-help inline-flex px-3 py-1 rounded-lg bg-amber-50 text-amber-700 font-black text-[11px] uppercase tracking-wider border border-dashed border-amber-300">
+                    Pending Review
+                  </span>
+                {% elif r.status == 'RESOLVED' %}
                   <span class="cursor-help inline-flex px-3 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-black text-[11px] uppercase tracking-wider border border-dashed border-emerald-300">
                     Fixed
                   </span>
@@ -344,7 +397,7 @@
             <td class="col-visit px-6 py-5">
               {% if r.admin_scheduled_at %}
                 <div class="relative group/tooltip inline-block">
-                  <span class="cursor-help text-slate-900 font-black block border-b border-dashed border-slate-300 pb-0.5 text-sm">{{ r.admin_scheduled_at|date:"M d, Y" }}</span>
+                  <span class="cursor-help text-slate-900 font-black block border-b border-dashed border-slate-300 pb-0.5 text-sm">{{ r.admin_scheduled_at|date:"M d, Y" }} at {{ r.admin_scheduled_at|date:"h:i A" }}</span>
                   <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-3 py-2 bg-slate-900 text-white rounded-lg shadow-xl text-xs font-medium opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-300 z-50 pointer-events-none border border-slate-700 text-center delay-[150ms]">
                     <strong class="text-indigo-400 block mb-1">Time & Status</strong>
                     {{ r.admin_scheduled_at|date:"h:i A" }} &bull; {{ r.get_schedule_decision_display }}
@@ -353,7 +406,7 @@
                 </div>
               {% elif r.requested_schedule_at %}
                 <div class="relative group/tooltip inline-block">
-                  <span class="cursor-help text-slate-900 font-black block border-b border-dashed border-slate-300 pb-0.5 text-sm">{{ r.requested_schedule_at|date:"M d, Y" }}</span>
+                  <span class="cursor-help text-slate-900 font-black block border-b border-dashed border-slate-300 pb-0.5 text-sm">{{ r.requested_schedule_at|date:"M d, Y" }} at {{ r.requested_schedule_at|date:"h:i A" }}</span>
                   <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-3 py-2 bg-slate-900 text-white rounded-lg shadow-xl text-xs font-medium opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-300 z-50 pointer-events-none border border-slate-700 text-center delay-[150ms]">
                     <strong class="text-amber-400 block mb-1">Pending Review</strong>
                     {{ r.requested_schedule_at|date:"h:i A" }}
@@ -392,8 +445,13 @@
                     <div class="absolute top-full right-4 border-[5px] border-transparent border-t-slate-900"></div>
                   </div>
                 </div>
+              {% elif r.assigned_staff %}
+                <div>
+                  <span class="text-sm text-slate-900 font-black block">{{ r.assigned_staff.tenantprofile.full_name|default:r.assigned_staff.email }}</span>
+                  <span class="text-xs text-slate-500 font-bold">Assigned staff</span>
+                </div>
               {% else %}
-                <span class="text-sm text-slate-400 italic font-bold">Not fixed yet...</span>
+                <span class="text-sm text-slate-400 italic font-bold">No staff assigned yet...</span>
               {% endif %}
             </td>
 
@@ -401,7 +459,7 @@
             <td class="col-action px-6 py-5 text-right">
               <a href="{% url 'admin_update_maintenance' r.id %}" 
                  class="inline-flex px-5 py-2.5 bg-white border-2 border-slate-200 text-slate-900 hover:bg-slate-900 hover:text-white hover:border-slate-900 rounded-xl font-black text-sm transition-all shadow-xs">
-                View
+                {% if is_staff_portal %}Update{% else %}Review{% endif %}
               </a>
             </td>
 
@@ -415,8 +473,8 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                   </svg>
                 </div>
-                <strong class="text-lg font-black text-slate-900 block">No requests found</strong>
-                <p class="text-sm text-slate-500 mt-2 font-bold leading-relaxed">Try searching for something else or reset the filters.</p>
+                <strong class="text-lg font-black text-slate-900 block">{% if is_staff_portal %}No assigned requests found{% else %}No requests found{% endif %}</strong>
+                <p class="text-sm text-slate-500 mt-2 font-bold leading-relaxed">{% if is_staff_portal %}You currently have no assigned maintenance work matching these filters.{% else %}Try searching for something else or reset the filters.{% endif %}</p>
               </div>
             </td>
           </tr>

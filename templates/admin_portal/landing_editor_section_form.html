@@ -1,0 +1,52 @@
+{% extends "admin_portal/base.html" %}
+{% block title %}{{ title }} | Real Estate Administration{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-2 sm:px-4 lg:px-6 py-6 sm:py-8 space-y-6">
+  <nav class="flex items-center">
+    <a href="{{ back_url }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
+      <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
+      </svg>
+      <span>Back to Landing Page Editor</span>
+    </a>
+  </nav>
+
+  <header class="bg-white border border-slate-200 rounded-2xl p-6 lg:p-8 shadow-sm space-y-3">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 shadow-sm border border-slate-200">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h10"></path></svg>
+      </div>
+      <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 leading-tight">{{ section_name }}</h1>
+    </div>
+    <p class="text-sm text-slate-500">{{ subtitle|default:"Update this fixed landing page section and return to the preview once saved." }}</p>
+  </header>
+
+  <section class="bg-white border border-slate-200 rounded-[2rem] shadow-sm p-6 sm:p-8">
+    <form method="post" enctype="multipart/form-data" class="space-y-6">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+          {{ form.non_field_errors }}
+        </div>
+      {% endif %}
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {% for field in form %}
+          <div class="{% if field.widget_type == 'textarea' %}md:col-span-2{% endif %}">
+            <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<p class="text-xs text-slate-400 mt-2">{{ field.help_text }}</p>{% endif %}
+            {% if field.errors %}<span class="block text-sm font-bold text-rose-600 mt-2">{{ field.errors.0 }}</span>{% endif %}
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="pt-6 border-t border-slate-100 flex flex-col sm:flex-row gap-3 justify-end">
+        <a href="{{ back_url }}" class="w-full sm:w-auto px-6 py-3 rounded-xl border-2 border-slate-200 bg-white text-slate-700 font-black text-sm text-center hover:bg-slate-50 transition-all">Cancel</a>
+        <button type="submit" class="w-full sm:w-auto px-8 py-3.5 bg-slate-900 hover:bg-black text-white rounded-xl font-extrabold text-sm transition-all shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-md text-center">Save Changes</button>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}

@@ -1,5 +1,5 @@
 {% load static %}
-<div class="lp-wrapper{% if active_banner %} has-cms-banner{% endif %}">
+<div class="lp-wrapper{% if active_banner %} has-cms-banner{% endif %}{% if cms_preview %} cms-preview-mode{% endif %}">
   
   <!-- Navigation -->
   <nav class="lp-nav">
@@ -26,6 +26,12 @@
     <div class="lp-container">
       <div class="lp-banner-card" data-reveal="fade">
         <div class="lp-banner-copy">
+          {% if cms_preview and landing_editor_urls.banner %}
+          <div class="lp-cms-toolbar lp-cms-toolbar-light">
+            <span class="lp-cms-toolbar-label">Homepage Banner</span>
+            <a href="{{ landing_editor_urls.banner }}" class="lp-cms-edit-link lp-cms-edit-link-light">Edit Section</a>
+          </div>
+          {% endif %}
           {% if active_banner.eyebrow %}<span class="lp-banner-eyebrow">{{ active_banner.eyebrow }}</span>{% endif %}
           <h2>{{ active_banner.title }}</h2>
           <p>{{ active_banner.body }}</p>
@@ -47,40 +53,58 @@
       <!-- Carousel Visual Layer -->
       <div class="lp-hero-visual" data-reveal="right">
         <div class="lp-carousel">
-          <div class="lp-slide active"><img src="{% static 'img/accounts/img 1.jpg' %}" alt="Sta Maria Img 1"></div>
-          <div class="lp-slide"><img src="{% static 'img/accounts/img 2.jpg' %}" alt="Sta Maria Img 2"></div>
-          <div class="lp-slide"><img src="{% static 'img/accounts/img 3.jpg' %}" alt="Sta Maria Img 3"></div>
-          <div class="lp-slide"><img src="{% static 'img/accounts/img 4.jpg' %}" alt="Sta Maria Img 4"></div>
-          <div class="lp-slide"><img src="{% static 'img/accounts/img 5.jpg' %}" alt="Sta Maria Img 5"></div>
-          <div class="lp-slide"><img src="{% static 'img/accounts/img 6.jpg' %}" alt="Sta Maria Img 6"></div>
-          <div class="lp-slide"><img src="{% static 'img/accounts/img 7.jpg' %}" alt="Sta Maria Img 7"></div>
-          <div class="lp-slide"><img src="{% static 'img/accounts/img 8.jpg' %}" alt="Sta Maria Img 8"></div>
+          {% if landing_visual_features %}
+            {% for feature in landing_visual_features %}
+              <div class="lp-slide {% if forloop.first %}active{% endif %}"><img src="{{ feature.image_url }}" alt="{{ feature.title }}"></div>
+            {% endfor %}
+          {% else %}
+            <div class="lp-slide active"><img src="{% static 'img/accounts/img 1.jpg' %}" alt="Sta Maria Img 1"></div>
+            <div class="lp-slide"><img src="{% static 'img/accounts/img 2.jpg' %}" alt="Sta Maria Img 2"></div>
+            <div class="lp-slide"><img src="{% static 'img/accounts/img 3.jpg' %}" alt="Sta Maria Img 3"></div>
+            <div class="lp-slide"><img src="{% static 'img/accounts/img 4.jpg' %}" alt="Sta Maria Img 4"></div>
+            <div class="lp-slide"><img src="{% static 'img/accounts/img 5.jpg' %}" alt="Sta Maria Img 5"></div>
+            <div class="lp-slide"><img src="{% static 'img/accounts/img 6.jpg' %}" alt="Sta Maria Img 6"></div>
+            <div class="lp-slide"><img src="{% static 'img/accounts/img 7.jpg' %}" alt="Sta Maria Img 7"></div>
+            <div class="lp-slide"><img src="{% static 'img/accounts/img 8.jpg' %}" alt="Sta Maria Img 8"></div>
+          {% endif %}
         </div>
         
         <div class="lp-glass-badge">
-          <span class="badge-title">Affordable spaces</span>
+          <span class="badge-title">{{ business_profile.business_name }}</span>
           <span class="badge-sub">{{ business_profile.tagline }}</span>
         </div>
 
         <button class="lp-carousel-btn prev" id="carouselPrev">&#10094;</button>
         <button class="lp-carousel-btn next" id="carouselNext">&#10095;</button>
         <div class="lp-carousel-nav">
-          <button class="lp-dot active" data-slide="0"></button>
-          <button class="lp-dot" data-slide="1"></button>
-          <button class="lp-dot" data-slide="2"></button>
-          <button class="lp-dot" data-slide="3"></button>
-          <button class="lp-dot" data-slide="4"></button>
-          <button class="lp-dot" data-slide="5"></button>
-          <button class="lp-dot" data-slide="6"></button>
-          <button class="lp-dot" data-slide="7"></button>
+          {% if landing_visual_features %}
+            {% for feature in landing_visual_features %}
+              <button class="lp-dot {% if forloop.first %}active{% endif %}" data-slide="{{ forloop.counter0 }}"></button>
+            {% endfor %}
+          {% else %}
+            <button class="lp-dot active" data-slide="0"></button>
+            <button class="lp-dot" data-slide="1"></button>
+            <button class="lp-dot" data-slide="2"></button>
+            <button class="lp-dot" data-slide="3"></button>
+            <button class="lp-dot" data-slide="4"></button>
+            <button class="lp-dot" data-slide="5"></button>
+            <button class="lp-dot" data-slide="6"></button>
+            <button class="lp-dot" data-slide="7"></button>
+          {% endif %}
         </div>
       </div>
 
       <!-- Text Content Layer (Overlaps visual) -->
       <div class="lp-hero-text" data-reveal="up">
-        <h1>Spaces<br>Designed<br>For <i>You</i>.</h1>
-        <p>{{ business_profile.about_text }}</p>
-        <a href="#about" class="lp-btn-primary">Explore {{ business_profile.business_name }}</a>
+        {% if cms_preview and landing_editor_urls.hero %}
+        <div class="lp-cms-toolbar">
+          <span class="lp-cms-toolbar-label">Hero Section</span>
+          <a href="{{ landing_editor_urls.hero }}" class="lp-cms-edit-link">Edit Section</a>
+        </div>
+        {% endif %}
+        <h1>{{ business_profile.hero_title|linebreaksbr }} <i>{{ business_profile.hero_subtitle }}</i></h1>
+        <p>{{ business_profile.hero_description }}</p>
+        <a href="{{ business_profile.hero_button_url|default:'#about' }}" class="lp-btn-primary">{{ business_profile.hero_button_text|default:"Explore RealEstate360+" }}</a>
       </div>
     </div>
   </section>
@@ -93,30 +117,70 @@
         
         <!-- Large Text Card -->
         <div class="lp-bento-card col-span-2 row-span-1 bg-navy" data-reveal="up">
+          {% if cms_preview and landing_editor_urls.about %}
+          <div class="lp-cms-toolbar lp-cms-toolbar-light">
+            <span class="lp-cms-toolbar-label">About Section</span>
+            <a href="{{ landing_editor_urls.about }}" class="lp-cms-edit-link lp-cms-edit-link-light">Edit Section</a>
+          </div>
+          {% endif %}
           <span class="lp-section-subtitle text-light-blue">Our Heritage</span>
-          <h2 class="text-white">A Foundation Built on Trust</h2>
-          <p class="text-light-blue">{{ business_profile.about_text }}</p>
+          <h2 class="text-white">{{ business_profile.about_title|default:"A Foundation Built on Trust" }}</h2>
+          <p class="text-light-blue">{{ business_profile.about_description|default:business_profile.about_text }}</p>
         </div>
 
         <!-- Vertical Image Card -->
         <div class="lp-bento-card col-span-1 row-span-2 image-card" data-reveal="right">
-          <img src="{% static 'img/accounts/img 6.jpg' %}" alt="Exterior">
-          <div class="image-overlay">Distinct Architecture</div>
+          {% if business_profile.about_image_url %}
+            <img src="{{ business_profile.about_image_url }}" alt="{{ business_profile.about_title|default:'Exterior' }}">
+          {% else %}
+            <img src="{% static 'img/accounts/img 6.jpg' %}" alt="Exterior">
+          {% endif %}
+          <div class="image-overlay">{{ business_profile.about_title|default:"Distinct Architecture" }}</div>
         </div>
 
         <!-- Square Image Card -->
         <div class="lp-bento-card col-span-1 row-span-1 image-card" data-reveal="up" style="transition-delay: 0.1s;">
           <img src="{% static 'img/accounts/img 7.jpg' %}" alt="Interior" onerror="this.style.display='none'">
-          <div class="image-overlay">Pristine Interiors</div>
+          <div class="image-overlay">{{ business_profile.tagline }}</div>
         </div>
 
         <!-- Medium Text Card -->
         <div class="lp-bento-card col-span-1 row-span-1 bg-white border-card" data-reveal="up" style="transition-delay: 0.2s;">
           <span class="lp-section-subtitle">The Future</span>
-          <h2>Growing With You</h2>
-          <p>The platform can scale across different properties by updating public-facing business content directly from the admin CMS instead of editing code.</p>
+          <h2>{{ business_profile.services_title|default:"Growing With You" }}</h2>
+          <p>{{ business_profile.services_description|default:"The platform can scale across different properties by updating public-facing business content directly from the admin CMS instead of editing code." }}</p>
         </div>
 
+      </div>
+    </div>
+  </section>
+
+  <section class="lp-section">
+    <div class="lp-container" data-reveal="up">
+      <div class="mb-10 text-center">
+        {% if cms_preview and landing_editor_urls.services %}
+        <div class="lp-cms-toolbar lp-cms-toolbar-center">
+          <span class="lp-cms-toolbar-label">Services Section</span>
+          <a href="{{ landing_editor_urls.services }}" class="lp-cms-edit-link">Edit Section</a>
+        </div>
+        {% endif %}
+        <span class="lp-section-subtitle">Property Highlights</span>
+        <h2 class="text-slate-900 text-[clamp(2rem,4vw,3rem)] font-[800] leading-[1.05] mt-3">{{ business_profile.services_title|default:"What You Can Expect" }}</h2>
+        <p class="text-slate-500 max-w-3xl mx-auto mt-4 text-lg leading-8">{{ business_profile.services_description }}</p>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        {% for feature in landing_service_cards %}
+        <article class="lp-bento-card bg-white border-card" data-reveal="up" {% if not forloop.first %}style="transition-delay: {{ forloop.counter0|add:1 }}00ms;"{% endif %}>
+          {% if feature.image_url %}
+            <div class="rounded-[24px] overflow-hidden mb-5 aspect-[16/10] bg-slate-100">
+              <img src="{{ feature.image_url }}" alt="{{ feature.title }}" class="w-full h-full object-cover">
+            </div>
+          {% endif %}
+          <span class="lp-section-subtitle">{{ feature.icon_label|default:"Feature" }}</span>
+          <h2>{{ feature.title }}</h2>
+          <p>{{ feature.description }}</p>
+        </article>
+        {% endfor %}
       </div>
     </div>
   </section>
@@ -131,7 +195,7 @@
             <span class="modern-text">Ready to</span>
             <span class="elegant-text">come home?</span>
           </h2>
-          <p>Join {{ business_profile.business_name }} through RealEstate360+ to explore properties, manage your lease, and stay connected with the community.</p>
+          <p>{{ business_profile.services_description|default:"Join our community through RealEstate360+ to explore properties, manage your lease, and stay connected with the community." }}</p>
           <a href="{% url 'login' %}" class="lp-btn-cta">Join Our Community</a>
         </div>
       </div>
@@ -143,9 +207,15 @@
     <div class="inquiry-expand-container">
       <div class="lp-inquiry-box" id="inquiryExpandBox" style="transition: transform 0.1s ease-out, border-radius 0.1s ease-out;">
         <div class="inquiry-text">
+          {% if cms_preview and landing_editor_urls.contact %}
+          <div class="lp-cms-toolbar lp-cms-toolbar-light">
+            <span class="lp-cms-toolbar-label">Contact Section</span>
+            <a href="{{ landing_editor_urls.contact }}" class="lp-cms-edit-link lp-cms-edit-link-light">Edit Section</a>
+          </div>
+          {% endif %}
           <span class="lp-section-subtitle text-light-blue">Get in Touch</span>
-          <h2 class="text-white">Looking to Inquire?</h2>
-          <p class="text-white">{{ business_profile.inquiry_text }}</p>
+          <h2 class="text-white">{{ business_profile.contact_title|default:"Looking to Inquire?" }}</h2>
+          <p class="text-white">{{ business_profile.contact_description|default:business_profile.inquiry_text }}</p>
           <div class="contact-details">
             <div class="contact-item">
               <div>
@@ -186,13 +256,19 @@
   <!-- Footer -->
   <footer class="lp-footer">
     <div class="lp-container">
+      {% if cms_preview and landing_editor_urls.footer %}
+      <div class="lp-cms-toolbar lp-cms-toolbar-footer">
+        <span class="lp-cms-toolbar-label">Footer Section</span>
+        <a href="{{ landing_editor_urls.footer }}" class="lp-cms-edit-link">Edit Section</a>
+      </div>
+      {% endif %}
       <div class="lp-footer-grid">
         <div>
           <a href="/" class="lp-footer-logo">
             <img src="{% static 'img/accounts/RealEstate360+ Logo2 jpg.jpg' %}" alt="Logo">
             <span style="font-family: 'Outfit', sans-serif; font-weight: 600;">{{ business_profile.business_name }}</span>
           </a>
-          <p>{{ business_profile.tagline }}. {{ business_profile.about_text }}</p>
+          <p>{{ business_profile.tagline }}. {{ business_profile.footer_text|default:business_profile.about_text }}</p>
         </div>
         <div>
           <h4>Discover</h4>
@@ -211,7 +287,7 @@
         </div>
       </div>
       <div class="lp-footer-bottom">
-        &copy; {% now "Y" %} {{ business_profile.business_name }}. Crafted with care.
+        &copy; {% now "Y" %} {{ business_profile.business_name }}. {{ business_profile.footer_text|default:"Crafted with care." }}
       </div>
     </div>
   </footer>
@@ -295,6 +371,139 @@
 .lp-banner-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 12px 28px rgba(255, 255, 255, 0.2);
+}
+
+.lp-cms-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.lp-cms-toolbar-center {
+  justify-content: center;
+}
+
+.lp-cms-toolbar-footer {
+  margin-bottom: 28px;
+}
+
+.lp-cms-toolbar-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.06);
+  color: #334155;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.lp-cms-toolbar-light .lp-cms-toolbar-label {
+  background: rgba(255, 255, 255, 0.14);
+  color: #dbeafe;
+}
+
+.lp-cms-edit-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(30, 58, 138, 0.1);
+  color: #1d4ed8;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+}
+
+.lp-cms-edit-link:hover {
+  background: rgba(30, 58, 138, 0.16);
+  transform: translateY(-1px);
+}
+
+.lp-cms-edit-link-light {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+.lp-cms-edit-link-light:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.cms-preview-mode {
+  min-height: auto;
+}
+
+.cms-preview-mode .lp-nav {
+  position: relative;
+  top: 0;
+  left: auto;
+  transform: none;
+  width: calc(100% - 48px);
+  margin: 24px auto 28px;
+}
+
+.cms-preview-mode .lp-hero {
+  position: relative;
+  top: auto;
+  min-height: auto;
+  padding-top: 24px;
+  padding-bottom: 48px;
+}
+
+.cms-preview-mode .lp-hero-layout {
+  grid-template-columns: 5fr 7fr;
+  gap: 0;
+  align-items: center;
+}
+
+.cms-preview-mode .lp-hero-text {
+  position: absolute;
+  left: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+  max-width: 520px;
+  width: min(44vw, 520px);
+  padding: 34px 36px;
+  border-radius: 0 32px 32px 0;
+  border-left: none;
+  box-shadow: 20px 20px 60px rgba(0,0,0,0.05);
+  align-self: auto;
+  z-index: 20;
+}
+
+.cms-preview-mode .lp-hero-text h1 {
+  font-size: clamp(2.6rem, 3.8vw, 4.2rem);
+  line-height: 1.02;
+  margin-bottom: 18px;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.cms-preview-mode .lp-hero-text p {
+  font-size: 1rem;
+  line-height: 1.58;
+  margin-bottom: 24px;
+}
+
+.cms-preview-mode .lp-hero-visual {
+  grid-column: 2;
+  height: 620px;
+}
+
+.cms-preview-mode .lp-watermark {
+  font-size: 15vw;
+}
+
+.cms-preview-mode .lp-section-wrapper {
+  background-attachment: scroll;
 }
 
 .cta-content h2 {

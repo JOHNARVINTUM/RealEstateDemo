@@ -8,7 +8,7 @@ from django.db import transaction
 from PIL import Image, UnidentifiedImageError
 from rentals.models import TenantProfile, Lease, Unit, UnitImage, TenantAttachment, validate_tenant_attachment_upload
 from rentals.services import generate_tenant_password, send_tenant_credentials_email
-from announcements.models import Announcement, HomepageBanner, BusinessProfile
+from announcements.models import Announcement, HomepageBanner, BusinessProfile, LandingPageSection, LandingPageFeature
 from billing.models import MonthlyBill
 
 User = get_user_model()
@@ -803,21 +803,240 @@ class HomepageBannerForm(forms.ModelForm):
 
 
 class BusinessProfileForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        input_class = "w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none"
+        textarea_class = input_class + " leading-relaxed"
+        for field in self.fields.values():
+            if isinstance(field.widget, forms.Textarea):
+                field.widget.attrs.update({"class": textarea_class})
+            elif isinstance(field.widget, forms.CheckboxInput):
+                field.widget.attrs.update({"class": "w-5 h-5 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer transition-all"})
+            elif isinstance(field.widget, forms.ClearableFileInput):
+                field.widget.attrs.update({"class": "block w-full text-sm font-bold text-slate-700"})
+            else:
+                field.widget.attrs.update({"class": input_class})
+
     class Meta:
         model = BusinessProfile
         fields = [
             "business_name",
             "tagline",
+            "hero_title",
+            "hero_subtitle",
+            "hero_description",
+            "hero_button_text",
+            "hero_button_url",
+            "hero_image",
+            "about_title",
             "about_text",
+            "about_description",
+            "about_image",
+            "services_title",
+            "services_description",
+            "service_1_title",
+            "service_1_description",
+            "service_1_image",
+            "service_2_title",
+            "service_2_description",
+            "service_2_image",
+            "service_3_title",
+            "service_3_description",
+            "service_3_image",
+            "contact_title",
+            "contact_description",
             "contact_email",
             "contact_phone",
             "address",
             "inquiry_text",
+            "footer_text",
             "is_active",
         ]
         widgets = {
-            "about_text": forms.Textarea(attrs={"rows": 5}),
+            "about_text": forms.Textarea(attrs={"rows": 4}),
+            "hero_description": forms.Textarea(attrs={"rows": 4}),
+            "about_description": forms.Textarea(attrs={"rows": 4}),
+            "services_description": forms.Textarea(attrs={"rows": 4}),
+            "service_1_description": forms.Textarea(attrs={"rows": 3}),
+            "service_2_description": forms.Textarea(attrs={"rows": 3}),
+            "service_3_description": forms.Textarea(attrs={"rows": 3}),
+            "contact_description": forms.Textarea(attrs={"rows": 4}),
             "inquiry_text": forms.Textarea(attrs={"rows": 4}),
+            "footer_text": forms.Textarea(attrs={"rows": 3}),
+        }
+
+    def clean_hero_button_url(self):
+        url = (self.cleaned_data.get("hero_button_url") or "").strip()
+        return url or "#about"
+
+    def save(self, commit=True, user=None):
+        instance = super().save(commit=False)
+        if user:
+            instance.updated_by = user
+        if commit:
+            instance.save()
+        return instance
+
+
+class HeroSectionForm(BusinessProfileForm):
+    class Meta(BusinessProfileForm.Meta):
+        fields = [
+            "hero_title",
+            "hero_subtitle",
+            "hero_description",
+            "hero_button_text",
+            "hero_button_url",
+            "hero_image",
+        ]
+        widgets = {
+            "hero_description": forms.Textarea(attrs={"rows": 4}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["hero_description"].label = "Hero description"
+
+
+class AboutSectionForm(BusinessProfileForm):
+    class Meta(BusinessProfileForm.Meta):
+        fields = [
+            "about_title",
+            "about_description",
+            "about_image",
+        ]
+        widgets = {
+            "about_description": forms.Textarea(attrs={"rows": 4}),
+        }
+
+
+class ServicesSectionForm(BusinessProfileForm):
+    class Meta(BusinessProfileForm.Meta):
+        fields = [
+            "services_title",
+            "services_description",
+            "service_1_title",
+            "service_1_description",
+            "service_1_image",
+            "service_2_title",
+            "service_2_description",
+            "service_2_image",
+            "service_3_title",
+            "service_3_description",
+            "service_3_image",
+        ]
+        widgets = {
+            "services_description": forms.Textarea(attrs={"rows": 4}),
+            "service_1_description": forms.Textarea(attrs={"rows": 3}),
+            "service_2_description": forms.Textarea(attrs={"rows": 3}),
+            "service_3_description": forms.Textarea(attrs={"rows": 3}),
+        }
+
+
+class ContactSectionForm(BusinessProfileForm):
+    def clean_contact_title(self):
+        value = (self.cleaned_data.get("contact_title") or "").strip()
+        if not value:
+            return value
+        if not re.search(r"[A-Za-z]", value):
+            raise forms.ValidationError("Contact title must contain words, not numbers only.")
+        return re.sub(r"\s+", " ", value)
+
+    class Meta(BusinessProfileForm.Meta):
+        fields = [
+            "contact_title",
+            "contact_description",
+            "contact_email",
+            "contact_phone",
+            "address",
+        ]
+        widgets = {
+            "contact_description": forms.Textarea(attrs={"rows": 4}),
+        }
+
+
+class FooterSectionForm(BusinessProfileForm):
+    class Meta(BusinessProfileForm.Meta):
+        fields = [
+            "footer_text",
+            "business_name",
+            "tagline",
+        ]
+        widgets = {
+            "footer_text": forms.Textarea(attrs={"rows": 3}),
+        }
+
+
+class LandingPageSectionForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        input_class = "w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none"
+        textarea_class = input_class + " leading-relaxed"
+        for name, field in self.fields.items():
+            if isinstance(field.widget, forms.Textarea):
+                field.widget.attrs.update({"class": textarea_class})
+            elif isinstance(field.widget, forms.CheckboxInput):
+                field.widget.attrs.update({"class": "w-5 h-5 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer transition-all"})
+            elif isinstance(field.widget, forms.ClearableFileInput):
+                field.widget.attrs.update({"class": "block w-full text-sm font-bold text-slate-700"})
+            else:
+                field.widget.attrs.update({"class": input_class})
+
+    class Meta:
+        model = LandingPageSection
+        fields = [
+            "section_key",
+            "title",
+            "subtitle",
+            "body_text",
+            "image",
+            "button_text",
+            "button_url",
+            "display_order",
+            "is_active",
+        ]
+        widgets = {
+            "body_text": forms.Textarea(attrs={"rows": 5}),
+        }
+
+    def clean_button_url(self):
+        return (self.cleaned_data.get("button_url") or "").strip()
+
+    def save(self, commit=True, user=None):
+        instance = super().save(commit=False)
+        if user:
+            instance.updated_by = user
+        if commit:
+            instance.save()
+        return instance
+
+
+class LandingPageFeatureForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        input_class = "w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 transition-all outline-none"
+        textarea_class = input_class + " leading-relaxed"
+        for name, field in self.fields.items():
+            if isinstance(field.widget, forms.Textarea):
+                field.widget.attrs.update({"class": textarea_class})
+            elif isinstance(field.widget, forms.CheckboxInput):
+                field.widget.attrs.update({"class": "w-5 h-5 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer transition-all"})
+            elif isinstance(field.widget, forms.ClearableFileInput):
+                field.widget.attrs.update({"class": "block w-full text-sm font-bold text-slate-700"})
+            else:
+                field.widget.attrs.update({"class": input_class})
+
+    class Meta:
+        model = LandingPageFeature
+        fields = [
+            "title",
+            "description",
+            "image",
+            "icon_label",
+            "display_order",
+            "is_active",
+        ]
+        widgets = {
+            "description": forms.Textarea(attrs={"rows": 4}),
         }
 
     def save(self, commit=True, user=None):

@@ -19,11 +19,11 @@
     <div class="w-full sm:w-auto shrink-0 flex flex-col sm:flex-row gap-3">
       <a href="{% url 'admin_business_profile' %}" 
          class="block w-full sm:w-auto bg-white hover:bg-slate-50 border-2 border-slate-200 text-slate-800 font-black px-6 py-3.5 rounded-xl text-base transition-all shadow-sm active:scale-95 text-center">
-        Edit Business Profile
+        Landing Page Editor
       </a>
-      <a href="{% url 'admin_homepage_banners' %}" 
+      <a href="{% url 'admin_business_profile' %}" 
          class="block w-full sm:w-auto bg-white hover:bg-slate-50 border-2 border-slate-200 text-slate-800 font-black px-6 py-3.5 rounded-xl text-base transition-all shadow-sm active:scale-95 text-center">
-        Manage Homepage Banner
+        Open Landing Page Editor
       </a>
       <a href="{% url 'admin_create_announcement' %}" 
          class="block w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white font-black px-6 py-3.5 rounded-xl text-base transition-all shadow-md active:scale-95 text-center">
@@ -81,7 +81,7 @@
       <p class="text-sm font-bold text-slate-600 max-w-3xl">{{ active_business_profile.tagline }} ? {{ active_business_profile.address }}</p>
     </div>
     <div class="w-full lg:w-auto flex flex-col sm:flex-row gap-3">
-      <a href="{% url 'admin_business_profile' %}" class="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-slate-900 text-white font-black text-sm hover:bg-slate-800 transition-all">Edit Business Profile</a>
+      <a href="{% url 'admin_business_profile' %}" class="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-slate-900 text-white font-black text-sm hover:bg-slate-800 transition-all">Landing Page Editor</a>
     </div>
   </section>
   {% endif %}
@@ -97,8 +97,8 @@
       <p class="text-sm font-bold text-slate-600 max-w-3xl">{{ active_banner.body|truncatechars:180 }}</p>
     </div>
     <div class="w-full lg:w-auto flex flex-col sm:flex-row gap-3">
-      <a href="{% url 'admin_edit_homepage_banner' active_banner.id %}" class="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-slate-900 text-white font-black text-sm hover:bg-slate-800 transition-all">Edit Active Banner</a>
-      <a href="{% url 'admin_homepage_banners' %}" class="inline-flex items-center justify-center px-5 py-3 rounded-xl border-2 border-slate-200 bg-white text-slate-700 font-black text-sm hover:bg-slate-50 transition-all">View Banner Library</a>
+      <a href="{% url 'admin_edit_homepage_banner' active_banner.id %}" class="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-slate-900 text-white font-black text-sm hover:bg-slate-800 transition-all">Edit Landing Content</a>
+      <a href="{% url 'admin_business_profile' %}" class="inline-flex items-center justify-center px-5 py-3 rounded-xl border-2 border-slate-200 bg-white text-slate-700 font-black text-sm hover:bg-slate-50 transition-all">Open Landing Page Editor</a>
     </div>
   </section>
   {% endif %}

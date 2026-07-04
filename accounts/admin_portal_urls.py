@@ -1,11 +1,25 @@
 from django.urls import path
 from .admin_portal_views import (
     admin_dashboard,
-    admin_announcements,
     admin_create_announcement,
     admin_homepage_banners,
     admin_business_profile,
+    admin_landing_sections,
+    admin_create_landing_section,
+    admin_edit_landing_section,
+    admin_delete_landing_section,
+    admin_landing_features,
+    admin_create_landing_feature,
+    admin_edit_landing_feature,
+    admin_delete_landing_feature,
     admin_create_homepage_banner,
+    admin_create_landing_banner,
+    admin_edit_landing_banner,
+    admin_edit_landing_hero,
+    admin_edit_landing_about,
+    admin_edit_landing_services,
+    admin_edit_landing_contact,
+    admin_edit_landing_footer,
     admin_edit_homepage_banner,
     admin_delete_homepage_banner,
     admin_create_unit,
@@ -22,6 +36,7 @@ from .admin_portal_views import (
     api_get_unit_data,
     api_get_unit_data_by_id,
 )
+from .admin_portal_views import admin_announcements
 from .admin_tenant_views import (
     admin_tenants,
     admin_tenant_detail,
@@ -114,7 +129,16 @@ urlpatterns = [
     path("maintenance/<int:req_id>/update/", admin_update_maintenance, name="admin_update_maintenance"),
     path("announcements/", admin_announcements, name="admin_announcements"),
     path("content/profile/", admin_business_profile, name="admin_business_profile"),
+    path("content/banner/", admin_edit_landing_banner, name="admin_edit_landing_banner"),
+    path("content/banner/create/", admin_create_landing_banner, name="admin_create_landing_banner"),
+    path("content/hero/", admin_edit_landing_hero, name="admin_edit_landing_hero"),
+    path("content/about/", admin_edit_landing_about, name="admin_edit_landing_about"),
+    path("content/services/", admin_edit_landing_services, name="admin_edit_landing_services"),
+    path("content/contact/", admin_edit_landing_contact, name="admin_edit_landing_contact"),
+    path("content/footer/", admin_edit_landing_footer, name="admin_edit_landing_footer"),
     path("content/banners/", admin_homepage_banners, name="admin_homepage_banners"),
+    path("content/sections/", admin_landing_sections, name="admin_landing_sections"),
+    path("content/features/", admin_landing_features, name="admin_landing_features"),
     
     # Tenant Risk Classification
     path("tenant-risk/", admin_tenant_risk, name="admin_tenant_risk"),
@@ -150,6 +174,12 @@ urlpatterns = [
     path("content/banners/add/", admin_create_homepage_banner, name="admin_create_homepage_banner"),
     path("content/banners/<int:banner_id>/edit/", admin_edit_homepage_banner, name="admin_edit_homepage_banner"),
     path("content/banners/<int:banner_id>/delete/", admin_delete_homepage_banner, name="admin_delete_homepage_banner"),
+    path("content/sections/add/", admin_create_landing_section, name="admin_create_landing_section"),
+    path("content/sections/<int:section_id>/edit/", admin_edit_landing_section, name="admin_edit_landing_section"),
+    path("content/sections/<int:section_id>/delete/", admin_delete_landing_section, name="admin_delete_landing_section"),
+    path("content/features/add/", admin_create_landing_feature, name="admin_create_landing_feature"),
+    path("content/features/<int:feature_id>/edit/", admin_edit_landing_feature, name="admin_edit_landing_feature"),
+    path("content/features/<int:feature_id>/delete/", admin_delete_landing_feature, name="admin_delete_landing_feature"),
 
     # Forecasting
     path("forecasting/", admin_forecasting, name="admin_forecasting"),

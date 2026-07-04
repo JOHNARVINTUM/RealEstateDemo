@@ -27,12 +27,14 @@ from water.models import WaterReading
 from accounts.admin_portal_forms import _ordinal
 
 
-from announcements.models import Announcement, HomepageBanner, BusinessProfile
+from announcements.models import Announcement, HomepageBanner, BusinessProfile, LandingPageSection, LandingPageFeature
 from rentals.services import TenantRiskService, repair_historical_move_in_payment
 
-from .admin_portal_forms import TenantProfileForm, AnnouncementForm, HomepageBannerForm, BusinessProfileForm, LeaseForm
+from .admin_portal_forms import TenantProfileForm, AnnouncementForm, HomepageBannerForm, BusinessProfileForm, LandingPageSectionForm, LandingPageFeatureForm, LeaseForm, HeroSectionForm, AboutSectionForm, ServicesSectionForm, ContactSectionForm, FooterSectionForm
 from .admin_portal_forms import TenantProfileEditForm
 from .admin_portal_forms import ComprehensiveTenantEditForm
+from .views import _get_public_business_profile, _build_landing_service_cards, _build_landing_visual_features, _default_business_profile
+from .ml.tenant_risk_model import load_model_metrics as load_rf_metrics, get_model_artifact_status as get_rf_artifact_status
 from .admin_portal_forms import UnitForm
 from rentals.models import UnitImage
 from django.contrib import messages
@@ -100,6 +102,70 @@ def _safe_active_business_profile():
 def _safe_business_profile_count():
     try:
         return BusinessProfile.objects.count()
+    except (ProgrammingError, OperationalError):
+        return 0
+
+
+def _ensure_business_profile():
+    profile = _safe_active_business_profile() or _safe_business_profile_queryset().first()
+    if profile:
+        return profile
+
+    defaults = _default_business_profile()
+    return BusinessProfile.objects.create(
+        business_name=defaults["business_name"],
+        tagline=defaults["tagline"],
+        about_text=defaults["about_text"],
+        hero_title=defaults["hero_title"],
+        hero_subtitle=defaults["hero_subtitle"],
+        hero_description=defaults["hero_description"],
+        hero_button_text=defaults["hero_button_text"],
+        hero_button_url=defaults["hero_button_url"],
+        about_title=defaults["about_title"],
+        about_description=defaults["about_description"],
+        services_title=defaults["services_title"],
+        services_description=defaults["services_description"],
+        service_1_title=defaults["service_1_title"],
+        service_1_description=defaults["service_1_description"],
+        service_2_title=defaults["service_2_title"],
+        service_2_description=defaults["service_2_description"],
+        service_3_title=defaults["service_3_title"],
+        service_3_description=defaults["service_3_description"],
+        contact_title=defaults["contact_title"],
+        contact_description=defaults["contact_description"],
+        contact_email=defaults["contact_email"],
+        contact_phone=defaults["contact_phone"],
+        address=defaults["address"],
+        inquiry_text=defaults["inquiry_text"],
+        footer_text=defaults["footer_text"],
+        is_active=True,
+    )
+
+
+def _safe_landing_section_queryset():
+    try:
+        return LandingPageSection.objects.select_related("updated_by").order_by("display_order", "section_key")
+    except (ProgrammingError, OperationalError):
+        return LandingPageSection.objects.none()
+
+
+def _safe_landing_section_count():
+    try:
+        return LandingPageSection.objects.count()
+    except (ProgrammingError, OperationalError):
+        return 0
+
+
+def _safe_landing_feature_queryset():
+    try:
+        return LandingPageFeature.objects.select_related("updated_by").order_by("display_order", "title")
+    except (ProgrammingError, OperationalError):
+        return LandingPageFeature.objects.none()
+
+
+def _safe_landing_feature_count():
+    try:
+        return LandingPageFeature.objects.count()
     except (ProgrammingError, OperationalError):
         return 0
 
@@ -703,6 +769,25 @@ def admin_toggle_unit_status(request, unit_id):
 
 
 
+@admin_required
+def admin_announcements(request):
+    q = (request.GET.get("q") or "").strip()
+    items = Announcement.objects.select_related("created_by").order_by("-created_at")
+    if q:
+        items = items.filter(Q(title__icontains=q) | Q(body__icontains=q))
+
+    today = timezone.localdate()
+    context = {
+        "items": items,
+        "q": q,
+        "total_count": Announcement.objects.count(),
+        "active_count": Announcement.objects.filter(is_active=True).count(),
+        "this_month_count": Announcement.objects.filter(created_at__year=today.year, created_at__month=today.month).count(),
+        "active_business_profile": _safe_active_business_profile() or _safe_business_profile_queryset().first(),
+        "active_banner": _safe_active_homepage_banner(),
+    }
+    return render(request, "admin_portal/announcements.html", context)
+
 
 @admin_required
 def admin_edit_announcement(request, ann_id: int):
@@ -750,188 +835,210 @@ def admin_delete_announcement(request, ann_id: int):
 
 
 @admin_required
-def admin_tenant_risk(request):
-    """Tenant Risk Classification view"""
-    q = request.GET.get("q", "").strip()
-    risk_filter = request.GET.get("risk", "").strip()
-
-    risk_classifications = _admin_tenant_risk_queryset(q=q, risk_filter=risk_filter)
-
-    # Sorting
-    sort = request.GET.get("sort", "score_desc").strip()
-    if sort == "score_asc":
-        risk_classifications = risk_classifications.order_by("payment_score")
-    else:
-        risk_classifications = risk_classifications.order_by("-payment_score")
-    
-    # Pagination
-    paginator = Paginator(risk_classifications, 10)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    
-    # Calculate statistics
-    total_tenants = risk_classifications.count()
-    low_risk_count = TenantRiskClassification.objects.filter(risk_level='LOW').count()
-    medium_risk_count = TenantRiskClassification.objects.filter(risk_level='MEDIUM').count()
-    high_risk_count = TenantRiskClassification.objects.filter(risk_level='HIGH').count()
-    new_tenant_count = TenantRiskClassification.objects.filter(is_new_tenant=True).count()
-    rf_metrics = None
-    rf_artifact_status = None
-    try:
-        from accounts.ml.tenant_risk_model import get_model_artifact_status, load_model_metrics
-        rf_metrics = load_model_metrics()
-        rf_artifact_status = get_model_artifact_status()
-    except Exception:
-        rf_metrics = None
-        rf_artifact_status = None
-    
-    context = {
-        'page_obj': page_obj,
-        'q': q,
-        'risk': risk_filter,
-        'sort': sort,
-        'total_tenants': total_tenants,
-        'low_risk_count': low_risk_count,
-        'medium_risk_count': medium_risk_count,
-        'high_risk_count': high_risk_count,
-        'new_tenant_count': new_tenant_count,
-        'rf_metrics': rf_metrics,
-        'rf_artifact_status': rf_artifact_status,
-    }
-    
-    return render(request, "admin_portal/tenant_risk.html", context)
-
-
-def _admin_tenant_risk_queryset(*, q="", risk_filter=""):
-    """Base queryset for tenant risk listing and bounded refresh."""
-    risk_classifications = TenantRiskClassification.objects.select_related(
-        'tenant',
-        'tenant__tenantprofile',
-    ).all()
-
-    if risk_filter in ("LOW", "MEDIUM", "HIGH"):
-        risk_classifications = risk_classifications.filter(risk_level=risk_filter)
-
-    if q:
-        risk_classifications = risk_classifications.filter(
-            Q(tenant__email__icontains=q) |
-            Q(tenant__tenantprofile__first_name__icontains=q) |
-            Q(tenant__tenantprofile__last_name__icontains=q)
-        )
-
-    return risk_classifications
+def admin_landing_sections(request):
+    messages.info(request, "Landing sections now live inside the preview-based Landing Page Editor.")
+    return redirect("admin_business_profile")
 
 
 @admin_required
-def admin_update_tenant_risks(request):
-    """Refresh RF predictions for rows still showing checking state within the current filters."""
-    if request.method == 'POST':
-        q = request.POST.get("q", "").strip()
-        risk_filter = request.POST.get("risk", "").strip()
-        sort = request.POST.get("sort", "score_desc").strip()
-        page_number = request.POST.get("page", "").strip()
-        try:
-            risk_classifications = _admin_tenant_risk_queryset(q=q, risk_filter=risk_filter)
-            checking_classifications = risk_classifications.filter(
-                Q(rf_risk_level__isnull=True) | Q(rf_risk_level="")
-            )
-            updated_count = TenantRiskService.refresh_missing_rf_predictions(checking_classifications)
-
-            messages.success(
-                request,
-                f"Successfully refreshed RF risk results for {updated_count} tenant(s) still marked as checking."
-            )
-        except Exception as e:
-            logger.exception("Tenant risk refresh failed: %s", e)
-            messages.warning(
-                request,
-                "Risk refresh could not fully complete. The rule-based fallback remains available; check server logs for details.",
-            )
-
-        redirect_url = reverse('admin_tenant_risk')
-        query_params = {}
-        if q:
-            query_params["q"] = q
-        if risk_filter:
-            query_params["risk"] = risk_filter
-        if sort:
-            query_params["sort"] = sort
-        if page_number:
-            query_params["page"] = page_number
-        if query_params:
-            redirect_url = f"{redirect_url}?{urlencode(query_params)}"
-        return redirect(redirect_url)
-
-    return redirect('admin_tenant_risk')
+def admin_create_landing_section(request):
+    messages.info(request, "Landing sections are now managed from the Landing Page Editor.")
+    return redirect("admin_business_profile")
 
 
 @admin_required
-def admin_announcements(request):
-    q = request.GET.get("q", "").strip()
-    items = Announcement.objects.all()
+def admin_edit_landing_section(request, section_id: int):
+    messages.info(request, "Landing sections are now managed from the Landing Page Editor.")
+    return redirect("admin_business_profile")
 
-    # FIX: model field is "body", not "content"
-    if q:
-        items = items.filter(Q(title__icontains=q) | Q(body__icontains=q))
 
-    items = items.order_by("-created_at")
-    
-    # Calculate statistics
-    total_count = Announcement.objects.count()
-    active_count = Announcement.objects.filter(is_active=True).count()
-    
-    from django.utils import timezone
-    now = timezone.now()
-    this_month_count = Announcement.objects.filter(
-        created_at__year=now.year, 
-        created_at__month=now.month
-    ).count()
+@admin_required
+def admin_delete_landing_section(request, section_id: int):
+    messages.info(request, "Legacy landing sections are hidden from the current CMS flow.")
+    return redirect("admin_business_profile")
 
+
+@admin_required
+def admin_landing_features(request):
+    messages.info(request, "Feature cards now live inside the preview-based Landing Page Editor.")
+    return redirect("admin_business_profile")
+
+
+@admin_required
+def admin_create_landing_feature(request):
+    messages.info(request, "Feature cards are now managed from the Landing Page Editor.")
+    return redirect("admin_business_profile")
+
+
+@admin_required
+def admin_edit_landing_feature(request, feature_id: int):
+    messages.info(request, "Feature cards are now managed from the Landing Page Editor.")
+    return redirect("admin_business_profile")
+
+
+@admin_required
+def admin_delete_landing_feature(request, feature_id: int):
+    messages.info(request, "Legacy feature cards are hidden from the current CMS flow.")
+    return redirect("admin_business_profile")
+
+
+def _build_landing_editor_context():
+    preview_profile = _get_public_business_profile()
+    landing_service_cards = _build_landing_service_cards(preview_profile)
     active_banner = _safe_active_homepage_banner()
-    banner_count = _safe_homepage_banner_count()
-    active_business_profile = _safe_active_business_profile()
-
-    return render(request, "admin_portal/announcements.html", {
-        "items": items, 
-        "q": q,
-        "total_count": total_count,
-        "active_count": active_count,
-        "this_month_count": this_month_count,
+    return {
+        "business_profile": preview_profile,
         "active_banner": active_banner,
-        "banner_count": banner_count,
-        "active_business_profile": active_business_profile,
+        "landing_service_cards": landing_service_cards,
+        "landing_visual_features": _build_landing_visual_features(preview_profile, landing_service_cards),
+        "cms_preview": True,
+        "landing_editor_urls": {
+            "banner": reverse("admin_edit_landing_banner") if active_banner else reverse("admin_create_landing_banner"),
+            "hero": reverse("admin_edit_landing_hero"),
+            "about": reverse("admin_edit_landing_about"),
+            "services": reverse("admin_edit_landing_services"),
+            "contact": reverse("admin_edit_landing_contact"),
+            "footer": reverse("admin_edit_landing_footer"),
+        },
+    }
+
+
+def _render_landing_section_editor(request, *, title, section_name, form_class, success_message, subtitle=""):
+    profile = _ensure_business_profile()
+    form = form_class(request.POST or None, request.FILES or None, instance=profile)
+
+    if request.method == "POST" and form.is_valid():
+        form.save(user=request.user)
+        messages.success(request, success_message)
+        return redirect("admin_business_profile")
+
+    return render(request, "admin_portal/landing_editor_section_form.html", {
+        "title": title,
+        "section_name": section_name,
+        "subtitle": subtitle,
+        "form": form,
+        "back_url": reverse("admin_business_profile"),
+        "profile": profile,
     })
 
 
 @admin_required
 def admin_business_profile(request):
-    profile = _safe_active_business_profile() or _safe_business_profile_queryset().first()
-    form = BusinessProfileForm(request.POST or None, instance=profile)
-
-    if request.method == "POST" and form.is_valid():
-        form.save(user=request.user)
-        messages.success(request, "Business profile saved successfully.")
-        return redirect("admin_business_profile")
-
-    return render(request, "admin_portal/business_profile_form.html", {
-        "title": "Business Profile",
-        "form": form,
+    profile = _ensure_business_profile()
+    context = _build_landing_editor_context()
+    context.update({
+        "title": "Landing Page Editor",
         "profile": profile,
         "banner_count": _safe_homepage_banner_count(),
         "profile_count": _safe_business_profile_count(),
-        "active_banner": _safe_active_homepage_banner(),
     })
+    return render(request, "admin_portal/landing_editor.html", context)
 
 
 @admin_required
 def admin_homepage_banners(request):
-    banners = _safe_homepage_banner_queryset()
-    active_banner = next((banner for banner in banners if banner.is_active), None)
-    return render(request, "admin_portal/homepage_banners.html", {
-        "items": banners,
-        "active_banner": active_banner,
-        "total_count": banners.count(),
+    messages.info(request, "Homepage banners are now edited from the Landing Page Editor preview.")
+    return redirect("admin_business_profile")
+
+
+@admin_required
+def admin_create_landing_banner(request):
+    form = HomepageBannerForm(request.POST or None)
+
+    if request.method == "POST" and form.is_valid():
+        form.save(user=request.user)
+        messages.success(request, "Homepage banner saved successfully.")
+        return redirect("admin_business_profile")
+
+    return render(request, "admin_portal/landing_editor_section_form.html", {
+        "title": "Edit Homepage Banner",
+        "section_name": "Homepage Banner",
+        "subtitle": "Control the optional banner strip above the hero section.",
+        "form": form,
+        "back_url": reverse("admin_business_profile"),
+        "banner_preview": _safe_active_homepage_banner(),
     })
+
+
+@admin_required
+def admin_edit_landing_banner(request):
+    banner = _safe_active_homepage_banner() or _safe_homepage_banner_queryset().first()
+    creating = banner is None
+
+    form = HomepageBannerForm(request.POST or None, instance=banner)
+    if request.method == "POST" and form.is_valid():
+        form.save(user=request.user)
+        messages.success(request, "Homepage banner saved successfully." if creating else "Homepage banner updated successfully.")
+        return redirect("admin_business_profile")
+
+    return render(request, "admin_portal/landing_editor_section_form.html", {
+        "title": "Create Homepage Banner" if creating else "Edit Homepage Banner",
+        "section_name": "Homepage Banner",
+        "subtitle": "Control the optional banner strip above the hero section.",
+        "form": form,
+        "back_url": reverse("admin_business_profile"),
+        "banner_preview": banner,
+    })
+
+
+@admin_required
+def admin_edit_landing_hero(request):
+    return _render_landing_section_editor(
+        request,
+        title="Edit Hero Section",
+        section_name="Hero Section",
+        subtitle="Update the main headline, supporting copy, button, and hero image.",
+        form_class=HeroSectionForm,
+        success_message="Hero section updated successfully.",
+    )
+
+
+@admin_required
+def admin_edit_landing_about(request):
+    return _render_landing_section_editor(
+        request,
+        title="Edit About Section",
+        section_name="About Section",
+        subtitle="Update the about section title, description, and feature image.",
+        form_class=AboutSectionForm,
+        success_message="About section updated successfully.",
+    )
+
+
+@admin_required
+def admin_edit_landing_services(request):
+    return _render_landing_section_editor(
+        request,
+        title="Edit Services Section",
+        section_name="Services Section",
+        subtitle="Update the services heading and the three fixed service cards.",
+        form_class=ServicesSectionForm,
+        success_message="Services section updated successfully.",
+    )
+
+
+@admin_required
+def admin_edit_landing_contact(request):
+    return _render_landing_section_editor(
+        request,
+        title="Edit Contact Section",
+        section_name="Contact Section",
+        subtitle="Update the contact heading, description, and contact details shown publicly.",
+        form_class=ContactSectionForm,
+        success_message="Contact section updated successfully.",
+    )
+
+
+@admin_required
+def admin_edit_landing_footer(request):
+    return _render_landing_section_editor(
+        request,
+        title="Edit Footer Section",
+        section_name="Footer Section",
+        subtitle="Update the footer brand line and supporting identity text.",
+        form_class=FooterSectionForm,
+        success_message="Footer section updated successfully.",
+    )
 
 
 @admin_required
@@ -1012,6 +1119,80 @@ def admin_create_announcement(request):
         "recent_items": recent_items,
         "back_url": reverse("admin_announcements"),
     })
+
+
+@admin_required
+def admin_tenant_risk(request):
+    q = (request.GET.get("q") or "").strip()
+    risk = (request.GET.get("risk") or "").strip().upper()
+    sort = (request.GET.get("sort") or "score_desc").strip() or "score_desc"
+
+    qs = TenantRiskClassification.objects.select_related("tenant", "tenant__tenantprofile").filter(tenant__tenantprofile__isnull=False)
+    if q:
+        qs = qs.filter(
+            Q(tenant__email__icontains=q)
+            | Q(tenant__tenantprofile__first_name__icontains=q)
+            | Q(tenant__tenantprofile__last_name__icontains=q)
+        )
+    if risk in {"LOW", "MEDIUM", "HIGH"}:
+        qs = qs.filter(rf_risk_level=risk)
+
+    if sort == "score_asc":
+        qs = qs.order_by("payment_score", "tenant__email")
+    else:
+        sort = "score_desc"
+        qs = qs.order_by("-payment_score", "tenant__email")
+
+    paginator = Paginator(qs, 12)
+    page_obj = paginator.get_page(request.GET.get("page") or 1)
+
+    base_qs = TenantRiskClassification.objects.filter(tenant__tenantprofile__isnull=False)
+    context = {
+        "page_obj": page_obj,
+        "q": q,
+        "risk": risk,
+        "sort": sort,
+        "total_tenants": base_qs.count(),
+        "low_risk_count": base_qs.filter(rf_risk_level="LOW").count(),
+        "medium_risk_count": base_qs.filter(rf_risk_level="MEDIUM").count(),
+        "high_risk_count": base_qs.filter(rf_risk_level="HIGH").count(),
+        "new_tenant_count": base_qs.filter(is_new_tenant=True).count(),
+        "rf_metrics": load_rf_metrics(),
+        "rf_artifact_status": get_rf_artifact_status(),
+    }
+    return render(request, "admin_portal/tenant_risk.html", context)
+
+
+@admin_required
+def admin_update_tenant_risks(request):
+    if request.method != "POST":
+        return redirect("admin_tenant_risk")
+
+    q = (request.POST.get("q") or "").strip()
+    risk = (request.POST.get("risk") or "").strip().upper()
+    sort = (request.POST.get("sort") or "score_desc").strip() or "score_desc"
+
+    qs = TenantRiskClassification.objects.select_related("tenant", "tenant__tenantprofile").filter(tenant__tenantprofile__isnull=False)
+    if q:
+        qs = qs.filter(
+            Q(tenant__email__icontains=q)
+            | Q(tenant__tenantprofile__first_name__icontains=q)
+            | Q(tenant__tenantprofile__last_name__icontains=q)
+        )
+    if risk in {"LOW", "MEDIUM", "HIGH"}:
+        qs = qs.filter(rf_risk_level=risk)
+
+    updated = 0
+    for classification in qs.filter(Q(rf_risk_level="") | Q(rf_risk_level__isnull=True)):
+        TenantRiskService.update_tenant_risk_classification(classification.tenant)
+        updated += 1
+
+    messages.success(request, f"Refreshed Random Forest outputs for {updated} tenant profile(s).")
+    params = urlencode({k: v for k, v in {"q": q, "risk": risk, "sort": sort}.items() if v})
+    target = reverse("admin_tenant_risk")
+    if params:
+        target = f"{target}?{params}"
+    return redirect(target)
 
 
 @admin_required

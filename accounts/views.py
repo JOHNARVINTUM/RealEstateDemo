@@ -10,26 +10,79 @@ from django.db.utils import OperationalError, ProgrammingError
 from django.urls import reverse, reverse_lazy
 from django.contrib import messages
 
-from announcements.models import HomepageBanner, BusinessProfile
+from announcements.models import HomepageBanner, BusinessProfile, LandingPageSection, LandingPageFeature
 from rentals.models import Lease, TenantAttachment, TenantProfile
 
 logger = logging.getLogger(__name__)
 
 
-def _default_business_profile():
+
+
+def _default_landing_page_content():
     return {
         "business_name": "RealEstate360+",
         "tagline": "Elevating Urban Living",
         "about_text": "A masterclass in modern living. Affordable, pristine, and perfectly located in the heart of Mandaluyong. We provide a space you can truly call home.",
+        "hero_title": "Spaces\nDesigned\nFor",
+        "hero_subtitle": "You.",
+        "hero_description": "A masterclass in modern living. Affordable, pristine, and perfectly located in the heart of Mandaluyong. We provide a space you can truly call home.",
+        "hero_button_text": "Explore RealEstate360+",
+        "hero_button_url": "#about",
+        "hero_image_url": "",
+        "about_title": "A Foundation Built on Trust",
+        "about_description": "Our spaces are designed to feel modern, welcoming, and dependable for every tenant who calls this property home.",
+        "about_image_url": "",
+        "services_title": "What You Can Expect",
+        "services_description": "Present your strongest property features here, from responsive management to clean shared spaces and reliable billing support.",
+        "service_1_title": "Responsive Support",
+        "service_1_description": "Tenants can report issues, monitor billing, and stay connected through one organized property portal.",
+        "service_1_image_url": "",
+        "service_2_title": "Clean Shared Spaces",
+        "service_2_description": "Highlight the quality of corridors, exteriors, and common areas without changing your current landing page layout.",
+        "service_2_image_url": "",
+        "service_3_title": "Simple Tenant Experience",
+        "service_3_description": "Show prospects that payments, renewals, announcements, and maintenance are handled in one place.",
+        "service_3_image_url": "",
+        "contact_title": "Looking to Inquire?",
+        "contact_description": "We'd love to hear from you. Reach out to our team to learn more about available spaces, schedule a viewing, or ask any questions.",
         "contact_email": "lod.bituin@yahoo.com",
         "contact_phone": "09178255935",
         "address": "91 Coronado, Mandaluyong City, 1550 Metro Manila",
         "inquiry_text": "We'd love to hear from you. Reach out to our team to learn more about available spaces, schedule a viewing, or ask any questions.",
+        "footer_text": "Crafted with care.",
     }
 
 
+def _default_business_profile():
+    return _default_landing_page_content().copy()
+
+
+def _build_landing_service_cards(profile_data):
+    defaults = _default_landing_page_content()
+    cards = []
+    for index in range(1, 4):
+        cards.append({
+            "title": profile_data.get(f"service_{index}_title") or defaults[f"service_{index}_title"],
+            "description": profile_data.get(f"service_{index}_description") or defaults[f"service_{index}_description"],
+            "image_url": profile_data.get(f"service_{index}_image_url") or defaults[f"service_{index}_image_url"],
+            "icon_label": f"Feature {index}",
+            "is_active": True,
+        })
+    return cards
+
+
+def _build_landing_visual_features(profile_data, service_cards):
+    visuals = []
+    if profile_data.get("hero_image_url"):
+        visuals.append({
+            "title": profile_data.get("hero_title") or "Hero",
+            "image_url": profile_data["hero_image_url"],
+        })
+    return visuals
+
+
 def _get_public_business_profile():
-    defaults = _default_business_profile()
+    defaults = _default_landing_page_content()
     try:
         profile = (
             BusinessProfile.objects.filter(is_active=True)
@@ -46,10 +99,33 @@ def _get_public_business_profile():
         "business_name": profile.business_name or defaults["business_name"],
         "tagline": profile.tagline or defaults["tagline"],
         "about_text": profile.about_text or defaults["about_text"],
+        "hero_title": profile.hero_title or defaults["hero_title"],
+        "hero_subtitle": profile.hero_subtitle or defaults["hero_subtitle"],
+        "hero_description": profile.hero_description or defaults["hero_description"],
+        "hero_button_text": profile.hero_button_text or defaults["hero_button_text"],
+        "hero_button_url": profile.hero_button_url or defaults["hero_button_url"],
+        "hero_image_url": profile.hero_image_url or defaults["hero_image_url"],
+        "about_title": profile.about_title or defaults["about_title"],
+        "about_description": profile.about_description or defaults["about_description"],
+        "about_image_url": profile.about_image_url or defaults["about_image_url"],
+        "services_title": profile.services_title or defaults["services_title"],
+        "services_description": profile.services_description or defaults["services_description"],
+        "service_1_title": profile.service_1_title or defaults["service_1_title"],
+        "service_1_description": profile.service_1_description or defaults["service_1_description"],
+        "service_1_image_url": profile.service_1_image_url or defaults["service_1_image_url"],
+        "service_2_title": profile.service_2_title or defaults["service_2_title"],
+        "service_2_description": profile.service_2_description or defaults["service_2_description"],
+        "service_2_image_url": profile.service_2_image_url or defaults["service_2_image_url"],
+        "service_3_title": profile.service_3_title or defaults["service_3_title"],
+        "service_3_description": profile.service_3_description or defaults["service_3_description"],
+        "service_3_image_url": profile.service_3_image_url or defaults["service_3_image_url"],
+        "contact_title": profile.contact_title or defaults["contact_title"],
+        "contact_description": profile.contact_description or defaults["contact_description"],
         "contact_email": profile.contact_email or defaults["contact_email"],
         "contact_phone": profile.contact_phone or defaults["contact_phone"],
         "address": profile.address or defaults["address"],
         "inquiry_text": profile.inquiry_text or defaults["inquiry_text"],
+        "footer_text": profile.footer_text or defaults["footer_text"],
     }
 
 
@@ -68,6 +144,11 @@ class RoleBasedLoginView(LoginView):
         except (ProgrammingError, OperationalError):
             context["active_banner"] = None
         context["business_profile"] = _get_public_business_profile()
+        context["landing_service_cards"] = _build_landing_service_cards(context["business_profile"])
+        context["landing_visual_features"] = _build_landing_visual_features(
+            context["business_profile"],
+            context["landing_service_cards"],
+        )
         return context
 
     def get_success_url(self):

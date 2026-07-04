@@ -23,17 +23,18 @@ class HomepageBannerCmsTests(TestCase):
             role='STAFF',
         )
 
-    def test_admin_can_open_banner_management_page(self):
-        self.client.force_login(self.admin)
-        response = self.client.get(reverse('admin_homepage_banners'))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Homepage Banners')
-
-    def test_admin_can_open_business_profile_page(self):
+    def test_admin_can_open_landing_page_editor_preview(self):
         self.client.force_login(self.admin)
         response = self.client.get(reverse('admin_business_profile'))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Business Profile')
+        self.assertContains(response, 'Landing Page Editor')
+        self.assertContains(response, 'Edit Hero')
+
+    def test_legacy_banner_management_redirects_to_editor(self):
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse('admin_homepage_banners'))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse('admin_business_profile'))
 
     def test_staff_cannot_open_banner_management_page(self):
         self.client.force_login(self.staff)
@@ -64,7 +65,8 @@ class HomepageBannerCmsTests(TestCase):
         BusinessProfile.objects.create(
             business_name='Demo Property Group',
             tagline='Smart Leasing For Growing Portfolios',
-            about_text='A scalable leasing platform for multiple properties.',
+            about_text='Legacy about text',
+            hero_description='A scalable leasing platform for multiple properties.',
             contact_email='hello@example.com',
             contact_phone='09170000000',
             address='Mandaluyong City',
@@ -77,6 +79,24 @@ class HomepageBannerCmsTests(TestCase):
         self.assertContains(response, 'Demo Property Group')
         self.assertContains(response, 'Smart Leasing For Growing Portfolios')
         self.assertContains(response, 'hello@example.com')
+        self.assertContains(response, 'A scalable leasing platform for multiple properties.')
+
+    def test_public_landing_uses_default_hero_paragraph_when_hero_description_is_blank(self):
+        BusinessProfile.objects.create(
+            business_name='Fallback Property',
+            tagline='Fallback Tagline',
+            about_text='Legacy about fallback text',
+            hero_description='',
+            contact_email='fallback@example.com',
+            contact_phone='09170000003',
+            address='Fallback Address',
+            inquiry_text='Fallback inquiry text',
+            is_active=True,
+            updated_by=self.admin,
+        )
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'A masterclass in modern living.')
 
     def test_only_latest_active_banner_stays_active(self):
         first = HomepageBanner.objects.create(

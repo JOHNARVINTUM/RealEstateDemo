@@ -10,6 +10,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import User
+from announcements.models import BusinessProfile, HomepageBanner, LandingPageFeature, LandingPageSection
 from accounts.admin_forecasting_views import _build_forecasting_context
 from accounts.admin_notification_views import resolve_notification_target_url
 from accounts.admin_portal_forms import ComprehensiveTenantEditForm, LeaseForm, TenantProfileForm
@@ -298,7 +299,7 @@ class StaffPortalRestrictionTests(TestCase):
         self.assertNotContains(response, "Units")
         self.assertNotContains(response, "News & Updates")
         self.assertNotContains(response, "Future Estimates")
-        self.assertNotContains(response, "Edit Business Profile")
+        self.assertNotContains(response, "Landing Page Editor")
         self.assertNotContains(response, reverse("admin_business_profile"))
 
     def test_staff_is_redirected_from_admin_only_routes(self):
@@ -311,6 +312,15 @@ class StaffPortalRestrictionTests(TestCase):
             reverse("admin_tenant_risk"),
             reverse("admin_announcements"),
             reverse("admin_business_profile"),
+            reverse("admin_homepage_banners"),
+            reverse("admin_edit_landing_banner"),
+            reverse("admin_edit_landing_hero"),
+            reverse("admin_edit_landing_about"),
+            reverse("admin_edit_landing_services"),
+            reverse("admin_edit_landing_contact"),
+            reverse("admin_edit_landing_footer"),
+            reverse("admin_landing_sections"),
+            reverse("admin_landing_features"),
             reverse("admin_delete_payment", args=[self.payment.id]),
             reverse("admin_water_rate"),
         ]
@@ -341,10 +351,72 @@ class StaffPortalRestrictionTests(TestCase):
     def test_admin_still_has_access_to_admin_only_pages(self):
         self.client.force_login(self.admin)
 
-        for url_name in ["admin_tenants", "admin_units", "admin_forecasting", "admin_announcements", "admin_business_profile"]:
+        direct_ok = ["admin_tenants", "admin_units", "admin_forecasting", "admin_announcements", "admin_business_profile", "admin_edit_landing_banner", "admin_edit_landing_hero", "admin_edit_landing_about", "admin_edit_landing_services", "admin_edit_landing_contact", "admin_edit_landing_footer"]
+        redirects = ["admin_homepage_banners", "admin_landing_sections", "admin_landing_features"]
+
+        for url_name in direct_ok:
             with self.subTest(url_name=url_name):
                 response = self.client.get(reverse(url_name))
                 self.assertEqual(response.status_code, 200)
+
+        for url_name in redirects:
+            with self.subTest(url_name=url_name):
+                response = self.client.get(reverse(url_name))
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual(response.url, reverse("admin_business_profile"))
+
+
+class PublicLandingCmsTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            email="cms-admin@gmail.com",
+            username="cmsadmin",
+            password="password123",
+            role=User.Role.ADMIN,
+        )
+        self.staff = User.objects.create_user(
+            email="cms-staff@gmail.com",
+            username="cmsstaff",
+            password="password123",
+            role=User.Role.STAFF,
+        )
+
+    def test_admin_can_access_preview_editor_and_section_forms(self):
+        self.client.force_login(self.admin)
+        for url_name in ["admin_business_profile", "admin_edit_landing_banner", "admin_edit_landing_hero", "admin_edit_landing_about", "admin_edit_landing_services", "admin_edit_landing_contact", "admin_edit_landing_footer"]:
+            with self.subTest(url_name=url_name):
+                response = self.client.get(reverse(url_name))
+                self.assertEqual(response.status_code, 200)
+
+    def test_staff_is_blocked_from_preview_editor_and_section_forms(self):
+        self.client.force_login(self.staff)
+        for url_name in ["admin_business_profile", "admin_edit_landing_banner", "admin_edit_landing_hero", "admin_edit_landing_about", "admin_edit_landing_services", "admin_edit_landing_contact", "admin_edit_landing_footer", "admin_landing_sections", "admin_landing_features"]:
+            with self.subTest(url_name=url_name):
+                response = self.client.get(reverse(url_name))
+                self.assertEqual(response.status_code, 302)
+                self.assertIn(reverse("login"), response.url)
+
+    def test_login_page_renders_with_no_cms_records(self):
+        BusinessProfile.objects.all().delete()
+        HomepageBanner.objects.all().delete()
+        LandingPageSection.objects.all().delete()
+        LandingPageFeature.objects.all().delete()
+
+        response = self.client.get("/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "RealEstate360+")
+        self.assertContains(response, "RealEstate360+")
+        self.assertContains(response, "Designed")
+
+    def test_legacy_cms_routes_redirect_to_preview_editor(self):
+        self.client.force_login(self.admin)
+        for url_name in ["admin_homepage_banners", "admin_landing_sections", "admin_landing_features"]:
+            with self.subTest(url_name=url_name):
+                response = self.client.get(reverse(url_name))
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual(response.url, reverse("admin_business_profile"))
+
 
 
 class AdminPaymentTypeEditTests(TestCase):

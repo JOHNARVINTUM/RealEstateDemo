@@ -1,13 +1,16 @@
 from datetime import date
 from decimal import Decimal
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.core.management import call_command
+from django.core.management.base import CommandError
+from io import StringIO
 from unittest.mock import patch
 
 from accounts.models import User
 from accounts.admin_payment_views import _admin_payment_queryset
-from billing.models import MonthlyBill
+from billing.models import BillingInvoice, BillLineItem, MonthlyBill
 from payments.models import ManualPayment
 from payments.paymongo_workflow import (
     auto_approve_paymongo_payment,
@@ -395,4 +398,82 @@ class F2FCashScheduleTests(TestCase):
         self.assertEqual(out_of_hours_response.status_code, 200)
         self.assertContains(out_of_hours_response, "office hours")
         self.assertEqual(ManualPayment.objects.filter(payment_method="CASH").count(), 0)
+
+
+
+class SeedDemoPaymentsCommandTests(TestCase):
+    def setUp(self):
+        self.tenant = User.objects.create_user(
+            email="seed.tenant@gmail.com",
+            username="seedtenant",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        self.unit = Unit.objects.create(number="SD-101")
+        self.lease = Lease.objects.create(
+            tenant=self.tenant,
+            unit=self.unit,
+            monthly_rent=Decimal("10000.00"),
+            due_day=5,
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 12, 31),
+            status=Lease.STATUS_ACTIVE,
+            is_active=True,
+        )
+
+    @override_settings(DEBUG=False, DEMO_MODE=False)
+    def test_command_requires_debug_or_demo_mode(self):
+        with self.assertRaisesMessage(CommandError, "seed_demo_payments can only run"):
+            call_command("seed_demo_payments", months=3)
+
+    @override_settings(DEBUG=False, DEMO_MODE=True)
+    def test_command_seeds_paid_history_without_side_effects(self):
+        out = StringIO()
+
+        call_command("seed_demo_payments", months=3, stdout=out)
+
+        payments = ManualPayment.objects.filter(reference_code__startswith="REF-DEMO-SEED-").order_by("reference_code")
+        bills = MonthlyBill.objects.filter(lease=self.lease).order_by("billing_month")
+
+        self.assertEqual(payments.count(), 3)
+        self.assertEqual(bills.count(), 3)
+        self.assertEqual(BillingInvoice.objects.count(), 0)
+
+        for payment in payments:
+            self.assertEqual(payment.status, "APPROVED")
+            self.assertEqual(payment.payment_type, "full")
+            self.assertEqual(payment.metadata.get("seed_label"), "Seeded Demo Payment.")
+
+        for bill in bills:
+            self.assertEqual(bill.status, "PAID")
+            self.assertEqual(bill.total_balance, Decimal("0.00"))
+            self.assertTrue(bill.payment_reference.startswith("REF-DEMO-SEED-"))
+            self.assertEqual(bill.rent_paid, bill.base_rent)
+            self.assertEqual(bill.water_paid, bill.water_amount)
+            self.assertEqual(bill.parking_paid, bill.parking_fee)
+            self.assertIsNotNone(bill.paid_at)
+            line_items = BillLineItem.objects.filter(monthly_bill=bill)
+            self.assertTrue(line_items.exists())
+            for line in line_items:
+                if line.amount > 0:
+                    self.assertEqual(line.status, BillLineItem.STATUS_PAID)
+                    self.assertEqual(line.paid_amount, line.amount)
+                    self.assertEqual(line.payment_reference, bill.payment_reference)
+
+        output = out.getvalue()
+        self.assertIn("Months covered:", output)
+        self.assertIn("Payments created: 3", output)
+        self.assertIn("Bills updated: 3", output)
+
+    @override_settings(DEBUG=False, DEMO_MODE=True)
+    def test_command_is_idempotent(self):
+        first_out = StringIO()
+        second_out = StringIO()
+
+        call_command("seed_demo_payments", months=2, stdout=first_out)
+        call_command("seed_demo_payments", months=2, stdout=second_out)
+
+        self.assertEqual(ManualPayment.objects.filter(reference_code__startswith="REF-DEMO-SEED-").count(), 2)
+        self.assertIn("Skipped already-seeded: 2", second_out.getvalue())
+        self.assertIn("Payments created: 0", second_out.getvalue())
 

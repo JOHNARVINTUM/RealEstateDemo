@@ -1,6 +1,6 @@
 """
 Management command: train_maintenance_nlp
-Trains a TF-IDF + Logistic Regression model to predict
+Trains a TF-IDF feature pipeline plus a selected classifier to predict
 maintenance request priority from description text.
 
 Usage:
@@ -8,22 +8,23 @@ Usage:
 """
 import json
 import os
+from collections import Counter
 
 from django.core.management.base import BaseCommand
+from django.utils import timezone
 
 
 class Command(BaseCommand):
-    help = "Train TF-IDF + Logistic Regression NLP model for maintenance priority prediction"
+    help = "Train TF-IDF-based NLP model for maintenance priority prediction"
 
     def handle(self, *args, **options):
-        from sklearn.feature_extraction.text import TfidfVectorizer
-        from sklearn.ensemble import RandomForestClassifier
-        from sklearn.linear_model import LogisticRegression
-        from sklearn.model_selection import train_test_split, cross_val_score
-        from sklearn.metrics import classification_report, accuracy_score
-        from sklearn.pipeline import FeatureUnion, Pipeline
-        import numpy as np
         import joblib
+        from sklearn.ensemble import RandomForestClassifier
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        from sklearn.linear_model import LogisticRegression
+        from sklearn.metrics import accuracy_score, classification_report
+        from sklearn.model_selection import cross_val_score, train_test_split
+        from sklearn.pipeline import FeatureUnion, Pipeline
 
         from maintenance.models import MaintenanceRequest
 
@@ -31,9 +32,9 @@ class Command(BaseCommand):
         records = MaintenanceRequest.objects.values("description", "priority")
         texts, labels = [], []
 
-        for r in records:
-            desc = (r["description"] or "").strip()
-            priority = (r["priority"] or "").strip()
+        for record in records:
+            desc = (record["description"] or "").strip()
+            priority = (record["priority"] or "").strip()
             if not desc or not priority:
                 continue
             texts.append(desc)
@@ -41,7 +42,6 @@ class Command(BaseCommand):
 
         self.stdout.write(f"  Total samples: {len(texts)}")
 
-        from collections import Counter
         dist = Counter(labels)
         for cls, count in sorted(dist.items()):
             self.stdout.write(f"    {cls}: {count}")
@@ -51,27 +51,37 @@ class Command(BaseCommand):
             return
 
         X_train, X_test, y_train, y_test = train_test_split(
-            texts, labels, test_size=0.2, random_state=42, stratify=labels
+            texts,
+            labels,
+            test_size=0.2,
+            random_state=42,
+            stratify=labels,
         )
         self.stdout.write(f"\nTrain: {len(X_train)}  Test: {len(X_test)}")
 
         features = FeatureUnion([
-            ("word_tfidf", TfidfVectorizer(
-                ngram_range=(1, 3),
-                max_features=3000,
-                sublinear_tf=True,
-                min_df=1,
-                max_df=0.9,
-                stop_words=None,
-            )),
-            ("char_tfidf", TfidfVectorizer(
-                analyzer="char_wb",
-                ngram_range=(3, 5),
-                max_features=2000,
-                sublinear_tf=True,
-                min_df=1,
-                max_df=0.9,
-            )),
+            (
+                "word_tfidf",
+                TfidfVectorizer(
+                    ngram_range=(1, 3),
+                    max_features=3000,
+                    sublinear_tf=True,
+                    min_df=1,
+                    max_df=0.9,
+                    stop_words=None,
+                ),
+            ),
+            (
+                "char_tfidf",
+                TfidfVectorizer(
+                    analyzer="char_wb",
+                    ngram_range=(3, 5),
+                    max_features=2000,
+                    sublinear_tf=True,
+                    min_df=1,
+                    max_df=0.9,
+                ),
+            ),
         ])
 
         candidates = {
@@ -103,8 +113,17 @@ class Command(BaseCommand):
             ])
 
             self.stdout.write(f"\nRunning cross-validation for {name}...")
-            cv_scores = cross_val_score(pipeline, X_train, y_train, cv=4, scoring="accuracy", n_jobs=-1)
-            self.stdout.write(f"  CV accuracy ({name}): {cv_scores.mean()*100:.1f}% (+/- {cv_scores.std()*100:.1f}%)")
+            cv_scores = cross_val_score(
+                pipeline,
+                X_train,
+                y_train,
+                cv=4,
+                scoring="accuracy",
+                n_jobs=-1,
+            )
+            self.stdout.write(
+                f"  CV accuracy ({name}): {cv_scores.mean() * 100:.1f}% (+/- {cv_scores.std() * 100:.1f}%)"
+            )
 
             self.stdout.write(f"Training {name} pipeline on the full training set...")
             pipeline.fit(X_train, y_train)
@@ -114,8 +133,8 @@ class Command(BaseCommand):
             report = classification_report(y_test, y_pred, output_dict=True)
             report_str = classification_report(y_test, y_pred)
 
-            self.stdout.write(f"\n{'='*50}")
-            self.stdout.write(f"{name} Test Accuracy: {accuracy*100:.1f}%")
+            self.stdout.write("\n" + "=" * 50)
+            self.stdout.write(f"{name} Test Accuracy: {accuracy * 100:.1f}%")
             self.stdout.write(f"\n{name} Classification Report:\n{report_str}")
 
             if accuracy > best_accuracy:
@@ -125,43 +144,55 @@ class Command(BaseCommand):
                 best_name = name
                 best_classes = list(pipeline.named_steps["classifier"].classes_)
 
-        if best_model is None:
+        if best_model is None or best_report is None or best_name is None or best_classes is None:
             self.stderr.write("Failed to train any model.")
             return
 
-        self.stdout.write(f"\nBest model selected: {best_name} with accuracy {best_accuracy*100:.1f}%")
+        self.stdout.write(
+            f"\nBest model selected: {best_name} with accuracy {best_accuracy * 100:.1f}%"
+        )
 
-        classes = best_classes
+        trained_at = timezone.now().isoformat()
         output_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "exports", "ml")
         output_dir = os.path.normpath(output_dir)
         os.makedirs(output_dir, exist_ok=True)
 
         model_path = os.path.join(output_dir, "maintenance_nlp.joblib")
-        joblib.dump({"pipeline": best_model, "classes": classes, "model_name": best_name}, model_path)
+        joblib.dump(
+            {
+                "pipeline": best_model,
+                "classes": best_classes,
+                "model_name": best_name,
+            },
+            model_path,
+        )
         self.stdout.write(f"\nModel saved to: {model_path}")
 
         metrics = {
-            "accuracy": round(accuracy, 4),
-            "accuracy_pct": round(accuracy * 100, 1),
+            "model_name": best_name,
+            "trained_at": trained_at,
+            "accuracy": round(best_accuracy, 4),
+            "accuracy_pct": round(best_accuracy * 100, 1),
             "total_samples": len(texts),
             "train_samples": len(X_train),
             "test_samples": len(X_test),
-            "classes": classes,
+            "classes": [str(cls) for cls in best_classes],
             "per_class": {
-                cls: {
-                    "precision": round(report[cls]["precision"], 4),
-                    "recall": round(report[cls]["recall"], 4),
-                    "f1": round(report[cls]["f1-score"], 4),
-                    "support": int(report[cls]["support"]),
+                str(cls): {
+                    "precision": round(best_report[str(cls)]["precision"], 4),
+                    "recall": round(best_report[str(cls)]["recall"], 4),
+                    "f1": round(best_report[str(cls)]["f1-score"], 4),
+                    "support": int(best_report[str(cls)]["support"]),
                 }
-                for cls in classes if cls in report
+                for cls in best_classes
+                if str(cls) in best_report
             },
-            "macro_f1": round(report["macro avg"]["f1-score"], 4),
-            "weighted_f1": round(report["weighted avg"]["f1-score"], 4),
+            "macro_f1": round(best_report["macro avg"]["f1-score"], 4),
+            "weighted_f1": round(best_report["weighted avg"]["f1-score"], 4),
         }
 
         metrics_path = os.path.join(output_dir, "maintenance_nlp_metrics.json")
-        with open(metrics_path, "w") as f:
+        with open(metrics_path, "w", encoding="utf-8") as f:
             json.dump(metrics, f, indent=2)
         self.stdout.write(f"Metrics saved to: {metrics_path}")
         self.stdout.write(self.style.SUCCESS("\nTraining complete!"))

@@ -1,0 +1,36 @@
+{
+  "model_name": "RandomForest",
+  "trained_at": "2026-07-04T10:35:38.596663+00:00",
+  "accuracy": 0.4,
+  "accuracy_pct": 40.0,
+  "total_samples": 247,
+  "train_samples": 197,
+  "test_samples": 50,
+  "classes": [
+    "HIGH",
+    "LOW",
+    "MEDIUM"
+  ],
+  "per_class": {
+    "HIGH": {
+      "precision": 0.4,
+      "recall": 0.4286,
+      "f1": 0.4138,
+      "support": 14
+    },
+    "LOW": {
+      "precision": 0.2727,
+      "recall": 0.2143,
+      "f1": 0.24,
+      "support": 14
+    },
+    "MEDIUM": {
+      "precision": 0.4583,
+      "recall": 0.5,
+      "f1": 0.4783,
+      "support": 22
+    }
+  },
+  "macro_f1": 0.3774,
+  "weighted_f1": 0.3935
+}

@@ -105,7 +105,7 @@
             <span class="text-sm font-black text-slate-900">SARIMA Revenue Forecast</span>
             <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-violet-50 text-violet-700 border border-violet-200 hidden md:inline-block">SARIMA + Comparison Metrics</span>
           </div>
-          <p class="text-xs text-slate-500 font-medium">Builds the active SARIMA forecast from collected revenue history while keeping Naive and ARIMA visible as comparison metrics only.</p>
+          <p class="text-xs text-slate-500 font-medium">Builds the active SARIMA forecast from recognized rental revenue by billing month while keeping Naive and ARIMA visible as comparison metrics only.</p>
         </div>
         <div class="flex items-center gap-4 shrink-0 text-slate-400 group-open:text-violet-600 transition-colors">
           <span class="text-xs font-bold uppercase tracking-widest hidden sm:block group-open:hidden">View Metrics</span>
@@ -126,7 +126,7 @@
           </div>
         </div>
         <p class="text-sm text-slate-600 leading-7 font-medium">
-          Source history comes from actual collected revenue in <span class="font-black text-slate-800">MonthlyBill</span> using rent, water, parking, and paid-interest totals grouped by month. The system computes Naive, ARIMA, and SARIMA results from the same monthly collection history, but the dashboard always presents <span class="font-black text-slate-800">SARIMA</span> as the active forecast while the other two remain comparison baselines.
+          Source history comes from recognized rental revenue in <span class="font-black text-slate-800">MonthlyBill</span> using paid rent, water, parking, and paid-interest totals grouped by each bill's billing month. The system computes Naive, ARIMA, and SARIMA results from the same recognized-revenue history, but the dashboard always presents <span class="font-black text-slate-800">SARIMA</span> as the active forecast while the other two remain comparison baselines.
         </p>
         <div class="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-4 gap-4">
           <div class="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-5 py-4">
@@ -162,7 +162,7 @@
         <div class="space-y-4">
           <div class="rounded-2xl border border-slate-200 px-4 py-4">
             <div class="text-[11px] uppercase tracking-[0.14em] font-black text-violet-600">1. Historical Revenue</div>
-            <p class="text-sm font-medium text-slate-600 mt-2">Collected MonthlyBill amounts are grouped by month to create the time-series input.</p>
+            <p class="text-sm font-medium text-slate-600 mt-2">Recognized paid bill amounts are grouped by billing month to create the time-series input.</p>
           </div>
           <div class="rounded-2xl border border-slate-200 px-4 py-4">
             <div class="text-[11px] uppercase tracking-[0.14em] font-black text-violet-600">2. Model Comparison</div>
@@ -279,7 +279,8 @@
       <div class="mb-6 pb-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 class="text-2xl font-black text-slate-900 tracking-tight">Revenue Trajectory</h2>
-          <p class="chart-subtitle text-sm text-slate-500 mt-1 font-bold">Historical collected revenue with the SARIMA forecast, seasonal baseline, and confidence band. ARIMA remains in the comparison table only.</p>
+          <p class="chart-subtitle text-sm text-slate-500 mt-1 font-bold">Historical recognized rental revenue by billing month with the SARIMA forecast, seasonal baseline, and confidence band. ARIMA remains in the comparison table only.</p>
+          <p class="text-xs text-slate-400 mt-2 font-semibold">Revenue is grouped by billing month using paid bill amounts, not by payment transaction date.</p>
         </div>
       </div>
       <div class="h-[450px] w-full relative">
@@ -407,9 +408,13 @@
     renderMetricRow("metricSarima", data.revenue_sarima_metrics || {}, "SARIMA");
   }
 
-  function nullPad(arr, totalLen) {
-    var pad = totalLen - arr.length;
-    return Array(pad).fill(null).concat(arr);
+  function alignedForecastSeries(histLabels, fcLabels, values) {
+    var historyPadding = Array(histLabels.length).fill(null);
+    var alignedForecast = fcLabels.map(function (_, idx) {
+      var value = Array.isArray(values) ? values[idx] : null;
+      return typeof value === "number" && Number.isFinite(value) ? value : null;
+    });
+    return historyPadding.concat(alignedForecast);
   }
 
   function renderChart(months) {
@@ -445,7 +450,7 @@
     if (naiveFcRev.length || arimaFcRev.length || sarFcRev.length) {
       datasets.push({
         label: "SARIMA Forecast",
-        data: nullPad(sarFcRev, labels.length),
+        data: alignedForecastSeries(histLabels, fcLabels, sarFcRev),
         borderColor: "#7c3aed",
         borderDash: [3, 3],
         borderWidth: 2.5,
@@ -454,7 +459,7 @@
       });
       datasets.push({
         label: "Naive Baseline",
-        data: nullPad(naiveFcRev, labels.length),
+        data: alignedForecastSeries(histLabels, fcLabels, naiveFcRev),
         borderColor: "#64748b",
         borderDash: [2, 5],
         borderWidth: 2,
@@ -464,7 +469,7 @@
       if (selectedLowRev.length && selectedUpRev.length) {
         datasets.push({
           label: selectedModel + " Upper CI",
-          data: nullPad(selectedUpRev, labels.length),
+          data: alignedForecastSeries(histLabels, fcLabels, selectedUpRev),
           borderColor: "transparent",
           backgroundColor: "rgba(124, 58, 237, 0.12)",
           pointRadius: 0,
@@ -472,7 +477,7 @@
         });
         datasets.push({
           label: selectedModel + " Lower CI",
-          data: nullPad(selectedLowRev, labels.length),
+          data: alignedForecastSeries(histLabels, fcLabels, selectedLowRev),
           borderColor: "transparent",
           pointRadius: 0
         });

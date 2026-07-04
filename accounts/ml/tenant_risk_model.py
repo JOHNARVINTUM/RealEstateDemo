@@ -39,11 +39,51 @@ def load_model_metrics():
 def _model_feature_names(bundle, model):
     bundle_features = bundle.get("features") if isinstance(bundle, dict) else None
     if bundle_features:
-        return list(bundle_features)
+        return [str(feature) for feature in bundle_features]
     model_features = getattr(model, "feature_names_in_", None)
     if model_features is not None:
         return [str(feature) for feature in model_features]
     return []
+
+
+def get_model_artifact_status():
+    bundle = load_model_bundle()
+    metrics = load_model_metrics()
+    model = bundle.get("model") if isinstance(bundle, dict) else None
+    bundle_version = bundle.get("model_version") if isinstance(bundle, dict) else None
+    metrics_version = metrics.get("model_version") if isinstance(metrics, dict) else None
+    bundle_features = _model_feature_names(bundle, model) if bundle else []
+    metrics_features = [str(feature) for feature in (metrics.get("features") or [])] if isinstance(metrics, dict) else []
+    version_match = bool(bundle_version and metrics_version and bundle_version == metrics_version)
+    feature_match = bool(bundle_features and metrics_features and bundle_features == metrics_features)
+
+    warnings = []
+    if not bundle:
+        warnings.append("RF model bundle is missing or unreadable.")
+    if not metrics:
+        warnings.append("RF metrics file is missing or unreadable.")
+    if bundle and metrics and not version_match:
+        warnings.append(
+            f"RF model version ({bundle_version}) does not match RF metrics version ({metrics_version})."
+        )
+    if bundle and metrics and not feature_match:
+        warnings.append(
+            f"RF feature list mismatch: model has {len(bundle_features)} feature(s) while metrics file has {len(metrics_features)}."
+        )
+
+    is_consistent = bool(bundle and metrics and version_match and feature_match)
+    return {
+        "bundle_version": bundle_version,
+        "metrics_version": metrics_version,
+        "bundle_feature_count": len(bundle_features),
+        "metrics_feature_count": len(metrics_features),
+        "bundle_features": bundle_features,
+        "metrics_features": metrics_features,
+        "version_match": version_match,
+        "feature_match": feature_match,
+        "is_consistent": is_consistent,
+        "warnings": warnings,
+    }
 
 
 def _align_features_for_model(bundle, model, X):

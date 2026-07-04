@@ -776,11 +776,14 @@ def admin_tenant_risk(request):
     high_risk_count = TenantRiskClassification.objects.filter(risk_level='HIGH').count()
     new_tenant_count = TenantRiskClassification.objects.filter(is_new_tenant=True).count()
     rf_metrics = None
+    rf_artifact_status = None
     try:
-        from accounts.ml.tenant_risk_model import load_model_metrics
+        from accounts.ml.tenant_risk_model import get_model_artifact_status, load_model_metrics
         rf_metrics = load_model_metrics()
+        rf_artifact_status = get_model_artifact_status()
     except Exception:
         rf_metrics = None
+        rf_artifact_status = None
     
     context = {
         'page_obj': page_obj,
@@ -793,6 +796,7 @@ def admin_tenant_risk(request):
         'high_risk_count': high_risk_count,
         'new_tenant_count': new_tenant_count,
         'rf_metrics': rf_metrics,
+        'rf_artifact_status': rf_artifact_status,
     }
     
     return render(request, "admin_portal/tenant_risk.html", context)

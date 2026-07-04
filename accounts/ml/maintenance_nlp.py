@@ -1,6 +1,6 @@
 """
 NLP Priority Predictor for Maintenance Requests
-Model: TF-IDF vectorizer + Logistic Regression
+Model: TF-IDF feature pipeline + saved classifier bundle
 Language: English only (multilingual support is future work)
 """
 import os
@@ -98,7 +98,7 @@ def predict_priority(text):
     """
     Predict priority level from maintenance description text.
     Returns dict: {priority, confidence, available}
-    - priority: LOW / MEDIUM / HIGH / URGENT
+    - priority: uses the saved classifier classes from the current bundle
     - confidence: float 0.0-1.0
     - available: False if model not loaded
     """

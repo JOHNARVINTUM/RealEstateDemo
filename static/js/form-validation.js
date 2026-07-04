@@ -79,7 +79,7 @@
     if (type === "email" || name.includes("email")) {
       return "email";
     }
-    if (name.includes("phone") || name.includes("contact") || id.includes("phone") || id.includes("contact")) {
+    if (name.includes("phone") || id.includes("phone") || name === "contact_no" || id === "contact_no") {
       return "phone";
     }
     if (name.includes("amount") || id.includes("amount") || name.includes("rent") || name.includes("deposit")) {

@@ -113,17 +113,70 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   // Sidebar Toggle logic
+  const sidebarSections = document.querySelectorAll('[data-sidebar-section]');
+
+  function syncSidebarSection(section, expanded) {
+    const toggle = section.querySelector('.sidebar-section-toggle');
+    const links = section.querySelector('.sidebar-section-links');
+    const chevron = section.querySelector('.sidebar-section-chevron');
+    if (!toggle || !links) return;
+
+    section.dataset.expanded = expanded ? 'true' : 'false';
+    toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    links.classList.toggle('hidden', !expanded);
+    if (chevron) {
+      chevron.classList.toggle('rotate-180', expanded);
+    }
+  }
+
+  sidebarSections.forEach(function(section) {
+    const toggle = section.querySelector('.sidebar-section-toggle');
+    const initiallyExpanded = toggle && toggle.getAttribute('aria-expanded') === 'true';
+    syncSidebarSection(section, initiallyExpanded);
+
+    if (toggle) {
+      toggle.addEventListener('click', function() {
+        if (document.body.classList.contains('sidebar-collapsed')) return;
+        const expanded = toggle.getAttribute('aria-expanded') === 'true';
+
+        sidebarSections.forEach(function(otherSection) {
+          if (otherSection !== section) {
+            syncSidebarSection(otherSection, false);
+          }
+        });
+
+        syncSidebarSection(section, !expanded);
+      });
+    }
+  });
+
   const sidebarToggle = document.getElementById('sidebarToggle');
   if (sidebarToggle) {
     // Check local storage for preference
     if (localStorage.getItem('sidebarCollapsed') === 'true') {
       document.body.classList.add('sidebar-collapsed');
+      sidebarSections.forEach(function(section) {
+        const links = section.querySelector('.sidebar-section-links');
+        if (links) links.classList.add('hidden');
+      });
     }
 
     sidebarToggle.addEventListener('click', function() {
       document.body.classList.toggle('sidebar-collapsed');
       const isCollapsed = document.body.classList.contains('sidebar-collapsed');
       localStorage.setItem('sidebarCollapsed', isCollapsed);
+
+      sidebarSections.forEach(function(section) {
+        const wasExpanded = section.dataset.expanded !== 'false';
+        const links = section.querySelector('.sidebar-section-links');
+        if (!links) return;
+
+        if (isCollapsed) {
+          links.classList.add('hidden');
+        } else {
+          syncSidebarSection(section, wasExpanded);
+        }
+      });
     });
   }
 

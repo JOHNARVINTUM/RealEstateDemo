@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.conf import settings
 from django.db import models
 from rentals.models import Lease, get_user_files_storage
@@ -110,3 +112,65 @@ class MaintenanceRequest(models.Model):
             except Exception:
                 return ""
 
+
+
+class MaintenanceCharge(models.Model):
+    STATUS_PENDING_REVIEW = "PENDING_REVIEW"
+    STATUS_NO_CHARGE = "NO_CHARGE"
+    STATUS_APPROVED = "APPROVED"
+    STATUS_READY_FOR_BILLING = "READY_FOR_BILLING"
+    STATUS_ADDED_TO_BILL = "ADDED_TO_BILL"
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING_REVIEW, "Pending Review"),
+        (STATUS_NO_CHARGE, "No Charge"),
+        (STATUS_APPROVED, "Approved"),
+        (STATUS_READY_FOR_BILLING, "Ready for Billing"),
+        (STATUS_ADDED_TO_BILL, "Added to Bill"),
+    ]
+
+    maintenance_request = models.OneToOneField(
+        MaintenanceRequest,
+        on_delete=models.CASCADE,
+        related_name="charge",
+    )
+    suggested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="suggested_maintenance_charges",
+    )
+    diagnosis = models.TextField(blank=True, default="")
+    repair_notes = models.TextField(blank=True, default="")
+    labor_cost = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    material_cost = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    suggested_total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    admin_approved_total = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default=STATUS_PENDING_REVIEW)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="approved_maintenance_charges",
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    bill_line_item = models.ForeignKey(
+        "billing.BillLineItem",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="maintenance_charges",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        labor_cost = self.labor_cost or Decimal("0.00")
+        material_cost = self.material_cost or Decimal("0.00")
+        self.suggested_total = (labor_cost + material_cost).quantize(Decimal("0.01"))
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Charge for maintenance #{self.maintenance_request_id} ({self.status})"

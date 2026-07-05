@@ -147,6 +147,7 @@ class BillLineItem(models.Model):
     LINE_TYPE_LATE_FEE = "LATE_FEE"
     LINE_TYPE_SECURITY_DEPOSIT = "SECURITY_DEPOSIT"
     LINE_TYPE_CONTRACT_DEPOSIT = "CONTRACT_DEPOSIT"
+    LINE_TYPE_MAINTENANCE = "MAINTENANCE"
 
     LINE_TYPE_CHOICES = [
         (LINE_TYPE_RENT, "Rent"),
@@ -155,6 +156,7 @@ class BillLineItem(models.Model):
         (LINE_TYPE_LATE_FEE, "Late Fee"),
         (LINE_TYPE_SECURITY_DEPOSIT, "Security Deposit"),
         (LINE_TYPE_CONTRACT_DEPOSIT, "Contract Deposit"),
+        (LINE_TYPE_MAINTENANCE, "Maintenance"),
     ]
 
     STATUS_UNPAID = "UNPAID"

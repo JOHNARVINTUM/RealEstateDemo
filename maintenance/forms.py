@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 
 from accounts.models import User
 
-from .models import MaintenanceRequest
+from .models import MaintenanceCharge, MaintenanceRequest
 
 
 def _person_label(user):
@@ -159,3 +159,59 @@ class StaffMaintenanceUpdateForm(forms.ModelForm):
             self.fields["fixed_by"].choices.append((current_fixed_by, current_fixed_by))
         if not current_fixed_by and assigned_staff_name:
             self.initial["fixed_by"] = assigned_staff_name
+
+
+class StaffMaintenanceChargeSuggestionForm(forms.ModelForm):
+    suggested_total = forms.DecimalField(
+        required=False,
+        decimal_places=2,
+        max_digits=12,
+        disabled=True,
+        label="Computed suggested total",
+    )
+
+    class Meta:
+        model = MaintenanceCharge
+        fields = ["diagnosis", "repair_notes", "labor_cost", "material_cost", "suggested_total"]
+        widgets = {
+            "diagnosis": forms.Textarea(attrs={"rows": 3, "placeholder": "Summarize the diagnosed cause of the issue."}),
+            "repair_notes": forms.Textarea(attrs={"rows": 4, "placeholder": "Describe the repair work performed or planned."}),
+            "labor_cost": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
+            "material_cost": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
+        }
+
+    def __init__(self, *args, maintenance_request=None, staff_user=None, **kwargs):
+        self.maintenance_request = maintenance_request
+        self.staff_user = staff_user
+        super().__init__(*args, **kwargs)
+        self.fields["diagnosis"].label = "Diagnosis"
+        self.fields["repair_notes"].label = "Repair notes"
+        self.fields["labor_cost"].label = "Labor cost"
+        self.fields["material_cost"].label = "Material cost"
+        self.fields["suggested_total"].initial = getattr(self.instance, "suggested_total", None)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        req = self.maintenance_request
+        if req is None:
+            raise forms.ValidationError("Maintenance request context is required.")
+        if req.review_status != "ACCEPTED" or req.assigned_staff_id != getattr(self.staff_user, "id", None):
+            raise forms.ValidationError("You can only suggest costs for accepted requests assigned to you.")
+
+        current_status = self.instance.status if self.instance and self.instance.pk else MaintenanceCharge.STATUS_PENDING_REVIEW
+        if current_status != MaintenanceCharge.STATUS_PENDING_REVIEW:
+            raise forms.ValidationError("This repair cost suggestion is locked after admin review.")
+
+        cleaned_data["suggested_total"] = (
+            (cleaned_data.get("labor_cost") or 0) + (cleaned_data.get("material_cost") or 0)
+        )
+        return cleaned_data
+
+    def save(self, commit=True):
+        charge = super().save(commit=False)
+        charge.maintenance_request = self.maintenance_request
+        if not charge.suggested_by_id:
+            charge.suggested_by = self.staff_user
+        if commit:
+            charge.save()
+        return charge

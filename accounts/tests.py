@@ -1550,41 +1550,51 @@ class AdminMaintenanceDisplayTests(TestCase):
             is_active=False,
         )
 
-    def test_admin_maintenance_page_shows_tenant_name_without_lease(self):
-        MaintenanceRequest.objects.create(
+    def test_admin_maintenance_page_archives_request_without_lease(self):
+        request_obj = MaintenanceRequest.objects.create(
             tenant=self.tenant,
             lease=None,
             category="ELECTRICAL",
             title="Light issue",
             description="Ceiling light exploded.",
             priority="MEDIUM",
+            status="OPEN",
+            review_status="PENDING",
         )
         self.client.force_login(self.admin)
 
         response = self.client.get(reverse("admin_maintenance"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Sophia Sinco")
-        self.assertContains(response, "Unit #107")
+        request_obj.refresh_from_db()
+        self.assertEqual(request_obj.status, "CLOSED")
+        self.assertEqual(request_obj.review_status, "REJECTED")
+        self.assertNotContains(response, "Sophia Sinco")
+        self.assertContains(response, "No requests found")
 
-    def test_admin_maintenance_page_falls_back_to_latest_room_when_status_is_stale(self):
+    def test_admin_maintenance_page_excludes_orphaned_request_even_if_tenant_has_stale_latest_lease(self):
         self.lease.status = Lease.STATUS_PENDING_PAYMENT
         self.lease.save(update_fields=["status"])
-        MaintenanceRequest.objects.create(
+        request_obj = MaintenanceRequest.objects.create(
             tenant=self.tenant,
             lease=None,
             category="PLUMBING",
             title="Water leak",
             description="Water leak in cr",
             priority="MEDIUM",
+            status="OPEN",
+            review_status="PENDING",
         )
         self.client.force_login(self.admin)
 
         response = self.client.get(reverse("admin_maintenance"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Sophia Sinco")
-        self.assertContains(response, "Unit #107")
+        request_obj.refresh_from_db()
+        self.assertEqual(request_obj.status, "CLOSED")
+        self.assertEqual(request_obj.review_status, "REJECTED")
+        self.assertNotContains(response, "Sophia Sinco")
+        self.assertContains(response, "No requests found")
 
 
 class AdminForecastingRevenueTests(TestCase):

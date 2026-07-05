@@ -8,8 +8,8 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils import timezone as dj_timezone
 
-from maintenance.forms import AdminMaintenanceUpdateForm, StaffMaintenanceUpdateForm
-from maintenance.models import MaintenanceRequest
+from maintenance.forms import AdminMaintenanceUpdateForm, StaffMaintenanceChargeSuggestionForm, StaffMaintenanceUpdateForm
+from maintenance.models import MaintenanceCharge, MaintenanceRequest
 from rentals.models import Lease, Notification
 from rentals.services import send_email_via_resend
 
@@ -53,6 +53,37 @@ def _display_name(user):
     if profile and getattr(profile, "full_name", ""):
         return profile.full_name
     return user.email
+
+
+def _maintenance_charge_for_request(req):
+    try:
+        return req.charge
+    except MaintenanceCharge.DoesNotExist:
+        return None
+
+
+def _staff_can_edit_charge(req, user, charge):
+    if getattr(user, "role", "") != "STAFF":
+        return False
+    if req.review_status != "ACCEPTED" or req.assigned_staff_id != user.id:
+        return False
+    if charge is None:
+        return True
+    return charge.status == MaintenanceCharge.STATUS_PENDING_REVIEW
+
+
+def _charge_lock_message(charge):
+    if not charge:
+        return ""
+    if charge.status == MaintenanceCharge.STATUS_APPROVED:
+        return "Admin already finalized this repair cost suggestion."
+    if charge.status == MaintenanceCharge.STATUS_NO_CHARGE:
+        return "Admin marked this request as no charge."
+    if charge.status == MaintenanceCharge.STATUS_READY_FOR_BILLING:
+        return "This repair cost suggestion is already approved and waiting for billing."
+    if charge.status == MaintenanceCharge.STATUS_ADDED_TO_BILL:
+        return "This repair cost suggestion was already linked to billing."
+    return ""
 
 
 def _archive_orphaned_requests(queryset=None):
@@ -212,11 +243,16 @@ def admin_update_maintenance(request, req_id: int):
     visible_queryset = _visible_maintenance_queryset_for_user(request.user)
     req = get_object_or_404(visible_queryset, pk=req_id)
     is_staff_portal = _is_staff_portal_user(request.user)
+    charge = _maintenance_charge_for_request(req)
 
     if req.lease_id is None:
         archived_ids = _archive_orphaned_requests(MaintenanceRequest.objects.filter(pk=req.pk))
         if archived_ids:
             req.refresh_from_db()
+            charge = _maintenance_charge_for_request(req)
+
+    can_edit_charge = _staff_can_edit_charge(req, request.user, charge)
+    locked_charge_message = _charge_lock_message(charge)
 
     if request.method == "POST":
         old_status = req.status
@@ -226,118 +262,150 @@ def admin_update_maintenance(request, req_id: int):
         old_admin_scheduled_at = req.admin_scheduled_at
         old_schedule_admin_note = req.schedule_admin_note
         form_class = StaffMaintenanceUpdateForm if is_staff_portal else AdminMaintenanceUpdateForm
-        form = form_class(request.POST, instance=req)
-        if form.is_valid():
-            updated = form.save(commit=False)
+        action = request.POST.get("form_action", "progress")
 
+        if is_staff_portal and action == "charge_suggestion":
+            form = StaffMaintenanceUpdateForm(instance=req)
+            charge_form = StaffMaintenanceChargeSuggestionForm(
+                request.POST,
+                instance=charge or MaintenanceCharge(),
+                maintenance_request=req,
+                staff_user=request.user,
+            )
+            if not can_edit_charge:
+                messages.error(request, locked_charge_message or "You cannot edit the repair cost suggestion for this request.")
+                return redirect("admin_update_maintenance", req_id=req.id)
+            if charge_form.is_valid():
+                charge = charge_form.save()
+                messages.success(request, "Repair cost suggestion saved.")
+                return redirect("admin_update_maintenance", req_id=req.id)
+        else:
+            form = form_class(request.POST, instance=req)
+            charge_form = None
             if is_staff_portal:
-                updated.review_status = req.review_status
-                updated.assigned_staff = req.assigned_staff
-                updated.category = req.category
-                updated.priority = req.priority
-                updated.schedule_decision = req.schedule_decision
-                updated.admin_scheduled_at = req.admin_scheduled_at
-                updated.schedule_admin_note = req.schedule_admin_note
-            else:
-                if updated.review_status == "ACCEPTED" and updated.status == "CLOSED":
-                    updated.status = "OPEN"
-                if updated.review_status == "REJECTED":
-                    updated.assigned_staff = None
-                    updated.fixed_by = ""
-                    updated.status = "CLOSED"
-                    if updated.requested_schedule_at and updated.schedule_decision == "PENDING":
-                        updated.schedule_decision = "DECLINED"
-                if updated.review_status == "PENDING":
-                    updated.assigned_staff = None
-                    updated.fixed_by = ""
-                    if updated.status in {"IN_PROGRESS", "RESOLVED", "CLOSED"}:
+                charge_form = StaffMaintenanceChargeSuggestionForm(
+                    instance=charge or MaintenanceCharge(),
+                    maintenance_request=req,
+                    staff_user=request.user,
+                ) if can_edit_charge else None
+            if form.is_valid():
+                updated = form.save(commit=False)
+
+                if is_staff_portal:
+                    updated.review_status = req.review_status
+                    updated.assigned_staff = req.assigned_staff
+                    updated.category = req.category
+                    updated.priority = req.priority
+                    updated.schedule_decision = req.schedule_decision
+                    updated.admin_scheduled_at = req.admin_scheduled_at
+                    updated.schedule_admin_note = req.schedule_admin_note
+                else:
+                    if updated.review_status == "ACCEPTED" and updated.status == "CLOSED":
                         updated.status = "OPEN"
+                    if updated.review_status == "REJECTED":
+                        updated.assigned_staff = None
+                        updated.fixed_by = ""
+                        updated.status = "CLOSED"
+                        if updated.requested_schedule_at and updated.schedule_decision == "PENDING":
+                            updated.schedule_decision = "DECLINED"
+                    if updated.review_status == "PENDING":
+                        updated.assigned_staff = None
+                        updated.fixed_by = ""
+                        if updated.status in {"IN_PROGRESS", "RESOLVED", "CLOSED"}:
+                            updated.status = "OPEN"
 
-            if updated.status == "RESOLVED":
-                if not req.resolved_at:
-                    updated.resolved_at = dj_timezone.now()
-            else:
-                updated.resolved_at = None
+                if updated.status == "RESOLVED":
+                    if not req.resolved_at:
+                        updated.resolved_at = dj_timezone.now()
+                else:
+                    updated.resolved_at = None
 
-            updated.save()
+                updated.save()
 
-            if not is_staff_portal:
-                _notify_tenant_review_update(updated, old_review_status=old_review_status)
-                _notify_staff_assignment(updated, previous_staff_id=old_assigned_staff_id)
+                if not is_staff_portal:
+                    _notify_tenant_review_update(updated, old_review_status=old_review_status)
+                    _notify_staff_assignment(updated, previous_staff_id=old_assigned_staff_id)
 
-            if updated.status != old_status:
-                try:
-                    status_label = dict(MaintenanceRequest.STATUS_CHOICES).get(updated.status, updated.status)
-                    tenant_name = _display_name(updated.tenant)
-                    unit_number = updated.lease.unit.number if updated.lease and updated.lease.unit else "N/A"
-                    fixed_by_line = f"  Fixed By:    {updated.fixed_by}\n" if updated.fixed_by else ""
-                    send_email_via_resend(
-                        to_email=updated.tenant.email,
-                        subject=f"[REALESTATE360+] Maintenance Request Update - {updated.title}",
-                        message=(
-                            f"Dear {tenant_name}\n\n"
-                            "Your maintenance request has been updated.\n\n"
-                            f"  Request:     {updated.title}\n"
-                            f"  Category:    {updated.get_category_display()}\n"
-                            f"  Unit:        {unit_number}\n"
-                            f"  New Status:  {status_label}\n"
-                            f"{fixed_by_line}\n"
-                            f"{'Your issue has been resolved. Thank you for your patience!' if updated.status == 'RESOLVED' else 'Our team is working on your request.'}\n\n"
-                            "You can view the status in your tenant portal.\n\n"
-                            "REALESTATE360+ Administration"
-                        ),
-                    )
-                except Exception as exc:
-                    logger.exception("Failed to send maintenance update email: %s", exc)
+                if updated.status != old_status:
+                    try:
+                        status_label = dict(MaintenanceRequest.STATUS_CHOICES).get(updated.status, updated.status)
+                        tenant_name = _display_name(updated.tenant)
+                        unit_number = updated.lease.unit.number if updated.lease and updated.lease.unit else "N/A"
+                        fixed_by_line = f"  Fixed By:    {updated.fixed_by}\n" if updated.fixed_by else ""
+                        send_email_via_resend(
+                            to_email=updated.tenant.email,
+                            subject=f"[REALESTATE360+] Maintenance Request Update - {updated.title}",
+                            message=(
+                                f"Dear {tenant_name}\n\n"
+                                "Your maintenance request has been updated.\n\n"
+                                f"  Request:     {updated.title}\n"
+                                f"  Category:    {updated.get_category_display()}\n"
+                                f"  Unit:        {unit_number}\n"
+                                f"  New Status:  {status_label}\n"
+                                f"{fixed_by_line}\n"
+                                f"{'Your issue has been resolved. Thank you for your patience!' if updated.status == 'RESOLVED' else 'Our team is working on your request.'}\n\n"
+                                "You can view the status in your tenant portal.\n\n"
+                                "REALESTATE360+ Administration"
+                            ),
+                        )
+                    except Exception as exc:
+                        logger.exception("Failed to send maintenance update email: %s", exc)
 
-            schedule_changed = (
-                updated.schedule_decision != old_schedule_decision
-                or updated.admin_scheduled_at != old_admin_scheduled_at
-                or updated.schedule_admin_note != old_schedule_admin_note
-            )
-            if (not is_staff_portal) and schedule_changed and updated.requested_schedule_at:
-                try:
-                    decision_label = dict(MaintenanceRequest.SCHEDULE_DECISION_CHOICES).get(
-                        updated.schedule_decision,
-                        updated.schedule_decision,
-                    )
-                    visit_time = updated.admin_scheduled_at or updated.requested_schedule_at
-                    visit_time_label = visit_time.strftime("%b %d, %Y at %I:%M %p") if visit_time else "To be confirmed"
-                    note_line = f"\nAdmin note: {updated.schedule_admin_note}" if updated.schedule_admin_note else ""
-                    unit_number = updated.lease.unit.number if updated.lease and updated.lease.unit else "N/A"
-                    message = (
-                        f"Your maintenance visit schedule for '{updated.title}' is {decision_label.lower()}.\n"
-                        f"Visit time: {visit_time_label}\n"
-                        f"Unit: {unit_number}"
-                        f"{note_line}"
-                    )
-                    Notification.create_tenant_notification(
-                        title="Maintenance Schedule Update",
-                        message=message,
-                        notification_type="MAINTENANCE",
-                        tenant_user=updated.tenant,
-                        related_unit=updated.lease.unit if updated.lease else None,
-                    )
-                    send_email_via_resend(
-                        to_email=updated.tenant.email,
-                        subject=f"[REALESTATE360+] Maintenance Schedule Update - {updated.title}",
-                        message=(
-                            f"Dear {_display_name(updated.tenant)}\n\n"
-                            f"{message}\n\n"
-                            "You can view this update in your tenant portal.\n\n"
-                            "REALESTATE360+ Administration"
-                        ),
-                    )
-                except Exception as exc:
-                    logger.exception("Failed to send maintenance schedule update: %s", exc)
+                schedule_changed = (
+                    updated.schedule_decision != old_schedule_decision
+                    or updated.admin_scheduled_at != old_admin_scheduled_at
+                    or updated.schedule_admin_note != old_schedule_admin_note
+                )
+                if (not is_staff_portal) and schedule_changed and updated.requested_schedule_at:
+                    try:
+                        decision_label = dict(MaintenanceRequest.SCHEDULE_DECISION_CHOICES).get(
+                            updated.schedule_decision,
+                            updated.schedule_decision,
+                        )
+                        visit_time = updated.admin_scheduled_at or updated.requested_schedule_at
+                        visit_time_label = visit_time.strftime("%b %d, %Y at %I:%M %p") if visit_time else "To be confirmed"
+                        note_line = f"\nAdmin note: {updated.schedule_admin_note}" if updated.schedule_admin_note else ""
+                        unit_number = updated.lease.unit.number if updated.lease and updated.lease.unit else "N/A"
+                        message = (
+                            f"Your maintenance visit schedule for '{updated.title}' is {decision_label.lower()}.\n"
+                            f"Visit time: {visit_time_label}\n"
+                            f"Unit: {unit_number}"
+                            f"{note_line}"
+                        )
+                        Notification.create_tenant_notification(
+                            title="Maintenance Schedule Update",
+                            message=message,
+                            notification_type="MAINTENANCE",
+                            tenant_user=updated.tenant,
+                            related_unit=updated.lease.unit if updated.lease else None,
+                        )
+                        send_email_via_resend(
+                            to_email=updated.tenant.email,
+                            subject=f"[REALESTATE360+] Maintenance Schedule Update - {updated.title}",
+                            message=(
+                                f"Dear {_display_name(updated.tenant)}\n\n"
+                                f"{message}\n\n"
+                                "You can view this update in your tenant portal.\n\n"
+                                "REALESTATE360+ Administration"
+                            ),
+                        )
+                    except Exception as exc:
+                        logger.exception("Failed to send maintenance schedule update: %s", exc)
 
-            messages.success(
-                request,
-                "Maintenance progress updated." if is_staff_portal else "Maintenance review saved.",
-            )
-            return redirect("admin_maintenance")
+                messages.success(
+                    request,
+                    "Maintenance progress updated." if is_staff_portal else "Maintenance review saved.",
+                )
+                return redirect("admin_maintenance")
     else:
         form = StaffMaintenanceUpdateForm(instance=req) if is_staff_portal else AdminMaintenanceUpdateForm(instance=req)
+        charge_form = None
+        if is_staff_portal and can_edit_charge:
+            charge_form = StaffMaintenanceChargeSuggestionForm(
+                instance=charge or MaintenanceCharge(),
+                maintenance_request=req,
+                staff_user=request.user,
+            )
 
     return render(
         request,
@@ -345,6 +413,10 @@ def admin_update_maintenance(request, req_id: int):
         {
             "title": "Resolve Maintenance Issue",
             "form": form,
+            "charge_form": charge_form,
+            "charge": charge,
+            "can_edit_charge": can_edit_charge,
+            "locked_charge_message": locked_charge_message,
             "req": req,
             "is_staff_portal": is_staff_portal,
             "back_url": reverse("admin_maintenance"),

@@ -11,6 +11,7 @@ from accounts.models import User
 from accounts.ml.maintenance_nlp import classify_issue_category
 from maintenance.forms import AdminMaintenanceUpdateForm
 from maintenance.models import MaintenanceCharge, MaintenanceRequest
+from maintenance.services import post_maintenance_charge_to_billing
 from rentals.models import Lease, TenantProfile, Unit
 from billing.models import BillLineItem, MonthlyBill
 
@@ -678,11 +679,11 @@ class MaintenanceChargeAdminReviewWorkflowTests(TestCase):
 
         self.assertRedirects(response, self._charge_url())
         self.charge.refresh_from_db()
-        self.assertEqual(self.charge.status, MaintenanceCharge.STATUS_READY_FOR_BILLING)
+        self.assertEqual(self.charge.status, MaintenanceCharge.STATUS_ADDED_TO_BILL)
         self.assertEqual(self.charge.admin_approved_total, Decimal("1000.00"))
         self.assertEqual(self.charge.approved_by, self.admin)
         self.assertIsNotNone(self.charge.approved_at)
-        self.assertIsNone(self.charge.bill_line_item)
+        self.assertIsNotNone(self.charge.bill_line_item)
 
     def test_admin_can_approve_charge_with_adjusted_amount(self):
         self.client.force_login(self.admin)
@@ -698,11 +699,11 @@ class MaintenanceChargeAdminReviewWorkflowTests(TestCase):
 
         self.assertRedirects(response, self._charge_url())
         self.charge.refresh_from_db()
-        self.assertEqual(self.charge.status, MaintenanceCharge.STATUS_READY_FOR_BILLING)
+        self.assertEqual(self.charge.status, MaintenanceCharge.STATUS_ADDED_TO_BILL)
         self.assertEqual(self.charge.admin_approved_total, Decimal("875.50"))
         self.assertEqual(self.charge.approved_by, self.admin)
         self.assertIsNotNone(self.charge.approved_at)
-        self.assertIsNone(self.charge.bill_line_item)
+        self.assertIsNotNone(self.charge.bill_line_item)
 
     def test_admin_can_mark_no_charge(self):
         self.client.force_login(self.admin)
@@ -760,6 +761,228 @@ class MaintenanceChargeAdminReviewWorkflowTests(TestCase):
 
         self.assertRedirects(response, self._charge_url())
         self.assertFalse(MaintenanceCharge.objects.filter(maintenance_request=self.request_obj).exists())
+
+
+class MaintenanceChargeBillingPostingWorkflowTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            email="charge-post-admin@example.com",
+            username="chargepostadmin",
+            password="password123",
+            role=User.Role.ADMIN,
+        )
+        self.staff = User.objects.create_user(
+            email="charge-post-staff@example.com",
+            username="chargepoststaff",
+            password="password123",
+            role=User.Role.STAFF,
+        )
+        self.tenant = User.objects.create_user(
+            email="charge-post-tenant@example.com",
+            username="chargeposttenant",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        TenantProfile.objects.create(user=self.staff, first_name="Post", last_name="Staff", created_by=self.admin)
+        TenantProfile.objects.create(user=self.tenant, first_name="Post", last_name="Tenant", created_by=self.admin)
+        self.unit = Unit.objects.create(number="MC-401", monthly_rent=14000, status="OCCUPIED", is_active=True)
+        self.lease = Lease.objects.create(
+            tenant=self.tenant,
+            unit=self.unit,
+            monthly_rent=14000,
+            due_day=5,
+            start_date=date(2026, 6, 1),
+            status=Lease.STATUS_ACTIVE,
+            is_active=True,
+        )
+        self.request_obj = MaintenanceRequest.objects.create(
+            tenant=self.tenant,
+            lease=self.lease,
+            category="PLUMBING",
+            title="Pipe repair",
+            description="Pipe under the sink needs repair.",
+            requested_schedule_at=timezone.make_aware(datetime(2026, 7, 21, 10, 0)),
+            status="OPEN",
+            review_status="ACCEPTED",
+            assigned_staff=self.staff,
+        )
+        self.charge = MaintenanceCharge.objects.create(
+            maintenance_request=self.request_obj,
+            suggested_by=self.staff,
+            diagnosis="Pipe joint is damaged.",
+            repair_notes="Replace the connector and retighten fittings.",
+            labor_cost=Decimal("650.00"),
+            material_cost=Decimal("350.00"),
+            admin_approved_total=Decimal("1000.00"),
+            approved_by=self.admin,
+            approved_at=timezone.now(),
+            status=MaintenanceCharge.STATUS_READY_FOR_BILLING,
+        )
+
+    def _charge_url(self):
+        return reverse("admin_update_maintenance", args=[self.request_obj.id])
+
+    def test_admin_can_post_ready_for_billing_charge(self):
+        result = post_maintenance_charge_to_billing(self.charge, today=date(2026, 7, 21))
+
+        self.assertTrue(result.success)
+        self.charge.refresh_from_db()
+        self.assertEqual(self.charge.status, MaintenanceCharge.STATUS_ADDED_TO_BILL)
+        self.assertIsNotNone(self.charge.bill_line_item)
+        self.assertEqual(self.charge.bill_line_item.line_type, BillLineItem.LINE_TYPE_MAINTENANCE)
+        self.assertEqual(self.charge.bill_line_item.amount, Decimal("1000.00"))
+
+    def test_admin_review_flow_posts_charge_to_billing(self):
+        self.charge.status = MaintenanceCharge.STATUS_PENDING_REVIEW
+        self.charge.admin_approved_total = None
+        self.charge.approved_by = None
+        self.charge.approved_at = None
+        self.charge.save(update_fields=["status", "admin_approved_total", "approved_by", "approved_at", "updated_at"])
+        self.client.force_login(self.admin)
+
+        response = self.client.post(
+            self._charge_url(),
+            {
+                "form_action": "charge_review",
+                "charge_review_action": "approve_as_is",
+                "admin_approved_total": "",
+            },
+        )
+
+        self.assertRedirects(response, self._charge_url())
+        self.charge.refresh_from_db()
+        self.assertEqual(self.charge.status, MaintenanceCharge.STATUS_ADDED_TO_BILL)
+        self.assertEqual(self.charge.admin_approved_total, Decimal("1000.00"))
+        self.assertIsNotNone(self.charge.bill_line_item)
+
+    def test_no_charge_does_not_post_to_billing(self):
+        self.charge.status = MaintenanceCharge.STATUS_NO_CHARGE
+        self.charge.admin_approved_total = None
+        self.charge.save(update_fields=["status", "admin_approved_total", "updated_at"])
+
+        result = post_maintenance_charge_to_billing(self.charge, today=date(2026, 7, 21))
+
+        self.assertFalse(result.success)
+        self.charge.refresh_from_db()
+        self.assertEqual(self.charge.status, MaintenanceCharge.STATUS_NO_CHARGE)
+        self.assertIsNone(self.charge.bill_line_item)
+        self.assertFalse(BillLineItem.objects.filter(line_type=BillLineItem.LINE_TYPE_MAINTENANCE).exists())
+
+    def test_staff_cannot_post_to_billing(self):
+        self.client.force_login(self.staff)
+
+        response = self.client.post(
+            self._charge_url(),
+            {
+                "form_action": "charge_post",
+            },
+        )
+
+        self.assertRedirects(response, reverse("admin_maintenance"))
+        self.charge.refresh_from_db()
+        self.assertEqual(self.charge.status, MaintenanceCharge.STATUS_READY_FOR_BILLING)
+        self.assertIsNone(self.charge.bill_line_item)
+
+    def test_paid_bill_is_not_modified_and_next_unpaid_bill_is_used(self):
+        july_bill = MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=date(2026, 7, 1),
+            due_date=date(2026, 7, 5),
+            base_rent=Decimal("14000.00"),
+            total_due=Decimal("14000.00"),
+            status="PAID",
+        )
+        august_bill = MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=date(2026, 8, 1),
+            due_date=date(2026, 8, 5),
+            base_rent=Decimal("14000.00"),
+            total_due=Decimal("14000.00"),
+            status="UNPAID",
+        )
+
+        result = post_maintenance_charge_to_billing(self.charge, today=date(2026, 7, 21))
+
+        self.assertTrue(result.success)
+        self.assertEqual(result.bill, august_bill)
+        self.assertFalse(BillLineItem.objects.filter(monthly_bill=july_bill, line_type=BillLineItem.LINE_TYPE_MAINTENANCE).exists())
+        self.assertTrue(BillLineItem.objects.filter(monthly_bill=august_bill, line_type=BillLineItem.LINE_TYPE_MAINTENANCE).exists())
+
+    def test_current_or_repair_period_unpaid_bill_is_selected_not_oldest_unrelated_unpaid_bill(self):
+        june_bill = MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=date(2026, 6, 1),
+            due_date=date(2026, 6, 5),
+            base_rent=Decimal("14000.00"),
+            total_due=Decimal("14000.00"),
+            status="UNPAID",
+        )
+        july_bill = MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=date(2026, 7, 1),
+            due_date=date(2026, 7, 5),
+            base_rent=Decimal("14000.00"),
+            total_due=Decimal("14000.00"),
+            status="UNPAID",
+        )
+
+        result = post_maintenance_charge_to_billing(self.charge, today=date(2026, 7, 21))
+
+        self.assertTrue(result.success)
+        self.assertEqual(result.bill, july_bill)
+        self.assertFalse(BillLineItem.objects.filter(monthly_bill=june_bill, line_type=BillLineItem.LINE_TYPE_MAINTENANCE).exists())
+
+    def test_multiple_charges_in_same_bill_aggregate_into_one_maintenance_line(self):
+        result_one = post_maintenance_charge_to_billing(self.charge, today=date(2026, 7, 21))
+        self.assertTrue(result_one.success)
+
+        second_request = MaintenanceRequest.objects.create(
+            tenant=self.tenant,
+            lease=self.lease,
+            category="STRUCTURAL",
+            title="Door hinge repair",
+            description="Fix the hinge.",
+            requested_schedule_at=timezone.make_aware(datetime(2026, 7, 25, 9, 0)),
+            status="OPEN",
+            review_status="ACCEPTED",
+            assigned_staff=self.staff,
+        )
+        second_charge = MaintenanceCharge.objects.create(
+            maintenance_request=second_request,
+            suggested_by=self.staff,
+            diagnosis="Hinge replacement needed.",
+            repair_notes="Replace hinge and align door.",
+            labor_cost=Decimal("300.00"),
+            material_cost=Decimal("200.00"),
+            admin_approved_total=Decimal("500.00"),
+            approved_by=self.admin,
+            approved_at=timezone.now(),
+            status=MaintenanceCharge.STATUS_READY_FOR_BILLING,
+        )
+
+        result_two = post_maintenance_charge_to_billing(second_charge, today=date(2026, 7, 25))
+
+        self.assertTrue(result_two.success)
+        self.assertEqual(result_one.bill_line_item, result_two.bill_line_item)
+        result_two.bill_line_item.refresh_from_db()
+        self.assertEqual(result_two.bill_line_item.amount, Decimal("1500.00"))
+        self.assertEqual(
+            BillLineItem.objects.filter(monthly_bill=result_one.bill, line_type=BillLineItem.LINE_TYPE_MAINTENANCE).count(),
+            1,
+        )
+
+    def test_no_active_lease_keeps_charge_ready_for_billing(self):
+        self.lease.status = Lease.STATUS_TERMINATED
+        self.lease.is_active = False
+        self.lease.save(update_fields=["status", "is_active"])
+
+        result = post_maintenance_charge_to_billing(self.charge, today=date(2026, 7, 21))
+
+        self.assertFalse(result.success)
+        self.charge.refresh_from_db()
+        self.assertEqual(self.charge.status, MaintenanceCharge.STATUS_READY_FOR_BILLING)
+        self.assertIsNone(self.charge.bill_line_item)
+        self.assertFalse(BillLineItem.objects.filter(line_type=BillLineItem.LINE_TYPE_MAINTENANCE).exists())
 
 
 class MaintenanceChargeModelTests(TestCase):

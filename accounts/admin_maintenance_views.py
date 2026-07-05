@@ -10,6 +10,7 @@ from django.utils import timezone as dj_timezone
 
 from maintenance.forms import AdminMaintenanceChargeReviewForm, AdminMaintenanceUpdateForm, StaffMaintenanceChargeSuggestionForm, StaffMaintenanceUpdateForm
 from maintenance.models import MaintenanceCharge, MaintenanceRequest
+from maintenance.services import post_maintenance_charge_to_billing
 from rentals.models import Lease, Notification
 from rentals.services import send_email_via_resend
 
@@ -290,6 +291,9 @@ def admin_update_maintenance(request, req_id: int):
         form_class = StaffMaintenanceUpdateForm if is_staff_portal else AdminMaintenanceUpdateForm
         action = request.POST.get("form_action", "progress")
 
+        if is_staff_portal and action == "charge_post":
+            messages.error(request, "Only administrators can post repair charges to billing.")
+            return redirect("admin_maintenance")
         if is_staff_portal and action == "charge_suggestion":
             form = StaffMaintenanceUpdateForm(instance=req)
             admin_charge_form = None
@@ -324,11 +328,36 @@ def admin_update_maintenance(request, req_id: int):
                 action_taken = request.POST.get("charge_review_action")
                 if action_taken == AdminMaintenanceChargeReviewForm.REVIEW_ACTION_NO_CHARGE:
                     messages.success(request, "Repair charge marked as no charge.")
-                elif action_taken == AdminMaintenanceChargeReviewForm.REVIEW_ACTION_APPROVE_ADJUSTED:
-                    messages.success(request, "Repair charge approved with adjusted amount and queued for billing.")
                 else:
-                    messages.success(request, "Repair charge approved and queued for billing.")
+                    posting_result = post_maintenance_charge_to_billing(charge)
+                    charge = posting_result.charge
+                    if posting_result.success:
+                        if action_taken == AdminMaintenanceChargeReviewForm.REVIEW_ACTION_APPROVE_ADJUSTED:
+                            messages.success(request, "Repair charge approved, posted to billing, and linked to the selected bill.")
+                        else:
+                            messages.success(request, "Repair charge approved, posted to billing, and linked to the selected bill.")
+                    else:
+                        if action_taken == AdminMaintenanceChargeReviewForm.REVIEW_ACTION_APPROVE_ADJUSTED:
+                            messages.success(request, "Repair charge approved with adjusted amount and queued for billing.")
+                        else:
+                            messages.success(request, "Repair charge approved and queued for billing.")
+                        messages.warning(request, posting_result.warning)
                 return redirect("admin_update_maintenance", req_id=req.id)
+        elif (not is_staff_portal) and action == "charge_post":
+            form = AdminMaintenanceUpdateForm(instance=req)
+            charge_form = None
+            admin_charge_form = AdminMaintenanceChargeReviewForm(
+                instance=charge,
+                maintenance_request=req,
+                admin_user=request.user,
+            ) if charge else None
+            posting_result = post_maintenance_charge_to_billing(charge) if charge else None
+            if posting_result and posting_result.success:
+                charge = posting_result.charge
+                messages.success(request, "Repair charge posted to billing successfully.")
+            else:
+                messages.warning(request, posting_result.warning if posting_result else "Repair charge review is not available for this request.")
+            return redirect("admin_update_maintenance", req_id=req.id)
         else:
             form = form_class(request.POST, instance=req)
             charge_form = None

@@ -401,6 +401,18 @@
                   <div class="mt-1 text-xl font-black text-emerald-700">PHP {{ charge.admin_approved_total|floatformat:2 }}</div>
                 </div>
                 {% endif %}
+                <div>
+                  <span class="block text-[11px] font-black uppercase tracking-wider text-slate-500">Billing Link</span>
+                  <div class="mt-1 font-semibold text-slate-900">
+                    {% if charge.bill_line_item %}
+                      Bill {{ charge.bill_line_item.monthly_bill.billing_month|date:"M Y" }} ? Maintenance line linked
+                    {% elif charge.status == 'READY_FOR_BILLING' %}
+                      Waiting to be attached to a valid unpaid/upcoming bill
+                    {% else %}
+                      Not yet linked to billing
+                    {% endif %}
+                  </div>
+                </div>
               </div>
             </div>
             {% endif %}
@@ -432,8 +444,17 @@
               </div>
             </form>
             {% else %}
-            <div class="rounded-xl border border-slate-200 bg-slate-50 p-5">
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-5 space-y-4">
               <p class="text-sm font-bold text-slate-700">{{ admin_charge_lock_message|default:"Repair charge review is not available for this request." }}</p>
+              {% if charge and charge.status == 'READY_FOR_BILLING' and not charge.bill_line_item %}
+              <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="form_action" value="charge_post">
+                <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-extrabold text-sm transition-all text-center shadow-lg active:scale-95">
+                  Retry Posting to Billing
+                </button>
+              </form>
+              {% endif %}
             </div>
             {% endif %}
           </div>

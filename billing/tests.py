@@ -84,7 +84,17 @@ class BillingWorkflowTests(TestCase):
             ensure_bills_up_to(self.lease, date(2026, 12, 1), today=date(2026, 6, 1))
 
         self.assertFalse(mocked_get_or_update.called)
-        self.assertEqual(MonthlyBill.objects.filter(lease=self.lease).count(), 12)
+        bills = list(MonthlyBill.objects.filter(lease=self.lease).order_by("billing_month"))
+        self.assertEqual([bill.billing_month for bill in bills], [
+            date(2026, 6, 1),
+            date(2026, 7, 1),
+            date(2026, 8, 1),
+            date(2026, 9, 1),
+            date(2026, 10, 1),
+            date(2026, 11, 1),
+            date(2026, 12, 1),
+        ])
+        self.assertEqual(len(bills), 7)
 
     def test_approve_manual_payment_rejects_bills_outside_payment_owner(self):
         tenant_bill = MonthlyBill.objects.create(

@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils import timezone as dj_timezone
 
-from maintenance.forms import AdminMaintenanceUpdateForm, StaffMaintenanceChargeSuggestionForm, StaffMaintenanceUpdateForm
+from maintenance.forms import AdminMaintenanceChargeReviewForm, AdminMaintenanceUpdateForm, StaffMaintenanceChargeSuggestionForm, StaffMaintenanceUpdateForm
 from maintenance.models import MaintenanceCharge, MaintenanceRequest
 from rentals.models import Lease, Notification
 from rentals.services import send_email_via_resend
@@ -83,6 +83,30 @@ def _charge_lock_message(charge):
         return "This repair cost suggestion is already approved and waiting for billing."
     if charge.status == MaintenanceCharge.STATUS_ADDED_TO_BILL:
         return "This repair cost suggestion was already linked to billing."
+    return ""
+
+
+def _admin_can_review_charge(req, charge):
+    if charge is None:
+        return False
+    if req.review_status != "ACCEPTED":
+        return False
+    return charge.status == MaintenanceCharge.STATUS_PENDING_REVIEW
+
+
+def _admin_charge_lock_message(req, charge):
+    if charge is None:
+        return "No staff repair cost suggestion has been submitted yet."
+    if req.review_status != "ACCEPTED":
+        return "Only accepted maintenance requests can receive an admin repair charge decision."
+    if charge.status == MaintenanceCharge.STATUS_NO_CHARGE:
+        return "This repair cost suggestion was marked as no charge."
+    if charge.status == MaintenanceCharge.STATUS_READY_FOR_BILLING:
+        return "This repair cost suggestion is approved and waiting for billing."
+    if charge.status == MaintenanceCharge.STATUS_ADDED_TO_BILL:
+        return "This repair cost suggestion was already attached to billing."
+    if charge.status == MaintenanceCharge.STATUS_APPROVED:
+        return "Admin already finalized this repair cost suggestion."
     return ""
 
 
@@ -253,6 +277,8 @@ def admin_update_maintenance(request, req_id: int):
 
     can_edit_charge = _staff_can_edit_charge(req, request.user, charge)
     locked_charge_message = _charge_lock_message(charge)
+    can_review_charge = (not is_staff_portal) and _admin_can_review_charge(req, charge)
+    admin_charge_lock_message = "" if is_staff_portal else _admin_charge_lock_message(req, charge)
 
     if request.method == "POST":
         old_status = req.status
@@ -266,6 +292,7 @@ def admin_update_maintenance(request, req_id: int):
 
         if is_staff_portal and action == "charge_suggestion":
             form = StaffMaintenanceUpdateForm(instance=req)
+            admin_charge_form = None
             charge_form = StaffMaintenanceChargeSuggestionForm(
                 request.POST,
                 instance=charge or MaintenanceCharge(),
@@ -279,15 +306,45 @@ def admin_update_maintenance(request, req_id: int):
                 charge = charge_form.save()
                 messages.success(request, "Repair cost suggestion saved.")
                 return redirect("admin_update_maintenance", req_id=req.id)
+        elif (not is_staff_portal) and action == "charge_review":
+            form = AdminMaintenanceUpdateForm(instance=req)
+            charge_form = None
+            admin_charge_form = AdminMaintenanceChargeReviewForm(
+                request.POST,
+                instance=charge,
+                maintenance_request=req,
+                admin_user=request.user,
+                action=request.POST.get("charge_review_action"),
+            )
+            if not can_review_charge:
+                messages.error(request, admin_charge_lock_message or "Repair charge review is not available for this request.")
+                return redirect("admin_update_maintenance", req_id=req.id)
+            if admin_charge_form.is_valid():
+                charge = admin_charge_form.save()
+                action_taken = request.POST.get("charge_review_action")
+                if action_taken == AdminMaintenanceChargeReviewForm.REVIEW_ACTION_NO_CHARGE:
+                    messages.success(request, "Repair charge marked as no charge.")
+                elif action_taken == AdminMaintenanceChargeReviewForm.REVIEW_ACTION_APPROVE_ADJUSTED:
+                    messages.success(request, "Repair charge approved with adjusted amount and queued for billing.")
+                else:
+                    messages.success(request, "Repair charge approved and queued for billing.")
+                return redirect("admin_update_maintenance", req_id=req.id)
         else:
             form = form_class(request.POST, instance=req)
             charge_form = None
+            admin_charge_form = None
             if is_staff_portal:
                 charge_form = StaffMaintenanceChargeSuggestionForm(
                     instance=charge or MaintenanceCharge(),
                     maintenance_request=req,
                     staff_user=request.user,
                 ) if can_edit_charge else None
+            else:
+                admin_charge_form = AdminMaintenanceChargeReviewForm(
+                    instance=charge,
+                    maintenance_request=req,
+                    admin_user=request.user,
+                ) if charge else None
             if form.is_valid():
                 updated = form.save(commit=False)
 
@@ -400,11 +457,18 @@ def admin_update_maintenance(request, req_id: int):
     else:
         form = StaffMaintenanceUpdateForm(instance=req) if is_staff_portal else AdminMaintenanceUpdateForm(instance=req)
         charge_form = None
+        admin_charge_form = None
         if is_staff_portal and can_edit_charge:
             charge_form = StaffMaintenanceChargeSuggestionForm(
                 instance=charge or MaintenanceCharge(),
                 maintenance_request=req,
                 staff_user=request.user,
+            )
+        elif not is_staff_portal and charge:
+            admin_charge_form = AdminMaintenanceChargeReviewForm(
+                instance=charge,
+                maintenance_request=req,
+                admin_user=request.user,
             )
 
     return render(
@@ -414,9 +478,12 @@ def admin_update_maintenance(request, req_id: int):
             "title": "Resolve Maintenance Issue",
             "form": form,
             "charge_form": charge_form,
+            "admin_charge_form": admin_charge_form,
             "charge": charge,
             "can_edit_charge": can_edit_charge,
             "locked_charge_message": locked_charge_message,
+            "can_review_charge": can_review_charge,
+            "admin_charge_lock_message": admin_charge_lock_message,
             "req": req,
             "is_staff_portal": is_staff_portal,
             "back_url": reverse("admin_maintenance"),

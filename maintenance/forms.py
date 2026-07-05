@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 from accounts.models import User
 
@@ -212,6 +213,76 @@ class StaffMaintenanceChargeSuggestionForm(forms.ModelForm):
         charge.maintenance_request = self.maintenance_request
         if not charge.suggested_by_id:
             charge.suggested_by = self.staff_user
+        if commit:
+            charge.save()
+        return charge
+
+
+class AdminMaintenanceChargeReviewForm(forms.ModelForm):
+    REVIEW_ACTION_APPROVE_AS_IS = "approve_as_is"
+    REVIEW_ACTION_APPROVE_ADJUSTED = "approve_adjusted"
+    REVIEW_ACTION_NO_CHARGE = "no_charge"
+
+    admin_approved_total = forms.DecimalField(
+        required=False,
+        decimal_places=2,
+        max_digits=12,
+        min_value=0,
+        label="Approved amount",
+    )
+
+    class Meta:
+        model = MaintenanceCharge
+        fields = ["admin_approved_total"]
+        widgets = {
+            "admin_approved_total": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
+        }
+
+    def __init__(self, *args, maintenance_request=None, admin_user=None, action=None, **kwargs):
+        self.maintenance_request = maintenance_request
+        self.admin_user = admin_user
+        self.action = action
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk and self.instance.admin_approved_total is None:
+            self.initial.setdefault("admin_approved_total", self.instance.suggested_total)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        req = self.maintenance_request
+        if req is None:
+            raise forms.ValidationError("Maintenance request context is required.")
+        if not self.instance or not self.instance.pk:
+            raise forms.ValidationError("A staff cost suggestion is required before admin review.")
+        if req.review_status != "ACCEPTED":
+            raise forms.ValidationError("Only accepted maintenance requests can receive a repair charge decision.")
+        if self.instance.status != MaintenanceCharge.STATUS_PENDING_REVIEW:
+            raise forms.ValidationError("This repair cost suggestion is already locked after admin review.")
+        if self.action not in {
+            self.REVIEW_ACTION_APPROVE_AS_IS,
+            self.REVIEW_ACTION_APPROVE_ADJUSTED,
+            self.REVIEW_ACTION_NO_CHARGE,
+        }:
+            raise forms.ValidationError("Choose a valid admin repair charge action.")
+
+        if self.action == self.REVIEW_ACTION_APPROVE_AS_IS:
+            cleaned_data["admin_approved_total"] = self.instance.suggested_total
+        elif self.action == self.REVIEW_ACTION_APPROVE_ADJUSTED:
+            approved_total = cleaned_data.get("admin_approved_total")
+            if approved_total is None:
+                self.add_error("admin_approved_total", "Enter the approved amount when adjusting the staff suggestion.")
+        elif self.action == self.REVIEW_ACTION_NO_CHARGE:
+            cleaned_data["admin_approved_total"] = None
+        return cleaned_data
+
+    def save(self, commit=True):
+        charge = super().save(commit=False)
+        charge.approved_by = self.admin_user
+        charge.approved_at = timezone.now()
+        if self.action == self.REVIEW_ACTION_NO_CHARGE:
+            charge.admin_approved_total = None
+            charge.status = MaintenanceCharge.STATUS_NO_CHARGE
+        else:
+            charge.status = MaintenanceCharge.STATUS_READY_FOR_BILLING
         if commit:
             charge.save()
         return charge

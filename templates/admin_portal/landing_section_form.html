@@ -1,0 +1,68 @@
+{% extends "admin_portal/base.html" %}
+{% block title %}{{ title }} | Real Estate Administration{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6 py-6 sm:py-8">
+  <nav class="flex items-center">
+    <a href="{{ back_url }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">Back</a>
+  </nav>
+
+  <header class="bg-white border border-slate-200 rounded-2xl p-6 lg:p-8 shadow-sm">
+    <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 leading-tight">{{ title }}</h1>
+    <p class="text-sm text-slate-500 mt-1">Edit a fixed landing-page section while preserving the current public layout.</p>
+  </header>
+
+  <div class="bg-white border border-slate-200 rounded-[2rem] shadow-sm hover:shadow-md transition-shadow p-6 sm:p-10">
+    <form method="post" enctype="multipart/form-data" class="space-y-8">
+      {% csrf_token %}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Section Key</label>
+          {{ form.section_key }}
+          {% if form.section_key.errors %}<span class="block text-sm font-bold text-rose-600 mt-1">{{ form.section_key.errors.0 }}</span>{% endif %}
+        </div>
+        <div>
+          <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Display Order</label>
+          {{ form.display_order }}
+          {% if form.display_order.errors %}<span class="block text-sm font-bold text-rose-600 mt-1">{{ form.display_order.errors.0 }}</span>{% endif %}
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Title</label>
+          {{ form.title }}
+        </div>
+        <div>
+          <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Subtitle</label>
+          {{ form.subtitle }}
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Body Text</label>
+        {{ form.body_text }}
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Button Text</label>
+          {{ form.button_text }}
+        </div>
+        <div>
+          <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Button URL</label>
+          {{ form.button_url }}
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Section Image</label>
+        {{ form.image }}
+        {% if section and section.image_url %}<img src="{{ section.image_url }}" alt="{{ section.title }}" class="mt-4 max-h-64 rounded-2xl border border-slate-200">{% endif %}
+      </div>
+      <div class="flex items-center pt-2">
+        <label class="inline-flex items-center gap-3 cursor-pointer group">{{ form.is_active }}<span class="text-sm font-extrabold text-slate-800 select-none uppercase tracking-wider group-hover:text-slate-900">Show this section on the public landing page</span></label>
+      </div>
+      <div class="pt-8 border-t border-slate-100 flex justify-end">
+        <button type="submit" class="w-full sm:w-auto px-8 py-3.5 bg-slate-900 hover:bg-black text-white rounded-xl font-extrabold text-sm transition-all shadow-xl">Save Section</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

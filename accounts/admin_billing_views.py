@@ -341,7 +341,9 @@ def admin_billing(request):
     upcoming_count = stats["upcoming_count"] or 0
 
     if active_tab == "active":
-        display_qs = base_qs.filter(Q(billing_month__lte=current_month) | Q(status="PAID"))
+        display_qs = base_qs.filter(
+            Q(billing_month__lte=current_month) | Q(status__in=("PAID", "PARTIALLY_PAID"))
+        )
         if status_filter == "UNPAID":
             display_qs = display_qs.filter(status__in=("UNPAID", "PARTIALLY_PAID"))
         elif status_filter == "OVERDUE":

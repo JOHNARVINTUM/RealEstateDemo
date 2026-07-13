@@ -7,7 +7,7 @@ from decimal import Decimal
 from django.utils import timezone
 
 from billing.models import BillLineItem, MonthlyBill
-from billing.services import add_months, get_or_update_monthly_bill, month_start
+from billing.services import add_months, get_or_update_monthly_bill, month_start, sync_monthly_bill_from_line_items
 from .models import MaintenanceCharge
 
 
@@ -145,6 +145,7 @@ def post_maintenance_charge_to_billing(charge: MaintenanceCharge, *, today: date
     maintenance_line.amount = aggregate_amount
     maintenance_line.refresh_status()
     maintenance_line.save(update_fields=["amount", "status", "updated_at"])
+    sync_monthly_bill_from_line_items(bill)
 
     charge.bill_line_item = maintenance_line
     charge.status = MaintenanceCharge.STATUS_ADDED_TO_BILL

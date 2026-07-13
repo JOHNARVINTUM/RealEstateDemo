@@ -22,6 +22,7 @@ class ManualPayment(models.Model):
         ("full", "Full Payment"),
         ("rent_only", "Monthly Rent"),
         ("water_only", "Water Only"),
+        ("maintenance_only", "Maintenance Charge Only"),
         ("move_in", "Move-in Payment"),
     ]
 

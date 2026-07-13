@@ -480,32 +480,56 @@ def admin_delete_tenant(request, tenant_id: int):
                 f"Tenant {tenant.full_name} archived and deactivated. All records preserved. Unit is now available.",
             )
 
-        elif deletion_type == "DELETE":
+        elif deletion_type == "SOFT_DELETE":
+            if has_records:
+                messages.error(
+                    request,
+                    "Soft delete is only allowed for tenants without lease, billing, payment, maintenance, or attachment records. Use Archive instead.",
+                )
+                return redirect("admin_tenant_detail", tenant_id=tenant.id)
+
+            full_name = tenant.full_name
             ArchivedTenant.objects.create(
                 original_user_id=user.id,
                 original_tenant_id=tenant.id,
                 email=user.email,
                 tenant_data=tenant_data,
-                archive_type="DELETED_HARD" if has_records else "DELETED_SOFT",
+                archive_type="DELETED_SOFT",
                 deleted_by=request.user,
                 deletion_reason=deletion_reason,
-                can_be_restored=not has_records,
+                can_be_restored=True,
             )
-
-            full_name = tenant.full_name
-
-            if has_records:
-                Lease.objects.filter(tenant=user).delete()
-                ManualPayment.objects.filter(user=user).delete()
-                MaintenanceRequest.objects.filter(tenant=user).delete()
-                TenantAttachment.objects.filter(tenant=user).delete()
-
             tenant.delete()
             user.delete()
-
             messages.success(
                 request,
-                f"Tenant {full_name} and all records permanently deleted. Archive created for audit trail.",
+                f"Tenant {full_name} was soft deleted. The live account was removed and the archive can still be restored.",
+            )
+
+        elif deletion_type == "HARD_DELETE":
+            if has_records:
+                messages.error(
+                    request,
+                    "Hard delete is blocked for tenants with historical records because it can remove billing ledger history and affect forecasting. Use Archive instead.",
+                )
+                return redirect("admin_tenant_detail", tenant_id=tenant.id)
+
+            full_name = tenant.full_name
+            ArchivedTenant.objects.create(
+                original_user_id=user.id,
+                original_tenant_id=tenant.id,
+                email=user.email,
+                tenant_data=tenant_data,
+                archive_type="DELETED_HARD",
+                deleted_by=request.user,
+                deletion_reason=deletion_reason,
+                can_be_restored=False,
+            )
+            tenant.delete()
+            user.delete()
+            messages.success(
+                request,
+                f"Tenant {full_name} was permanently hard deleted. Only the audit archive remains.",
             )
         else:
             messages.error(request, "Invalid deletion type selected.")
@@ -552,7 +576,7 @@ def admin_delete_tenant(request, tenant_id: int):
             "message": (
                 f"You are attempting to delete tenant: {tenant.full_name}\n\n"
                 f"For security, please enter your admin password to continue. "
-                f"You will then be able to choose between archiving or permanent deletion."
+                f"You will then be able to choose between archive, soft delete, or hard delete depending on the tenant record state."
             ),
             "tenant": tenant,
             "has_records": has_records,

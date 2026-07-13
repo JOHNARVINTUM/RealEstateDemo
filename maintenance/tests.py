@@ -12,7 +12,7 @@ from accounts.ml.maintenance_nlp import classify_issue_category
 from maintenance.forms import AdminMaintenanceUpdateForm
 from maintenance.models import MaintenanceCharge, MaintenanceRequest
 from maintenance.services import post_maintenance_charge_to_billing
-from rentals.models import Lease, TenantProfile, Unit
+from rentals.models import Lease, Notification, TenantProfile, Unit
 from billing.models import BillLineItem, MonthlyBill
 
 
@@ -332,6 +332,28 @@ class MaintenanceWorkflowTests(TestCase):
         self.assertContains(response, "Pipe leak")
         self.assertContains(response, "In Progress")
 
+    def test_staff_marking_request_done_creates_admin_notification(self):
+        self.request_obj.review_status = "ACCEPTED"
+        self.request_obj.assigned_staff = self.staff
+        self.request_obj.status = "IN_PROGRESS"
+        self.request_obj.save(update_fields=["review_status", "assigned_staff", "status"])
+        self.client.force_login(self.staff)
+
+        response = self.client.post(
+            reverse("admin_update_maintenance", args=[self.request_obj.id]),
+            {
+                "status": "RESOLVED",
+                "fixed_by": "Assigned Staff",
+            },
+        )
+
+        self.assertRedirects(response, reverse("admin_maintenance"))
+        notification = Notification.objects.filter(recipient_type="ADMIN", title="Maintenance Marked as Done").latest("created_at")
+        self.assertIn("Pipe leak", notification.message)
+        self.assertIn("Assigned Staff", notification.message)
+        self.assertEqual(notification.related_tenant, self.tenant)
+        self.assertEqual(notification.related_unit, self.unit)
+
 
 class MaintenanceChargeSuggestionWorkflowTests(TestCase):
     def setUp(self):
@@ -438,6 +460,31 @@ class MaintenanceChargeSuggestionWorkflowTests(TestCase):
         self.assertEqual(charge.diagnosis, "Updated diagnosis")
         self.assertEqual(charge.repair_notes, "Updated repair notes")
         self.assertEqual(charge.suggested_total, Decimal("625.00"))
+        notification = Notification.objects.filter(recipient_type="ADMIN", title="Repair Cost Suggestion Updated").latest("created_at")
+        self.assertIn("PHP 625.00", notification.message)
+        self.assertEqual(notification.related_tenant, self.tenant)
+        self.assertEqual(notification.related_unit, self.unit)
+
+    def test_assigned_staff_creating_initial_amount_creates_admin_notification(self):
+        self.client.force_login(self.staff)
+
+        response = self.client.post(
+            self._charge_url(),
+            {
+                "form_action": "charge_suggestion",
+                "diagnosis": "Pipe joint is damaged.",
+                "repair_notes": "Replace the connector and retighten fittings.",
+                "labor_cost": "650.00",
+                "material_cost": "350.00",
+            },
+        )
+
+        self.assertRedirects(response, self._charge_url())
+        notification = Notification.objects.filter(recipient_type="ADMIN", title="Repair Cost Suggestion Submitted").latest("created_at")
+        self.assertIn("Pipe repair", notification.message)
+        self.assertIn("PHP 1,000.00", notification.message)
+        self.assertEqual(notification.related_tenant, self.tenant)
+        self.assertEqual(notification.related_unit, self.unit)
 
     def test_unassigned_staff_cannot_create_or_update_charge_suggestion(self):
         self.request_obj.assigned_staff = self.other_staff
@@ -1085,3 +1132,4 @@ class MaintenanceChargeModelTests(TestCase):
 
         self.assertEqual(line_item.line_type, BillLineItem.LINE_TYPE_MAINTENANCE)
         self.assertEqual(line_item.status, BillLineItem.STATUS_UNPAID)
+

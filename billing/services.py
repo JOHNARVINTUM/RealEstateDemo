@@ -395,6 +395,7 @@ def sync_monthly_bill_from_line_items(bill: MonthlyBill):
     parking = lines.get(BillLineItem.LINE_TYPE_PARKING)
     water = lines.get(BillLineItem.LINE_TYPE_WATER)
     late_fee = lines.get(BillLineItem.LINE_TYPE_LATE_FEE)
+    maintenance = lines.get(BillLineItem.LINE_TYPE_MAINTENANCE)
 
     bill.base_rent = rent.amount if rent else Decimal("0.00")
     bill.rent_paid = rent.paid_amount if rent else Decimal("0.00")
@@ -405,7 +406,8 @@ def sync_monthly_bill_from_line_items(bill: MonthlyBill):
     bill.water_paid = water.paid_amount if water else Decimal("0.00")
     bill.water_paid_at = water.paid_at if water and water.paid_amount > 0 else None
     bill.interest = late_fee.balance if late_fee else Decimal("0.00")
-    bill.total_due = (bill.base_rent + bill.parking_fee + bill.water_amount + bill.interest).quantize(Decimal("0.01"))
+    maintenance_amount = maintenance.amount if maintenance else Decimal("0.00")
+    bill.total_due = (bill.base_rent + bill.parking_fee + bill.water_amount + bill.interest + maintenance_amount).quantize(Decimal("0.01"))
     if water and water.source_water_reading:
         bill.source_water_reading = water.source_water_reading
 
@@ -449,12 +451,15 @@ def bill_line_items_for_payment_type(bill: MonthlyBill, payment_type: str):
         }
     elif payment_type == "water_only":
         line_types = {BillLineItem.LINE_TYPE_WATER}
+    elif payment_type == "maintenance_only":
+        line_types = {BillLineItem.LINE_TYPE_MAINTENANCE}
     else:
         line_types = {
             BillLineItem.LINE_TYPE_RENT,
             BillLineItem.LINE_TYPE_PARKING,
             BillLineItem.LINE_TYPE_WATER,
             BillLineItem.LINE_TYPE_LATE_FEE,
+            BillLineItem.LINE_TYPE_MAINTENANCE,
         }
     return list(bill.line_items.filter(line_type__in=line_types))
 
@@ -959,7 +964,7 @@ def _approve_move_in_payment(payment, logger):
 
 
 def _validate_payment_type(payment_type: str):
-    if payment_type not in {"full", "rent_only", "water_only"}:
+    if payment_type not in {"full", "rent_only", "water_only", "maintenance_only"}:
         raise ValidationError("Invalid payment type.")
 
 
@@ -986,6 +991,7 @@ def _payment_type_display(payment_type: str) -> str:
         "full": "Full Payment",
         "rent_only": "Monthly Rent",
         "water_only": "Water Only",
+        "maintenance_only": "Maintenance Charge Only",
         "move_in": "Move-in Payment",
     }.get(payment_type, "Payment")
 
@@ -1013,6 +1019,7 @@ def _build_invoice_line_for_bill(bill, payment_type: str):
         "rent_charge": _money(amounts.get(BillLineItem.LINE_TYPE_RENT, Decimal("0.00"))),
         "water_charge": _money(amounts.get(BillLineItem.LINE_TYPE_WATER, Decimal("0.00"))),
         "parking_charge": _money(amounts.get(BillLineItem.LINE_TYPE_PARKING, Decimal("0.00"))),
+        "maintenance_charge": _money(amounts.get(BillLineItem.LINE_TYPE_MAINTENANCE, Decimal("0.00"))),
         "late_fee": _money(amounts.get(BillLineItem.LINE_TYPE_LATE_FEE, Decimal("0.00"))),
         "total_due_before_payment": _money(amount_paid),
         "amount_paid": _money(amount_paid),
@@ -1033,6 +1040,7 @@ def _invoice_snapshot(*, tenant, payment, payment_type: str, method_display: str
         "rent_charge": _money(_invoice_lines_total(lines, "rent_charge")),
         "water_charge": _money(_invoice_lines_total(lines, "water_charge")),
         "parking_charge": _money(_invoice_lines_total(lines, "parking_charge")),
+        "maintenance_charge": _money(_invoice_lines_total(lines, "maintenance_charge")),
         "late_fee": _money(_invoice_lines_total(lines, "late_fee")),
         "total_due_before_payment": _money(_invoice_lines_total(lines, "total_due_before_payment")),
         "amount_paid": _money(_invoice_lines_total(lines, "amount_paid")),
@@ -1072,6 +1080,7 @@ def _render_invoice_email(invoice: BillingInvoice) -> str:
             f"  Rent: PHP {Decimal(line.get('rent_charge', '0.00')):,.2f}",
             f"  Water: PHP {Decimal(line.get('water_charge', '0.00')):,.2f}",
             f"  Parking: PHP {Decimal(line.get('parking_charge', '0.00')):,.2f}",
+            f"  Maintenance: PHP {Decimal(line.get('maintenance_charge', '0.00')):,.2f}",
             f"  Security Deposit: PHP {Decimal(line.get('security_deposit', '0.00')):,.2f}",
             f"  Contract Deposit: PHP {Decimal(line.get('contract_deposit', '0.00')):,.2f}",
             f"  Late Fee: PHP {Decimal(line.get('late_fee', '0.00')):,.2f}",

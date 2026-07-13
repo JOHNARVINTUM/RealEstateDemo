@@ -1,0 +1,52 @@
+{% extends "admin_portal/base.html" %}
+{% block title %}{{ title }} | Real Estate Administration{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6 py-6 sm:py-8">
+  <nav class="flex items-center">
+    <a href="{{ back_url }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">Back</a>
+  </nav>
+
+  <header class="bg-white border border-slate-200 rounded-2xl p-6 lg:p-8 shadow-sm">
+    <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 leading-tight">{{ title }}</h1>
+    <p class="text-sm text-slate-500 mt-1">Manage one feature card for the services section and optional landing-page hero visuals.</p>
+  </header>
+
+  <div class="bg-white border border-slate-200 rounded-[2rem] shadow-sm hover:shadow-md transition-shadow p-6 sm:p-10">
+    <form method="post" enctype="multipart/form-data" class="space-y-8">
+      {% csrf_token %}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Title</label>
+          {{ form.title }}
+        </div>
+        <div>
+          <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Icon Label</label>
+          {{ form.icon_label }}
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Description</label>
+        {{ form.description }}
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Display Order</label>
+          {{ form.display_order }}
+        </div>
+        <div>
+          <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">Feature Image</label>
+          {{ form.image }}
+        </div>
+      </div>
+      {% if feature and feature.image_url %}<img src="{{ feature.image_url }}" alt="{{ feature.title }}" class="max-h-64 rounded-2xl border border-slate-200">{% endif %}
+      <div class="flex items-center pt-2">
+        <label class="inline-flex items-center gap-3 cursor-pointer group">{{ form.is_active }}<span class="text-sm font-extrabold text-slate-800 select-none uppercase tracking-wider group-hover:text-slate-900">Show this feature card on the public landing page</span></label>
+      </div>
+      <div class="pt-8 border-t border-slate-100 flex justify-end">
+        <button type="submit" class="w-full sm:w-auto px-8 py-3.5 bg-slate-900 hover:bg-black text-white rounded-xl font-extrabold text-sm transition-all shadow-xl">Save Feature Card</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

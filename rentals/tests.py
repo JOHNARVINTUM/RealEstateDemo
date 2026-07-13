@@ -7,7 +7,7 @@ import zoneinfo
 from django.test import TestCase
 
 from accounts.models import User
-from billing.models import MonthlyBill
+from billing.models import BillLineItem, MonthlyBill
 from payments.models import ManualPayment
 from rentals.models import Lease, TenantProfile, Unit
 from rentals.services import (
@@ -394,6 +394,61 @@ class TenantViewWorkflowTests(TestCase):
         self.assertEqual(response.context["payment_type"], "water_only")
         self.assertEqual(response.context["total_amount"], 800.0)
         self.assertEqual(response.context["preview_rows"][0]["bill_id"], bill.id)
+
+    def test_payment_preview_allows_maintenance_only_when_full_is_disabled(self):
+        lease = self.create_active_lease()
+        bill = MonthlyBill.objects.create(
+            lease=lease,
+            billing_month=date(2026, 1, 1),
+            due_date=date(2026, 1, 5),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("0.00"),
+            parking_fee=Decimal("350.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("11250.00"),
+            status="UNPAID",
+        )
+        BillLineItem.objects.create(
+            monthly_bill=bill,
+            line_type=BillLineItem.LINE_TYPE_MAINTENANCE,
+            amount=Decimal("900.00"),
+        )
+
+        response = self.client.get("/tenant/pay/?payment_type=maintenance_only")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["can_pay_full_bill"])
+        self.assertTrue(response.context["maintenance_only_available"])
+        self.assertEqual(response.context["payment_type"], "maintenance_only")
+        self.assertEqual(response.context["total_amount"], 900.0)
+        self.assertEqual(response.context["total_maintenance"], 900.0)
+
+    def test_payment_post_redirect_preserves_maintenance_only_payment_type(self):
+        lease = self.create_active_lease()
+        bill = MonthlyBill.objects.create(
+            lease=lease,
+            billing_month=date(2026, 1, 1),
+            due_date=date(2026, 1, 5),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("0.00"),
+            parking_fee=Decimal("0.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("10900.00"),
+            status="UNPAID",
+        )
+        BillLineItem.objects.create(
+            monthly_bill=bill,
+            line_type=BillLineItem.LINE_TYPE_MAINTENANCE,
+            amount=Decimal("900.00"),
+        )
+
+        response = self.client.post("/tenant/pay/?payment_type=maintenance_only")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/payments/gcash/manual/", response["Location"])
+        self.assertIn("amount=900.0", response["Location"])
+        self.assertIn(f"bill_ids={bill.id}", response["Location"])
+        self.assertIn("payment_type=maintenance_only", response["Location"])
 
     def test_payment_post_redirect_includes_amount_bill_ids_and_payment_type(self):
         lease = self.create_active_lease()

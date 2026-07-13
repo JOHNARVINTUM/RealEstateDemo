@@ -206,10 +206,10 @@
 
             <!-- Original Sum Base Column -->
             <td class="px-5 py-3.5 text-right font-bold text-slate-700">
-              ?{{ b.total_due|floatformat:0|intcomma }}
+              ₱{{ b.total_due|floatformat:0|intcomma }}
               {% if b.maintenance_amount > 0 %}
                 <div class="mt-1 text-[10px] font-bold uppercase tracking-wide text-indigo-600">
-                  Includes maintenance ?{{ b.maintenance_amount|floatformat:0|intcomma }}
+                  Includes maintenance ₱{{ b.maintenance_amount|floatformat:0|intcomma }}
                 </div>
               {% endif %}
             </td>

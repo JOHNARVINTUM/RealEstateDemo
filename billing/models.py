@@ -77,6 +77,33 @@ class MonthlyBill(models.Model):
     def __str__(self):
         return f"{self.lease} - {self.billing_month} ({self.status})"
 
+    def _line_item_amounts(self, line_type):
+        line_items = getattr(self, "_prefetched_objects_cache", {}).get("line_items")
+        if line_items is not None:
+            for line in line_items:
+                if line.line_type == line_type:
+                    return line.amount, line.paid_amount
+            return 0, 0
+
+        line = self.line_items.filter(line_type=line_type).only("amount", "paid_amount").first()
+        if not line:
+            return 0, 0
+        return line.amount, line.paid_amount
+
+    @property
+    def maintenance_amount(self):
+        amount, _ = self._line_item_amounts(BillLineItem.LINE_TYPE_MAINTENANCE)
+        return amount
+
+    @property
+    def maintenance_paid(self):
+        _, paid_amount = self._line_item_amounts(BillLineItem.LINE_TYPE_MAINTENANCE)
+        return paid_amount
+
+    @property
+    def maintenance_balance(self):
+        return max(self.maintenance_amount - self.maintenance_paid, 0)
+
     @property
     def parking_balance(self):
         """Remaining parking fee to pay"""
@@ -94,12 +121,12 @@ class MonthlyBill(models.Model):
     
     @property
     def total_balance(self):
-        """Total remaining balance including interest and parking"""
+        """Total remaining balance including interest, parking, and maintenance"""
         if self.status == "PAID":
             return 0
         if self.base_rent == 0 and self.water_amount == 0 and self.total_due > 0:
-            return max(self.total_due - (self.rent_paid + self.water_paid + self.parking_paid), 0)
-        return self.rent_balance + self.water_balance + self.parking_balance + self.interest
+            return max(self.total_due - (self.rent_paid + self.water_paid + self.parking_paid + self.maintenance_paid), 0)
+        return self.rent_balance + self.water_balance + self.parking_balance + self.maintenance_balance + self.interest
     
     @property
     def is_rent_paid(self):

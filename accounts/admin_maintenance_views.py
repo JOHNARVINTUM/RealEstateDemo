@@ -263,6 +263,54 @@ def _notify_staff_assignment(req, *, previous_staff_id):
         logger.exception("Failed to send maintenance assignment email: %s", exc)
 
 
+
+def _notify_admin_staff_marked_done(req, *, staff_user):
+    unit_number = req.lease.unit.number if req.lease and req.lease.unit else "N/A"
+    tenant_name = _display_name(req.tenant)
+    fixed_by_text = req.fixed_by or _display_name(staff_user)
+    message = (
+        f"{_display_name(staff_user)} marked maintenance request #{req.id} as resolved.\n"
+        f"Request: {req.title}\n"
+        f"Tenant: {tenant_name}\n"
+        f"Unit: {unit_number}\n"
+        f"Completed by: {fixed_by_text}"
+    )
+    try:
+        Notification.create_notification(
+            title="Maintenance Marked as Done",
+            message=message,
+            notification_type="MAINTENANCE",
+            related_unit=req.lease.unit if req.lease else None,
+            related_tenant=req.tenant,
+            recipient_type="ADMIN",
+        )
+    except Exception as exc:
+        logger.exception("Failed to create admin notification for resolved maintenance request: %s", exc)
+
+
+def _notify_admin_charge_suggestion(req, charge, *, staff_user, is_update=False):
+    unit_number = req.lease.unit.number if req.lease and req.lease.unit else "N/A"
+    tenant_name = _display_name(req.tenant)
+    action_label = "updated" if is_update else "submitted"
+    title = "Repair Cost Suggestion Updated" if is_update else "Repair Cost Suggestion Submitted"
+    message = (
+        f"{_display_name(staff_user)} {action_label} a repair cost suggestion for maintenance request #{req.id}.\n"
+        f"Request: {req.title}\n"
+        f"Tenant: {tenant_name}\n"
+        f"Unit: {unit_number}\n"
+        f"Suggested total: PHP {charge.suggested_total:,.2f}"
+    )
+    try:
+        Notification.create_notification(
+            title=title,
+            message=message,
+            notification_type="MAINTENANCE",
+            related_unit=req.lease.unit if req.lease else None,
+            related_tenant=req.tenant,
+            recipient_type="ADMIN",
+        )
+    except Exception as exc:
+        logger.exception("Failed to create admin notification for repair cost suggestion: %s", exc)
 @staff_or_admin_required
 def admin_update_maintenance(request, req_id: int):
     visible_queryset = _visible_maintenance_queryset_for_user(request.user)
@@ -297,6 +345,7 @@ def admin_update_maintenance(request, req_id: int):
         if is_staff_portal and action == "charge_suggestion":
             form = StaffMaintenanceUpdateForm(instance=req)
             admin_charge_form = None
+            had_existing_charge = bool(charge and charge.pk)
             charge_form = StaffMaintenanceChargeSuggestionForm(
                 request.POST,
                 instance=charge or MaintenanceCharge(),
@@ -308,6 +357,7 @@ def admin_update_maintenance(request, req_id: int):
                 return redirect("admin_update_maintenance", req_id=req.id)
             if charge_form.is_valid():
                 charge = charge_form.save()
+                _notify_admin_charge_suggestion(req, charge, staff_user=request.user, is_update=had_existing_charge)
                 messages.success(request, "Repair cost suggestion saved.")
                 return redirect("admin_update_maintenance", req_id=req.id)
         elif (not is_staff_portal) and action == "charge_review":
@@ -407,6 +457,9 @@ def admin_update_maintenance(request, req_id: int):
                     updated.resolved_at = None
 
                 updated.save()
+
+                if is_staff_portal and old_status != updated.status and updated.status == "RESOLVED":
+                    _notify_admin_staff_marked_done(updated, staff_user=request.user)
 
                 if not is_staff_portal:
                     _notify_tenant_review_update(updated, old_review_status=old_review_status)
@@ -607,3 +660,7 @@ def admin_maintenance(request):
             "is_staff_portal": is_staff_portal,
         },
     )
+
+
+
+

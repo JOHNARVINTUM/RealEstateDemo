@@ -115,7 +115,7 @@
                 {% endif %}
               </h4>
               <p class="text-sm font-semibold text-slate-500 mt-1">
-                {% if payment_type == 'rent_only' %}Monthly rent{% elif payment_type == 'water_only' %}Water only{% else %}Full bill{% endif %}
+                {% if payment_type == 'rent_only' %}Monthly rent{% elif payment_type == 'water_only' %}Water only{% elif payment_type == 'maintenance_only' %}Maintenance charge only{% else %}Full bill{% endif %}
                 {% if preview_rows %}for the generated billing months below{% else %}Select a duration to build the preview{% endif %}
               </p>
             </div>
@@ -138,6 +138,12 @@
               <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">Parking</span>
               <strong class="text-lg font-black text-slate-900">&#8369;{{ total_parking|floatformat:2|intcomma }}</strong>
             </div>
+            {% if total_maintenance > 0 %}
+            <div class="rounded-2xl border border-slate-200 bg-white px-5 py-4">
+              <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">Maintenance Charge</span>
+              <strong class="text-lg font-black text-slate-900">&#8369;{{ total_maintenance|floatformat:2|intcomma }}</strong>
+            </div>
+            {% endif %}
             <div class="rounded-2xl border border-slate-200 bg-white px-5 py-4">
               <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">Late Fee</span>
               <strong class="text-lg font-black {% if total_penalty > 0 %}text-rose-600{% else %}text-slate-900{% endif %}">
@@ -205,6 +211,14 @@
               </div>
             {% endif %}
 
+            {% if maintenance_only_available %}
+              <a href="?months_to_pay={{ months_to_pay }}&payment_type=maintenance_only"
+                 class="px-6 py-4 rounded-2xl font-black text-center transition-all border-2
+                        {% if payment_type == 'maintenance_only' %}bg-white text-slate-900 border-white shadow-[0_0_20px_rgba(255,255,255,0.3)]{% else %}bg-slate-800 text-slate-300 border-slate-700 hover:border-slate-500 hover:bg-slate-700{% endif %}">
+                Maintenance Charge Only
+              </a>
+            {% endif %}
+
             {% if can_pay_full_bill %}
               <a href="?months_to_pay={{ months_to_pay }}&payment_type=full"
                  class="px-6 py-4 rounded-2xl font-black text-center transition-all border-2
@@ -225,6 +239,8 @@
           <div class="text-center mb-8">
             {% if water_only_locked %}
               <p class="text-[11px] font-bold uppercase tracking-widest text-amber-400">Rent settled. Water only available.</p>
+            {% elif payment_type == 'maintenance_only' %}
+              <p class="text-[11px] font-bold uppercase tracking-widest text-blue-300">Maintenance charge can be paid separately.</p>
             {% elif full_bill_available %}
               <p class="text-[11px] font-bold uppercase tracking-widest text-emerald-400">Full bill available.</p>
             {% else %}
@@ -234,7 +250,7 @@
 
           <div class="border-t border-slate-700 pt-8 mb-8">
             <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 text-center">
-              {% if payment_type == 'rent_only' %}Total Monthly Rent{% elif payment_type == 'water_only' %}Total Water{% else %}Total Amount{% endif %}
+              {% if payment_type == 'rent_only' %}Total Monthly Rent{% elif payment_type == 'water_only' %}Total Water{% elif payment_type == 'maintenance_only' %}Total Maintenance{% else %}Total Amount{% endif %}
             </span>
             <strong class="text-6xl font-black text-white tracking-tight block text-center">
               ₱{{ total_amount|default:"0.00"|floatformat:2|intcomma }}
@@ -343,6 +359,7 @@
             <th class="pb-3 px-4 text-right">Rent</th>
             <th class="pb-3 px-4 text-right">Water</th>
             <th class="pb-3 px-4 text-right">Parking</th>
+            {% if total_maintenance > 0 %}<th class="pb-3 px-4 text-right">Maintenance</th>{% endif %}
             <th class="pb-3 px-4 text-right">Late Fee</th>
             <th class="pb-3 px-4 text-right">Total</th>
             <th class="pb-3 px-4 pl-8">Pay By</th>
@@ -374,6 +391,14 @@
                 {% endif %}
               </td>
               
+              {% if total_maintenance > 0 %}
+              <td class="bg-slate-50 p-4 border-y border-slate-100 text-right group-hover:bg-white group-hover:border-slate-200 group-hover:shadow-sm transition-all">
+                <strong class="text-sm font-black {% if r.pay_maintenance == 0 %}text-slate-300{% else %}text-slate-700{% endif %}">&#8369;{{ r.maintenance|default:"0.00"|floatformat:2|intcomma }}</strong>
+                {% if r.pay_maintenance > 0 and r.pay_maintenance < r.maintenance %}
+                  <span class="block text-[9px] font-black text-emerald-600 uppercase tracking-widest mt-1.5">[Apply &#8369;{{ r.pay_maintenance|floatformat:2 }}]</span>
+                {% endif %}
+              </td>
+              {% endif %}
               <td class="bg-slate-50 p-4 border-y border-slate-100 text-right group-hover:bg-white group-hover:border-slate-200 group-hover:shadow-sm transition-all">
                 <strong class="text-sm font-black {% if r.pay_penalty and r.pay_penalty != 0 %}text-rose-600{% else %}text-slate-300{% endif %}">
                   {% if r.pay_penalty and r.pay_penalty != 0 %}₱{{ r.pay_penalty|floatformat:2|intcomma }}{% else %}-{% endif %}
@@ -390,7 +415,7 @@
             </tr>
           {% empty %}
             <tr>
-              <td colspan="7">
+              <td colspan="{% if total_maintenance > 0 %}8{% else %}7{% endif %}">
                 <div class="border-2 border-dashed border-slate-200 rounded-3xl p-16 text-center bg-slate-50/50 mt-4 shadow-inner">
                   <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mx-auto mb-4 border border-slate-200">
                     <svg class="w-8 h-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>

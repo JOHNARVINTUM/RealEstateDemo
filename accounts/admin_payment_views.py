@@ -43,6 +43,34 @@ def _admin_payment_queryset():
     )
 
 
+
+def _payment_component_labels(payment_type, bills):
+    if payment_type == "maintenance_only":
+        return ["Maintenance"]
+    if payment_type == "water_only":
+        return ["Water"]
+    if payment_type == "rent_only":
+        labels = ["Rent"]
+        if any(b.parking_fee > 0 for b in bills):
+            labels.append("Parking")
+        if any(b.interest > 0 for b in bills):
+            labels.append("Late Fee")
+        return labels
+
+    labels = []
+    if any(b.base_rent > 0 for b in bills):
+        labels.append("Rent")
+    if any(b.water_amount > 0 for b in bills):
+        labels.append("Water")
+    if any(b.parking_fee > 0 for b in bills):
+        labels.append("Parking")
+    if any(b.maintenance_amount > 0 for b in bills):
+        labels.append("Maintenance")
+    if any(b.interest > 0 for b in bills):
+        labels.append("Late Fee")
+    return labels
+
+
 def _decorate_admin_payment_rows(payment_rows):
     page_user_ids = {payment.user_id for payment in payment_rows}
     tenant_leases = (
@@ -71,7 +99,7 @@ def _decorate_admin_payment_rows(payment_rows):
                 "base_rent",
                 "water_amount",
                 "parking_fee",
-            )
+            ).prefetch_related("line_items")
         }
 
     for p in payment_rows:
@@ -83,16 +111,7 @@ def _decorate_admin_payment_rows(payment_rows):
             bid_list = payment_bill_ids.get(p.id, [])
             if bid_list:
                 bills = [bills_by_id[bill_id] for bill_id in bid_list if bill_id in bills_by_id]
-                parts = []
-                has_rent = any(b.base_rent > 0 for b in bills)
-                has_water = any(b.water_amount > 0 for b in bills)
-                has_parking = any(b.parking_fee > 0 for b in bills)
-                if has_rent:
-                    parts.append('Rent')
-                if has_water:
-                    parts.append('Water')
-                if has_parking:
-                    parts.append('Parking')
+                parts = _payment_component_labels(p.payment_type, bills)
                 p.bill_components = ', '.join(parts) if parts else 'Rent'
                 months = sorted({bill.billing_month for bill in bills})
                 p.affected_months = ", ".join(month.strftime("%b %Y") for month in months) if months else "-"
@@ -189,9 +208,9 @@ def _build_cash_calendar_context(request, calendar_url):
 def _payment_record_fallback_amounts(payment, bill, remaining_amount):
     remaining_amount = Decimal(remaining_amount or 0)
     if remaining_amount <= 0:
-        return Decimal("0.00"), Decimal("0.00"), Decimal("0.00"), Decimal("0.00")
+        return Decimal("0.00"), Decimal("0.00"), Decimal("0.00"), Decimal("0.00"), Decimal("0.00")
 
-    pay_rent = pay_water = pay_parking = pay_penalty = Decimal("0.00")
+    pay_rent = pay_water = pay_parking = pay_maintenance = pay_penalty = Decimal("0.00")
 
     def take(amount):
         nonlocal remaining_amount
@@ -205,19 +224,22 @@ def _payment_record_fallback_amounts(payment, bill, remaining_amount):
         pay_penalty = take(bill.interest)
     elif payment.payment_type == "water_only":
         pay_water = take(bill.water_amount)
+    elif payment.payment_type == "maintenance_only":
+        pay_maintenance = take(bill.maintenance_amount)
     else:
         pay_rent = take(bill.base_rent)
         pay_water = take(bill.water_amount)
         pay_parking = take(bill.parking_fee)
+        pay_maintenance = take(bill.maintenance_amount)
         pay_penalty = take(bill.interest)
 
-    if pay_rent + pay_water + pay_parking + pay_penalty == 0:
+    if pay_rent + pay_water + pay_parking + pay_maintenance + pay_penalty == 0:
         if payment.payment_type == "water_only":
             pay_water = remaining_amount
         else:
             pay_rent = remaining_amount
 
-    return pay_rent, pay_water, pay_parking, pay_penalty
+    return pay_rent, pay_water, pay_parking, pay_maintenance, pay_penalty
 
 
 @staff_or_admin_required
@@ -388,7 +410,8 @@ def admin_payments(request):
                 "base_rent",
                 "water_amount",
                 "parking_fee",
-            )
+                "interest",
+            ).prefetch_related("line_items")
         }
 
     for p in page_payments:
@@ -400,25 +423,16 @@ def admin_payments(request):
             bid_list = payment_bill_ids.get(p.id, [])
             if bid_list:
                 bills = [bills_by_id[bill_id] for bill_id in bid_list if bill_id in bills_by_id]
-                parts = []
-                has_rent = any(b.base_rent > 0 for b in bills)
-                has_water = any(b.water_amount > 0 for b in bills)
-                has_parking = any(b.parking_fee > 0 for b in bills)
-                if has_rent:
-                    parts.append('Rent')
-                if has_water:
-                    parts.append('Water')
-                if has_parking:
-                    parts.append('Parking')
-                p.bill_components = ', '.join(parts) if parts else 'Rent'
+                parts = _payment_component_labels(p.payment_type, bills)
+                p.bill_components = ", ".join(parts) if parts else "Rent"
                 months = sorted({bill.billing_month for bill in bills})
-                p.affected_months = ", ".join(month.strftime("%b %Y") for month in months) if months else "â€”"
+                p.affected_months = ", ".join(month.strftime("%b %Y") for month in months) if months else "-"
             else:
-                p.bill_components = 'â€”'
-                p.affected_months = 'â€”'
+                p.bill_components = "-"
+                p.affected_months = "-"
         except Exception:
-            p.bill_components = 'â€”'
-            p.affected_months = 'â€”'
+            p.bill_components = "-"
+            p.affected_months = "-"
 
     is_f2f_schedule_view = method == "CASH" and status == "PENDING"
     cash_schedule_payments = page_payments if is_f2f_schedule_view else []
@@ -446,7 +460,6 @@ def admin_payments(request):
         )
 
     return render(request, "admin_portal/payments.html", context)
-
 
 @staff_or_admin_required
 def admin_payment_calendar(request):
@@ -493,6 +506,7 @@ def admin_payment_detail(request, payment_id: int):
     payment_type_choices = [
         ("rent_only", "Monthly Rent"),
         ("water_only", "Water Only"),
+        ("maintenance_only", "Maintenance Charge Only"),
         ("full", "Full Bill"),
     ]
 
@@ -548,26 +562,35 @@ def admin_payment_detail(request, payment_id: int):
             pay_rent = bill.base_rent if is_settled_payment else bill.rent_balance
             pay_water = 0
             pay_parking = bill.parking_fee if is_settled_payment else bill.parking_balance
+            pay_maintenance = 0
             pay_penalty = bill.interest
         elif payment.payment_type == "water_only":
             pay_rent = 0
             pay_water = bill.water_amount if is_settled_payment else bill.water_balance
             pay_parking = 0
+            pay_maintenance = 0
+            pay_penalty = 0
+        elif payment.payment_type == "maintenance_only":
+            pay_rent = 0
+            pay_water = 0
+            pay_parking = 0
+            pay_maintenance = bill.maintenance_amount if is_settled_payment else bill.maintenance_balance
             pay_penalty = 0
         else:
             pay_rent = bill.base_rent if is_settled_payment else bill.rent_balance
             pay_water = bill.water_amount if is_settled_payment else bill.water_balance
             pay_parking = bill.parking_fee if is_settled_payment else bill.parking_balance
+            pay_maintenance = bill.maintenance_amount if is_settled_payment else bill.maintenance_balance
             pay_penalty = bill.interest
 
-        pay_total = pay_rent + pay_water + pay_parking + pay_penalty
+        pay_total = pay_rent + pay_water + pay_parking + pay_maintenance + pay_penalty
         if pay_total == 0 and remaining_payment_amount > 0:
-            pay_rent, pay_water, pay_parking, pay_penalty = _payment_record_fallback_amounts(
+            pay_rent, pay_water, pay_parking, pay_maintenance, pay_penalty = _payment_record_fallback_amounts(
                 payment,
                 bill,
                 remaining_payment_amount,
             )
-            pay_total = pay_rent + pay_water + pay_parking + pay_penalty
+            pay_total = pay_rent + pay_water + pay_parking + pay_maintenance + pay_penalty
         remaining_payment_amount = max(remaining_payment_amount - pay_total, Decimal("0.00"))
 
         bills.append({
@@ -577,10 +600,12 @@ def admin_payment_detail(request, payment_id: int):
             "full_rent": bill.base_rent,
             "full_water": bill.water_amount,
             "full_parking": bill.parking_fee,
+            "full_maintenance": bill.maintenance_amount,
             "full_penalty": bill.interest,
             "rent": pay_rent,
             "water": pay_water,
             "parking": pay_parking,
+            "maintenance": pay_maintenance,
             "penalty": pay_penalty,
             "total": pay_total,
         })
@@ -588,8 +613,9 @@ def admin_payment_detail(request, payment_id: int):
     total_rent = sum(b["rent"] for b in bills)
     total_water = sum(b["water"] for b in bills)
     total_parking = sum(b["parking"] for b in bills)
+    total_maintenance = sum(b["maintenance"] for b in bills)
     total_penalty = sum(b["penalty"] for b in bills)
-    calculated_total = total_rent + total_water + total_parking + total_penalty
+    calculated_total = total_rent + total_water + total_parking + total_maintenance + total_penalty
 
     context = {
         "payment": payment,
@@ -603,6 +629,7 @@ def admin_payment_detail(request, payment_id: int):
         "total_rent": total_rent,
         "total_water": total_water,
         "total_parking": total_parking,
+        "total_maintenance": total_maintenance,
         "total_penalty": total_penalty,
         "total_amount": calculated_total,
     }

@@ -19,6 +19,7 @@ from payments.paymongo_workflow import (
 )
 from payments.services import should_relabel_full_payment_as_rent_only
 from rentals.models import Lease, TenantProfile, Unit
+from rentals.views import _payment_preview_rows, _payment_totals
 
 
 class AdvancePaymentRelabelTests(TestCase):
@@ -298,6 +299,70 @@ class MoveInPaymentNotificationTests(TestCase):
 
         self.assertNotIn(draft, payments)
         self.assertIn(paid_pending, payments)
+
+
+class TenantAdvancePaymentMaintenancePreviewTests(TestCase):
+    def setUp(self):
+        self.tenant = User.objects.create_user(
+            email="preview.tenant@gmail.com",
+            username="previewtenant",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        TenantProfile.objects.create(
+            user=self.tenant,
+            first_name="Preview",
+            last_name="Tenant",
+            password_change_required=False,
+            created_by=None,
+        )
+        self.unit = Unit.objects.create(number="PV-101")
+        self.lease = Lease.objects.create(
+            tenant=self.tenant,
+            unit=self.unit,
+            monthly_rent=Decimal("10000.00"),
+            due_day=5,
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 12, 31),
+            status=Lease.STATUS_ACTIVE,
+            is_active=True,
+        )
+        self.bill = MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=date(2026, 7, 1),
+            due_date=date(2026, 7, 5),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("1200.00"),
+            parking_fee=Decimal("500.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("12600.00"),
+            status="UNPAID",
+        )
+        BillLineItem.objects.create(
+            monthly_bill=self.bill,
+            line_type=BillLineItem.LINE_TYPE_MAINTENANCE,
+            amount=Decimal("900.00"),
+        )
+
+    def test_full_payment_preview_rows_include_maintenance_charge(self):
+        preview_rows = _payment_preview_rows(self.lease, [self.bill], "full")
+        totals = _payment_totals(preview_rows, "full")
+
+        self.assertEqual(totals["total_maintenance"], 900.0)
+        self.assertEqual(preview_rows[0]["maintenance"], 900.0)
+        self.assertEqual(preview_rows[0]["pay_maintenance"], 900.0)
+
+    def test_maintenance_only_preview_rows_include_only_maintenance_charge(self):
+        preview_rows = _payment_preview_rows(self.lease, [self.bill], "maintenance_only")
+        totals = _payment_totals(preview_rows, "maintenance_only")
+
+        self.assertEqual(totals["total_amount"], 900.0)
+        self.assertEqual(totals["total_rent"], 0.0)
+        self.assertEqual(totals["total_water"], 0.0)
+        self.assertEqual(totals["total_maintenance"], 900.0)
+        self.assertEqual(preview_rows[0]["pay_rent"], 0.0)
+        self.assertEqual(preview_rows[0]["pay_water"], 0.0)
+        self.assertEqual(preview_rows[0]["pay_maintenance"], 900.0)
 
 
 class F2FCashScheduleTests(TestCase):

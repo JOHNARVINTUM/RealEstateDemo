@@ -85,7 +85,7 @@
         </p>
 
         {% if current_bill %}
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8">
+          <div class="grid grid-cols-2 {% if current_bill and current_bill.maintenance_amount > 0 %}sm:grid-cols-5{% else %}sm:grid-cols-4{% endif %} gap-4 mt-8">
             <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
               <span class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Rent</span>
               <strong class="block text-xl font-black text-slate-900">&#8369;{{ current_bill.base_rent|default:"0.00"|floatformat:2|intcomma }}</strong>
@@ -98,6 +98,12 @@
               <span class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Parking</span>
               <strong class="block text-xl font-black text-slate-900">&#8369;{{ current_bill.parking_fee|default:"0.00"|floatformat:2|intcomma }}</strong>
             </div>
+            {% if current_bill.maintenance_amount > 0 %}
+            <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+              <span class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Maintenance Charge</span>
+              <strong class="block text-xl font-black text-slate-900">&#8369;{{ current_bill.maintenance_amount|default:"0.00"|floatformat:2|intcomma }}</strong>
+            </div>
+            {% endif %}
             <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
               <span class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Late Fee</span>
               <strong class="block text-xl font-black {% if current_bill.interest > 0 %}text-rose-600{% else %}text-slate-900{% endif %}">&#8369;{{ current_bill.interest|default:"0.00"|floatformat:2|intcomma }}</strong>

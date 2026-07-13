@@ -393,6 +393,204 @@ class BillingWorkflowTests(TestCase):
         statuses = set(bill.line_items.values_list("status", flat=True))
         self.assertEqual(statuses, {BillLineItem.STATUS_PAID})
 
+    def test_full_payment_includes_maintenance_charge(self):
+        bill = MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=date(2026, 2, 1),
+            due_date=date(2026, 2, 28),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("1200.00"),
+            parking_fee=Decimal("500.00"),
+            interest=Decimal("315.00"),
+            total_due=Decimal("12915.00"),
+            status="UNPAID",
+        )
+        BillLineItem.objects.create(
+            monthly_bill=bill,
+            line_type=BillLineItem.LINE_TYPE_MAINTENANCE,
+            amount=Decimal("900.00"),
+        )
+        payment = ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="REF-FULL-MAINTENANCE",
+            bill_ids=str(bill.id),
+            payment_type="full",
+            amount=Decimal("12915.00"),
+            status="PENDING",
+        )
+
+        with patch("rentals.services.send_email_via_resend", return_value=True):
+            approve_manual_payment(payment)
+
+        bill.refresh_from_db()
+        invoice = BillingInvoice.objects.get(payment=payment)
+        maintenance_line = bill.line_items.get(line_type=BillLineItem.LINE_TYPE_MAINTENANCE)
+
+        self.assertEqual(bill.status, "PAID")
+        self.assertEqual(bill.maintenance_amount, Decimal("900.00"))
+        self.assertEqual(bill.maintenance_balance, Decimal("0.00"))
+        self.assertEqual(maintenance_line.status, BillLineItem.STATUS_PAID)
+        self.assertEqual(invoice.snapshot["lines"][0]["maintenance_charge"], "900.00")
+        self.assertIn("Maintenance: PHP 900.00", _render_invoice_email(invoice))
+
+    def test_rent_only_payment_ignores_maintenance_charge(self):
+        bill = MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=date(2026, 2, 1),
+            due_date=date(2026, 2, 28),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("1200.00"),
+            parking_fee=Decimal("500.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("12600.00"),
+            status="UNPAID",
+        )
+        BillLineItem.objects.create(
+            monthly_bill=bill,
+            line_type=BillLineItem.LINE_TYPE_MAINTENANCE,
+            amount=Decimal("900.00"),
+        )
+        payment = ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="REF-RENT-IGNORE-MAINT",
+            bill_ids=str(bill.id),
+            payment_type="rent_only",
+            amount=Decimal("10500.00"),
+            status="PENDING",
+        )
+
+        with patch("rentals.services.send_email_via_resend", return_value=True):
+            approve_manual_payment(payment)
+
+        bill.refresh_from_db()
+        maintenance_line = bill.line_items.get(line_type=BillLineItem.LINE_TYPE_MAINTENANCE)
+
+        self.assertEqual(bill.status, "PARTIALLY_PAID")
+        self.assertEqual(maintenance_line.status, BillLineItem.STATUS_UNPAID)
+        self.assertEqual(bill.maintenance_balance, Decimal("900.00"))
+        self.assertEqual(bill.total_balance, Decimal("2100.00"))
+
+    def test_water_only_payment_ignores_maintenance_charge(self):
+        bill = MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=date(2026, 2, 1),
+            due_date=date(2026, 2, 28),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("1200.00"),
+            parking_fee=Decimal("0.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("12100.00"),
+            status="UNPAID",
+        )
+        BillLineItem.objects.create(
+            monthly_bill=bill,
+            line_type=BillLineItem.LINE_TYPE_MAINTENANCE,
+            amount=Decimal("900.00"),
+        )
+        payment = ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="REF-WATER-IGNORE-MAINT",
+            bill_ids=str(bill.id),
+            payment_type="water_only",
+            amount=Decimal("1200.00"),
+            status="PENDING",
+        )
+
+        with patch("rentals.services.send_email_via_resend", return_value=True):
+            approve_manual_payment(payment)
+
+        bill.refresh_from_db()
+        maintenance_line = bill.line_items.get(line_type=BillLineItem.LINE_TYPE_MAINTENANCE)
+
+        self.assertEqual(bill.water_paid, Decimal("1200.00"))
+        self.assertEqual(maintenance_line.status, BillLineItem.STATUS_UNPAID)
+        self.assertEqual(bill.maintenance_balance, Decimal("900.00"))
+        self.assertEqual(bill.total_balance, Decimal("10900.00"))
+
+    def test_maintenance_only_payment_settles_only_maintenance_charge(self):
+        bill = MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=date(2026, 2, 1),
+            due_date=date(2026, 2, 28),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("1200.00"),
+            parking_fee=Decimal("0.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("12100.00"),
+            status="UNPAID",
+        )
+        BillLineItem.objects.create(
+            monthly_bill=bill,
+            line_type=BillLineItem.LINE_TYPE_MAINTENANCE,
+            amount=Decimal("900.00"),
+        )
+        payment = ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="REF-MAINTENANCE-ONLY",
+            bill_ids=str(bill.id),
+            payment_type="maintenance_only",
+            amount=Decimal("900.00"),
+            status="PENDING",
+        )
+
+        with patch("rentals.services.send_email_via_resend", return_value=True):
+            approve_manual_payment(payment)
+
+        bill.refresh_from_db()
+        maintenance_line = bill.line_items.get(line_type=BillLineItem.LINE_TYPE_MAINTENANCE)
+        rent_line = bill.line_items.get(line_type=BillLineItem.LINE_TYPE_RENT)
+        water_line = bill.line_items.get(line_type=BillLineItem.LINE_TYPE_WATER)
+
+        self.assertEqual(maintenance_line.status, BillLineItem.STATUS_PAID)
+        self.assertEqual(maintenance_line.paid_amount, Decimal("900.00"))
+        self.assertEqual(rent_line.status, BillLineItem.STATUS_UNPAID)
+        self.assertEqual(water_line.status, BillLineItem.STATUS_UNPAID)
+        self.assertEqual(bill.maintenance_balance, Decimal("0.00"))
+        self.assertEqual(bill.status, "PARTIALLY_PAID")
+        self.assertEqual(bill.total_balance, Decimal("11200.00"))
+
+    def test_bill_only_becomes_paid_when_all_balances_are_settled_after_maintenance_payment(self):
+        bill = MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=date(2026, 2, 1),
+            due_date=date(2026, 2, 28),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("1200.00"),
+            parking_fee=Decimal("0.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("12100.00"),
+            status="UNPAID",
+        )
+        BillLineItem.objects.create(
+            monthly_bill=bill,
+            line_type=BillLineItem.LINE_TYPE_MAINTENANCE,
+            amount=Decimal("900.00"),
+        )
+        maintenance_payment = ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="REF-MAINT-FIRST",
+            bill_ids=str(bill.id),
+            payment_type="maintenance_only",
+            amount=Decimal("900.00"),
+            status="PENDING",
+        )
+        full_payment = ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="REF-FULL-AFTER-MAINT",
+            bill_ids=str(bill.id),
+            payment_type="full",
+            amount=Decimal("11200.00"),
+            status="PENDING",
+        )
+
+        with patch("rentals.services.send_email_via_resend", return_value=True):
+            approve_manual_payment(maintenance_payment)
+            approve_manual_payment(full_payment)
+
+        bill.refresh_from_db()
+        self.assertEqual(bill.status, "PAID")
+        self.assertEqual(bill.total_balance, Decimal("0.00"))
+
     def test_water_payment_refreshes_future_unpaid_carryover(self):
         WaterRate.objects.create(
             effective_date=date(2026, 5, 1),

@@ -71,6 +71,7 @@
           <span class="font-semibold text-slate-900 text-base capitalize px-2.5 py-1 bg-slate-50 rounded border border-slate-200">
             {% if payment.payment_type == "rent_only" %}Monthly Rent
             {% elif payment.payment_type == "water_only" %}Water Only
+            {% elif payment.payment_type == "maintenance_only" %}Maintenance Charge Only
             {% elif payment.payment_type == "full" %}Full Bill
             {% else %}Full{% endif %}
           </span>
@@ -175,6 +176,7 @@
               <th class="px-6 py-4 text-[11px] font-black text-slate-500 uppercase tracking-widest text-right">Rent Base</th>
               <th class="px-6 py-4 text-[11px] font-black text-slate-500 uppercase tracking-widest text-right">Water Utility</th>
               <th class="px-6 py-4 text-[11px] font-black text-slate-500 uppercase tracking-widest text-right">Parking</th>
+              {% if total_maintenance > 0 %}<th class="px-6 py-4 text-[11px] font-black text-slate-500 uppercase tracking-widest text-right">Maintenance</th>{% endif %}
               <th class="px-6 py-4 text-[11px] font-black text-slate-500 uppercase tracking-widest text-right">Penalties</th>
               <th class="px-6 py-4 text-[11px] font-black text-slate-800 uppercase tracking-widest text-right">Subtotal</th>
             </tr>
@@ -187,12 +189,13 @@
               <td class="px-6 py-5 text-right font-medium text-slate-700">₱{{ bill.rent|floatformat:2|intcomma }}</td>
               <td class="px-6 py-5 text-right font-medium text-slate-700">₱{{ bill.water|floatformat:2|intcomma }}</td>
               <td class="px-6 py-5 text-right font-medium text-slate-700">₱{{ bill.parking|floatformat:2|intcomma }}</td>
+              {% if total_maintenance > 0 %}<td class="px-6 py-5 text-right font-medium text-slate-700">&#8369;{{ bill.maintenance|floatformat:2|intcomma }}</td>{% endif %}
               <td class="px-6 py-5 text-right font-medium {% if bill.penalty > 0 %}text-rose-600 font-bold bg-rose-50/50{% else %}text-slate-400{% endif %}">₱{{ bill.penalty|floatformat:2|intcomma }}</td>
               <td class="px-6 py-5 text-right font-black text-slate-900 bg-slate-50/30 group-hover:bg-slate-100/50 transition-colors">₱{{ bill.total|floatformat:2|intcomma }}</td>
             </tr>
             {% empty %}
             <tr>
-              <td colspan="7" class="px-6 py-12 text-center">
+              <td colspan="{% if total_maintenance > 0 %}8{% else %}7{% endif %}" class="px-6 py-12 text-center">
                 <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-100 mb-3 text-slate-400">
                   <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                 </div>
@@ -207,6 +210,7 @@
               <td class="px-6 py-5 text-right font-bold text-indigo-800">₱{{ total_rent|floatformat:2|intcomma }}</td>
               <td class="px-6 py-5 text-right font-bold text-indigo-800">₱{{ total_water|floatformat:2|intcomma }}</td>
               <td class="px-6 py-5 text-right font-bold text-indigo-800">₱{{ total_parking|floatformat:2|intcomma }}</td>
+              {% if total_maintenance > 0 %}<td class="px-6 py-5 text-right font-bold text-indigo-800">&#8369;{{ total_maintenance|floatformat:2|intcomma }}</td>{% endif %}
               <td class="px-6 py-5 text-right font-bold {% if total_penalty > 0 %}text-rose-700{% else %}text-indigo-800{% endif %}">₱{{ total_penalty|floatformat:2|intcomma }}</td>
               <td class="px-6 py-5 text-right font-black text-indigo-900 text-lg">₱{{ total_amount|floatformat:2|intcomma }}</td>
             </tr>

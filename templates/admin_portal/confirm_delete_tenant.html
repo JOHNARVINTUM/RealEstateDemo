@@ -117,7 +117,7 @@
                 <input type="hidden" name="phase" value="2">
                 <input type="hidden" name="admin_password" value="{{ request.POST.admin_password }}">
 
-                <!-- OPTION 1: ARCHIVE (Keep Profile) -->
+                <!-- OPTION 1: ARCHIVE (Recommended) -->
                 <label class="block cursor-pointer group">
                     <input type="radio" name="deletion_type" value="ARCHIVE" class="sr-only peer" checked>
                     <div class="p-6 rounded-2xl border-2 border-slate-200 bg-white hover:border-blue-400 peer-checked:border-blue-500 peer-checked:bg-blue-50/50 transition-all">
@@ -128,35 +128,52 @@
                                 </svg>
                             </div>
                             <div class="flex-1">
-                                <h4 class="text-base font-bold text-slate-900">Archive & Deactivate</h4>
-                                <p class="text-sm text-slate-600 mt-1">Keep profile and records in archive. Tenant cannot login but all data is preserved.</p>
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <h4 class="text-base font-bold text-slate-900">Archive & Deactivate</h4>
+                                    <span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-black uppercase tracking-wider">Recommended</span>
+                                </div>
+                                <p class="text-sm text-slate-600 mt-1">Keep the tenant in the archive and preserve all live historical records for billing, ledger, and forecasting.</p>
                                 <ul class="text-xs text-slate-500 mt-3 space-y-1">
-                                    <li class="flex items-center gap-2">
-                                        <svg class="w-3 h-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-                                        All records preserved (leases, payments, maintenance)
-                                    </li>
-                                    <li class="flex items-center gap-2">
-                                        <svg class="w-3 h-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-                                        Tenant data archived for audit trail
-                                    </li>
-                                    <li class="flex items-center gap-2">
-                                        <svg class="w-3 h-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-                                        Can be restored in the future
-                                    </li>
-                                    <li class="flex items-center gap-2">
-                                        <svg class="w-3 h-3 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                                        Tenant login disabled, unit becomes available
-                                    </li>
+                                    <li class="flex items-center gap-2"><svg class="w-3 h-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg> All leases, bills, payments, and maintenance history stay intact</li>
+                                    <li class="flex items-center gap-2"><svg class="w-3 h-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg> Tenant login is disabled and the account can be restored later</li>
+                                    <li class="flex items-center gap-2"><svg class="w-3 h-3 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg> Best option when the tenant already has records</li>
                                 </ul>
                             </div>
                         </div>
                     </div>
                 </label>
 
-                <!-- OPTION 2: DELETE (Permanent) -->
-                <label class="block cursor-pointer group">
-                    <input type="radio" name="deletion_type" value="DELETE" class="sr-only peer">
-                    <div class="p-6 rounded-2xl border-2 border-slate-200 bg-white hover:border-rose-400 peer-checked:border-rose-500 peer-checked:bg-rose-50/50 transition-all">
+                <!-- OPTION 2: SOFT DELETE -->
+                <label class="block cursor-pointer group {% if has_records %}opacity-60 cursor-not-allowed{% endif %}">
+                    <input type="radio" name="deletion_type" value="SOFT_DELETE" class="sr-only peer" {% if has_records %}disabled{% endif %}>
+                    <div class="p-6 rounded-2xl border-2 border-slate-200 bg-white {% if not has_records %}hover:border-amber-400 peer-checked:border-amber-500 peer-checked:bg-amber-50/50{% endif %} transition-all">
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a5 5 0 00-10 0v2m-2 0h14v10a2 2 0 01-2 2H7a2 2 0 01-2-2V9zm5 4h4"></path>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="text-base font-bold text-slate-900">Soft Delete</h4>
+                                <p class="text-sm text-slate-600 mt-1">Remove the live account but keep a restorable archive snapshot. Only safe for tenants with no records.</p>
+                                <ul class="text-xs text-slate-500 mt-3 space-y-1">
+                                    <li class="flex items-center gap-2"><svg class="w-3 h-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg> Removes tenant from active lists</li>
+                                    <li class="flex items-center gap-2"><svg class="w-3 h-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg> Archive remains restorable</li>
+                                    {% if has_records %}
+                                    <li class="flex items-center gap-2 text-rose-600 font-bold"><svg class="w-3 h-3 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path></svg> Disabled because this tenant already has records</li>
+                                    {% else %}
+                                    <li class="flex items-center gap-2"><svg class="w-3 h-3 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg> Use only for empty/mistaken accounts</li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </label>
+
+                <!-- OPTION 3: HARD DELETE -->
+                <label class="block cursor-pointer group {% if has_records %}opacity-60 cursor-not-allowed{% endif %}">
+                    <input type="radio" name="deletion_type" value="HARD_DELETE" class="sr-only peer" {% if has_records %}disabled{% endif %}>
+                    <div class="p-6 rounded-2xl border-2 border-slate-200 bg-white {% if not has_records %}hover:border-rose-400 peer-checked:border-rose-500 peer-checked:bg-rose-50/50{% endif %} transition-all">
                         <div class="flex items-start gap-4">
                             <div class="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 shrink-0">
                                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -164,25 +181,16 @@
                                 </svg>
                             </div>
                             <div class="flex-1">
-                                <h4 class="text-base font-bold text-slate-900">Permanently Delete</h4>
-                                <p class="text-sm text-slate-600 mt-1">Delete tenant profile and all associated records. Cannot be undone.</p>
+                                <h4 class="text-base font-bold text-slate-900">Hard Delete</h4>
+                                <p class="text-sm text-slate-600 mt-1">Permanently remove the live account and keep only a non-restorable audit archive.</p>
                                 <ul class="text-xs text-slate-500 mt-3 space-y-1">
-                                    <li class="flex items-center gap-2">
-                                        <svg class="w-3 h-3 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path></svg>
-                                        Tenant profile permanently removed
-                                    </li>
-                                    <li class="flex items-center gap-2">
-                                        <svg class="w-3 h-3 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path></svg>
-                                        All records deleted (leases, payments, maintenance)
-                                    </li>
-                                    <li class="flex items-center gap-2">
-                                        <svg class="w-3 h-3 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                                        Archive entry created for audit only
-                                    </li>
-                                    <li class="flex items-center gap-2">
-                                        <svg class="w-3 h-3 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path></svg>
-                                        <strong>Cannot be restored</strong>
-                                    </li>
+                                    <li class="flex items-center gap-2"><svg class="w-3 h-3 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path></svg> Live tenant account is permanently removed</li>
+                                    <li class="flex items-center gap-2"><svg class="w-3 h-3 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path></svg> Archive remains for audit only and cannot be restored</li>
+                                    {% if has_records %}
+                                    <li class="flex items-center gap-2 text-rose-600 font-bold"><svg class="w-3 h-3 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path></svg> Blocked because this tenant has records that would affect billing ledger and forecasting</li>
+                                    {% else %}
+                                    <li class="flex items-center gap-2"><svg class="w-3 h-3 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg> Use only when you are certain the account should never be restored</li>
+                                    {% endif %}
                                 </ul>
                             </div>
                         </div>

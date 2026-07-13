@@ -14,7 +14,7 @@ from announcements.models import BusinessProfile, HomepageBanner, LandingPageFea
 from accounts.admin_forecasting_views import _build_forecasting_context
 from accounts.admin_notification_views import resolve_notification_target_url
 from accounts.admin_portal_forms import ComprehensiveTenantEditForm, LeaseForm, TenantProfileForm
-from billing.models import MonthlyBill
+from billing.models import BillLineItem, MonthlyBill
 from maintenance.models import MaintenanceRequest
 from payments.models import ManualPayment
 from rentals.models import ArchivedTenant, Lease, Notification, TenantAttachment, TenantProfile, Unit
@@ -494,6 +494,29 @@ class AdminPaymentTypeEditTests(TestCase):
         self.assertEqual(response.status_code, 200)
         page_payment = response.context["page_obj"][0]
         self.assertEqual(page_payment.tenant_display_name, "Tenant Person")
+        self.assertEqual(page_payment.affected_months, "Sep 2026")
+
+    def test_admin_payments_labels_maintenance_only_rows_as_maintenance(self):
+        maintenance_line = BillLineItem.objects.create(
+            monthly_bill=self.bill,
+            line_type=BillLineItem.LINE_TYPE_MAINTENANCE,
+            amount=Decimal("900.00"),
+            paid_amount=Decimal("900.00"),
+            status=BillLineItem.STATUS_PAID,
+        )
+        self.bill.total_due = Decimal("11250.00")
+        self.bill.payment_reference = self.payment.reference_code
+        self.bill.save(update_fields=["total_due", "payment_reference"])
+        self.payment.payment_type = "maintenance_only"
+        self.payment.amount = Decimal("900.00")
+        self.payment.save(update_fields=["payment_type", "amount"])
+
+        self.client.force_login(self.admin)
+        response = self.client.get("/admin-portal/payments/")
+
+        self.assertEqual(response.status_code, 200)
+        page_payment = response.context["page_obj"][0]
+        self.assertEqual(page_payment.bill_components, "Maintenance")
         self.assertEqual(page_payment.affected_months, "Sep 2026")
 
     def test_admin_payments_all_view_includes_pending_f2f_cash_records(self):
@@ -1179,6 +1202,45 @@ class AdminBillingSettlementWarningTests(TestCase):
         self.assertContains(response, "May 2026")
         self.assertNotContains(response, "Apr 2026")
         self.assertTrue(MonthlyBill.objects.filter(pk=paid_april.pk).exists())
+
+    def test_admin_billing_shows_future_partially_paid_contract_months_in_main_table(self):
+        self.admin.role = User.Role.ADMIN
+        self.admin.save(update_fields=["role"])
+        today = date.today()
+        current_month = today.replace(day=1)
+        if current_month.month == 12:
+            next_month = date(current_month.year + 1, 1, 1)
+        else:
+            next_month = date(current_month.year, current_month.month + 1, 1)
+        future_partial = MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=next_month,
+            due_date=next_month.replace(day=5),
+            base_rent=Decimal("10125.00"),
+            water_amount=Decimal("0.00"),
+            parking_fee=Decimal("350.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("12275.00"),
+            status="PARTIALLY_PAID",
+            payment_reference="REF-MAINT-ADMIN",
+        )
+        BillLineItem.objects.create(
+            monthly_bill=future_partial,
+            line_type=BillLineItem.LINE_TYPE_MAINTENANCE,
+            amount=Decimal("1800.00"),
+            paid_amount=Decimal("1800.00"),
+            payment_reference="REF-MAINT-ADMIN",
+            status=BillLineItem.STATUS_PAID,
+        )
+        self.client.force_login(self.admin)
+
+        response = self.client.get(reverse("admin_billing"), {"q": "billing-tenant"})
+
+        self.assertEqual(response.status_code, 200)
+        bill_ids = [bill.id for bill in response.context["page_obj"]]
+        self.assertIn(future_partial.id, bill_ids)
+        self.assertContains(response, "Includes maintenance")
+        self.assertContains(response, "1,800")
 
     def test_admin_billing_shows_future_paid_contract_months_in_main_table(self):
         today = date.today()
@@ -2523,6 +2585,7 @@ class AdminTenantDeleteArchiveTests(TestCase):
             email="admin-delete@gmail.com",
             username="admindelete",
             password="password123",
+            role=User.Role.ADMIN,
         )
         self.tenant = User.objects.create_user(
             email="archive.tenant@gmail.com",
@@ -2596,6 +2659,108 @@ class AdminTenantDeleteArchiveTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Security Verification Required")
         self.assertContains(response, self.profile.full_name)
+
+
+    def test_delete_phase_two_disables_soft_and_hard_delete_for_tenants_with_records(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.post(
+            f"/admin-portal/tenants/{self.profile.id}/delete/",
+            {"admin_password": "password123"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'value="SOFT_DELETE"')
+        self.assertContains(response, 'value="HARD_DELETE"')
+        self.assertContains(response, 'disabled')
+        self.assertContains(response, 'already has records')
+
+    def test_soft_delete_removes_empty_tenant_with_restorable_archive(self):
+        empty_tenant = User.objects.create_user(
+            email="empty.tenant@gmail.com",
+            username="emptytenant",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        empty_profile = TenantProfile.objects.create(
+            user=empty_tenant,
+            first_name="Empty",
+            last_name="Tenant",
+            password_change_required=False,
+            created_by=None,
+        )
+        self.client.force_login(self.admin)
+
+        response = self.client.post(
+            f"/admin-portal/tenants/{empty_profile.id}/delete/",
+            {
+                "phase": "2",
+                "admin_password": "password123",
+                "deletion_type": "SOFT_DELETE",
+                "deletion_reason": "Cleanup test",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(TenantProfile.objects.filter(pk=empty_profile.id).exists())
+        self.assertFalse(User.objects.filter(pk=empty_tenant.id).exists())
+        archive = ArchivedTenant.objects.get(email="empty.tenant@gmail.com")
+        self.assertEqual(archive.archive_type, "DELETED_SOFT")
+        self.assertTrue(archive.can_be_restored)
+
+    def test_hard_delete_is_blocked_for_tenant_with_records(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.post(
+            f"/admin-portal/tenants/{self.profile.id}/delete/",
+            {
+                "phase": "2",
+                "admin_password": "password123",
+                "deletion_type": "HARD_DELETE",
+                "deletion_reason": "Unsafe delete attempt",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(TenantProfile.objects.filter(pk=self.profile.id).exists())
+        self.assertTrue(User.objects.filter(pk=self.tenant.id).exists())
+        self.assertContains(response, 'Hard delete is blocked')
+
+    def test_hard_delete_removes_empty_tenant_with_non_restorable_archive(self):
+        empty_tenant = User.objects.create_user(
+            email="hard.empty@gmail.com",
+            username="hardempty",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        empty_profile = TenantProfile.objects.create(
+            user=empty_tenant,
+            first_name="Hard",
+            last_name="Empty",
+            password_change_required=False,
+            created_by=None,
+        )
+        self.client.force_login(self.admin)
+
+        response = self.client.post(
+            f"/admin-portal/tenants/{empty_profile.id}/delete/",
+            {
+                "phase": "2",
+                "admin_password": "password123",
+                "deletion_type": "HARD_DELETE",
+                "deletion_reason": "Permanent cleanup",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(TenantProfile.objects.filter(pk=empty_profile.id).exists())
+        self.assertFalse(User.objects.filter(pk=empty_tenant.id).exists())
+        archive = ArchivedTenant.objects.get(email="hard.empty@gmail.com")
+        self.assertEqual(archive.archive_type, "DELETED_HARD")
+        self.assertFalse(archive.can_be_restored)
 
 
 class LeaseFormCompatibilityTests(TestCase):

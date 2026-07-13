@@ -80,6 +80,22 @@
     </a>
     {% endif %}
 
+        <a href="{% url 'admin_maintenance' %}"
+       aria-current="{% if request.resolver_match.url_name == 'admin_maintenance' or request.resolver_match.url_name == 'admin_update_maintenance' %}page{% endif %}"
+       class="nav-link flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 overflow-hidden
+              {% if request.resolver_match.url_name == 'admin_maintenance' or request.resolver_match.url_name == 'admin_update_maintenance' %}
+                bg-[#262B33]/60 border-l-4 border-[#3B7CE6] font-semibold text-white shadow-xs
+              {% else %}
+                text-slate-300 hover:bg-[#262B33]/30 hover:text-white
+              {% endif %}">
+      <div class="w-6 flex justify-center shrink-0">
+        <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <span class="nav-text ml-3 whitespace-nowrap transition-all duration-300">Maintenance</span>
+    </a>
+
     <div class="space-y-2 sidebar-section" data-sidebar-section>
       <button type="button"
               class="sidebar-section-toggle w-full flex items-center justify-between px-4 py-2 rounded-xl text-left text-slate-300 hover:bg-[#262B33]/20 transition-all duration-200"
@@ -271,3 +287,4 @@
   </div>
 
 </aside>
+

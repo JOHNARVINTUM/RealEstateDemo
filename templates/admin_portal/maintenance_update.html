@@ -189,7 +189,7 @@
 
     <!-- Right Column: Update Status Form -->
     <div class="w-full lg:w-96 shrink-0 space-y-6">
-      <div class="bg-white border border-slate-200 rounded-xl p-8 shadow-xs sticky top-6">
+      <div class="bg-white border border-slate-200 rounded-xl p-8 shadow-xs">
         
         <h2 class="text-lg font-black text-slate-900">{% if is_staff_portal %}Update Progress{% else %}Review & Assignment{% endif %}</h2>
         <p class="text-sm text-slate-500 mt-1 mb-6 font-bold leading-relaxed">{% if is_staff_portal %}You can update only the work progress for this request.{% else %}Accept or reject the request first, then assign a staff member for accepted work.{% endif %}</p>
@@ -531,3 +531,4 @@
   });
 </script>
 {% endblock %}
+

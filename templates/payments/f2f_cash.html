@@ -76,9 +76,10 @@
           <div class="mb-8">
             <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Payment for</span>
             <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 font-bold text-lg text-slate-800">
-              {% if payment_type == "full" %}Rent & Water
+              {% if payment_type == "full" %}Rent, Water & Maintenance
               {% elif payment_type == "rent_only" %}Monthly Rent
               {% elif payment_type == "water_only" %}Water Only
+              {% elif payment_type == "maintenance_only" %}Maintenance Charge Only
               {% else %}Rent & Water{% endif %}
             </div>
           </div>

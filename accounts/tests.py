@@ -10,7 +10,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import User
-from announcements.models import BusinessProfile, HomepageBanner, LandingPageFeature, LandingPageSection
+from announcements.models import Announcement, BusinessProfile, HomepageBanner, LandingPageFeature, LandingPageSection
 from accounts.admin_forecasting_views import _build_forecasting_context
 from accounts.admin_notification_views import resolve_notification_target_url
 from accounts.admin_portal_forms import ComprehensiveTenantEditForm, LeaseForm, TenantProfileForm
@@ -266,6 +266,12 @@ class StaffPortalRestrictionTests(TestCase):
             status="PENDING",
             preferred_date=date(2026, 7, 5),
         )
+        self.announcement = Announcement.objects.create(
+            title="Water Interruption Notice",
+            body="Scheduled maintenance will affect water access from 1 PM to 3 PM.",
+            is_active=True,
+            created_by=self.admin,
+        )
 
     def test_staff_can_access_allowed_operational_pages(self):
         self.client.force_login(self.staff)
@@ -273,10 +279,8 @@ class StaffPortalRestrictionTests(TestCase):
         for url_name in [
             "admin_dashboard",
             "admin_maintenance",
-            "admin_payments",
-            "admin_payment_calendar",
             "admin_notifications",
-            "admin_water",
+            "admin_announcements",
         ]:
             with self.subTest(url_name=url_name):
                 response = self.client.get(reverse(url_name))
@@ -288,18 +292,17 @@ class StaffPortalRestrictionTests(TestCase):
         response = self.client.get(reverse("admin_dashboard"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Operations Overview")
+        self.assertContains(response, "Staff Overview")
         self.assertContains(response, "Notifications")
         self.assertContains(response, "Repair Requests")
-        self.assertContains(response, "Payments")
-        self.assertContains(response, "Water")
-        self.assertNotContains(response, "Tenants")
-        self.assertNotContains(response, "Rent & Bills")
-        self.assertNotContains(response, "Risk Check")
-        self.assertNotContains(response, "Units")
-        self.assertNotContains(response, "News & Updates")
-        self.assertNotContains(response, "Future Estimates")
-        self.assertNotContains(response, "Landing Page Editor")
+        self.assertContains(response, reverse("admin_announcements"))
+        self.assertNotContains(response, "Operations")
+        self.assertNotContains(response, reverse("admin_payments"))
+        self.assertNotContains(response, reverse("admin_water"))
+        self.assertNotContains(response, reverse("admin_units"))
+        self.assertNotContains(response, reverse("admin_tenants"))
+        self.assertNotContains(response, reverse("admin_forecasting"))
+        self.assertNotContains(response, reverse("admin_tenant_risk"))
         self.assertNotContains(response, reverse("admin_business_profile"))
 
     def test_staff_is_redirected_from_admin_only_routes(self):
@@ -310,8 +313,13 @@ class StaffPortalRestrictionTests(TestCase):
             reverse("admin_units"),
             reverse("admin_forecasting"),
             reverse("admin_tenant_risk"),
-            reverse("admin_announcements"),
             reverse("admin_business_profile"),
+            reverse("admin_create_announcement"),
+            reverse("admin_edit_announcement", args=[self.announcement.id]),
+            reverse("admin_delete_announcement", args=[self.announcement.id]),
+            reverse("admin_payments"),
+            reverse("admin_payment_calendar"),
+            reverse("admin_payment_detail", args=[self.payment.id]),
             reverse("admin_homepage_banners"),
             reverse("admin_edit_landing_banner"),
             reverse("admin_edit_landing_hero"),
@@ -322,6 +330,8 @@ class StaffPortalRestrictionTests(TestCase):
             reverse("admin_landing_sections"),
             reverse("admin_landing_features"),
             reverse("admin_delete_payment", args=[self.payment.id]),
+            reverse("admin_water"),
+            reverse("admin_water_export_csv"),
             reverse("admin_water_rate"),
         ]
 
@@ -331,7 +341,7 @@ class StaffPortalRestrictionTests(TestCase):
                 self.assertEqual(response.status_code, 302)
                 self.assertIn(reverse("login"), response.url)
 
-    def test_staff_cannot_change_payment_type_label(self):
+    def test_staff_cannot_access_payment_detail_actions(self):
         self.client.force_login(self.staff)
 
         response = self.client.post(
@@ -340,13 +350,26 @@ class StaffPortalRestrictionTests(TestCase):
                 "action": "update_payment_type",
                 "payment_type": "rent_only",
             },
-            follow=True,
         )
 
         self.payment.refresh_from_db()
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("login"), response.url)
         self.assertEqual(self.payment.payment_type, "full")
-        self.assertContains(response, "Staff cannot change payment type labels.")
+
+    def test_staff_can_view_announcements_read_only(self):
+        self.client.force_login(self.staff)
+
+        response = self.client.get(reverse("admin_announcements"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.announcement.title)
+        self.assertNotContains(response, reverse("admin_create_announcement"))
+        self.assertNotContains(response, reverse("admin_edit_announcement", args=[self.announcement.id]))
+        self.assertNotContains(response, reverse("admin_delete_announcement", args=[self.announcement.id]))
+        self.assertNotContains(response, "Business Profile Live")
+        self.assertNotContains(response, "Landing Banner Live")
+        self.assertNotContains(response, reverse("admin_business_profile"))
 
     def test_admin_still_has_access_to_admin_only_pages(self):
         self.client.force_login(self.admin)

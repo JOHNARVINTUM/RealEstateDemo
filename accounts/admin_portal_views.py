@@ -390,6 +390,18 @@ def admin_dashboard(request):
 
     open_maintenance_count = MaintenanceRequest.objects.filter(status="OPEN").count()
     maintenance_in_progress_count = MaintenanceRequest.objects.filter(status="IN_PROGRESS").count()
+    if is_staff_portal:
+        staff_requests = MaintenanceRequest.objects.filter(
+            review_status="ACCEPTED",
+            assigned_staff=request.user,
+        )
+        assigned_task_count = staff_requests.filter(status="OPEN").count()
+        staff_in_progress_count = staff_requests.filter(status="IN_PROGRESS").count()
+        resolved_task_count = staff_requests.filter(status="RESOLVED").count()
+    else:
+        assigned_task_count = open_maintenance_count
+        staff_in_progress_count = maintenance_in_progress_count
+        resolved_task_count = MaintenanceRequest.objects.filter(status="RESOLVED").count()
     pending_payment_reviews = ManualPayment.objects.filter(
         user__role="TENANT",
         user__is_staff=False,
@@ -434,6 +446,9 @@ def admin_dashboard(request):
         "is_staff_portal": is_staff_portal,
         "open_maintenance_count": open_maintenance_count,
         "maintenance_in_progress_count": maintenance_in_progress_count,
+        "assigned_task_count": assigned_task_count,
+        "staff_in_progress_count": staff_in_progress_count,
+        "resolved_task_count": resolved_task_count,
         "pending_payment_reviews": pending_payment_reviews,
         "pending_cash_schedules": pending_cash_schedules,
         "missing_water_readings": missing_water_readings,
@@ -769,22 +784,28 @@ def admin_toggle_unit_status(request, unit_id):
 
 
 
-@admin_required
+@staff_or_admin_required
 def admin_announcements(request):
     q = (request.GET.get("q") or "").strip()
+    is_staff_portal = getattr(request.user, "role", "") == "STAFF"
     items = Announcement.objects.select_related("created_by").order_by("-created_at")
+    if is_staff_portal:
+        items = items.filter(is_active=True)
     if q:
         items = items.filter(Q(title__icontains=q) | Q(body__icontains=q))
 
     today = timezone.localdate()
+    active_business_profile = None if is_staff_portal else (_safe_active_business_profile() or _safe_business_profile_queryset().first())
+    active_banner = None if is_staff_portal else _safe_active_homepage_banner()
     context = {
         "items": items,
         "q": q,
-        "total_count": Announcement.objects.count(),
-        "active_count": Announcement.objects.filter(is_active=True).count(),
-        "this_month_count": Announcement.objects.filter(created_at__year=today.year, created_at__month=today.month).count(),
-        "active_business_profile": _safe_active_business_profile() or _safe_business_profile_queryset().first(),
-        "active_banner": _safe_active_homepage_banner(),
+        "total_count": items.count(),
+        "active_count": items.filter(is_active=True).count(),
+        "this_month_count": items.filter(created_at__year=today.year, created_at__month=today.month).count(),
+        "active_business_profile": active_business_profile,
+        "active_banner": active_banner,
+        "is_staff_portal": is_staff_portal,
     }
     return render(request, "admin_portal/announcements.html", context)
 

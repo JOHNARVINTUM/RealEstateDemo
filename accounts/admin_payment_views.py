@@ -242,7 +242,7 @@ def _payment_record_fallback_amounts(payment, bill, remaining_amount):
     return pay_rent, pay_water, pay_parking, pay_maintenance, pay_penalty
 
 
-@staff_or_admin_required
+@admin_required
 def admin_approve_payment(request, payment_id: int):
     p = get_object_or_404(ManualPayment.objects.select_related("user", "user__tenantprofile"), pk=payment_id)
     if request.method == "POST":
@@ -288,7 +288,7 @@ def admin_repair_move_in_payment(request, payment_id: int):
     })
 
 
-@staff_or_admin_required
+@admin_required
 def admin_reject_payment(request, payment_id: int):
     p = get_object_or_404(ManualPayment.objects.select_related("user", "user__tenantprofile"), pk=payment_id)
     if request.method == "POST":
@@ -303,7 +303,7 @@ def admin_reject_payment(request, payment_id: int):
     })
 
 
-@staff_or_admin_required
+@admin_required
 def admin_confirm_schedule(request, payment_id: int):
     """Confirm F2F cash payment schedule - notifies tenant that time is confirmed"""
     p = get_object_or_404(ManualPayment.objects.select_related("user", "user__tenantprofile"), pk=payment_id)
@@ -342,7 +342,7 @@ def admin_confirm_schedule(request, payment_id: int):
     })
 
 
-@staff_or_admin_required
+@admin_required
 def admin_payments(request):
     q = request.GET.get("q", "").strip()
     status = request.GET.get("status", "").strip()
@@ -461,7 +461,7 @@ def admin_payments(request):
 
     return render(request, "admin_portal/payments.html", context)
 
-@staff_or_admin_required
+@admin_required
 def admin_payment_calendar(request):
     context = _build_cash_calendar_context(request, reverse("admin_payment_calendar"))
     return render(request, "admin_portal/payment_calendar.html", context)
@@ -492,7 +492,7 @@ def admin_delete_payment(request, payment_id: int):
     )
 
 
-@staff_or_admin_required
+@admin_required
 def admin_payment_detail(request, payment_id: int):
     """
     Display complete payment details including breakdown of bills and amounts.
@@ -637,7 +637,7 @@ def admin_payment_detail(request, payment_id: int):
     return render(request, "admin_portal/payment_detail.html", context)
 
 
-@staff_or_admin_required
+@admin_required
 def admin_reschedule_cash_payment(request, payment_id: int):
     payment = get_object_or_404(_admin_payment_queryset(), pk=payment_id)
     if payment.payment_method != "CASH":

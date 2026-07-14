@@ -120,7 +120,7 @@ def _recompute_unpaid_water_readings_for_month(reading_date, computed_by):
     return fixed_count, skipped_count, error_count
 
 
-@staff_or_admin_required
+@admin_required
 def admin_water(request):
     """Water Management dashboard with bulk entry"""
     
@@ -281,7 +281,7 @@ def admin_water(request):
     return render(request, "admin_portal/water_management.html", context)
 
 
-@staff_or_admin_required
+@admin_required
 def admin_water_export_csv(request):
     today = date.today()
     month = int(request.GET.get('month', today.month))

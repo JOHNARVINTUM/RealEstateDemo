@@ -96,6 +96,30 @@
       <span class="nav-text ml-3 whitespace-nowrap transition-all duration-300">Maintenance</span>
     </a>
 
+    {% if request.user.role == "STAFF" %}
+    <a href="{% url 'admin_announcements' %}"
+       aria-current="{% if request.resolver_match.url_name == 'admin_announcements' %}page{% endif %}"
+       class="nav-link flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 overflow-hidden
+              {% if request.resolver_match.url_name == 'admin_announcements' %}
+                bg-[#262B33]/60 border-l-4 border-[#3B7CE6] font-semibold text-white shadow-xs
+              {% else %}
+                text-slate-300 hover:bg-[#262B33]/30 hover:text-white
+              {% endif %}">
+      <div class="w-6 flex justify-center shrink-0">
+        <svg class="w-5 h-5 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 11v2" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 10.5 14.5 7a1 1 0 0 1 1.5.87v8.26a1 1 0 0 1-1.5.87L6 13.5" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 10.5h3a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2v-.5a1 1 0 0 1 1-1Z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10 13.5 11.5 18a1.5 1.5 0 0 0 2.85-.95L13 13.2" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M18.5 9.5a3.5 3.5 0 0 1 0 5" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M20.5 8a5.5 5.5 0 0 1 0 8" />
+        </svg>
+      </div>
+      <span class="nav-text ml-3 whitespace-nowrap transition-all duration-300">Announcements</span>
+    </a>
+    {% endif %}
+
+    {% if request.user.role != "STAFF" %}
     <div class="space-y-2 sidebar-section" data-sidebar-section>
       <button type="button"
               class="sidebar-section-toggle w-full flex items-center justify-between px-4 py-2 rounded-xl text-left text-slate-300 hover:bg-[#262B33]/20 transition-all duration-200"
@@ -107,6 +131,7 @@
       </button>
 
       <div class="sidebar-section-links space-y-2 {% if request.resolver_match.url_name != 'admin_payments' and request.resolver_match.url_name != 'admin_payment_calendar' and request.resolver_match.url_name != 'admin_payment_detail' and request.resolver_match.url_name != 'admin_reschedule_cash_payment' and request.resolver_match.url_name != 'admin_approve_payment' and request.resolver_match.url_name != 'admin_reject_payment' and request.resolver_match.url_name != 'admin_confirm_schedule' and request.resolver_match.url_name != 'admin_delete_payment' and request.resolver_match.url_name != 'admin_repair_move_in_payment' and request.resolver_match.url_name != 'admin_water' and request.resolver_match.url_name != 'admin_water_rate' and request.resolver_match.url_name != 'admin_water_process' and request.resolver_match.url_name != 'admin_water_export_csv' and request.resolver_match.url_name != 'admin_water_recompute' and request.resolver_match.url_name != 'admin_units' and request.resolver_match.url_name != 'admin_unit_detail' and request.resolver_match.url_name != 'admin_create_unit' and request.resolver_match.url_name != 'admin_edit_unit' and request.resolver_match.url_name != 'admin_delete_unit' and request.resolver_match.url_name != 'admin_restore_unit' and request.resolver_match.url_name != 'admin_toggle_unit_status' %}hidden{% endif %}">
+        {% if request.user.role != "STAFF" %}
         <a href="{% url 'admin_water' %}"
            aria-current="{% if request.resolver_match.url_name == 'admin_water' or request.resolver_match.url_name == 'admin_water_rate' or request.resolver_match.url_name == 'admin_water_process' or request.resolver_match.url_name == 'admin_water_export_csv' or request.resolver_match.url_name == 'admin_water_recompute' %}page{% endif %}"
            class="nav-link flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 overflow-hidden
@@ -138,7 +163,7 @@
           </div>
           <span class="nav-text ml-3 whitespace-nowrap transition-all duration-300">Payments</span>
         </a>
-
+        {% endif %}
         {% if request.user.role != "STAFF" %}
         <a href="{% url 'admin_units' %}"
            aria-current="{% if request.resolver_match.url_name == 'admin_units' or request.resolver_match.url_name == 'admin_unit_detail' or request.resolver_match.url_name == 'admin_create_unit' or request.resolver_match.url_name == 'admin_edit_unit' or request.resolver_match.url_name == 'admin_delete_unit' or request.resolver_match.url_name == 'admin_restore_unit' or request.resolver_match.url_name == 'admin_toggle_unit_status' %}page{% endif %}"
@@ -158,6 +183,7 @@
         {% endif %}
       </div>
     </div>
+    {% endif %}
 
     {% if request.user.role != "STAFF" %}
     <div class="space-y-2 sidebar-section" data-sidebar-section>

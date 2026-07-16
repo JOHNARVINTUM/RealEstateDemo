@@ -1322,6 +1322,12 @@ class AdminNotificationBehaviorTests(TestCase):
             username="adminnotify",
             password="password123",
         )
+        self.staff = User.objects.create_user(
+            email="notify-staff@gmail.com",
+            username="notifystaff",
+            password="password123",
+            role=User.Role.STAFF,
+        )
         self.tenant = User.objects.create_user(
             email="notify-tenant@gmail.com",
             username="notifytenant",
@@ -1375,6 +1381,37 @@ class AdminNotificationBehaviorTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Notification.objects.filter(pk=old_read.pk).exists())
+
+    def test_admin_can_delete_single_notification_without_password_prompt(self):
+        notification = Notification.objects.create(
+            title="Delete Me",
+            message="Done",
+            notification_type="SYSTEM",
+            recipient_type="ADMIN",
+            is_read=True,
+        )
+        self.client.force_login(self.admin)
+
+        response = self.client.post(reverse("admin_delete_notification", args=[notification.id]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(Notification.objects.filter(pk=notification.pk).exists())
+
+    def test_staff_can_delete_own_notification_without_password_prompt(self):
+        notification = Notification.objects.create(
+            title="Staff Delete",
+            message="Assigned task updated",
+            notification_type="SYSTEM",
+            recipient_type="SPECIFIC_USER",
+            user=self.staff,
+            is_read=True,
+        )
+        self.client.force_login(self.staff)
+
+        response = self.client.post(reverse("admin_delete_notification", args=[notification.id]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(Notification.objects.filter(pk=notification.pk).exists())
 
     def test_payment_notifications_show_view_for_approved_and_approve_for_pending(self):
         approved_payment = ManualPayment.objects.create(

@@ -1133,3 +1133,100 @@ class MaintenanceChargeModelTests(TestCase):
         self.assertEqual(line_item.line_type, BillLineItem.LINE_TYPE_MAINTENANCE)
         self.assertEqual(line_item.status, BillLineItem.STATUS_UNPAID)
 
+
+class StaffAssignmentAvailabilityTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            email="staff-availability-admin@example.com",
+            username="staffavailabilityadmin",
+            password="password123",
+            role=User.Role.ADMIN,
+        )
+        self.active_staff = User.objects.create_user(
+            email="available-staff@example.com",
+            username="availablestaff",
+            password="password123",
+            role=User.Role.STAFF,
+        )
+        self.inactive_staff = User.objects.create_user(
+            email="inactive-staff@example.com",
+            username="inactivestaff",
+            password="password123",
+            role=User.Role.STAFF,
+            is_active=False,
+        )
+        self.tenant = User.objects.create_user(
+            email="availability-tenant@example.com",
+            username="availabilitytenant",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        TenantProfile.objects.create(user=self.active_staff, first_name="Available", last_name="Staff", created_by=self.admin)
+        TenantProfile.objects.create(user=self.inactive_staff, first_name="Inactive", last_name="Staff", created_by=self.admin)
+        TenantProfile.objects.create(user=self.tenant, first_name="Tenant", last_name="User", created_by=self.admin)
+        self.unit = Unit.objects.create(number="MS-101", monthly_rent=Decimal("10000.00"), status="OCCUPIED", is_active=True)
+        self.lease = Lease.objects.create(
+            tenant=self.tenant,
+            unit=self.unit,
+            monthly_rent=Decimal("10000.00"),
+            due_day=5,
+            start_date=date(2026, 6, 1),
+            status=Lease.STATUS_ACTIVE,
+            is_active=True,
+        )
+        self.request_obj = MaintenanceRequest.objects.create(
+            tenant=self.tenant,
+            lease=self.lease,
+            category="PLUMBING",
+            title="Pipe leak",
+            description="Water is leaking under the kitchen sink.",
+            requested_schedule_at=timezone.make_aware(datetime(2026, 6, 20, 9, 0)),
+            status="OPEN",
+            review_status="PENDING",
+        )
+
+    def test_assignment_dropdown_shows_only_active_staff_with_job_counts(self):
+        MaintenanceRequest.objects.create(
+            tenant=self.tenant,
+            lease=self.lease,
+            category="ELECTRICAL",
+            title="Outlet problem",
+            description="The outlet is not working.",
+            review_status="ACCEPTED",
+            assigned_staff=self.active_staff,
+            status="OPEN",
+        )
+
+        form = AdminMaintenanceUpdateForm(instance=self.request_obj)
+        staff_queryset = form.fields["assigned_staff"].queryset
+        staff_ids = list(staff_queryset.values_list("id", flat=True))
+        labels = [form.fields["assigned_staff"].label_from_instance(obj) for obj in staff_queryset]
+
+        self.assertIn(self.active_staff.id, staff_ids)
+        self.assertNotIn(self.inactive_staff.id, staff_ids)
+        self.assertTrue(any("1 active job" in label for label in labels))
+
+    def test_existing_inactive_assigned_staff_remains_visible_in_assignment_dropdown(self):
+        self.request_obj.review_status = "ACCEPTED"
+        self.request_obj.assigned_staff = self.inactive_staff
+        self.request_obj.status = "OPEN"
+        self.request_obj.save(update_fields=["review_status", "assigned_staff", "status"])
+
+        form = AdminMaintenanceUpdateForm(instance=self.request_obj)
+        staff_ids = list(form.fields["assigned_staff"].queryset.values_list("id", flat=True))
+
+        self.assertIn(self.inactive_staff.id, staff_ids)
+
+    def test_staff_history_page_preserves_existing_records_after_deactivation(self):
+        self.request_obj.review_status = "ACCEPTED"
+        self.request_obj.assigned_staff = self.inactive_staff
+        self.request_obj.status = "RESOLVED"
+        self.request_obj.resolved_at = timezone.now()
+        self.request_obj.save(update_fields=["review_status", "assigned_staff", "status", "resolved_at"])
+        self.client.force_login(self.admin)
+
+        response = self.client.get(reverse("admin_staff_detail", args=[self.inactive_staff.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Pipe leak")
+        self.assertContains(response, "Resolved")

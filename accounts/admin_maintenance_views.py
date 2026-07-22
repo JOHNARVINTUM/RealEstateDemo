@@ -2,7 +2,7 @@ import logging
 
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -14,7 +14,9 @@ from maintenance.services import post_maintenance_charge_to_billing
 from rentals.models import Lease, Notification
 from rentals.services import send_email_via_resend
 
-from .decorators import staff_or_admin_required
+from .admin_portal_forms import StaffAccountCreateForm, StaffAccountUpdateForm
+from .decorators import admin_required, staff_or_admin_required
+from .models import User
 
 
 logger = logging.getLogger(__name__)
@@ -572,6 +574,190 @@ def admin_update_maintenance(request, req_id: int):
         },
     )
 
+
+ACTIVE_STAFF_JOB_STATUSES = ("OPEN", "IN_PROGRESS")
+
+
+def _staff_management_queryset():
+    return (
+        User.objects.filter(role=User.Role.STAFF)
+        .select_related("tenantprofile")
+        .annotate(
+            active_job_count=Count(
+                "assigned_maintenance_requests",
+                filter=Q(
+                    assigned_maintenance_requests__review_status="ACCEPTED",
+                    assigned_maintenance_requests__status__in=ACTIVE_STAFF_JOB_STATUSES,
+                ),
+                distinct=True,
+            ),
+            completed_job_count=Count(
+                "assigned_maintenance_requests",
+                filter=Q(
+                    assigned_maintenance_requests__review_status="ACCEPTED",
+                    assigned_maintenance_requests__status="RESOLVED",
+                ),
+                distinct=True,
+            ),
+        )
+        .order_by("tenantprofile__first_name", "tenantprofile__last_name", "email")
+    )
+
+
+def _prepare_staff_rows(staff_users):
+    for staff_user in staff_users:
+        profile = getattr(staff_user, "tenantprofile", None)
+        staff_user.display_name = _display_name(staff_user)
+        staff_user.display_identifier = staff_user.email or staff_user.username
+        staff_user.display_contact_no = (getattr(profile, "contact_no", "") or "-")
+        staff_user.display_date_added = getattr(profile, "created_at", None) or staff_user.date_joined
+    return staff_users
+
+
+@admin_required
+def admin_staff_management(request):
+    q = (request.GET.get("q") or "").strip()
+    status_filter = (request.GET.get("status") or "ALL").strip().upper() or "ALL"
+
+    base_queryset = _staff_management_queryset()
+    staff_queryset = base_queryset
+
+    if q:
+        staff_queryset = staff_queryset.filter(
+            Q(email__icontains=q)
+            | Q(username__icontains=q)
+            | Q(tenantprofile__first_name__icontains=q)
+            | Q(tenantprofile__last_name__icontains=q)
+        )
+
+    if status_filter == "ACTIVE":
+        staff_queryset = staff_queryset.filter(is_active=True)
+    elif status_filter == "INACTIVE":
+        staff_queryset = staff_queryset.filter(is_active=False)
+    else:
+        status_filter = "ALL"
+
+    paginator = Paginator(staff_queryset, 10)
+    page_obj = paginator.get_page(request.GET.get("page"))
+    _prepare_staff_rows(page_obj.object_list)
+
+    return render(
+        request,
+        "admin_portal/staff_management.html",
+        {
+            "page_obj": page_obj,
+            "q": q,
+            "status_filter": status_filter,
+            "total_staff": base_queryset.count(),
+            "active_staff_count": base_queryset.filter(is_active=True).count(),
+            "inactive_staff_count": base_queryset.filter(is_active=False).count(),
+        },
+    )
+
+
+@admin_required
+def admin_staff_add(request):
+    if request.method == "POST":
+        form = StaffAccountCreateForm(request.POST)
+        if form.is_valid():
+            form.save(uploaded_by=request.user)
+            messages.success(request, "Staff account created successfully.")
+            return redirect("admin_staff_management")
+    else:
+        form = StaffAccountCreateForm()
+
+    return render(
+        request,
+        "admin_portal/staff_form.html",
+        {
+            "form": form,
+            "form_title": "Add Staff",
+            "submit_label": "Create Staff Account",
+            "is_edit": False,
+        },
+    )
+
+
+@admin_required
+def admin_staff_detail(request, staff_id: int):
+    staff_user = get_object_or_404(_staff_management_queryset(), pk=staff_id)
+    _prepare_staff_rows([staff_user])
+    history = list(
+        MaintenanceRequest.objects.select_related(
+            "tenant",
+            "tenant__tenantprofile",
+            "lease",
+            "lease__unit",
+        )
+        .filter(assigned_staff=staff_user)
+        .order_by("-created_at")
+    )
+
+    return render(
+        request,
+        "admin_portal/staff_detail.html",
+        {
+            "staff_user": staff_user,
+            "history": history,
+            "active_jobs": getattr(staff_user, "active_job_count", 0) or 0,
+            "completed_jobs": getattr(staff_user, "completed_job_count", 0) or 0,
+        },
+    )
+
+
+@admin_required
+def admin_staff_edit(request, staff_id: int):
+    staff_user = get_object_or_404(User.objects.filter(role=User.Role.STAFF).select_related("tenantprofile"), pk=staff_id)
+    if request.method == "POST":
+        form = StaffAccountUpdateForm(request.POST, staff_user=staff_user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Staff account updated successfully.")
+            return redirect("admin_staff_management")
+    else:
+        form = StaffAccountUpdateForm(staff_user=staff_user)
+
+    return render(
+        request,
+        "admin_portal/staff_form.html",
+        {
+            "form": form,
+            "form_title": "Edit Staff",
+            "submit_label": "Save Staff Changes",
+            "staff_user": staff_user,
+            "is_edit": True,
+        },
+    )
+
+
+@admin_required
+def admin_staff_toggle_status(request, staff_id: int):
+    if request.method != "POST":
+        return redirect("admin_staff_management")
+
+    staff_user = get_object_or_404(_staff_management_queryset(), pk=staff_id)
+    action = (request.POST.get("action") or "").strip().lower()
+    next_url = (request.POST.get("next") or "").strip() or reverse("admin_staff_management")
+
+    if action not in {"activate", "deactivate"}:
+        messages.error(request, "Invalid staff status action.")
+        return redirect(next_url)
+
+    if action == "deactivate":
+        if staff_user.active_job_count:
+            messages.warning(
+                request,
+                "This staff member currently has active maintenance requests. Deactivation will prevent login and new assignments, but existing maintenance records will remain.",
+            )
+        staff_user.is_active = False
+        staff_user.save(update_fields=["is_active"])
+        messages.success(request, "Staff account deactivated successfully.")
+    else:
+        staff_user.is_active = True
+        staff_user.save(update_fields=["is_active"])
+        messages.success(request, "Staff account activated successfully.")
+
+    return redirect(next_url)
 
 @staff_or_admin_required
 def admin_maintenance(request):

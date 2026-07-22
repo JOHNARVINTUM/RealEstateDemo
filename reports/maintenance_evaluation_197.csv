@@ -1,0 +1,198 @@
+record_code,title,description,human_category,system_category,category_correct,keyword_matched,human_priority,system_priority,priority_confidence,priority_correct
+R001,ELECTRICAL Issue - Unit [Redacted],Bathroom light burned out in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,Low,42.57%,No
+R002,ELECTRICAL Issue - Unit [Redacted],Bedroom outlet sparks when plugging in charger in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,Low,53.33%,No
+R003,ELECTRICAL Issue - Unit [Redacted],Circuit breaker keeps tripping in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,Medium,58.00%,No
+R004,STRUCTURAL Issue - Unit [Redacted],Wall crack appearing in Unit [Redacted] bedroom,Structural,Structural,Yes,Yes,Low,Low,66.67%,Yes
+R005,PLUMBING Issue - Unit [Redacted],Bathroom sink clogged in Unit [Redacted],Plumbing,Plumbing,Yes,Yes,High,Medium,74.92%,No
+R006,STRUCTURAL Issue - Unit [Redacted],Floor tiles loose in Unit [Redacted] kitchen,Structural,Structural,Yes,Yes,Medium,High,56.00%,No
+R007,OTHER Issue - Unit [Redacted],Neighbors too noisy during midnight in Unit [Redacted],Other,Other,Yes,No,High,Medium,68.00%,No
+R008,ELECTRICAL Issue - Unit [Redacted],Circuit breaker keeps tripping in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,Low,68.67%,No
+R009,ELECTRICAL Issue - Unit [Redacted],Bedroom outlet sparks when plugging in charger in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,Low,69.33%,No
+R010,STRUCTURAL Issue - Unit [Redacted],Ceiling water stain in Unit [Redacted],Plumbing,Structural,No,Yes,Medium,Medium,84.85%,Yes
+R011,ELECTRICAL Issue - Unit [Redacted],Power outlet not working in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,High,68.00%,Yes
+R012,PLUMBING Issue - Unit [Redacted],Low water pressure in shower of Unit [Redacted],Plumbing,Plumbing,Yes,Yes,Medium,Low,74.00%,No
+R013,OTHER Issue - Unit [Redacted],Neighbors too noisy during midnight in Unit [Redacted],Other,Other,Yes,No,High,Medium,70.16%,No
+R014,STRUCTURAL Issue - Unit [Redacted],Door frame damaged in Unit [Redacted],Structural,Structural,Yes,Yes,Medium,Low,53.25%,No
+R015,PLUMBING Issue - Unit [Redacted],Low water pressure in shower of Unit [Redacted],Plumbing,Plumbing,Yes,Yes,Medium,High,69.33%,No
+R016,ELECTRICAL Issue - Unit [Redacted],Bathroom light burned out in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,Medium,73.33%,No
+R017,ELECTRICAL Issue - Unit [Redacted],Power outlet not working in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,High,70.67%,Yes
+R018,PLUMBING Issue - Unit [Redacted],Low water pressure in shower of Unit [Redacted],Plumbing,Plumbing,Yes,Yes,Medium,High,68.67%,No
+R019,OTHER Issue - Unit [Redacted],Internet connection unstable in Unit [Redacted],Other,Other,Yes,No,Medium,Low,37.21%,No
+R020,OTHER Issue - Unit [Redacted],Bad smell in hallway near Unit [Redacted],Other,Other,Yes,No,High,Low,70.67%,No
+R021,PLUMBING Issue - Unit [Redacted],Bathroom sink clogged in Unit [Redacted],Plumbing,Plumbing,Yes,Yes,High,Low,63.33%,No
+R022,ELECTRICAL Issue - Unit [Redacted],Bathroom light burned out in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,Low,53.50%,No
+R023,OTHER Issue - Unit [Redacted],Bad smell in hallway near Unit [Redacted],Other,Other,Yes,No,High,Medium,88.92%,No
+R024,OTHER Issue - Unit [Redacted],Aircon leaking in Unit [Redacted] bedroom,Other,Plumbing,No,Yes,Medium,High,70.67%,No
+R025,ELECTRICAL Issue - Unit [Redacted],Light fixture flickering in Unit [Redacted] living room,Electrical,Electrical,Yes,Yes,High,Low,65.68%,No
+R026,OTHER Issue - Unit [Redacted],Neighbors too noisy during midnight in Unit [Redacted],Other,Other,Yes,No,High,Low,78.51%,No
+R027,ELECTRICAL Issue - Unit [Redacted],Bedroom outlet sparks when plugging in charger in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,High,76.00%,Yes
+R028,OTHER Issue - Unit [Redacted],Internet connection unstable in Unit [Redacted],Other,Other,Yes,No,Medium,Medium,56.92%,Yes
+R029,OTHER Issue - Unit [Redacted],Cockroaches seen near kitchen cabinet in Unit [Redacted],Other,Structural,No,Yes,High,Medium,80.69%,No
+R030,OTHER Issue - Unit [Redacted],Internet connection unstable in Unit [Redacted],Other,Other,Yes,No,Medium,Low,75.33%,No
+R031,OTHER Issue - Unit [Redacted],Neighbors too noisy during midnight in Unit [Redacted],Other,Other,Yes,No,High,Low,73.58%,No
+R032,OTHER Issue - Unit [Redacted],Aircon leaking in Unit [Redacted] bedroom,Other,Plumbing,No,Yes,Medium,Medium,90.72%,Yes
+R033,STRUCTURAL Issue - Unit [Redacted],Door frame damaged in Unit [Redacted],Structural,Structural,Yes,Yes,Medium,Medium,85.04%,Yes
+R034,STRUCTURAL Issue - Unit [Redacted],Wall crack appearing in Unit [Redacted] bedroom,Structural,Structural,Yes,Yes,Low,Low,62.67%,Yes
+R035,PLUMBING Issue - Unit [Redacted],Bathroom sink clogged in Unit [Redacted],Plumbing,Plumbing,Yes,Yes,High,High,92.00%,Yes
+R036,ELECTRICAL Issue - Unit [Redacted],Light fixture flickering in Unit [Redacted] living room,Electrical,Electrical,Yes,Yes,High,Medium,76.00%,No
+R037,OTHER Issue - Unit [Redacted],Aircon leaking in Unit [Redacted] bedroom,Other,Plumbing,No,Yes,Medium,Medium,59.68%,Yes
+R038,OTHER Issue - Unit [Redacted],Bad smell in hallway near Unit [Redacted],Other,Other,Yes,No,High,Low,72.67%,No
+R039,OTHER Issue - Unit [Redacted],Aircon leaking in Unit [Redacted] bedroom,Other,Plumbing,No,Yes,Medium,Medium,87.33%,Yes
+R040,ELECTRICAL Issue - Unit [Redacted],Bathroom light burned out in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,High,68.00%,Yes
+R041,PLUMBING Issue - Unit [Redacted],Low water pressure in shower of Unit [Redacted],Plumbing,Plumbing,Yes,Yes,Medium,Medium,70.00%,Yes
+R042,OTHER Issue - Unit [Redacted],Neighbors too noisy during midnight in Unit [Redacted],Other,Other,Yes,No,High,High,60.00%,Yes
+R043,PLUMBING Issue - Unit [Redacted],Bathroom sink clogged in Unit [Redacted],Plumbing,Plumbing,Yes,Yes,High,High,92.00%,Yes
+R044,ELECTRICAL Issue - Unit [Redacted],Bathroom light burned out in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,Low,53.50%,No
+R045,STRUCTURAL Issue - Unit [Redacted],Wall crack appearing in Unit [Redacted] bedroom,Structural,Structural,Yes,Yes,Low,High,69.33%,No
+R046,OTHER Issue - Unit [Redacted],Cockroaches seen near kitchen cabinet in Unit [Redacted],Other,Structural,No,Yes,High,High,68.68%,Yes
+R047,ELECTRICAL Issue - Unit [Redacted],Bathroom light burned out in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,High,74.00%,Yes
+R048,OTHER Issue - Unit [Redacted],Neighbors too noisy during midnight in Unit [Redacted],Other,Other,Yes,No,High,Medium,71.03%,No
+R049,OTHER Issue - Unit [Redacted],Cockroaches seen near kitchen cabinet in Unit [Redacted],Other,Structural,No,Yes,High,Medium,56.97%,No
+R050,ELECTRICAL Issue - Unit [Redacted],Circuit breaker keeps tripping in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,High,68.49%,Yes
+R051,OTHER Issue - Unit [Redacted],Aircon leaking in Unit [Redacted] bedroom,Other,Plumbing,No,Yes,Medium,Low,66.30%,No
+R052,STRUCTURAL Issue - Unit [Redacted],Door frame damaged in Unit [Redacted],Structural,Structural,Yes,Yes,Medium,Low,53.25%,No
+R053,STRUCTURAL Issue - Unit [Redacted],Door frame damaged in Unit [Redacted],Structural,Structural,Yes,Yes,Medium,Medium,81.45%,Yes
+R054,STRUCTURAL Issue - Unit [Redacted],Door frame damaged in Unit [Redacted],Structural,Structural,Yes,Yes,Medium,Low,83.28%,No
+R055,OTHER Issue - Unit [Redacted],Neighbors too noisy during midnight in Unit [Redacted],Other,Other,Yes,No,High,Medium,71.33%,No
+R056,STRUCTURAL Issue - Unit [Redacted],Crack near window in Unit [Redacted] after heavy rain,Structural,Structural,Yes,Yes,Medium,Low,72.50%,No
+R057,OTHER Issue - Unit [Redacted],Cockroaches seen near kitchen cabinet in Unit [Redacted],Other,Structural,No,Yes,High,Medium,80.76%,No
+R058,PLUMBING Issue - Unit [Redacted],Bathroom sink clogged in Unit [Redacted],Plumbing,Plumbing,Yes,Yes,High,Low,67.08%,No
+R059,OTHER Issue - Unit [Redacted],Aircon leaking in Unit [Redacted] bedroom,Other,Plumbing,No,Yes,Medium,Low,70.67%,No
+R060,ELECTRICAL Issue - Unit [Redacted],Bathroom light burned out in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,High,83.33%,Yes
+R061,PLUMBING Issue - Unit [Redacted],Bathroom sink clogged in Unit [Redacted],Plumbing,Plumbing,Yes,Yes,High,Low,53.08%,No
+R062,ELECTRICAL Issue - Unit [Redacted],Circuit breaker keeps tripping in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,Medium,88.00%,No
+R063,PLUMBING Issue - Unit [Redacted],Toilet won't stop running in Unit [Redacted],Plumbing,Plumbing,Yes,Yes,High,Medium,53.33%,No
+R064,PLUMBING Issue - Unit [Redacted],Water leaking under kitchen sink in Unit [Redacted],Plumbing,Plumbing,Yes,Yes,Medium,High,59.33%,No
+R065,STRUCTURAL Issue - Unit [Redacted],Crack near window in Unit [Redacted] after heavy rain,Structural,Structural,Yes,Yes,Medium,High,50.72%,No
+R066,OTHER Issue - Unit [Redacted],Aircon leaking in Unit [Redacted] bedroom,Other,Plumbing,No,Yes,Medium,Medium,82.53%,Yes
+R067,STRUCTURAL Issue - Unit [Redacted],Crack near window in Unit [Redacted] after heavy rain,Structural,Structural,Yes,Yes,Medium,Low,74.78%,No
+R068,PLUMBING Issue - Unit [Redacted],Low water pressure in shower of Unit [Redacted],Plumbing,Plumbing,Yes,Yes,Medium,Low,92.00%,No
+R069,OTHER Issue - Unit [Redacted],Aircon leaking in Unit [Redacted] bedroom,Other,Plumbing,No,Yes,Medium,Medium,90.93%,Yes
+R070,PLUMBING Issue - Unit [Redacted],Faucet dripping in Unit [Redacted] bathroom,Plumbing,Plumbing,Yes,Yes,High,Medium,43.99%,No
+R071,OTHER Issue - Unit [Redacted],Neighbors too noisy during midnight in Unit [Redacted],Other,Other,Yes,No,High,Low,48.47%,No
+R072,ELECTRICAL Issue - Unit [Redacted],Circuit breaker keeps tripping in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,Medium,86.00%,No
+R073,ELECTRICAL Issue - Unit [Redacted],Circuit breaker keeps tripping in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,Medium,59.53%,No
+R074,STRUCTURAL Issue - Unit [Redacted],Door frame damaged in Unit [Redacted],Structural,Structural,Yes,Yes,Medium,Low,56.89%,No
+R075,PLUMBING Issue - Unit [Redacted],Low water pressure in shower of Unit [Redacted],Plumbing,Plumbing,Yes,Yes,Medium,High,62.67%,No
+R076,STRUCTURAL Issue - Unit [Redacted],Floor tiles loose in Unit [Redacted] kitchen,Structural,Structural,Yes,Yes,Medium,High,83.33%,No
+R077,OTHER Issue - Unit [Redacted],Bad smell in hallway near Unit [Redacted],Other,Other,Yes,No,High,Medium,52.92%,No
+R078,PLUMBING Issue - Unit [Redacted],Faucet dripping in Unit [Redacted] bathroom,Plumbing,Plumbing,Yes,Yes,High,High,66.67%,Yes
+R079,ELECTRICAL Issue - Unit [Redacted],Bathroom light burned out in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,Medium,65.80%,No
+R080,STRUCTURAL Issue - Unit [Redacted],Floor tiles loose in Unit [Redacted] kitchen,Structural,Structural,Yes,Yes,Medium,Low,45.06%,No
+R081,OTHER Issue - Unit [Redacted],Aircon leaking in Unit [Redacted] bedroom,Other,Plumbing,No,Yes,Medium,Medium,90.93%,Yes
+R082,ELECTRICAL Issue - Unit [Redacted],Bedroom outlet sparks when plugging in charger in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,Medium,54.67%,No
+R083,OTHER Issue - Unit [Redacted],Cockroaches seen near kitchen cabinet in Unit [Redacted],Other,Structural,No,Yes,High,Medium,49.47%,No
+R084,PLUMBING Issue - Unit [Redacted],Low water pressure in shower of Unit [Redacted],Plumbing,Plumbing,Yes,Yes,Medium,Medium,65.05%,Yes
+R085,OTHER Issue - Unit [Redacted],Internet connection unstable in Unit [Redacted],Other,Other,Yes,No,Medium,High,78.67%,No
+R086,OTHER Issue - Unit [Redacted],Cockroaches seen near kitchen cabinet in Unit [Redacted],Other,Structural,No,Yes,High,Medium,73.88%,No
+R087,OTHER Issue - Unit [Redacted],Internet connection unstable in Unit [Redacted],Other,Other,Yes,No,Medium,Low,58.00%,No
+R088,PLUMBING Issue - Unit [Redacted],Bathroom sink clogged in Unit [Redacted],Plumbing,Plumbing,Yes,Yes,High,Low,53.08%,No
+R089,OTHER Issue - Unit [Redacted],Cockroaches seen near kitchen cabinet in Unit [Redacted],Other,Structural,No,Yes,High,Medium,83.63%,No
+R090,OTHER Issue - Unit [Redacted],Bad smell in hallway near Unit [Redacted],Other,Other,Yes,No,High,Medium,60.26%,No
+R091,ELECTRICAL Issue - Unit [Redacted],Bedroom outlet sparks when plugging in charger in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,Low,59.33%,No
+R092,STRUCTURAL Issue - Unit [Redacted],Floor tiles loose in Unit [Redacted] kitchen,Structural,Structural,Yes,Yes,Medium,High,53.13%,No
+R093,OTHER Issue - Unit [Redacted],Neighbors too noisy during midnight in Unit [Redacted],Other,Other,Yes,No,High,Medium,70.24%,No
+R094,PLUMBING Issue - Unit [Redacted],Faucet dripping in Unit [Redacted] bathroom,Plumbing,Plumbing,Yes,Yes,High,Low,71.33%,No
+R095,OTHER Issue - Unit [Redacted],Internet connection unstable in Unit [Redacted],Other,Other,Yes,No,Medium,Low,73.08%,No
+R096,STRUCTURAL Issue - Unit [Redacted],Crack near window in Unit [Redacted] after heavy rain,Structural,Structural,Yes,Yes,Medium,High,50.72%,No
+R097,OTHER Issue - Unit [Redacted],Internet connection unstable in Unit [Redacted],Other,Other,Yes,No,Medium,Medium,63.33%,Yes
+R098,OTHER Issue - Unit [Redacted],Neighbors too noisy during midnight in Unit [Redacted],Other,Other,Yes,No,High,Medium,64.67%,No
+R099,ELECTRICAL Issue - Unit [Redacted],Circuit breaker keeps tripping in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,Low,81.33%,No
+R100,STRUCTURAL Issue - Unit [Redacted],Crack near window in Unit [Redacted] after heavy rain,Structural,Structural,Yes,Yes,Medium,Medium,62.92%,Yes
+R101,PLUMBING Issue - Unit [Redacted],Faucet dripping in Unit [Redacted] bathroom,Plumbing,Plumbing,Yes,Yes,High,High,45.73%,Yes
+R102,PLUMBING Issue - Unit [Redacted],Low water pressure in shower of Unit [Redacted],Plumbing,Plumbing,Yes,Yes,Medium,Medium,78.67%,Yes
+R103,OTHER Issue - Unit [Redacted],Cockroaches seen near kitchen cabinet in Unit [Redacted],Other,Structural,No,Yes,High,Medium,49.47%,No
+R104,STRUCTURAL Issue - Unit [Redacted],Ceiling water stain in Unit [Redacted],Plumbing,Structural,No,Yes,Medium,High,49.97%,No
+R105,OTHER Issue - Unit [Redacted],Cockroaches seen near kitchen cabinet in Unit [Redacted],Other,Structural,No,Yes,High,Medium,83.63%,No
+R106,ELECTRICAL Issue - Unit [Redacted],Bedroom outlet sparks when plugging in charger in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,Medium,59.78%,No
+R107,PLUMBING Issue - Unit [Redacted],Bathroom sink clogged in Unit [Redacted],Plumbing,Plumbing,Yes,Yes,High,High,78.00%,Yes
+R108,OTHER Issue - Unit [Redacted],Cockroaches seen near kitchen cabinet in Unit [Redacted],Other,Structural,No,Yes,High,High,69.85%,Yes
+R109,ELECTRICAL Issue - Unit [Redacted],Light fixture flickering in Unit [Redacted] living room,Electrical,Electrical,Yes,Yes,High,Medium,74.67%,No
+R110,STRUCTURAL Issue - Unit [Redacted],Floor tiles loose in Unit [Redacted] kitchen,Structural,Structural,Yes,Yes,Medium,High,78.67%,No
+R111,STRUCTURAL Issue - Unit [Redacted],Wall crack appearing in Unit [Redacted] bedroom,Structural,Structural,Yes,Yes,Medium,High,52.00%,No
+R112,PLUMBING Issue - Unit [Redacted],Toilet won't stop running in Unit [Redacted],Plumbing,Plumbing,Yes,Yes,High,High,50.67%,Yes
+R113,OTHER Issue - Unit [Redacted],Bad smell in hallway near Unit [Redacted],Other,Other,Yes,No,High,Medium,79.33%,No
+R114,OTHER Issue - Unit [Redacted],Internet connection unstable in Unit [Redacted],Other,Other,Yes,No,Medium,High,65.33%,No
+R115,PLUMBING Issue - Unit [Redacted],Bathroom sink clogged in Unit [Redacted],Plumbing,Plumbing,Yes,Yes,High,High,56.00%,Yes
+R116,STRUCTURAL Issue - Unit [Redacted],Door frame damaged in Unit [Redacted],Structural,Structural,Yes,Yes,Medium,Low,56.95%,No
+R117,PLUMBING Issue - Unit [Redacted],Toilet won't stop running in Unit [Redacted],Plumbing,Plumbing,Yes,Yes,High,High,54.00%,Yes
+R118,PLUMBING Issue - Unit [Redacted],Bathroom sink clogged in Unit [Redacted],Plumbing,Plumbing,Yes,Yes,High,Medium,74.92%,No
+R119,STRUCTURAL Issue - Unit [Redacted],Floor tiles loose in Unit [Redacted] kitchen,Structural,Structural,Yes,Yes,Medium,Medium,67.51%,Yes
+R120,PLUMBING Issue - Unit [Redacted],Faucet dripping in Unit [Redacted] bathroom,Plumbing,Plumbing,Yes,Yes,High,High,80.58%,Yes
+R121,STRUCTURAL Issue - Unit [Redacted],Wall crack appearing in Unit [Redacted] bedroom,Structural,Structural,Yes,Yes,Low,Medium,78.00%,No
+R122,ELECTRICAL Issue - Unit [Redacted],Light fixture flickering in Unit [Redacted] living room,Electrical,Electrical,Yes,Yes,High,High,67.33%,Yes
+R123,OTHER Issue - Unit [Redacted],Neighbors too noisy during midnight in Unit [Redacted],Other,Other,Yes,No,High,Low,69.11%,No
+R124,OTHER Issue - Unit [Redacted],Internet connection unstable in Unit [Redacted],Other,Other,Yes,No,Medium,High,75.33%,No
+R125,PLUMBING Issue - Unit [Redacted],Bathroom sink clogged in Unit [Redacted],Plumbing,Plumbing,Yes,Yes,High,High,75.33%,Yes
+R126,PLUMBING Issue - Unit [Redacted],Water leaking under kitchen sink in Unit [Redacted],Plumbing,Plumbing,Yes,Yes,Medium,Low,65.12%,No
+R127,PLUMBING Issue - Unit [Redacted],Faucet dripping in Unit [Redacted] bathroom,Plumbing,Plumbing,Yes,Yes,High,Low,72.00%,No
+R128,PLUMBING Issue - Unit [Redacted],Faucet dripping in Unit [Redacted] bathroom,Plumbing,Plumbing,Yes,Yes,High,High,81.33%,Yes
+R129,ELECTRICAL Issue - Unit [Redacted],Bedroom outlet sparks when plugging in charger in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,Medium,78.00%,No
+R130,OTHER Issue - Unit [Redacted],Neighbors too noisy during midnight in Unit [Redacted],Other,Other,Yes,No,High,Low,48.47%,No
+R131,STRUCTURAL Issue - Unit [Redacted],Door frame damaged in Unit [Redacted],Structural,Structural,Yes,Yes,Medium,Medium,78.49%,Yes
+R132,STRUCTURAL Issue - Unit [Redacted],Wall crack appearing in Unit [Redacted] bedroom,Structural,Structural,Yes,Yes,Medium,Medium,76.67%,Yes
+R133,OTHER Issue - Unit [Redacted],Bad smell in hallway near Unit [Redacted],Other,Other,Yes,No,High,High,78.00%,Yes
+R134,PLUMBING Issue - Unit [Redacted],Low water pressure in shower of Unit [Redacted],Plumbing,Plumbing,Yes,Yes,Medium,Low,84.00%,No
+R135,ELECTRICAL Issue - Unit [Redacted],Power outlet not working in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,Medium,57.04%,No
+R136,STRUCTURAL Issue - Unit [Redacted],Wall crack appearing in Unit [Redacted] bedroom,Structural,Structural,Yes,Yes,Low,Low,77.33%,Yes
+R137,ELECTRICAL Issue - Unit [Redacted],Bathroom light burned out in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,High,52.67%,Yes
+R138,ELECTRICAL Issue - Unit [Redacted],Light fixture flickering in Unit [Redacted] living room,Electrical,Electrical,Yes,Yes,High,Medium,74.67%,No
+R139,OTHER Issue - Unit [Redacted],Aircon leaking in Unit [Redacted] bedroom,Other,Plumbing,No,Yes,Medium,Low,67.33%,No
+R140,ELECTRICAL Issue - Unit [Redacted],Power outlet not working in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,High,70.00%,Yes
+R141,OTHER Issue - Unit [Redacted],Aircon leaking in Unit [Redacted] bedroom,Other,Plumbing,No,Yes,Medium,Medium,59.68%,Yes
+R142,OTHER Issue - Unit [Redacted],Aircon leaking in Unit [Redacted] bedroom,Other,Plumbing,No,Yes,Medium,Medium,82.41%,Yes
+R143,STRUCTURAL Issue - Unit [Redacted],Door frame damaged in Unit [Redacted],Structural,Structural,Yes,Yes,Medium,Low,56.95%,No
+R144,STRUCTURAL Issue - Unit [Redacted],Crack near window in Unit [Redacted] after heavy rain,Structural,Structural,Yes,Yes,Medium,High,67.14%,No
+R145,ELECTRICAL Issue - Unit [Redacted],Bedroom outlet sparks when plugging in charger in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,Medium,67.60%,No
+R146,PLUMBING Issue - Unit [Redacted],Faucet dripping in Unit [Redacted] bathroom,Plumbing,Plumbing,Yes,Yes,High,Medium,70.00%,No
+R147,OTHER Issue - Unit [Redacted],Cockroaches seen near kitchen cabinet in Unit [Redacted],Other,Structural,No,Yes,High,Medium,71.98%,No
+R148,OTHER Issue - Unit [Redacted],Internet connection unstable in Unit [Redacted],Other,Other,Yes,No,Medium,Medium,70.26%,Yes
+R149,PLUMBING Issue - Unit [Redacted],Faucet dripping in Unit [Redacted] bathroom,Plumbing,Plumbing,Yes,Yes,High,Low,72.67%,No
+R150,STRUCTURAL Issue - Unit [Redacted],Floor tiles loose in Unit [Redacted] kitchen,Structural,Structural,Yes,Yes,Medium,Low,45.06%,No
+R151,STRUCTURAL Issue - Unit [Redacted],Door frame damaged in Unit [Redacted],Structural,Structural,Yes,Yes,Medium,Medium,56.63%,Yes
+R152,PLUMBING Issue - Unit [Redacted],Water leaking under kitchen sink in Unit [Redacted],Plumbing,Plumbing,Yes,Yes,Medium,Medium,72.00%,Yes
+R153,OTHER Issue - Unit [Redacted],Cockroaches seen near kitchen cabinet in Unit [Redacted],Other,Structural,No,Yes,High,Low,68.93%,No
+R154,ELECTRICAL Issue - Unit [Redacted],Bedroom outlet sparks when plugging in charger in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,High,74.00%,Yes
+R155,ELECTRICAL Issue - Unit [Redacted],Bedroom outlet sparks when plugging in charger in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,Medium,52.26%,No
+R156,OTHER Issue - Unit [Redacted],Aircon leaking in Unit [Redacted] bedroom,Other,Plumbing,No,Yes,Medium,Medium,59.68%,Yes
+R157,PLUMBING Issue - Unit [Redacted],Toilet won't stop running in Unit [Redacted],Plumbing,Plumbing,Yes,Yes,High,Medium,44.00%,No
+R158,PLUMBING Issue - Unit [Redacted],Faucet dripping in Unit [Redacted] bathroom,Plumbing,Plumbing,Yes,Yes,High,Medium,73.33%,No
+R159,ELECTRICAL Issue - Unit [Redacted],Light fixture flickering in Unit [Redacted] living room,Electrical,Electrical,Yes,Yes,High,Medium,76.00%,No
+R160,ELECTRICAL Issue - Unit [Redacted],Bathroom light burned out in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,High,86.00%,Yes
+R161,ELECTRICAL Issue - Unit [Redacted],Circuit breaker keeps tripping in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,Medium,69.33%,No
+R162,STRUCTURAL Issue - Unit [Redacted],Ceiling water stain in Unit [Redacted],Plumbing,Structural,No,Yes,Medium,Low,64.90%,No
+R163,STRUCTURAL Issue - Unit [Redacted],Wall crack appearing in Unit [Redacted] bedroom,Structural,Structural,Yes,Yes,Low,High,73.33%,No
+R164,STRUCTURAL Issue - Unit [Redacted],Crack near window in Unit [Redacted] after heavy rain,Structural,Structural,Yes,Yes,Medium,Low,52.26%,No
+R165,STRUCTURAL Issue - Unit [Redacted],Crack near window in Unit [Redacted] after heavy rain,Structural,Structural,Yes,Yes,Medium,Low,67.68%,No
+R166,ELECTRICAL Issue - Unit [Redacted],Power outlet not working in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,Medium,88.00%,No
+R167,OTHER Issue - Unit [Redacted],Cockroaches seen near kitchen cabinet in Unit [Redacted],Other,Structural,No,Yes,High,Low,68.93%,No
+R168,ELECTRICAL Issue - Unit [Redacted],Circuit breaker keeps tripping in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,Medium,86.67%,No
+R169,ELECTRICAL Issue - Unit [Redacted],Bedroom outlet sparks when plugging in charger in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,Low,59.33%,No
+R170,STRUCTURAL Issue - Unit [Redacted],Floor tiles loose in Unit [Redacted] kitchen,Structural,Structural,Yes,Yes,Medium,High,78.67%,No
+R171,STRUCTURAL Issue - Unit [Redacted],Wall crack appearing in Unit [Redacted] bedroom,Structural,Structural,Yes,Yes,Low,High,70.67%,No
+R172,PLUMBING Issue - Unit [Redacted],Low water pressure in shower of Unit [Redacted],Plumbing,Plumbing,Yes,Yes,Medium,High,80.50%,No
+R173,STRUCTURAL Issue - Unit [Redacted],Wall crack appearing in Unit [Redacted] bedroom,Structural,Structural,Yes,Yes,Low,Low,74.67%,Yes
+R174,OTHER Issue - Unit [Redacted],Internet connection unstable in Unit [Redacted],Other,Other,Yes,No,Medium,Low,58.00%,No
+R175,OTHER Issue - Unit [Redacted],Internet connection unstable in Unit [Redacted],Other,Other,Yes,No,Medium,Low,87.17%,No
+R176,STRUCTURAL Issue - Unit [Redacted],Ceiling water stain in Unit [Redacted],Plumbing,Structural,No,Yes,Medium,Medium,73.52%,Yes
+R177,ELECTRICAL Issue - Unit [Redacted],Bedroom outlet sparks when plugging in charger in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,High,80.67%,Yes
+R178,PLUMBING Issue - Unit [Redacted],Low water pressure in shower of Unit [Redacted],Plumbing,Plumbing,Yes,Yes,Medium,High,87.20%,No
+R179,PLUMBING Issue - Unit [Redacted],Water leaking under kitchen sink in Unit [Redacted],Plumbing,Plumbing,Yes,Yes,Medium,Low,67.33%,No
+R180,OTHER Issue - Unit [Redacted],Bad smell in hallway near Unit [Redacted],Other,Other,Yes,No,High,Medium,76.00%,No
+R181,OTHER Issue - Unit [Redacted],Bad smell in hallway near Unit [Redacted],Other,Other,Yes,No,High,High,85.33%,Yes
+R182,OTHER Issue - Unit [Redacted],Cockroaches seen near kitchen cabinet in Unit [Redacted],Other,Structural,No,Yes,High,Low,74.46%,No
+R183,PLUMBING Issue - Unit [Redacted],Water leaking under kitchen sink in Unit [Redacted],Plumbing,Plumbing,Yes,Yes,Medium,Medium,50.00%,Yes
+R184,ELECTRICAL Issue - Unit [Redacted],Circuit breaker keeps tripping in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,Medium,46.20%,No
+R185,PLUMBING Issue - Unit [Redacted],Water leaking under kitchen sink in Unit [Redacted],Plumbing,Plumbing,Yes,Yes,Medium,High,65.33%,No
+R186,ELECTRICAL Issue - Unit [Redacted],Power outlet not working in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,High,78.00%,Yes
+R187,OTHER Issue - Unit [Redacted],Internet connection unstable in Unit [Redacted],Other,Other,Yes,No,Medium,Low,54.04%,No
+R188,OTHER Issue - Unit [Redacted],Aircon leaking in Unit [Redacted] bedroom,Other,Plumbing,No,Yes,Medium,Medium,86.17%,Yes
+R189,STRUCTURAL Issue - Unit [Redacted],Door frame damaged in Unit [Redacted],Structural,Structural,Yes,Yes,Medium,Low,65.03%,No
+R190,PLUMBING Issue - Unit [Redacted],Toilet won't stop running in Unit [Redacted],Plumbing,Plumbing,Yes,Yes,High,High,47.73%,Yes
+R191,STRUCTURAL Issue - Unit [Redacted],Wall crack appearing in Unit [Redacted] bedroom,Structural,Structural,Yes,Yes,Low,High,69.33%,No
+R192,PLUMBING Issue - Unit [Redacted],Faucet dripping in Unit [Redacted] bathroom,Plumbing,Plumbing,Yes,Yes,High,Low,50.21%,No
+R193,OTHER Issue - Unit [Redacted],Cockroaches seen near kitchen cabinet in Unit [Redacted],Other,Structural,No,Yes,High,Medium,49.74%,No
+R194,ELECTRICAL Issue - Unit [Redacted],Circuit breaker keeps tripping in Unit [Redacted],Electrical,Electrical,Yes,Yes,High,High,66.67%,Yes
+R195,STRUCTURAL Issue - Unit [Redacted],Floor tiles loose in Unit [Redacted] kitchen,Structural,Structural,Yes,Yes,Medium,High,80.00%,No
+R196,STRUCTURAL Issue - Unit [Redacted],Door frame damaged in Unit [Redacted],Structural,Structural,Yes,Yes,Medium,Medium,53.17%,Yes
+R197,STRUCTURAL Issue - Unit [Redacted],Crack near window in Unit [Redacted] after heavy rain,Structural,Structural,Yes,Yes,Medium,High,62.60%,No

@@ -81,9 +81,9 @@
     {% endif %}
 
         <a href="{% url 'admin_maintenance' %}"
-       aria-current="{% if request.resolver_match.url_name == 'admin_maintenance' or request.resolver_match.url_name == 'admin_update_maintenance' %}page{% endif %}"
+       aria-current="{% if request.resolver_match.url_name == 'admin_maintenance' or request.resolver_match.url_name == 'admin_update_maintenance' or request.resolver_match.url_name == 'admin_staff_management' or request.resolver_match.url_name == 'admin_staff_add' or request.resolver_match.url_name == 'admin_staff_detail' or request.resolver_match.url_name == 'admin_staff_edit' %}page{% endif %}"
        class="nav-link flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 overflow-hidden
-              {% if request.resolver_match.url_name == 'admin_maintenance' or request.resolver_match.url_name == 'admin_update_maintenance' %}
+              {% if request.resolver_match.url_name == 'admin_maintenance' or request.resolver_match.url_name == 'admin_update_maintenance' or request.resolver_match.url_name == 'admin_staff_management' or request.resolver_match.url_name == 'admin_staff_add' or request.resolver_match.url_name == 'admin_staff_detail' or request.resolver_match.url_name == 'admin_staff_edit' %}
                 bg-[#262B33]/60 border-l-4 border-[#3B7CE6] font-semibold text-white shadow-xs
               {% else %}
                 text-slate-300 hover:bg-[#262B33]/30 hover:text-white

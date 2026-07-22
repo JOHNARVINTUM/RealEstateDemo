@@ -55,6 +55,280 @@ def _clean_contact_number(value: str) -> str:
     return value
 
 
+def _apply_admin_portal_field_styles(fields, *, placeholders=None):
+    placeholders = placeholders or {}
+    base_input_class = (
+        "w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl "
+        "text-base font-bold text-slate-900 placeholder:text-slate-400 "
+        "focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 "
+        "transition-all outline-none shadow-sm"
+    )
+    base_select_class = (
+        "w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl "
+        "text-base font-bold text-slate-900 focus:bg-white focus:border-indigo-500 "
+        "focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none "
+        "cursor-pointer appearance-none shadow-sm"
+    )
+
+    for name, field in fields.items():
+        widget = field.widget
+        attrs = widget.attrs
+        attrs["class"] = base_select_class if isinstance(widget, forms.Select) else base_input_class
+
+        placeholder = placeholders.get(name)
+        if placeholder:
+            attrs["placeholder"] = placeholder
+
+        if name == "email":
+            attrs.setdefault("autocomplete", "email")
+            attrs.setdefault("spellcheck", "false")
+        elif name == "contact_no":
+            attrs.setdefault("autocomplete", "tel")
+            attrs.setdefault("inputmode", "tel")
+        elif name in {"temporary_password", "confirm_password", "new_password", "confirm_new_password"}:
+            attrs.setdefault("autocomplete", "new-password")
+        elif name == "full_name":
+            attrs.setdefault("autocomplete", "name")
+
+
+
+class StaffAccountCreateForm(forms.Form):
+    STATUS_ACTIVE = "ACTIVE"
+    STATUS_INACTIVE = "INACTIVE"
+    STATUS_CHOICES = [
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_INACTIVE, "Inactive"),
+    ]
+
+    full_name = forms.CharField(
+        label="Full Name",
+        max_length=120,
+        help_text="Enter the staff member's full name.",
+    )
+    email = forms.EmailField(
+        label="Email or Username",
+        help_text="Use the staff email address. The username is generated automatically from the full name.",
+    )
+    contact_no = forms.CharField(
+        label="Contact Number",
+        max_length=30,
+        required=False,
+        help_text="Phone number for maintenance coordination.",
+    )
+    temporary_password = forms.CharField(
+        label="Temporary Password",
+        widget=forms.PasswordInput,
+        strip=False,
+    )
+    confirm_password = forms.CharField(
+        label="Confirm Password",
+        widget=forms.PasswordInput,
+        strip=False,
+    )
+    status = forms.ChoiceField(
+        label="Status",
+        choices=STATUS_CHOICES,
+        initial=STATUS_ACTIVE,
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _apply_admin_portal_field_styles(
+            self.fields,
+            placeholders={
+                "full_name": "Juan Dela Cruz",
+                "email": "staff@example.com",
+                "contact_no": "0917 000 0000",
+                "temporary_password": "Enter temporary password",
+                "confirm_password": "Re-enter temporary password",
+            },
+        )
+
+    def clean_full_name(self):
+        full_name = _clean_person_name(self.cleaned_data.get("full_name"), label="Full name")
+        parts = [part for part in re.split(r"\s+", full_name) if part]
+        if len(parts) < 2:
+            raise forms.ValidationError("Full name must include at least a first name and last name.")
+        self.cleaned_data["_name_parts"] = parts
+        return full_name
+
+    def clean_email(self):
+        email = self.cleaned_data.get("email")
+        try:
+            return User.validate_email_constraints(email)
+        except ValidationError as exc:
+            raise forms.ValidationError(exc.message_dict.get("email", exc.messages))
+
+    def clean_contact_no(self):
+        return _clean_contact_number(self.cleaned_data.get("contact_no"))
+
+    def clean(self):
+        cleaned_data = super().clean()
+        temporary_password = cleaned_data.get("temporary_password")
+        confirm_password = cleaned_data.get("confirm_password")
+        if temporary_password and confirm_password and temporary_password != confirm_password:
+            raise forms.ValidationError("Temporary passwords do not match.")
+        return cleaned_data
+
+    def save(self, *, uploaded_by=None):
+        full_name = self.cleaned_data["full_name"]
+        parts = self.cleaned_data.get("_name_parts") or full_name.split()
+        first_name = parts[0]
+        last_name = " ".join(parts[1:])
+        username = User.generate_username_from_name(full_name)
+        is_active = self.cleaned_data["status"] == self.STATUS_ACTIVE
+
+        with transaction.atomic():
+            user = User.objects.create_user(
+                email=self.cleaned_data["email"],
+                username=username,
+                password=self.cleaned_data["temporary_password"],
+                role=User.Role.STAFF,
+                is_active=is_active,
+                first_name=first_name,
+                last_name=last_name,
+            )
+            TenantProfile.objects.create(
+                user=user,
+                first_name=first_name,
+                last_name=last_name,
+                contact_no=self.cleaned_data["contact_no"],
+                created_by=uploaded_by,
+                password_change_required=False,
+                send_credentials=False,
+            )
+        return user
+
+
+class StaffAccountUpdateForm(forms.Form):
+    STATUS_ACTIVE = StaffAccountCreateForm.STATUS_ACTIVE
+    STATUS_INACTIVE = StaffAccountCreateForm.STATUS_INACTIVE
+    STATUS_CHOICES = StaffAccountCreateForm.STATUS_CHOICES
+
+    full_name = forms.CharField(
+        label="Full Name",
+        max_length=120,
+        help_text="Enter the staff member's full name.",
+    )
+    email = forms.EmailField(
+        label="Email or Username",
+        help_text="Use the staff email address. The existing username is preserved unless missing.",
+    )
+    contact_no = forms.CharField(
+        label="Contact Number",
+        max_length=30,
+        required=False,
+        help_text="Phone number for maintenance coordination.",
+    )
+    new_password = forms.CharField(
+        label="New Password",
+        widget=forms.PasswordInput,
+        strip=False,
+        required=False,
+        help_text="Leave blank to keep the current password.",
+    )
+    confirm_new_password = forms.CharField(
+        label="Confirm New Password",
+        widget=forms.PasswordInput,
+        strip=False,
+        required=False,
+        help_text="Re-enter the new password to confirm the change.",
+    )
+    status = forms.ChoiceField(
+        label="Status",
+        choices=STATUS_CHOICES,
+    )
+
+    def __init__(self, *args, staff_user, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.staff_user = staff_user
+        profile = getattr(staff_user, "tenantprofile", None)
+        full_name = ""
+        if profile and getattr(profile, "full_name", ""):
+            full_name = profile.full_name
+        elif staff_user.first_name or staff_user.last_name:
+            full_name = f"{staff_user.first_name} {staff_user.last_name}".strip()
+        self.fields["full_name"].initial = full_name
+        self.fields["email"].initial = staff_user.email
+        self.fields["contact_no"].initial = getattr(profile, "contact_no", "")
+        self.fields["status"].initial = self.STATUS_ACTIVE if staff_user.is_active else self.STATUS_INACTIVE
+        _apply_admin_portal_field_styles(
+            self.fields,
+            placeholders={
+                "full_name": "Juan Dela Cruz",
+                "email": "staff@example.com",
+                "contact_no": "0917 000 0000",
+                "new_password": "Enter new password",
+                "confirm_new_password": "Re-enter new password",
+            },
+        )
+
+    def clean_full_name(self):
+        full_name = _clean_person_name(self.cleaned_data.get("full_name"), label="Full name")
+        parts = [part for part in re.split(r"\s+", full_name) if part]
+        if len(parts) < 2:
+            raise forms.ValidationError("Full name must include at least a first name and last name.")
+        self.cleaned_data["_name_parts"] = parts
+        return full_name
+
+    def clean_email(self):
+        email = self.cleaned_data.get("email")
+        try:
+            return User.validate_email_constraints(email, exclude_pk=self.staff_user.pk)
+        except ValidationError as exc:
+            raise forms.ValidationError(exc.message_dict.get("email", exc.messages))
+
+    def clean_contact_no(self):
+        return _clean_contact_number(self.cleaned_data.get("contact_no"))
+
+    def clean(self):
+        cleaned_data = super().clean()
+        new_password = cleaned_data.get("new_password")
+        confirm_new_password = cleaned_data.get("confirm_new_password")
+        if new_password or confirm_new_password:
+            if not new_password or not confirm_new_password:
+                raise forms.ValidationError("Enter the new password in both password fields.")
+            if new_password != confirm_new_password:
+                raise forms.ValidationError("New passwords do not match.")
+        return cleaned_data
+
+    def save(self):
+        full_name = self.cleaned_data["full_name"]
+        parts = self.cleaned_data.get("_name_parts") or full_name.split()
+        first_name = parts[0]
+        last_name = " ".join(parts[1:])
+        is_active = self.cleaned_data["status"] == self.STATUS_ACTIVE
+
+        with transaction.atomic():
+            self.staff_user.email = self.cleaned_data["email"]
+            self.staff_user.role = User.Role.STAFF
+            self.staff_user.is_active = is_active
+            self.staff_user.first_name = first_name
+            self.staff_user.last_name = last_name
+            if not self.staff_user.username:
+                self.staff_user.username = User.generate_username_from_name(full_name)
+            new_password = self.cleaned_data.get("new_password")
+            if new_password:
+                self.staff_user.set_password(new_password)
+            self.staff_user.save()
+
+            profile, _ = TenantProfile.objects.get_or_create(
+                user=self.staff_user,
+                defaults={
+                    "first_name": first_name,
+                    "last_name": last_name,
+                    "contact_no": self.cleaned_data["contact_no"],
+                    "password_change_required": False,
+                    "send_credentials": False,
+                },
+            )
+            profile.first_name = first_name
+            profile.last_name = last_name
+            profile.contact_no = self.cleaned_data["contact_no"]
+            profile.save()
+
+        return self.staff_user
+
 class TenantProfileForm(forms.ModelForm):
     # Create a new tenant user with profile
     email = forms.EmailField(required=True, label="Email address")

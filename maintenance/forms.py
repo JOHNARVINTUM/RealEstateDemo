@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.auth import get_user_model
+from django.db.models import Count, Q
 from django.utils import timezone
 
 from accounts.models import User
@@ -18,6 +19,7 @@ def _person_label(user):
     return user.username or user.email
 
 
+
 def _worker_name_choices(include_user=None):
     users = get_user_model().objects.filter(role=User.Role.STAFF, is_active=True).select_related("tenantprofile").order_by("email")
     choices = [("", "Select worker")]
@@ -34,6 +36,38 @@ def _worker_name_choices(include_user=None):
             choices.append((label, label))
     return choices
 
+
+ACTIVE_ASSIGNMENT_STATUSES = ("OPEN", "IN_PROGRESS")
+
+
+def _staff_assignment_queryset(include_user=None):
+    staff_queryset = (
+        get_user_model()
+        .objects.filter(role=User.Role.STAFF)
+        .select_related("tenantprofile")
+        .annotate(
+            active_job_count=Count(
+                "assigned_maintenance_requests",
+                filter=Q(
+                    assigned_maintenance_requests__review_status="ACCEPTED",
+                    assigned_maintenance_requests__status__in=ACTIVE_ASSIGNMENT_STATUSES,
+                ),
+                distinct=True,
+            )
+        )
+    )
+    if include_user is not None and getattr(include_user, "pk", None):
+        staff_queryset = staff_queryset.filter(Q(is_active=True) | Q(pk=include_user.pk))
+    else:
+        staff_queryset = staff_queryset.filter(is_active=True)
+    return staff_queryset.order_by("tenantprofile__first_name", "tenantprofile__last_name", "email")
+
+
+def _staff_assignment_label(user):
+    active_job_count = getattr(user, "active_job_count", 0) or 0
+    job_suffix = "job" if active_job_count == 1 else "jobs"
+    inactive_suffix = " (Inactive)" if not user.is_active else ""
+    return f"{_person_label(user)} - {active_job_count} active {job_suffix}{inactive_suffix}"
 
 class MaintenanceRequestForm(forms.ModelForm):
     class Meta:
@@ -85,8 +119,9 @@ class AdminMaintenanceUpdateForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        User = get_user_model()
-        self.fields["assigned_staff"].queryset = User.objects.filter(role="STAFF", is_active=True).order_by("email")
+        current_staff = getattr(self.instance, "assigned_staff", None)
+        self.fields["assigned_staff"].queryset = _staff_assignment_queryset(include_user=current_staff)
+        self.fields["assigned_staff"].label_from_instance = _staff_assignment_label
         self.fields["fixed_by"].choices = _worker_name_choices(include_user=getattr(self.instance, "assigned_staff", None))
         assigned_staff_name = _person_label(self.instance.assigned_staff) if getattr(self.instance, "assigned_staff", None) else ""
         current_fixed_by = getattr(self.instance, "fixed_by", "") or ""

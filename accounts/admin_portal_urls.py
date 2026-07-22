@@ -47,7 +47,15 @@ from .admin_tenant_views import (
     admin_view_attachment,
     admin_delete_attachment,
 )
-from .admin_maintenance_views import admin_maintenance, admin_update_maintenance
+from .admin_maintenance_views import (
+    admin_maintenance,
+    admin_staff_add,
+    admin_staff_detail,
+    admin_staff_edit,
+    admin_staff_management,
+    admin_staff_toggle_status,
+    admin_update_maintenance,
+)
 from .admin_forecasting_views import admin_forecasting, admin_forecasting_data, admin_billed_this_month
 from .admin_lease_views import (
     admin_create_lease,
@@ -126,6 +134,11 @@ urlpatterns = [
     path("payments/<int:payment_id>/confirm-schedule/", admin_confirm_schedule, name="admin_confirm_schedule"),
     path("payments/<int:payment_id>/delete/", admin_delete_payment, name="admin_delete_payment"),
     path("maintenance/", admin_maintenance, name="admin_maintenance"),
+    path("maintenance/staff/", admin_staff_management, name="admin_staff_management"),
+    path("maintenance/staff/add/", admin_staff_add, name="admin_staff_add"),
+    path("maintenance/staff/<int:staff_id>/", admin_staff_detail, name="admin_staff_detail"),
+    path("maintenance/staff/<int:staff_id>/edit/", admin_staff_edit, name="admin_staff_edit"),
+    path("maintenance/staff/<int:staff_id>/status/", admin_staff_toggle_status, name="admin_staff_toggle_status"),
     path("maintenance/<int:req_id>/update/", admin_update_maintenance, name="admin_update_maintenance"),
     path("announcements/", admin_announcements, name="admin_announcements"),
     path("content/profile/", admin_business_profile, name="admin_business_profile"),

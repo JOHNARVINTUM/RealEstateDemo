@@ -1,0 +1,142 @@
+{% extends "admin_portal/base.html" %}
+{% load humanize %}
+{% block title %}Staff Management | Real Estate Administration{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6 py-4 sm:py-6 overflow-x-hidden w-full max-w-full">
+  <header class="bg-white border border-slate-200 rounded-xl p-8 shadow-xs">
+    <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="inline-block w-3 h-3 rounded-full bg-indigo-600"></span>
+          <span class="text-sm font-semibold text-slate-700">Maintenance Team</span>
+        </div>
+        <h1 class="text-3xl md:text-4xl font-black tracking-tight text-slate-900 leading-tight">Staff Management</h1>
+        <p class="text-base text-slate-600 mt-2 font-bold leading-relaxed">Create, activate, deactivate, and review the maintenance staff accounts connected to repair assignments.</p>
+      </div>
+      <div class="flex w-full lg:w-auto">
+        <a href="{% url 'admin_staff_add' %}" class="inline-flex w-full lg:w-auto items-center justify-center rounded-xl bg-indigo-600 px-5 py-3 text-sm font-black text-white shadow-sm hover:bg-indigo-700 transition-all">Add Staff</a>
+      </div>
+    </div>
+  </header>
+
+  <div class="bg-white border border-slate-200 rounded-xl p-3 shadow-xs">
+    <div class="flex flex-wrap gap-3">
+      <a href="{% url 'admin_maintenance' %}" class="inline-flex items-center rounded-xl px-5 py-3 text-sm font-black transition-all border border-slate-200 text-slate-700 hover:bg-slate-50">Maintenance Requests</a>
+      <a href="{% url 'admin_staff_management' %}" class="inline-flex items-center rounded-xl px-5 py-3 text-sm font-black transition-all bg-slate-900 text-white shadow-sm">Staff Management</a>
+    </div>
+  </div>
+
+  <section class="grid grid-cols-1 gap-6 md:grid-cols-3">
+    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs border-l-4 border-l-slate-800">
+      <span class="text-sm font-black text-slate-500 uppercase tracking-wider block mb-1">Total Staff</span>
+      <div class="text-3xl font-black text-slate-900 tracking-tight">{{ total_staff|intcomma }}</div>
+      <p class="mt-3 text-xs font-bold text-slate-500">All maintenance staff accounts</p>
+    </div>
+    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs border-l-4 border-l-emerald-500">
+      <span class="text-sm font-black text-slate-500 uppercase tracking-wider block mb-1">Active Staff</span>
+      <div class="text-3xl font-black text-slate-900 tracking-tight">{{ active_staff_count|intcomma }}</div>
+      <p class="mt-3 text-xs font-bold text-slate-500">Can log in and receive new assignments</p>
+    </div>
+    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs border-l-4 border-l-amber-500">
+      <span class="text-sm font-black text-slate-500 uppercase tracking-wider block mb-1">Inactive Staff</span>
+      <div class="text-3xl font-black text-slate-900 tracking-tight">{{ inactive_staff_count|intcomma }}</div>
+      <p class="mt-3 text-xs font-bold text-slate-500">Login blocked and removed from new assignments</p>
+    </div>
+  </section>
+
+  <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <form method="get" class="flex w-full flex-col gap-3 lg:flex-row lg:items-center">
+      <div class="relative w-full lg:max-w-md">
+        <input type="text" name="q" value="{{ q }}" placeholder="Search by staff name, email, or username" class="w-full rounded-xl border-2 border-slate-200 bg-white py-3 pl-12 pr-4 text-sm font-bold text-slate-900 outline-none transition-all focus:border-slate-800">
+        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        </span>
+      </div>
+      <select name="status" class="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-800 outline-none transition-all focus:border-slate-800 lg:w-48">
+        <option value="ALL" {% if status_filter == "ALL" %}selected{% endif %}>All Statuses</option>
+        <option value="ACTIVE" {% if status_filter == "ACTIVE" %}selected{% endif %}>Active</option>
+        <option value="INACTIVE" {% if status_filter == "INACTIVE" %}selected{% endif %}>Inactive</option>
+      </select>
+      <div class="flex gap-3">
+        <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-black text-white shadow-sm hover:bg-slate-800 transition-all">Apply</button>
+        {% if q or status_filter != "ALL" %}
+        <a href="{% url 'admin_staff_management' %}" class="inline-flex items-center justify-center rounded-xl border border-slate-200 px-5 py-3 text-sm font-black text-slate-700 hover:bg-slate-50 transition-all">Reset</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  <div class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+    <div class="p-5 border-b border-slate-200 bg-slate-50/50">
+      <h2 class="text-xl font-black text-slate-900">Staff Directory</h2>
+      <p class="text-sm text-slate-600 mt-1">Review maintenance staff access and workload before assigning new repair requests.</p>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-[980px] w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-slate-50 border-b border-slate-200">
+            <th class="px-6 py-4 text-xs font-black uppercase tracking-wider text-slate-500">Staff Name</th>
+            <th class="px-6 py-4 text-xs font-black uppercase tracking-wider text-slate-500">Email or Username</th>
+            <th class="px-6 py-4 text-xs font-black uppercase tracking-wider text-slate-500">Contact Number</th>
+            <th class="px-6 py-4 text-xs font-black uppercase tracking-wider text-slate-500 text-center">Account Status</th>
+            <th class="px-6 py-4 text-xs font-black uppercase tracking-wider text-slate-500 text-center">Assigned Active Jobs</th>
+            <th class="px-6 py-4 text-xs font-black uppercase tracking-wider text-slate-500">Date Added</th>
+            <th class="px-6 py-4 text-xs font-black uppercase tracking-wider text-slate-500 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for staff in page_obj %}
+          <tr class="hover:bg-slate-50/60 transition-colors">
+            <td class="px-6 py-5 align-top">
+              <div class="font-black text-slate-900">{{ staff.display_name }}</div>
+              <div class="text-xs font-bold text-slate-500 mt-1">Completed jobs: {{ staff.completed_job_count|default:0 }}</div>
+            </td>
+            <td class="px-6 py-5 align-top">
+              <div class="font-semibold text-slate-800">{{ staff.email }}</div>
+              <div class="text-xs font-bold text-slate-500 mt-1">Username: {{ staff.username }}</div>
+            </td>
+            <td class="px-6 py-5 align-top font-semibold text-slate-700">{{ staff.display_contact_no }}</td>
+            <td class="px-6 py-5 align-top text-center">
+              <span class="inline-flex rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider {% if staff.is_active %}bg-emerald-50 text-emerald-700 border border-emerald-200{% else %}bg-amber-50 text-amber-700 border border-amber-200{% endif %}">
+                {% if staff.is_active %}Active{% else %}Inactive{% endif %}
+              </span>
+            </td>
+            <td class="px-6 py-5 align-top text-center font-black text-slate-900">{{ staff.active_job_count|default:0 }}</td>
+            <td class="px-6 py-5 align-top font-semibold text-slate-700">{{ staff.display_date_added|date:"M d, Y" }}</td>
+            <td class="px-6 py-5 align-top">
+              <div class="flex flex-wrap justify-end gap-2">
+                <a href="{% url 'admin_staff_detail' staff.id %}" class="inline-flex w-16 items-center justify-center rounded-lg border border-slate-200 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50 transition-all">View</a>
+                <a href="{% url 'admin_staff_edit' staff.id %}" class="inline-flex w-16 items-center justify-center rounded-lg border border-slate-200 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50 transition-all">Edit</a>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="px-6 py-16 text-center">
+              <div class="mx-auto max-w-md">
+                <div class="text-lg font-black text-slate-900">No staff accounts found</div>
+                <p class="mt-2 text-sm font-bold text-slate-500">Try a different search or add a new maintenance staff account.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="flex items-center justify-between gap-4 border-t border-slate-200 bg-white px-5 py-4">
+      <div class="text-xs font-bold text-slate-500">Showing <span class="text-slate-900">{{ page_obj.start_index }}-{{ page_obj.end_index }}</span> of <span class="text-slate-900">{{ page_obj.paginator.count }}</span> staff accounts</div>
+      <div class="flex items-center gap-2">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&status={{ status_filter }}" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50 transition-all">Previous</a>
+        {% endif %}
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}&q={{ q }}&status={{ status_filter }}" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50 transition-all">Next</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -2863,3 +2863,184 @@ class LeaseFormCompatibilityTests(TestCase):
 
         self.assertEqual(lease.status, Lease.STATUS_PENDING_PAYMENT)
         self.assertEqual(lease.renewal_status, "")
+
+class StaffManagementMVPTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            email="staff-mgmt-admin@gmail.com",
+            username="staffmgmtadmin",
+            password="password123",
+            role=User.Role.ADMIN,
+        )
+        self.staff = User.objects.create_user(
+            email="staff-mgmt-active@gmail.com",
+            username="staffmgmtactive",
+            password="password123",
+            role=User.Role.STAFF,
+        )
+        self.inactive_staff = User.objects.create_user(
+            email="staff-mgmt-inactive@gmail.com",
+            username="staffmgmtinactive",
+            password="password123",
+            role=User.Role.STAFF,
+            is_active=False,
+        )
+        TenantProfile.objects.create(user=self.staff, first_name="Active", last_name="Worker", created_by=self.admin)
+        TenantProfile.objects.create(user=self.inactive_staff, first_name="Inactive", last_name="Worker", created_by=self.admin)
+
+    def test_admin_can_create_staff_account_from_staff_management(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.post(
+            reverse("admin_staff_add"),
+            {
+                "full_name": "Maria Santos",
+                "email": "new-staff@example.com",
+                "contact_no": "09170000011",
+                "temporary_password": "TempPass123!",
+                "confirm_password": "TempPass123!",
+                "status": "ACTIVE",
+            },
+        )
+
+        self.assertRedirects(response, reverse("admin_staff_management"))
+        new_staff = User.objects.get(email="new-staff@example.com")
+        self.assertEqual(new_staff.role, User.Role.STAFF)
+        self.assertTrue(new_staff.is_active)
+        self.assertTrue(new_staff.check_password("TempPass123!"))
+        self.assertTrue(
+            TenantProfile.objects.filter(
+                user=new_staff,
+                first_name="Maria",
+                last_name="Santos",
+                contact_no="09170000011",
+            ).exists()
+        )
+
+    def test_staff_user_cannot_access_admin_staff_management_routes(self):
+        self.client.force_login(self.staff)
+
+        response = self.client.get(reverse("admin_staff_management"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("login"), response.url)
+
+    def test_admin_can_activate_inactive_staff_from_management(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.post(
+            reverse("admin_staff_toggle_status", args=[self.inactive_staff.id]),
+            {"action": "activate"},
+        )
+
+        self.assertRedirects(response, reverse("admin_staff_management"))
+        self.inactive_staff.refresh_from_db()
+        self.assertTrue(self.inactive_staff.is_active)
+
+    def test_inactive_staff_cannot_log_in_after_deactivation(self):
+        self.client.force_login(self.admin)
+        deactivate_response = self.client.post(
+            reverse("admin_staff_toggle_status", args=[self.staff.id]),
+            {"action": "deactivate"},
+        )
+        self.assertRedirects(deactivate_response, reverse("admin_staff_management"))
+
+        self.staff.refresh_from_db()
+        self.assertFalse(self.staff.is_active)
+
+        self.client.logout()
+        login_response = self.client.post(
+            reverse("login"),
+            {"username": self.staff.email, "password": "password123"},
+        )
+
+        self.assertEqual(login_response.status_code, 200)
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_staff_add_form_renders_visible_admin_input_classes(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.get(reverse("admin_staff_add"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="full_name"')
+        self.assertContains(response, 'name="email"')
+        self.assertContains(response, 'name="contact_no"')
+        self.assertContains(response, 'name="temporary_password"')
+        self.assertContains(response, 'name="confirm_password"')
+        self.assertContains(response, 'w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-xl')
+        self.assertContains(response, 'grid grid-cols-1 gap-6 lg:grid-cols-[1.4fr_0.8fr]')
+
+    def test_staff_edit_form_uses_same_field_styling(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.get(reverse("admin_staff_edit", args=[self.staff.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="full_name"')
+        self.assertContains(response, 'name="email"')
+        self.assertContains(response, 'name="contact_no"')
+        self.assertContains(response, 'name="new_password"')
+        self.assertContains(response, 'name="confirm_new_password"')
+        self.assertContains(response, 'appearance-none shadow-sm')
+        self.assertContains(response, 'Leave blank to keep the current password.')
+
+    def test_staff_add_form_shows_field_and_password_validation_errors(self):
+        self.client.force_login(self.admin)
+
+        empty_response = self.client.post(reverse("admin_staff_add"), {})
+        self.assertEqual(empty_response.status_code, 200)
+        self.assertContains(empty_response, 'This field is required.', count=5)
+
+        mismatch_response = self.client.post(
+            reverse("admin_staff_add"),
+            {
+                "full_name": "Maria Santos",
+                "email": "mismatch-staff@example.com",
+                "contact_no": "09170000011",
+                "temporary_password": "TempPass123!",
+                "confirm_password": "TempPass456!",
+                "status": "ACTIVE",
+            },
+        )
+
+        self.assertEqual(mismatch_response.status_code, 200)
+        self.assertContains(mismatch_response, 'Temporary passwords do not match.')
+
+    def test_admin_can_change_staff_password_from_edit_page(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.post(
+            reverse("admin_staff_edit", args=[self.staff.id]),
+            {
+                "full_name": "Active Worker",
+                "email": self.staff.email,
+                "contact_no": "09170000022",
+                "new_password": "UpdatedPass123!",
+                "confirm_new_password": "UpdatedPass123!",
+                "status": "ACTIVE",
+            },
+        )
+
+        self.assertRedirects(response, reverse("admin_staff_management"))
+        self.staff.refresh_from_db()
+        self.assertTrue(self.staff.check_password("UpdatedPass123!"))
+        self.assertEqual(self.staff.tenantprofile.contact_no, "09170000022")
+
+    def test_staff_edit_form_shows_password_mismatch_validation_error(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.post(
+            reverse("admin_staff_edit", args=[self.staff.id]),
+            {
+                "full_name": "Active Worker",
+                "email": self.staff.email,
+                "contact_no": "09170000022",
+                "new_password": "UpdatedPass123!",
+                "confirm_new_password": "MismatchPass123!",
+                "status": "ACTIVE",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'New passwords do not match.')

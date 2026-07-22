@@ -1,0 +1,141 @@
+RealEstate360+ Maintenance Evaluation Export
+
+Human-label source workbook: C:\Users\John Arvin\Downloads\RealEstateDemo\exports\ml\category_evaluation_reviewer.xlsx
+Maintenance source dataset: C:\Users\John Arvin\Downloads\RealEstateDemo\exports\complete_dataset\maintenance_requests.csv
+MaintenanceRequest model: maintenance/models.py -> MaintenanceRequest
+Category function: accounts/ml/maintenance_nlp.py -> classify_issue_category(text)
+Priority function: accounts/ml/maintenance_nlp.py -> predict_priority(text)
+Category preprocessing: _clean_text(text), then keyword matching on classify_issue_category(f"{title} {description}")
+Priority preprocessing: _clean_text(text), then model.predict_proba(cleaned_description)
+Priority confidence source: top predicted probability returned by predict_priority(...), stored as a 0.0-1.0 float and exported as a percentage with two decimals
+
+Generated CSV: C:\Users\John Arvin\Downloads\RealEstateDemo\reports\maintenance_evaluation_197.csv
+Generated Excel workbook: C:\Users\John Arvin\Downloads\RealEstateDemo\reports\maintenance_evaluation_197.xlsx
+
+Category summary:
+{
+  "total_records": 197,
+  "correct_predictions": 164,
+  "incorrect_predictions": 33,
+  "accuracy": 0.8325,
+  "macro_precision": 0.8605,
+  "macro_recall": 0.8641,
+  "macro_f1": 0.8358,
+  "per_class": {
+    "PLUMBING": {
+      "precision": 0.7586,
+      "recall": 0.9167,
+      "f1_score": 0.8302,
+      "support": 48
+    },
+    "ELECTRICAL": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "support": 45
+    },
+    "STRUCTURAL": {
+      "precision": 0.6833,
+      "recall": 1.0,
+      "f1_score": 0.8119,
+      "support": 41
+    },
+    "OTHER": {
+      "precision": 1.0,
+      "recall": 0.5397,
+      "f1_score": 0.701,
+      "support": 63
+    }
+  },
+  "confusion_matrix": {
+    "PLUMBING": {
+      "PLUMBING": 44,
+      "ELECTRICAL": 0,
+      "STRUCTURAL": 4,
+      "OTHER": 0
+    },
+    "ELECTRICAL": {
+      "PLUMBING": 0,
+      "ELECTRICAL": 45,
+      "STRUCTURAL": 0,
+      "OTHER": 0
+    },
+    "STRUCTURAL": {
+      "PLUMBING": 0,
+      "ELECTRICAL": 0,
+      "STRUCTURAL": 41,
+      "OTHER": 0
+    },
+    "OTHER": {
+      "PLUMBING": 14,
+      "ELECTRICAL": 0,
+      "STRUCTURAL": 15,
+      "OTHER": 34
+    }
+  },
+  "keyword_match_coverage": 0.8274,
+  "keyword_match_count": 163,
+  "unmatched_rate": 0.1726,
+  "unmatched_count": 34
+}
+
+Priority summary:
+{
+  "total_records": 197,
+  "correct_predictions": 64,
+  "incorrect_predictions": 133,
+  "accuracy": 0.3249,
+  "macro_precision": 0.3239,
+  "macro_recall": 0.3636,
+  "macro_f1": 0.2847,
+  "per_class": {
+    "LOW": {
+      "precision": 0.0656,
+      "recall": 0.4444,
+      "f1_score": 0.1143,
+      "support": 9
+    },
+    "MEDIUM": {
+      "precision": 0.3636,
+      "recall": 0.35,
+      "f1_score": 0.3567,
+      "support": 80
+    },
+    "HIGH": {
+      "precision": 0.5424,
+      "recall": 0.2963,
+      "f1_score": 0.3832,
+      "support": 108
+    }
+  },
+  "confusion_matrix": {
+    "LOW": {
+      "LOW": 4,
+      "MEDIUM": 1,
+      "HIGH": 4
+    },
+    "MEDIUM": {
+      "LOW": 29,
+      "MEDIUM": 28,
+      "HIGH": 23
+    },
+    "HIGH": {
+      "LOW": 28,
+      "MEDIUM": 48,
+      "HIGH": 32
+    }
+  },
+  "human_distribution": {
+    "HIGH": 108,
+    "LOW": 9,
+    "MEDIUM": 80
+  },
+  "system_distribution": {
+    "LOW": 61,
+    "MEDIUM": 77,
+    "HIGH": 59
+  },
+  "average_confidence": 0.6817
+}
+
+All calculated metrics matched the expected values exactly.

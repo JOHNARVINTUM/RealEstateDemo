@@ -17,6 +17,19 @@
     </div>
   </header>
 
+  {% if not is_staff_portal %}
+  <div class="bg-white border border-slate-200 rounded-xl p-3 shadow-xs">
+    <div class="flex flex-wrap gap-3">
+      <a href="{% url 'admin_maintenance' %}" class="inline-flex items-center rounded-xl px-5 py-3 text-sm font-black transition-all {% if request.resolver_match.url_name == 'admin_maintenance' or request.resolver_match.url_name == 'admin_update_maintenance' %}bg-slate-900 text-white shadow-sm{% else %}border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %}">
+        Maintenance Requests
+      </a>
+      <a href="{% url 'admin_staff_management' %}" class="inline-flex items-center rounded-xl px-5 py-3 text-sm font-black transition-all {% if request.resolver_match.url_name == 'admin_staff_management' or request.resolver_match.url_name == 'admin_staff_add' or request.resolver_match.url_name == 'admin_staff_detail' or request.resolver_match.url_name == 'admin_staff_edit' %}bg-slate-900 text-white shadow-sm{% else %}border border-slate-200 text-slate-700 hover:bg-slate-50{% endif %}">
+        Staff Management
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- NLP Model Metrics Card -->
   {% if nlp_metrics %}
   <details class="bg-white border border-slate-200 rounded-xl shadow-xs group [&_summary::-webkit-details-marker]:hidden mb-6">

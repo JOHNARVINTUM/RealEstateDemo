@@ -1,0 +1,198 @@
+test_id,maintenance_title,maintenance_description,human_label
+769,ELECTRICAL Issue - Unit 501,Bathroom light burned out in Unit 501,ELECTRICAL
+770,ELECTRICAL Issue - Unit 208,Bedroom outlet sparks when plugging in charger in Unit 208,ELECTRICAL
+771,ELECTRICAL Issue - Unit 405,Circuit breaker keeps tripping in Unit 405,ELECTRICAL
+772,STRUCTURAL Issue - Unit 503,Wall crack appearing in Unit 503 bedroom,STRUCTURAL
+773,PLUMBING Issue - Unit 508,Bathroom sink clogged in Unit 508,PLUMBING
+774,STRUCTURAL Issue - Unit 502,Floor tiles loose in Unit 502 kitchen,STRUCTURAL
+775,OTHER Issue - Unit 406,Neighbors too noisy during midnight in Unit 406,OTHER
+776,ELECTRICAL Issue - Unit 201,Circuit breaker keeps tripping in Unit 201,ELECTRICAL
+777,ELECTRICAL Issue - Unit 504,Bedroom outlet sparks when plugging in charger in Unit 504,ELECTRICAL
+778,STRUCTURAL Issue - Unit 407,Ceiling water stain in Unit 407,PLUMBING
+779,ELECTRICAL Issue - Unit 205,Power outlet not working in Unit 205,ELECTRICAL
+780,PLUMBING Issue - Unit 401,Low water pressure in shower of Unit 401,PLUMBING
+781,OTHER Issue - Unit 404,Neighbors too noisy during midnight in Unit 404,OTHER
+782,STRUCTURAL Issue - Unit 309,Door frame damaged in Unit 309,STRUCTURAL
+783,PLUMBING Issue - Unit 306,Low water pressure in shower of Unit 306,PLUMBING
+784,ELECTRICAL Issue - Unit 209,Bathroom light burned out in Unit 209,ELECTRICAL
+785,ELECTRICAL Issue - Unit 401,Power outlet not working in Unit 401,ELECTRICAL
+786,PLUMBING Issue - Unit 408,Low water pressure in shower of Unit 408,PLUMBING
+787,OTHER Issue - Unit 401,Internet connection unstable in Unit 401,OTHER
+788,OTHER Issue - Unit 505,Bad smell in hallway near Unit 505,OTHER
+789,PLUMBING Issue - Unit 201,Bathroom sink clogged in Unit 201,PLUMBING
+790,ELECTRICAL Issue - Unit 306,Bathroom light burned out in Unit 306,ELECTRICAL
+791,OTHER Issue - Unit 406,Bad smell in hallway near Unit 406,OTHER
+792,OTHER Issue - Unit 505,Aircon leaking in Unit 505 bedroom,OTHER
+793,ELECTRICAL Issue - Unit 502,Light fixture flickering in Unit 502 living room,ELECTRICAL
+794,OTHER Issue - Unit 308,Neighbors too noisy during midnight in Unit 308,OTHER
+795,ELECTRICAL Issue - Unit 205,Bedroom outlet sparks when plugging in charger in Unit 205,ELECTRICAL
+796,OTHER Issue - Unit 506,Internet connection unstable in Unit 506,OTHER
+797,OTHER Issue - Unit 206,Cockroaches seen near kitchen cabinet in Unit 206,OTHER
+798,OTHER Issue - Unit 202,Internet connection unstable in Unit 202,OTHER
+799,OTHER Issue - Unit 509,Neighbors too noisy during midnight in Unit 509,OTHER
+800,OTHER Issue - Unit 206,Aircon leaking in Unit 206 bedroom,OTHER
+801,STRUCTURAL Issue - Unit 210,Door frame damaged in Unit 210,STRUCTURAL
+802,STRUCTURAL Issue - Unit 506,Wall crack appearing in Unit 506 bedroom,STRUCTURAL
+803,PLUMBING Issue - Unit 203,Bathroom sink clogged in Unit 203,PLUMBING
+804,ELECTRICAL Issue - Unit 504,Light fixture flickering in Unit 504 living room,ELECTRICAL
+805,OTHER Issue - Unit 303,Aircon leaking in Unit 303 bedroom,OTHER
+806,OTHER Issue - Unit 404,Bad smell in hallway near Unit 404,OTHER
+807,OTHER Issue - Unit 502,Aircon leaking in Unit 502 bedroom,OTHER
+808,ELECTRICAL Issue - Unit 304,Bathroom light burned out in Unit 304,ELECTRICAL
+809,PLUMBING Issue - Unit 404,Low water pressure in shower of Unit 404,PLUMBING
+810,OTHER Issue - Unit 405,Neighbors too noisy during midnight in Unit 405,OTHER
+811,PLUMBING Issue - Unit 203,Bathroom sink clogged in Unit 203,PLUMBING
+812,ELECTRICAL Issue - Unit 306,Bathroom light burned out in Unit 306,ELECTRICAL
+813,STRUCTURAL Issue - Unit 210,Wall crack appearing in Unit 210 bedroom,STRUCTURAL
+814,OTHER Issue - Unit 209,Cockroaches seen near kitchen cabinet in Unit 209,OTHER
+815,ELECTRICAL Issue - Unit 202,Bathroom light burned out in Unit 202,ELECTRICAL
+816,OTHER Issue - Unit 305,Neighbors too noisy during midnight in Unit 305,OTHER
+817,OTHER Issue - Unit 410,Cockroaches seen near kitchen cabinet in Unit 410,OTHER
+818,ELECTRICAL Issue - Unit 309,Circuit breaker keeps tripping in Unit 309,ELECTRICAL
+819,OTHER Issue - Unit 403,Aircon leaking in Unit 403 bedroom,OTHER
+820,STRUCTURAL Issue - Unit 309,Door frame damaged in Unit 309,STRUCTURAL
+821,STRUCTURAL Issue - Unit 401,Door frame damaged in Unit 401,STRUCTURAL
+822,STRUCTURAL Issue - Unit 507,Door frame damaged in Unit 507,STRUCTURAL
+823,OTHER Issue - Unit 208,Neighbors too noisy during midnight in Unit 208,OTHER
+824,STRUCTURAL Issue - Unit 306,Crack near window in Unit 306 after heavy rain,STRUCTURAL
+825,OTHER Issue - Unit 405,Cockroaches seen near kitchen cabinet in Unit 405,OTHER
+826,PLUMBING Issue - Unit 404,Bathroom sink clogged in Unit 404,PLUMBING
+827,OTHER Issue - Unit 304,Aircon leaking in Unit 304 bedroom,OTHER
+828,ELECTRICAL Issue - Unit 409,Bathroom light burned out in Unit 409,ELECTRICAL
+829,PLUMBING Issue - Unit 506,Bathroom sink clogged in Unit 506,PLUMBING
+830,ELECTRICAL Issue - Unit 404,Circuit breaker keeps tripping in Unit 404,ELECTRICAL
+831,PLUMBING Issue - Unit 201,Toilet won't stop running in Unit 201,PLUMBING
+832,PLUMBING Issue - Unit 507,Water leaking under kitchen sink in Unit 507,PLUMBING
+833,STRUCTURAL Issue - Unit 409,Crack near window in Unit 409 after heavy rain,STRUCTURAL
+834,OTHER Issue - Unit 301,Aircon leaking in Unit 301 bedroom,OTHER
+835,STRUCTURAL Issue - Unit 206,Crack near window in Unit 206 after heavy rain,STRUCTURAL
+836,PLUMBING Issue - Unit 204,Low water pressure in shower of Unit 204,PLUMBING
+837,OTHER Issue - Unit 207,Aircon leaking in Unit 207 bedroom,OTHER
+838,PLUMBING Issue - Unit 306,Faucet dripping in Unit 306 bathroom,PLUMBING
+839,OTHER Issue - Unit 507,Neighbors too noisy during midnight in Unit 507,OTHER
+840,ELECTRICAL Issue - Unit 208,Circuit breaker keeps tripping in Unit 208,ELECTRICAL
+841,ELECTRICAL Issue - Unit 401,Circuit breaker keeps tripping in Unit 401,ELECTRICAL
+842,STRUCTURAL Issue - Unit 205,Door frame damaged in Unit 205,STRUCTURAL
+843,PLUMBING Issue - Unit 505,Low water pressure in shower of Unit 505,PLUMBING
+844,STRUCTURAL Issue - Unit 307,Floor tiles loose in Unit 307 kitchen,STRUCTURAL
+845,OTHER Issue - Unit 201,Bad smell in hallway near Unit 201,OTHER
+846,PLUMBING Issue - Unit 210,Faucet dripping in Unit 210 bathroom,PLUMBING
+847,ELECTRICAL Issue - Unit 201,Bathroom light burned out in Unit 201,ELECTRICAL
+848,STRUCTURAL Issue - Unit 305,Floor tiles loose in Unit 305 kitchen,STRUCTURAL
+849,OTHER Issue - Unit 207,Aircon leaking in Unit 207 bedroom,OTHER
+850,ELECTRICAL Issue - Unit 209,Bedroom outlet sparks when plugging in charger in Unit 209,ELECTRICAL
+851,OTHER Issue - Unit 501,Cockroaches seen near kitchen cabinet in Unit 501,OTHER
+852,PLUMBING Issue - Unit 402,Low water pressure in shower of Unit 402,PLUMBING
+853,OTHER Issue - Unit 304,Internet connection unstable in Unit 304,OTHER
+854,OTHER Issue - Unit 204,Cockroaches seen near kitchen cabinet in Unit 204,OTHER
+855,OTHER Issue - Unit 310,Internet connection unstable in Unit 310,OTHER
+856,PLUMBING Issue - Unit 506,Bathroom sink clogged in Unit 506,PLUMBING
+857,OTHER Issue - Unit 508,Cockroaches seen near kitchen cabinet in Unit 508,OTHER
+858,OTHER Issue - Unit 207,Bad smell in hallway near Unit 207,OTHER
+859,ELECTRICAL Issue - Unit 502,Bedroom outlet sparks when plugging in charger in Unit 502,ELECTRICAL
+860,STRUCTURAL Issue - Unit 508,Floor tiles loose in Unit 508 kitchen,STRUCTURAL
+861,OTHER Issue - Unit 301,Neighbors too noisy during midnight in Unit 301,OTHER
+862,PLUMBING Issue - Unit 501,Faucet dripping in Unit 501 bathroom,PLUMBING
+863,OTHER Issue - Unit 203,Internet connection unstable in Unit 203,OTHER
+864,STRUCTURAL Issue - Unit 409,Crack near window in Unit 409 after heavy rain,STRUCTURAL
+865,OTHER Issue - Unit 509,Internet connection unstable in Unit 509,OTHER
+866,OTHER Issue - Unit 408,Neighbors too noisy during midnight in Unit 408,OTHER
+867,ELECTRICAL Issue - Unit 507,Circuit breaker keeps tripping in Unit 507,ELECTRICAL
+868,STRUCTURAL Issue - Unit 405,Crack near window in Unit 405 after heavy rain,STRUCTURAL
+869,PLUMBING Issue - Unit 304,Faucet dripping in Unit 304 bathroom,PLUMBING
+870,PLUMBING Issue - Unit 407,Low water pressure in shower of Unit 407,PLUMBING
+871,OTHER Issue - Unit 501,Cockroaches seen near kitchen cabinet in Unit 501,OTHER
+872,STRUCTURAL Issue - Unit 508,Ceiling water stain in Unit 508,PLUMBING
+873,OTHER Issue - Unit 508,Cockroaches seen near kitchen cabinet in Unit 508,OTHER
+874,ELECTRICAL Issue - Unit 310,Bedroom outlet sparks when plugging in charger in Unit 310,ELECTRICAL
+875,PLUMBING Issue - Unit 505,Bathroom sink clogged in Unit 505,PLUMBING
+876,OTHER Issue - Unit 505,Cockroaches seen near kitchen cabinet in Unit 505,OTHER
+877,ELECTRICAL Issue - Unit 503,Light fixture flickering in Unit 503 living room,ELECTRICAL
+878,STRUCTURAL Issue - Unit 306,Floor tiles loose in Unit 306 kitchen,STRUCTURAL
+879,STRUCTURAL Issue - Unit 308,Wall crack appearing in Unit 308 bedroom,STRUCTURAL
+880,PLUMBING Issue - Unit 503,Toilet won't stop running in Unit 503,PLUMBING
+881,OTHER Issue - Unit 206,Bad smell in hallway near Unit 206,OTHER
+882,OTHER Issue - Unit 306,Internet connection unstable in Unit 306,OTHER
+883,PLUMBING Issue - Unit 310,Bathroom sink clogged in Unit 310,PLUMBING
+884,STRUCTURAL Issue - Unit 405,Door frame damaged in Unit 405,STRUCTURAL
+885,PLUMBING Issue - Unit 305,Toilet won't stop running in Unit 305,PLUMBING
+886,PLUMBING Issue - Unit 508,Bathroom sink clogged in Unit 508,PLUMBING
+887,STRUCTURAL Issue - Unit 504,Floor tiles loose in Unit 504 kitchen,STRUCTURAL
+888,PLUMBING Issue - Unit 303,Faucet dripping in Unit 303 bathroom,PLUMBING
+889,STRUCTURAL Issue - Unit 202,Wall crack appearing in Unit 202 bedroom,STRUCTURAL
+890,ELECTRICAL Issue - Unit 209,Light fixture flickering in Unit 209 living room,ELECTRICAL
+891,OTHER Issue - Unit 205,Neighbors too noisy during midnight in Unit 205,OTHER
+892,OTHER Issue - Unit 408,Internet connection unstable in Unit 408,OTHER
+893,PLUMBING Issue - Unit 410,Bathroom sink clogged in Unit 410,PLUMBING
+894,PLUMBING Issue - Unit 409,Water leaking under kitchen sink in Unit 409,PLUMBING
+895,PLUMBING Issue - Unit 207,Faucet dripping in Unit 207 bathroom,PLUMBING
+896,PLUMBING Issue - Unit 203,Faucet dripping in Unit 203 bathroom,PLUMBING
+897,ELECTRICAL Issue - Unit 406,Bedroom outlet sparks when plugging in charger in Unit 406,ELECTRICAL
+898,OTHER Issue - Unit 507,Neighbors too noisy during midnight in Unit 507,OTHER
+899,STRUCTURAL Issue - Unit 308,Door frame damaged in Unit 308,STRUCTURAL
+900,STRUCTURAL Issue - Unit 504,Wall crack appearing in Unit 504 bedroom,STRUCTURAL
+901,OTHER Issue - Unit 407,Bad smell in hallway near Unit 407,OTHER
+902,PLUMBING Issue - Unit 210,Low water pressure in shower of Unit 210,PLUMBING
+903,ELECTRICAL Issue - Unit 501,Power outlet not working in Unit 501,ELECTRICAL
+904,STRUCTURAL Issue - Unit 305,Wall crack appearing in Unit 305 bedroom,STRUCTURAL
+905,ELECTRICAL Issue - Unit 407,Bathroom light burned out in Unit 407,ELECTRICAL
+906,ELECTRICAL Issue - Unit 503,Light fixture flickering in Unit 503 living room,ELECTRICAL
+907,OTHER Issue - Unit 501,Aircon leaking in Unit 501 bedroom,OTHER
+908,ELECTRICAL Issue - Unit 308,Power outlet not working in Unit 308,ELECTRICAL
+909,OTHER Issue - Unit 303,Aircon leaking in Unit 303 bedroom,OTHER
+910,OTHER Issue - Unit 307,Aircon leaking in Unit 307 bedroom,OTHER
+911,STRUCTURAL Issue - Unit 405,Door frame damaged in Unit 405,STRUCTURAL
+912,STRUCTURAL Issue - Unit 508,Crack near window in Unit 508 after heavy rain,STRUCTURAL
+913,ELECTRICAL Issue - Unit 501,Bedroom outlet sparks when plugging in charger in Unit 501,ELECTRICAL
+914,PLUMBING Issue - Unit 310,Faucet dripping in Unit 310 bathroom,PLUMBING
+915,OTHER Issue - Unit 309,Cockroaches seen near kitchen cabinet in Unit 309,OTHER
+916,OTHER Issue - Unit 407,Internet connection unstable in Unit 407,OTHER
+917,PLUMBING Issue - Unit 308,Faucet dripping in Unit 308 bathroom,PLUMBING
+918,STRUCTURAL Issue - Unit 305,Floor tiles loose in Unit 305 kitchen,STRUCTURAL
+919,STRUCTURAL Issue - Unit 503,Door frame damaged in Unit 503,STRUCTURAL
+920,PLUMBING Issue - Unit 404,Water leaking under kitchen sink in Unit 404,PLUMBING
+921,OTHER Issue - Unit 302,Cockroaches seen near kitchen cabinet in Unit 302,OTHER
+922,ELECTRICAL Issue - Unit 404,Bedroom outlet sparks when plugging in charger in Unit 404,ELECTRICAL
+923,ELECTRICAL Issue - Unit 507,Bedroom outlet sparks when plugging in charger in Unit 507,ELECTRICAL
+924,OTHER Issue - Unit 303,Aircon leaking in Unit 303 bedroom,OTHER
+925,PLUMBING Issue - Unit 507,Toilet won't stop running in Unit 507,PLUMBING
+926,PLUMBING Issue - Unit 509,Faucet dripping in Unit 509 bathroom,PLUMBING
+927,ELECTRICAL Issue - Unit 202,Light fixture flickering in Unit 202 living room,ELECTRICAL
+928,ELECTRICAL Issue - Unit 208,Bathroom light burned out in Unit 208,ELECTRICAL
+929,ELECTRICAL Issue - Unit 205,Circuit breaker keeps tripping in Unit 205,ELECTRICAL
+930,STRUCTURAL Issue - Unit 410,Ceiling water stain in Unit 410,PLUMBING
+931,STRUCTURAL Issue - Unit 502,Wall crack appearing in Unit 502 bedroom,STRUCTURAL
+932,STRUCTURAL Issue - Unit 407,Crack near window in Unit 407 after heavy rain,STRUCTURAL
+933,STRUCTURAL Issue - Unit 507,Crack near window in Unit 507 after heavy rain,STRUCTURAL
+934,ELECTRICAL Issue - Unit 407,Power outlet not working in Unit 407,ELECTRICAL
+935,OTHER Issue - Unit 302,Cockroaches seen near kitchen cabinet in Unit 302,OTHER
+936,ELECTRICAL Issue - Unit 408,Circuit breaker keeps tripping in Unit 408,ELECTRICAL
+937,ELECTRICAL Issue - Unit 502,Bedroom outlet sparks when plugging in charger in Unit 502,ELECTRICAL
+938,STRUCTURAL Issue - Unit 306,Floor tiles loose in Unit 306 kitchen,STRUCTURAL
+939,STRUCTURAL Issue - Unit 405,Wall crack appearing in Unit 405 bedroom,STRUCTURAL
+940,PLUMBING Issue - Unit 508,Low water pressure in shower of Unit 508,PLUMBING
+941,STRUCTURAL Issue - Unit 302,Wall crack appearing in Unit 302 bedroom,STRUCTURAL
+942,OTHER Issue - Unit 310,Internet connection unstable in Unit 310,OTHER
+943,OTHER Issue - Unit 403,Internet connection unstable in Unit 403,OTHER
+944,STRUCTURAL Issue - Unit 509,Ceiling water stain in Unit 509,PLUMBING
+945,ELECTRICAL Issue - Unit 405,Bedroom outlet sparks when plugging in charger in Unit 405,ELECTRICAL
+946,PLUMBING Issue - Unit 309,Low water pressure in shower of Unit 309,PLUMBING
+947,PLUMBING Issue - Unit 306,Water leaking under kitchen sink in Unit 306,PLUMBING
+948,OTHER Issue - Unit 408,Bad smell in hallway near Unit 408,OTHER
+949,OTHER Issue - Unit 302,Bad smell in hallway near Unit 302,OTHER
+950,OTHER Issue - Unit 407,Cockroaches seen near kitchen cabinet in Unit 407,OTHER
+951,PLUMBING Issue - Unit 301,Water leaking under kitchen sink in Unit 301,PLUMBING
+952,ELECTRICAL Issue - Unit 210,Circuit breaker keeps tripping in Unit 210,ELECTRICAL
+953,PLUMBING Issue - Unit 208,Water leaking under kitchen sink in Unit 208,PLUMBING
+954,ELECTRICAL Issue - Unit 406,Power outlet not working in Unit 406,ELECTRICAL
+955,OTHER Issue - Unit 305,Internet connection unstable in Unit 305,OTHER
+956,OTHER Issue - Unit 305,Aircon leaking in Unit 305 bedroom,OTHER
+957,STRUCTURAL Issue - Unit 307,Door frame damaged in Unit 307,STRUCTURAL
+958,PLUMBING Issue - Unit 303,Toilet won't stop running in Unit 303,PLUMBING
+959,STRUCTURAL Issue - Unit 210,Wall crack appearing in Unit 210 bedroom,STRUCTURAL
+960,PLUMBING Issue - Unit 403,Faucet dripping in Unit 403 bathroom,PLUMBING
+961,OTHER Issue - Unit 403,Cockroaches seen near kitchen cabinet in Unit 403,OTHER
+962,ELECTRICAL Issue - Unit 302,Circuit breaker keeps tripping in Unit 302,ELECTRICAL
+963,STRUCTURAL Issue - Unit 310,Floor tiles loose in Unit 310 kitchen,STRUCTURAL
+964,STRUCTURAL Issue - Unit 404,Door frame damaged in Unit 404,STRUCTURAL
+965,STRUCTURAL Issue - Unit 209,Crack near window in Unit 209 after heavy rain,STRUCTURAL

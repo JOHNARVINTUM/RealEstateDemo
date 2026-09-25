@@ -62,7 +62,7 @@ def get_active_rate_for_date(target_date: date) -> WaterRate:
     rate = WaterRate.objects.filter(
         effective_date__lte=target_date,
         is_active=True
-    ).order_by('-effective_date').first()
+    ).order_by('-effective_date', '-created_at', '-pk').first()
     
     if not rate:
         raise ValidationError(

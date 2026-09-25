@@ -28,7 +28,7 @@ class HomepageBannerCmsTests(TestCase):
         response = self.client.get(reverse('admin_business_profile'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Landing Page Editor')
-        self.assertContains(response, 'Edit Hero')
+        self.assertContains(response, 'Edit Section')
 
     def test_legacy_banner_management_redirects_to_editor(self):
         self.client.force_login(self.admin)

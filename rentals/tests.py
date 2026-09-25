@@ -23,7 +23,8 @@ from rentals.services import (
     repair_historical_move_in_payment,
 )
 from rentals.views import _dashboard_billing_context, _monthly_status_rows
-from water.models import WaterBill
+from water.models import WaterBill, WaterBillingSettings, WaterRate, WaterReading
+from water.services import compute_water_reading, create_or_update_monthly_bill_from_reading
 
 
 class TenantViewWorkflowTests(TestCase):
@@ -98,18 +99,16 @@ class TenantViewWorkflowTests(TestCase):
 
     def test_dashboard_surfaces_delayed_water_after_rent_and_parking_paid(self):
         lease = self.create_active_lease()
-        WaterBill.objects.create(
-            unit=self.unit,
-            period_start=date(2026, 1, 1),
-            period_end=date(2026, 1, 31),
-            prev_reading=Decimal("0.00"),
-            curr_reading=Decimal("80.00"),
-            rate_per_cu_m=Decimal("10.00"),
-            status="POSTED",
+        billing_month = date(2026, 1, 1)
+        WaterRate.objects.create(effective_date=billing_month, rate_per_cu_m=Decimal("10.00"))
+        WaterBillingSettings.objects.create(
+            reading_month=billing_month,
+            shared_pump_total=Decimal("0.00"),
+            vat_percent=Decimal("0.00"),
         )
         bill = MonthlyBill.objects.create(
             lease=lease,
-            billing_month=date(2026, 1, 1),
+            billing_month=billing_month,
             due_date=date(2026, 1, 5),
             base_rent=Decimal("10000.00"),
             parking_fee=Decimal("350.00"),
@@ -119,6 +118,21 @@ class TenantViewWorkflowTests(TestCase):
             total_due=Decimal("10660.50"),
             status="PARTIALLY_PAID",
         )
+        reading = WaterReading.objects.create(
+            lease=lease,
+            reading_month=billing_month,
+            previous_reading=Decimal("0.00"),
+            current_reading=Decimal("80.00"),
+        )
+        compute_water_reading(
+            reading,
+            total_month_consumption=Decimal("80.00"),
+            shared_pump_total=Decimal("0.00"),
+            vat_percent=Decimal("0.00"),
+            previous_unpaid_water_amount=Decimal("0.00"),
+        )
+        reading.save()
+        create_or_update_monthly_bill_from_reading(reading, force_update=True)
 
         response = self.client.get("/tenant/")
 

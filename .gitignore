@@ -71,3 +71,4 @@ exports/ml/ML_THESIS_EXPLANATION.txt
 
 # Custom Folders
 skills/
+/.env.local

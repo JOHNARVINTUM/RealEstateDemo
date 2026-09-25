@@ -1,6 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.contrib.auth import get_user_model
+from accounts.decorators import is_admin_user
 from .models import Notification
 
 User = get_user_model()
@@ -33,7 +34,7 @@ def admin_notifications(request):
     user = request.user
     
     # Only show admin notifications to admin users
-    if user.role != 'ADMIN':
+    if not is_admin_user(user):
         return render(request, 'error.html', {
             'message': 'Access denied. This page is for administrators only.'
         })

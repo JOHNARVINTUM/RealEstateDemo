@@ -41,7 +41,7 @@ class WaterRate(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
-        ordering = ['-effective_date']
+        ordering = ['-effective_date', '-created_at', '-pk']
         verbose_name = "Water Rate"
         verbose_name_plural = "Water Rates"
     

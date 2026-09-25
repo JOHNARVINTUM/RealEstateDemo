@@ -7,7 +7,7 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
-from billing.services import cleanup_duplicate_monthly_bills_for_lease, ensure_bills_since_move_in
+from billing.services import cleanup_duplicate_monthly_bills_for_lease, ensure_current_month_bill_for_lease
 from payments.models import ManualPayment
 from rentals.models import Lease, Notification, TenantProfile
 from rentals.unit_status import sync_unit_status
@@ -302,7 +302,7 @@ def admin_edit_lease(request, lease_id: int):
     if request.method == "POST" and form.is_valid():
         lease = form.save()
         try:
-            ensure_bills_since_move_in(lease)
+            ensure_current_month_bill_for_lease(lease)
             removed_duplicates = cleanup_duplicate_monthly_bills_for_lease(lease)
             if removed_duplicates:
                 messages.info(
@@ -310,7 +310,7 @@ def admin_edit_lease(request, lease_id: int):
                     f"Cleaned up {removed_duplicates} duplicate historical bill record{'s' if removed_duplicates != 1 else ''} for this lease.",
                 )
         except Exception:
-            logger.exception("ensure_bills_since_move_in failed while editing lease id %s", getattr(lease, "id", None))
+            logger.exception("ensure_current_month_bill_for_lease failed while editing lease id %s", getattr(lease, "id", None))
             messages.warning(request, "Failed to update billing rows; please regenerate bills if needed.")
         tenant_id = lease.tenant.tenantprofile.id if hasattr(lease.tenant, "tenantprofile") else lease.tenant.id
         return redirect("admin_tenant_detail", tenant_id=tenant_id)

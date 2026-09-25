@@ -1088,15 +1088,14 @@ class LeaseActivationService:
 
     @staticmethod
     def _generate_initial_billing(lease, payment_reference: str, activated_at):
-        from billing.services import ensure_bills_since_move_in, set_bill_status, month_start
-
-        ensure_bills_since_move_in(lease)
+        from billing.services import get_or_update_monthly_bill, month_start, set_bill_status
 
         first_bill_month = month_start(lease.start_date)
-        first_bill = MonthlyBill.objects.filter(
-            lease=lease,
-            billing_month=first_bill_month
-        ).first()
+        first_bill = get_or_update_monthly_bill(
+            lease,
+            first_bill_month,
+            today=(activated_at.date() if activated_at else timezone.localdate()),
+        )
 
         if first_bill:
             set_bill_status(
@@ -1106,7 +1105,6 @@ class LeaseActivationService:
                 paid_at=activated_at or timezone.now()
             )
         return first_bill
-
     @staticmethod
     def _record_move_in_payment(
         *,

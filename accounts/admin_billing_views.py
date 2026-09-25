@@ -41,10 +41,75 @@ def _bill_balance_amount(bill):
     return Decimal("0.00")
 
 
+def _bill_has_remaining_balance(bill):
+    return _bill_balance_amount(bill) > 0
+
+
+def _bill_has_any_applied_payment(bill):
+    return any(
+        amount > 0
+        for amount in (
+            bill.rent_paid,
+            bill.water_paid,
+            bill.parking_paid,
+            bill.maintenance_paid,
+        )
+    ) or bill.status == "PARTIALLY_PAID"
+
+
+def _bill_month_start(bill):
+    return bill.billing_month.replace(day=1)
+
+
+def _bill_is_paid(bill):
+    return not _bill_has_remaining_balance(bill)
+
+
+def _bill_is_current_scope_outstanding(bill, scope_month):
+    return _bill_month_start(bill) == scope_month and _bill_has_remaining_balance(bill)
+
+
+def _bill_is_current_scope_unpaid(bill, scope_month):
+    return _bill_is_current_scope_outstanding(bill, scope_month) and not _bill_has_any_applied_payment(bill)
+
+
+def _bill_is_current_scope_partial(bill, scope_month):
+    return _bill_is_current_scope_outstanding(bill, scope_month) and _bill_has_any_applied_payment(bill)
+
+
+def _bill_is_late(bill, today):
+    return bool(bill.due_date and bill.due_date < today and _bill_has_remaining_balance(bill))
+
+
+def _bill_is_coming_soon(bill, current_month):
+    return _bill_month_start(bill) > current_month and _bill_has_remaining_balance(bill)
+
+
+def _selected_scope_month(month_filter, year_filter, fallback_month):
+    if month_filter and year_filter and month_filter.isdigit() and year_filter.isdigit():
+        try:
+            return date(int(year_filter), int(month_filter), 1)
+        except ValueError:
+            return fallback_month
+    return fallback_month
+
+
+def _filtered_admin_billing_rows(bills, *, scope_month, today, status_filter):
+    if status_filter == "UNPAID":
+        return [bill for bill in bills if _bill_is_current_scope_unpaid(bill, scope_month)]
+    if status_filter == "PARTIAL":
+        return [bill for bill in bills if _bill_is_current_scope_partial(bill, scope_month)]
+    if status_filter == "OVERDUE":
+        return [bill for bill in bills if _bill_is_late(bill, today)]
+    if status_filter == "PAID":
+        return [bill for bill in bills if _bill_month_start(bill) == scope_month and _bill_is_paid(bill)]
+    return [bill for bill in bills if _bill_is_current_scope_outstanding(bill, scope_month)]
+
+
 def _refresh_bill_for_settlement_display(bill, today=None):
     if bill.status == "PAID":
         return bill
-    today = today or date.today()
+    today = today or timezone.localdate()
     if bill.billing_month.replace(day=1) > today.replace(day=1):
         return bill
     return get_or_update_monthly_bill(bill.lease, bill.billing_month, today=today)
@@ -57,7 +122,7 @@ def _settle_bill_and_invoice(bill, paid_at):
 
 
 def _prior_unpaid_bills_for_settlement(bill):
-    current_month = date.today().replace(day=1)
+    current_month = timezone.localdate().replace(day=1)
     candidates = (
         MonthlyBill.objects.select_related("lease", "lease__tenant", "lease__tenant__tenantprofile", "lease__unit")
         .filter(
@@ -299,67 +364,52 @@ def admin_billing(request):
     if active_tab not in ("active", "upcoming"):
         active_tab = "active"
 
-    today = date.today()
+    today = timezone.localdate()
     current_month = today.replace(day=1)
+    scope_month = _selected_scope_month(month_filter, year_filter, current_month)
 
-    base_qs = MonthlyBill.objects.select_related("lease", "lease__unit", "lease__tenant", "lease__tenant__tenantprofile")
+    base_qs = MonthlyBill.objects.select_related(
+        "lease",
+        "lease__unit",
+        "lease__tenant",
+        "lease__tenant__tenantprofile",
+    ).prefetch_related("line_items")
     if q:
         for term in q.split():
             base_qs = base_qs.filter(
-                Q(lease__tenant__email__icontains=term) |
-                Q(lease__tenant__username__icontains=term) |
-                Q(lease__tenant__tenantprofile__first_name__icontains=term) |
-                Q(lease__tenant__tenantprofile__last_name__icontains=term) |
-                Q(lease__unit__number__icontains=term) |
-                Q(payment_reference__icontains=term)
+                Q(lease__tenant__email__icontains=term)
+                | Q(lease__tenant__username__icontains=term)
+                | Q(lease__tenant__tenantprofile__first_name__icontains=term)
+                | Q(lease__tenant__tenantprofile__last_name__icontains=term)
+                | Q(lease__unit__number__icontains=term)
+                | Q(payment_reference__icontains=term)
             )
     if month_filter and month_filter.isdigit():
         base_qs = base_qs.filter(billing_month__month=int(month_filter))
     if year_filter and year_filter.isdigit():
         base_qs = base_qs.filter(billing_month__year=int(year_filter))
 
-    stats = base_qs.aggregate(
-        paid_count=Count("id", filter=Q(status="PAID")),
-        unpaid_count=Count(
-            "id",
-            filter=Q(status__in=["UNPAID", "PARTIALLY_PAID"], billing_month__lte=current_month),
-        ),
-        overdue_count=Count(
-            "id",
-            filter=Q(status__in=["UNPAID", "PARTIALLY_PAID"], billing_month__lt=current_month),
-        ),
-        partial_count=Count("id", filter=Q(status="PARTIALLY_PAID")),
-        upcoming_count=Count(
-            "id",
-            filter=Q(billing_month__gt=current_month) & ~Q(status="PAID"),
-        ),
-    )
-    paid_count = stats["paid_count"] or 0
-    unpaid_count = stats["unpaid_count"] or 0
-    overdue_count = stats["overdue_count"] or 0
-    partial_count = stats["partial_count"] or 0
-    upcoming_count = stats["upcoming_count"] or 0
+    base_bills = [bill for bill in base_qs.order_by("-billing_month", "-id") if not _is_unpaid_duplicate_shell(bill)]
+
+    current_bills_count = sum(1 for bill in base_bills if _bill_is_current_scope_outstanding(bill, current_month))
+    paid_count = sum(1 for bill in base_bills if _bill_month_start(bill) == current_month and _bill_is_paid(bill))
+    unpaid_count = sum(1 for bill in base_bills if _bill_is_current_scope_unpaid(bill, current_month))
+    partial_count = sum(1 for bill in base_bills if _bill_is_current_scope_partial(bill, current_month))
+    overdue_count = sum(1 for bill in base_bills if _bill_is_late(bill, today))
+    upcoming_count = sum(1 for bill in base_bills if _bill_is_coming_soon(bill, current_month))
 
     if active_tab == "active":
-        display_qs = base_qs.filter(
-            Q(billing_month__lte=current_month) | Q(status__in=("PAID", "PARTIALLY_PAID"))
+        display_bills = _filtered_admin_billing_rows(
+            base_bills,
+            scope_month=scope_month,
+            today=today,
+            status_filter=status_filter,
         )
-        if status_filter == "UNPAID":
-            display_qs = display_qs.filter(status__in=("UNPAID", "PARTIALLY_PAID"))
-        elif status_filter == "OVERDUE":
-            display_qs = display_qs.filter(
-                status__in=("UNPAID", "PARTIALLY_PAID"),
-                billing_month__lt=current_month,
-            )
-        elif status_filter == "PARTIAL":
-            display_qs = display_qs.filter(status="PARTIALLY_PAID")
-        elif status_filter == "PAID":
-            display_qs = display_qs.filter(status="PAID")
     else:
-        display_qs = base_qs.filter(billing_month__gt=current_month).exclude(status="PAID")
+        display_bills = [bill for bill in base_bills if _bill_is_coming_soon(bill, current_month)]
 
-    active_count = display_qs.count()
-    paginator = Paginator(display_qs.order_by("-billing_month"), 10)
+    active_count = len(display_bills)
+    paginator = Paginator(display_bills, 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
@@ -386,6 +436,7 @@ def admin_billing(request):
         "partial_count": partial_count,
         "upcoming_count": upcoming_count,
         "active_count": active_count,
+        "current_bills_count": current_bills_count,
     })
 
 

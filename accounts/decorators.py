@@ -5,8 +5,16 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect
 
 
+def is_admin_user(user):
+    """Return whether a user may access administrator-only workflows."""
+    return bool(
+        getattr(user, "is_authenticated", False)
+        and (getattr(user, "is_superuser", False) or getattr(user, "role", "") == "ADMIN")
+    )
+
+
 def _is_admin_user(user):
-    return user.is_authenticated and getattr(user, "role", "") == "ADMIN"
+    return is_admin_user(user)
 
 
 def _is_staff_user(user):

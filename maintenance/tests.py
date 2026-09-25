@@ -931,6 +931,8 @@ class MaintenanceChargeBillingPostingWorkflowTests(TestCase):
         self.assertIsNone(self.charge.bill_line_item)
 
     def test_paid_bill_is_not_modified_and_next_unpaid_bill_is_used(self):
+        self.charge.approved_at = timezone.make_aware(datetime(2026, 7, 21, 10, 0))
+        self.charge.save(update_fields=["approved_at", "updated_at"])
         july_bill = MonthlyBill.objects.create(
             lease=self.lease,
             billing_month=date(2026, 7, 1),
@@ -956,6 +958,8 @@ class MaintenanceChargeBillingPostingWorkflowTests(TestCase):
         self.assertTrue(BillLineItem.objects.filter(monthly_bill=august_bill, line_type=BillLineItem.LINE_TYPE_MAINTENANCE).exists())
 
     def test_current_or_repair_period_unpaid_bill_is_selected_not_oldest_unrelated_unpaid_bill(self):
+        self.charge.approved_at = timezone.make_aware(datetime(2026, 7, 21, 10, 0))
+        self.charge.save(update_fields=["approved_at", "updated_at"])
         june_bill = MonthlyBill.objects.create(
             lease=self.lease,
             billing_month=date(2026, 6, 1),

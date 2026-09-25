@@ -18,9 +18,8 @@ from billing.services import (
     add_months,
     due_date_for_month,
     reconcile_approved_payments_for_tenant,
-    ensure_bills_since_move_in,
+    ensure_current_month_bill_for_lease,
     ensure_bills_up_to,
-    get_or_update_monthly_bill,
     month_start,
     parse_bill_ids,
 )
@@ -194,12 +193,11 @@ def _next_bill_after_current(lease, all_bills, current_balance, actual_balance_i
         return next_bill
 
     next_month_date = add_months(current_balance.billing_month, 1)
-    return get_or_update_monthly_bill(lease, next_month_date)
+    return MonthlyBill.objects.filter(lease=lease, billing_month=next_month_date).first()
 
 
 def _next_generated_bill_preview(lease, today_start):
     next_month = add_months(today_start, 1)
-    ensure_bills_up_to(lease, next_month)
     return MonthlyBill.objects.filter(lease=lease, billing_month=next_month).first()
 
 
@@ -209,7 +207,7 @@ def _dashboard_billing_context(user, lease, today):
         return context
 
     reconcile_approved_payments_for_tenant(user)
-    ensure_bills_since_move_in(lease)
+    ensure_current_month_bill_for_lease(lease, today=today)
 
     all_bills = list(MonthlyBill.objects.filter(lease=lease).order_by("billing_month"))
     context["partial_bill_alert"] = next(
@@ -886,7 +884,7 @@ def tenant_billing(request):
         return redirect("tenant_dashboard")
 
     reconcile_approved_payments_for_tenant(user)
-    ensure_bills_since_move_in(lease)
+    ensure_current_month_bill_for_lease(lease, today=today)
 
     billing_month_filter = _tenant_billing_filters(request)
     selected_bill = _selected_contract_bill(lease, billing_month_filter)

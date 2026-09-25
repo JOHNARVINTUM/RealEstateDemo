@@ -2,7 +2,7 @@ from datetime import date
 from decimal import Decimal
 import calendar
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Sum
 from django.core.exceptions import ValidationError
 from django.utils import timezone
@@ -181,10 +181,101 @@ def _preferred_monthly_bill(month_bills):
 def _lease_is_billable_today(lease, today: date) -> bool:
     return (
         lease is not None
+        and lease.status == lease.STATUS_ACTIVE
         and lease.start_date <= today
         and (lease.end_date is None or lease.end_date >= today)
     )
 
+
+def lease_covers_billing_month(lease, billing_month: date) -> bool:
+    billing_month = month_start(billing_month)
+    next_month = add_months(billing_month, 1)
+    return (
+        lease is not None
+        and lease.status == lease.STATUS_ACTIVE
+        and lease.start_date < next_month
+        and (lease.end_date is None or lease.end_date >= billing_month)
+    )
+
+
+def current_month_billable_leases(today: date | None = None):
+    from django.db.models import Q
+    from rentals.models import Lease
+
+    today = today or timezone.localdate()
+    current_month = month_start(today)
+    next_month = add_months(current_month, 1)
+    return Lease.objects.select_related("tenant", "tenant__tenantprofile", "unit").filter(
+        status=Lease.STATUS_ACTIVE,
+        start_date__lt=next_month,
+    ).filter(
+        Q(end_date__isnull=True) | Q(end_date__gte=current_month)
+    ).order_by("id")
+
+
+def _current_month_bill_result(
+    *,
+    status: str,
+    lease_id=None,
+    bill_id=None,
+    error_category: str = "",
+):
+    return {
+        "status": status,
+        "lease_id": lease_id,
+        "bill_id": bill_id,
+        "error_category": error_category,
+    }
+
+
+def _existing_bill_for_month(lease, billing_month: date):
+    return _preferred_monthly_bill(list(_same_calendar_month_bill_queryset(lease, billing_month)))
+
+
+def ensure_current_month_bill_for_lease(
+    lease_or_id,
+    *,
+    target_month: date | None = None,
+    today: date | None = None,
+    dry_run: bool = False,
+):
+    from rentals.models import Lease
+
+    today = today or timezone.localdate()
+    current_month = month_start(target_month or today)
+    lease_id = getattr(lease_or_id, "id", lease_or_id)
+
+    try:
+        if dry_run:
+            lease = lease_or_id if hasattr(lease_or_id, "id") else Lease.objects.filter(pk=lease_id).first()
+            if not lease_covers_billing_month(lease, current_month):
+                return _current_month_bill_result(status="ineligible", lease_id=lease_id)
+            bill = _existing_bill_for_month(lease, current_month)
+            if bill:
+                return _current_month_bill_result(status="existing", lease_id=lease.id, bill_id=bill.id)
+            return _current_month_bill_result(status="would_create", lease_id=lease.id)
+
+        with transaction.atomic():
+            lease = Lease.objects.select_for_update().select_related("tenant", "unit").filter(pk=lease_id).first()
+            if not lease_covers_billing_month(lease, current_month):
+                return _current_month_bill_result(status="ineligible", lease_id=lease_id)
+
+            bill = _existing_bill_for_month(lease, current_month)
+            if bill:
+                return _current_month_bill_result(status="existing", lease_id=lease.id, bill_id=bill.id)
+
+            try:
+                with transaction.atomic():
+                    bill = get_or_update_monthly_bill(lease, current_month, today=today)
+            except IntegrityError:
+                bill = _existing_bill_for_month(lease, current_month)
+                if not bill:
+                    raise
+                return _current_month_bill_result(status="existing", lease_id=lease.id, bill_id=bill.id)
+
+            return _current_month_bill_result(status="created", lease_id=lease.id, bill_id=bill.id)
+    except Exception as exc:
+        return _current_month_bill_result(status="failed", lease_id=lease_id, error_category=exc.__class__.__name__)
 
 def _bill_has_activity(bill: MonthlyBill) -> bool:
     return (
@@ -610,9 +701,7 @@ def _ensure_bills_for_range(
     apply_move_in: bool = False,
     start_month: date | None = None,
 ):
-    if lease is None:
-        return
-    if not _lease_is_billable_today(lease, today):
+    if lease is None or lease.status != lease.STATUS_ACTIVE:
         return
 
     lease_start = month_start(lease.start_date)
@@ -763,6 +852,65 @@ def ensure_bills_since_move_in(lease, today: date | None = None):
         today = timezone.localdate()
     _ensure_bills_for_range(lease, month_start(today), today, apply_move_in=True)
 
+
+def ensure_current_month_bills(*, today: date | None = None, dry_run: bool = False):
+    today = today or timezone.localdate()
+    current_month = month_start(today)
+    eligible_leases = list(current_month_billable_leases(today=today))
+    existing_lease_ids = set(
+        MonthlyBill.objects.filter(
+            billing_month__year=current_month.year,
+            billing_month__month=current_month.month,
+            lease_id__in=[lease.id for lease in eligible_leases],
+        ).values_list("lease_id", flat=True)
+    )
+    missing_leases = [lease for lease in eligible_leases if lease.id not in existing_lease_ids]
+
+    if dry_run:
+        results = [
+            _current_month_bill_result(status="existing", lease_id=lease.id)
+            if lease.id in existing_lease_ids
+            else _current_month_bill_result(status="would_create", lease_id=lease.id)
+            for lease in eligible_leases
+        ]
+    else:
+        results = []
+        for lease in eligible_leases:
+            results.append(
+                ensure_current_month_bill_for_lease(
+                    lease.id,
+                    target_month=current_month,
+                    today=today,
+                    dry_run=False,
+                )
+            )
+
+    created_results = [result for result in results if result["status"] == "created"]
+    existing_results = [result for result in results if result["status"] == "existing"]
+    would_create_results = [result for result in results if result["status"] == "would_create"]
+    ineligible_results = [result for result in results if result["status"] == "ineligible"]
+    failed_results = [result for result in results if result["status"] == "failed"]
+
+    return {
+        "today": today,
+        "current_month": current_month,
+        "checked_count": len(eligible_leases),
+        "created_count": len(created_results),
+        "existing_count": len(existing_lease_ids),
+        "skipped_count": len(existing_results) + len(would_create_results),
+        "ineligible_count": len(ineligible_results),
+        "failed_count": len(failed_results),
+        "created_lease_ids": [result["lease_id"] for result in created_results],
+        "created_bill_ids": [result["bill_id"] for result in created_results if result["bill_id"] is not None],
+        "skipped_lease_ids": [result["lease_id"] for result in existing_results + would_create_results],
+        "missing_lease_ids": [lease.id for lease in missing_leases],
+        "failed": [
+            {"lease_id": result["lease_id"], "error_category": result["error_category"]}
+            for result in failed_results
+        ],
+        "results": results,
+        "dry_run": dry_run,
+    }
 
 def _advance_generation_start_month(lease, today: date) -> date:
     lease_start = month_start(lease.start_date)
@@ -1261,7 +1409,7 @@ def _notify_payment_approved(payment, method_display: str, was_previously_approv
     try:
         (Notification.create_tenant_notification if not was_previously_approved else (lambda **kwargs: None))(
             title="Payment Approved",
-            message=f"Your {method_display} payment of ₱{payment.amount:,.2f} has been approved and your bills have been updated.",
+            message=f"Your {method_display} payment of â‚±{payment.amount:,.2f} has been approved and your bills have been updated.",
             notification_type="PAYMENT",
             tenant_user=payment.user,
         )
@@ -1414,8 +1562,8 @@ def approve_manual_payment(payment):
     expected_amount = _expected_amount_for_payment_type(bills, payment_type)
     if not was_previously_approved and payment_amount != expected_amount:
         raise ValidationError(
-            f"Payment amount ₱{payment_amount:,.2f} does not match the selected "
-            f"{payment_type.replace('_', ' ')} balance of ₱{expected_amount:,.2f}."
+            f"Payment amount â‚±{payment_amount:,.2f} does not match the selected "
+            f"{payment_type.replace('_', ' ')} balance of â‚±{expected_amount:,.2f}."
         )
 
     invoice_lines = _build_invoice_lines(bills, payment_type)
@@ -1450,7 +1598,7 @@ def reject_manual_payment(payment):
             method_display = "GCash" if payment.payment_method == "GCASH" else "Face-to-Face Cash"
             Notification.create_tenant_notification(
                 title="Payment Declined",
-                message=f"Your {method_display} payment request of ₱{payment.amount:,.2f} was declined. Please contact the admin for more information or submit a new payment.",
+                message=f"Your {method_display} payment request of â‚±{payment.amount:,.2f} was declined. Please contact the admin for more information or submit a new payment.",
                 notification_type='PAYMENT',
                 tenant_user=payment.user
             )

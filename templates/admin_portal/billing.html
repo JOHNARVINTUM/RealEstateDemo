@@ -85,7 +85,7 @@
       <a href="?tab=active&q={{ q }}&status={{ status_filter }}&month={{ month_filter }}&year={{ year_filter }}"
          class="inline-flex items-center gap-2 px-1 pb-3 text-sm font-bold transition-colors border-b-[3px] {% if active_tab == 'active' %}border-slate-900 text-slate-900 font-extrabold{% else %}border-transparent text-slate-600 hover:text-slate-900{% endif %}">
         <span>Current Bills</span>
-        <span class="px-2 py-0.5 rounded text-xs {% if active_tab == 'active' %}bg-slate-900 text-white font-bold{% else %}bg-slate-200 text-slate-700{% endif %}">{{ active_count }}</span>
+        <span class="px-2 py-0.5 rounded text-xs {% if active_tab == 'active' %}bg-slate-900 text-white font-bold{% else %}bg-slate-200 text-slate-700{% endif %}">{{ current_bills_count }}</span>
       </a>
     </div>
 
@@ -125,9 +125,9 @@
         {% if active_tab == "active" %}
         <select name="status" class="w-full bg-white border border-slate-300 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-slate-500/20 outline-none cursor-pointer shadow-sm">
           <option value="">All Statuses</option>
-          <option value="UNPAID" {% if status_filter == "UNPAID" %}selected{% endif %}>Unpaid (incl. Partial)</option>
-          <option value="OVERDUE" {% if status_filter == "OVERDUE" %}selected{% endif %}>Overdue Target</option>
-          <option value="PARTIAL" {% if status_filter == "PARTIAL" %}selected{% endif %}>Partially Settled</option>
+          <option value="UNPAID" {% if status_filter == "UNPAID" %}selected{% endif %}>Unpaid Only</option>
+          <option value="OVERDUE" {% if status_filter == "OVERDUE" %}selected{% endif %}>Late / Overdue</option>
+          <option value="PARTIAL" {% if status_filter == "PARTIAL" %}selected{% endif %}>Partly Paid</option>
           <option value="PAID" {% if status_filter == "PAID" %}selected{% endif %}>Fully Settled</option>
         </select>
         {% endif %}

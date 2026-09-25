@@ -1,9 +1,14 @@
-from datetime import date
+from datetime import date, datetime
+from io import StringIO
 from decimal import Decimal
 from unittest.mock import patch
 
 from django.core.exceptions import ValidationError
+from django.core.management import call_command, CommandError
+from django.db import IntegrityError
 from django.test import TestCase
+from django.urls import reverse
+from django.utils import timezone
 
 from accounts.models import User
 from billing.models import BillingInvoice, BillLineItem, MonthlyBill
@@ -11,7 +16,10 @@ from billing.services import (
     approve_manual_payment,
     compute_weekly_interest,
     ensure_bills_since_move_in,
+    ensure_current_month_bill_for_lease,
+    ensure_current_month_bills,
     ensure_bills_up_to,
+    add_months,
     parse_bill_ids,
     repair_inflated_unpaid_late_fees,
     reconcile_approved_payments_for_tenant,
@@ -44,6 +52,7 @@ class BillingWorkflowTests(TestCase):
             monthly_rent=Decimal("10000.00"),
             due_day=31,
             start_date=date(2026, 1, 15),
+            status=Lease.STATUS_ACTIVE,
             is_active=True,
         )
         self.other_lease = Lease.objects.create(
@@ -941,3 +950,392 @@ class MoveInFirstMonthPaidTests(TestCase):
         self.assertIsNotNone(first_bill)
         self.assertEqual(first_bill.base_rent, Decimal("10000.00"))
         self.assertEqual(first_bill.status, "UNPAID")
+
+
+class EnsureCurrentBillsCommandTests(TestCase):
+    def setUp(self):
+        self.today = timezone.localdate()
+        self.current_month = self.today.replace(day=1)
+        self.previous_month = add_months(self.current_month, -1)
+
+        self.old_tenant = User.objects.create_user(
+            email="old-current-bill@gmail.com",
+            username="oldcurrentbill",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        self.old_tenant.date_joined = timezone.make_aware(datetime(2024, 1, 15, 9, 0, 0))
+        self.old_tenant.save(update_fields=["date_joined"])
+
+        self.new_tenant = User.objects.create_user(
+            email="new-current-bill@gmail.com",
+            username="newcurrentbill",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        self.new_tenant.date_joined = timezone.make_aware(datetime(self.today.year, self.today.month, 10, 9, 0, 0))
+        self.new_tenant.save(update_fields=["date_joined"])
+
+        self.paid_tenant = User.objects.create_user(
+            email="paid-current-bill@gmail.com",
+            username="paidcurrentbill",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        self.partial_tenant = User.objects.create_user(
+            email="partial-current-bill@gmail.com",
+            username="partialcurrentbill",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        self.inactive_tenant = User.objects.create_user(
+            email="inactive-current-bill@gmail.com",
+            username="inactivecurrentbill",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        self.expired_tenant = User.objects.create_user(
+            email="expired-current-bill@gmail.com",
+            username="expiredcurrentbill",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+
+        self.old_lease = Lease.objects.create(
+            tenant=self.old_tenant,
+            unit=Unit.objects.create(number="CB-101"),
+            monthly_rent=Decimal("10000.00"),
+            due_day=5,
+            start_date=date(self.current_month.year, self.current_month.month, 1),
+            status=Lease.STATUS_ACTIVE,
+            is_active=True,
+        )
+        self.new_lease = Lease.objects.create(
+            tenant=self.new_tenant,
+            unit=Unit.objects.create(number="CB-102"),
+            monthly_rent=Decimal("11000.00"),
+            due_day=5,
+            start_date=date(self.current_month.year, self.current_month.month, 12),
+            status=Lease.STATUS_ACTIVE,
+            is_active=True,
+        )
+        self.paid_lease = Lease.objects.create(
+            tenant=self.paid_tenant,
+            unit=Unit.objects.create(number="CB-103"),
+            monthly_rent=Decimal("12000.00"),
+            due_day=5,
+            start_date=date(self.current_month.year, self.current_month.month, 1),
+            status=Lease.STATUS_ACTIVE,
+            is_active=True,
+        )
+        self.partial_lease = Lease.objects.create(
+            tenant=self.partial_tenant,
+            unit=Unit.objects.create(number="CB-104"),
+            monthly_rent=Decimal("13000.00"),
+            due_day=5,
+            start_date=date(self.current_month.year, self.current_month.month, 1),
+            status=Lease.STATUS_ACTIVE,
+            is_active=True,
+        )
+        self.inactive_lease = Lease.objects.create(
+            tenant=self.inactive_tenant,
+            unit=Unit.objects.create(number="CB-105"),
+            monthly_rent=Decimal("9000.00"),
+            due_day=5,
+            start_date=date(self.current_month.year, self.current_month.month, 1),
+            status=Lease.STATUS_TERMINATED,
+            is_active=False,
+        )
+        self.expired_lease = Lease.objects.create(
+            tenant=self.expired_tenant,
+            unit=Unit.objects.create(number="CB-106"),
+            monthly_rent=Decimal("9500.00"),
+            due_day=5,
+            start_date=date(self.previous_month.year, self.previous_month.month, 1),
+            end_date=self.previous_month,
+            status=Lease.STATUS_EXPIRED,
+            is_active=False,
+        )
+
+        self.paid_bill = MonthlyBill.objects.create(
+            lease=self.paid_lease,
+            billing_month=self.current_month,
+            due_date=self.current_month.replace(day=5),
+            base_rent=Decimal("12000.00"),
+            water_amount=Decimal("0.00"),
+            parking_fee=Decimal("0.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("12000.00"),
+            status="PAID",
+            rent_paid=Decimal("12000.00"),
+            payment_reference="REF-PAID-CURRENT",
+        )
+        self.partial_bill = MonthlyBill.objects.create(
+            lease=self.partial_lease,
+            billing_month=self.current_month,
+            due_date=self.current_month.replace(day=5),
+            base_rent=Decimal("13000.00"),
+            water_amount=Decimal("0.00"),
+            parking_fee=Decimal("0.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("13000.00"),
+            status="PARTIALLY_PAID",
+            rent_paid=Decimal("3000.00"),
+            payment_reference="REF-PARTIAL-CURRENT",
+        )
+
+    def test_ensure_current_bills_dry_run_reports_missing_without_creating(self):
+        out = StringIO()
+
+        call_command("ensure_current_bills", "--dry-run", stdout=out)
+
+        self.assertIn("Missing current-month bill lease IDs:", out.getvalue())
+        self.assertIn(str(self.old_lease.id), out.getvalue())
+        self.assertIn(str(self.new_lease.id), out.getvalue())
+        self.assertFalse(MonthlyBill.objects.filter(lease=self.old_lease, billing_month=self.current_month).exists())
+        self.assertFalse(MonthlyBill.objects.filter(lease=self.new_lease, billing_month=self.current_month).exists())
+
+    def test_ensure_current_bills_creates_missing_for_old_and_new_active_leases(self):
+        call_command("ensure_current_bills")
+
+        self.assertTrue(MonthlyBill.objects.filter(lease=self.old_lease, billing_month=self.current_month).exists())
+        self.assertTrue(MonthlyBill.objects.filter(lease=self.new_lease, billing_month=self.current_month).exists())
+
+    def test_ensure_current_bills_skips_inactive_and_expired_leases(self):
+        call_command("ensure_current_bills")
+
+        self.assertFalse(MonthlyBill.objects.filter(lease=self.inactive_lease, billing_month=self.current_month).exists())
+        self.assertFalse(MonthlyBill.objects.filter(lease=self.expired_lease, billing_month=self.current_month).exists())
+
+    def test_ensure_current_bills_is_idempotent(self):
+        call_command("ensure_current_bills")
+        call_command("ensure_current_bills")
+
+        current_month_bills = MonthlyBill.objects.filter(
+            billing_month=self.current_month,
+            lease__in=[self.old_lease, self.new_lease, self.paid_lease, self.partial_lease],
+        )
+        self.assertEqual(current_month_bills.count(), 4)
+        self.assertEqual(current_month_bills.values("lease_id").distinct().count(), 4)
+
+    def test_ensure_current_bills_preserves_existing_paid_bill(self):
+        call_command("ensure_current_bills")
+
+        self.paid_bill.refresh_from_db()
+        self.assertEqual(self.paid_bill.status, "PAID")
+        self.assertEqual(self.paid_bill.rent_paid, Decimal("12000.00"))
+        self.assertEqual(self.paid_bill.payment_reference, "REF-PAID-CURRENT")
+
+    def test_ensure_current_bills_preserves_existing_partial_bill(self):
+        call_command("ensure_current_bills")
+
+        self.partial_bill.refresh_from_db()
+        self.assertEqual(self.partial_bill.status, "PARTIALLY_PAID")
+        self.assertEqual(self.partial_bill.rent_paid, Decimal("3000.00"))
+        self.assertEqual(self.partial_bill.payment_reference, "REF-PARTIAL-CURRENT")
+
+
+class Phase1CurrentBillingSafetyTests(TestCase):
+    def setUp(self):
+        self.today = timezone.localdate()
+        self.current_month = self.today.replace(day=1)
+        self.previous_month = add_months(self.current_month, -1)
+        self.next_month = add_months(self.current_month, 1)
+
+    def _tenant(self, suffix):
+        return User.objects.create_user(
+            email=f"phase1-{suffix}@example.test",
+            username=f"phase1{suffix}",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+
+    def _lease(self, suffix, **overrides):
+        data = {
+            "tenant": self._tenant(suffix),
+            "unit": Unit.objects.create(number=f"P1-{suffix[:7]}"),
+            "monthly_rent": Decimal("10000.00"),
+            "due_day": 5,
+            "start_date": self.current_month,
+            "status": Lease.STATUS_ACTIVE,
+            "is_active": True,
+        }
+        data.update(overrides)
+        return Lease.objects.create(**data)
+
+    def test_current_month_service_respects_eligibility_boundaries(self):
+        open_ended = self._lease("open")
+        future = self._lease("future", start_date=self.next_month)
+        terminated = self._lease("term", status=Lease.STATUS_TERMINATED, is_active=False)
+        expired = self._lease("expired", status=Lease.STATUS_EXPIRED, is_active=False)
+        ended_before = self._lease("endedbefore", end_date=add_months(self.current_month, -1))
+        ending_this_month = self._lease("endingnow", end_date=self.current_month)
+
+        self.assertEqual(ensure_current_month_bill_for_lease(open_ended, today=self.today)["status"], "created")
+        self.assertEqual(ensure_current_month_bill_for_lease(future, today=self.today)["status"], "ineligible")
+        self.assertEqual(ensure_current_month_bill_for_lease(terminated, today=self.today)["status"], "ineligible")
+        self.assertEqual(ensure_current_month_bill_for_lease(expired, today=self.today)["status"], "ineligible")
+        self.assertEqual(ensure_current_month_bill_for_lease(ended_before, today=self.today)["status"], "ineligible")
+        self.assertEqual(ensure_current_month_bill_for_lease(ending_this_month, today=self.today)["status"], "created")
+
+        self.assertTrue(MonthlyBill.objects.filter(lease=open_ended, billing_month=self.current_month).exists())
+        self.assertTrue(MonthlyBill.objects.filter(lease=ending_this_month, billing_month=self.current_month).exists())
+        self.assertFalse(MonthlyBill.objects.filter(lease=future).exists())
+        self.assertFalse(MonthlyBill.objects.filter(lease=terminated).exists())
+        self.assertFalse(MonthlyBill.objects.filter(lease=expired).exists())
+        self.assertFalse(MonthlyBill.objects.filter(lease=ended_before).exists())
+
+    def test_existing_current_month_bills_are_preserved_without_duplicate_line_items(self):
+        lease = self._lease("existing")
+        bill = MonthlyBill.objects.create(
+            lease=lease,
+            billing_month=self.current_month,
+            due_date=self.current_month.replace(day=5),
+            base_rent=Decimal("10000.00"),
+            total_due=Decimal("10000.00"),
+            status="PARTIALLY_PAID",
+            rent_paid=Decimal("2500.00"),
+            payment_reference="KEEP-REFERENCE",
+        )
+        BillLineItem.objects.create(
+            monthly_bill=bill,
+            line_type=BillLineItem.LINE_TYPE_RENT,
+            amount=Decimal("10000.00"),
+            paid_amount=Decimal("2500.00"),
+        )
+
+        result = ensure_current_month_bill_for_lease(lease, today=self.today)
+
+        bill.refresh_from_db()
+        self.assertEqual(result["status"], "existing")
+        self.assertEqual(bill.status, "PARTIALLY_PAID")
+        self.assertEqual(bill.rent_paid, Decimal("2500.00"))
+        self.assertEqual(bill.payment_reference, "KEEP-REFERENCE")
+        self.assertEqual(MonthlyBill.objects.filter(lease=lease, billing_month=self.current_month).count(), 1)
+        self.assertEqual(BillLineItem.objects.filter(monthly_bill=bill, line_type=BillLineItem.LINE_TYPE_RENT).count(), 1)
+
+    def test_current_month_command_does_not_create_prior_missing_months(self):
+        lease = self._lease("history", start_date=self.previous_month)
+
+        summary = ensure_current_month_bills(today=self.today)
+
+        self.assertIn(lease.id, summary["created_lease_ids"])
+        self.assertTrue(MonthlyBill.objects.filter(lease=lease, billing_month=self.current_month).exists())
+        self.assertFalse(MonthlyBill.objects.filter(lease=lease, billing_month=self.previous_month).exists())
+
+    def test_per_lease_failure_does_not_prevent_other_lease_success(self):
+        failed_lease = self._lease("failone")
+        successful_lease = self._lease("succeedone")
+        original = ensure_current_month_bill_for_lease
+
+        def fake_single(lease_id, **kwargs):
+            if lease_id == failed_lease.id:
+                return {"status": "failed", "lease_id": lease_id, "bill_id": None, "error_category": "ValidationError"}
+            return original(lease_id, **kwargs)
+
+        with patch("billing.services.ensure_current_month_bill_for_lease", side_effect=fake_single):
+            summary = ensure_current_month_bills(today=self.today)
+
+        self.assertEqual(summary["failed_count"], 1)
+        self.assertIn(failed_lease.id, [row["lease_id"] for row in summary["failed"]])
+        self.assertTrue(MonthlyBill.objects.filter(lease=successful_lease, billing_month=self.current_month).exists())
+
+    def test_line_item_failure_rolls_back_created_bill_for_that_lease(self):
+        lease = self._lease("rollback")
+
+        with patch("billing.services.ensure_bill_line_items_from_legacy", side_effect=RuntimeError("line failure")):
+            result = ensure_current_month_bill_for_lease(lease, today=self.today)
+
+        self.assertEqual(result["status"], "failed")
+        self.assertEqual(result["error_category"], "RuntimeError")
+        self.assertFalse(MonthlyBill.objects.filter(lease=lease, billing_month=self.current_month).exists())
+
+    def test_duplicate_race_recovery_returns_existing_bill(self):
+        lease = self._lease("race")
+        existing = MonthlyBill.objects.create(
+            lease=lease,
+            billing_month=self.current_month,
+            due_date=self.current_month.replace(day=5),
+            base_rent=Decimal("10000.00"),
+            total_due=Decimal("10000.00"),
+            status="UNPAID",
+        )
+
+        with patch("billing.services._existing_bill_for_month", side_effect=[None, existing]), patch(
+            "billing.services.get_or_update_monthly_bill",
+            side_effect=IntegrityError("duplicate"),
+        ):
+            result = ensure_current_month_bill_for_lease(lease, today=self.today)
+
+        self.assertEqual(result["status"], "existing")
+        self.assertEqual(result["bill_id"], existing.id)
+        self.assertEqual(MonthlyBill.objects.filter(lease=lease, billing_month=self.current_month).count(), 1)
+
+    def test_command_output_is_sanitized_and_failures_exit_nonzero(self):
+        summary = {
+            "today": self.today,
+            "current_month": self.current_month,
+            "checked_count": 1,
+            "created_count": 0,
+            "existing_count": 0,
+            "skipped_count": 0,
+            "ineligible_count": 0,
+            "failed_count": 1,
+            "created_lease_ids": [],
+            "created_bill_ids": [],
+            "skipped_lease_ids": [],
+            "missing_lease_ids": [123],
+            "failed": [{"lease_id": 123, "error_category": "ValidationError"}],
+            "results": [],
+            "dry_run": False,
+        }
+        out = StringIO()
+
+        with patch("billing.management.commands.ensure_current_bills.ensure_current_month_bills", return_value=summary):
+            with self.assertRaises(CommandError):
+                call_command("ensure_current_bills", stdout=out)
+
+        output = out.getvalue()
+        self.assertIn("Lease #123", output)
+        self.assertNotIn("@", output)
+        self.assertNotIn("P1-", output)
+        self.assertNotIn("KEEP-REFERENCE", output)
+
+class Phase1PageFlowHistoricalSafetyTests(TestCase):
+    def setUp(self):
+        self.today = timezone.localdate()
+        self.current_month = self.today.replace(day=1)
+        self.previous_month = add_months(self.current_month, -1)
+        self.tenant = User.objects.create_user(
+            email="phase1-page@example.test",
+            username="phase1page",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        self.lease = Lease.objects.create(
+            tenant=self.tenant,
+            unit=Unit.objects.create(number="P1-PAGE"),
+            monthly_rent=Decimal("10000.00"),
+            due_day=5,
+            start_date=self.previous_month,
+            status=Lease.STATUS_ACTIVE,
+            is_active=True,
+        )
+
+    def test_tenant_dashboard_get_does_not_create_historical_gap(self):
+        self.client.force_login(self.tenant)
+
+        response = self.client.get(reverse("tenant_dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(MonthlyBill.objects.filter(lease=self.lease, billing_month=self.current_month).exists())
+        self.assertFalse(MonthlyBill.objects.filter(lease=self.lease, billing_month=self.previous_month).exists())
+
+    def test_tenant_billing_get_does_not_create_historical_gap(self):
+        self.client.force_login(self.tenant)
+
+        response = self.client.get(reverse("tenant_billing"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(MonthlyBill.objects.filter(lease=self.lease, billing_month=self.current_month).exists())
+        self.assertFalse(MonthlyBill.objects.filter(lease=self.lease, billing_month=self.previous_month).exists())

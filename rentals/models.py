@@ -159,6 +159,15 @@ class Lease(models.Model):
     motorcycle_slots = models.PositiveSmallIntegerField(default=0, help_text="Number of motorcycle parking slots (₱350 each/mo)")
     car_slots = models.PositiveSmallIntegerField(default=0, help_text="Number of car parking slots (₱2,500 each/mo)")
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["unit"],
+                condition=models.Q(status="ACTIVE"),
+                name="unique_active_lease_per_unit",
+            ),
+        ]
+
     def __str__(self):
         return f"{self.tenant.email} -> {self.unit.number}"
 

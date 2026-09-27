@@ -4,7 +4,8 @@ from decimal import Decimal
 from unittest.mock import patch
 import zoneinfo
 
-from django.test import TestCase
+from django.db import IntegrityError
+from django.test import TestCase, TransactionTestCase
 
 from accounts.models import User
 from billing.models import BillLineItem, MonthlyBill
@@ -25,6 +26,41 @@ from rentals.services import (
 from rentals.views import _dashboard_billing_context, _monthly_status_rows
 from water.models import WaterBill, WaterBillingSettings, WaterRate, WaterReading
 from water.services import compute_water_reading, create_or_update_monthly_bill_from_reading
+
+
+class ActiveLeaseConstraintTests(TransactionTestCase):
+    def _tenant(self, suffix):
+        return User.objects.create_user(
+            email=f"active-lease-{suffix}@example.test",
+            username=f"activelease{suffix}",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+
+    def _lease(self, tenant, unit, *, status=Lease.STATUS_ACTIVE):
+        return Lease.objects.create(
+            tenant=tenant,
+            unit=unit,
+            monthly_rent=Decimal("10000.00"),
+            due_day=5,
+            start_date=date(2026, 1, 1),
+            status=status,
+        )
+
+    def test_database_allows_only_one_active_lease_per_unit(self):
+        unit = Unit.objects.create(number="AC-101")
+        self._lease(self._tenant("first"), unit)
+
+        with self.assertRaises(IntegrityError):
+            self._lease(self._tenant("second"), unit)
+
+        self._lease(self._tenant("historical"), unit, status=Lease.STATUS_TERMINATED)
+        other_unit = Unit.objects.create(number="AC-102")
+        self._lease(self._tenant("otherunit"), other_unit)
+
+        self.assertEqual(Lease.objects.filter(unit=unit, status=Lease.STATUS_ACTIVE).count(), 1)
+        self.assertEqual(Lease.objects.filter(unit=unit, status=Lease.STATUS_TERMINATED).count(), 1)
+        self.assertEqual(Lease.objects.filter(unit=other_unit, status=Lease.STATUS_ACTIVE).count(), 1)
 
 
 class TenantViewWorkflowTests(TestCase):

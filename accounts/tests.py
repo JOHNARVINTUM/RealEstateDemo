@@ -1,11 +1,14 @@
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
+import os
+from pathlib import Path
+import subprocess
+import sys
 from unittest.mock import patch
 from dateutil.relativedelta import relativedelta
 
 from django.test import RequestFactory, TestCase
 from django.core.exceptions import ValidationError
-from django.core.management import call_command
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.utils import timezone
@@ -16,10 +19,51 @@ from accounts.admin_forecasting_views import _build_forecasting_context
 from accounts.admin_notification_views import resolve_notification_target_url
 from accounts.admin_portal_forms import ComprehensiveTenantEditForm, LeaseForm, TenantProfileForm
 from billing.models import BillLineItem, MonthlyBill
+from billing.services import ensure_current_month_bill_for_lease
 from maintenance.models import MaintenanceRequest
 from payments.models import ManualPayment
 from rentals.models import ArchivedTenant, Lease, Notification, TenantAttachment, TenantProfile, Unit
 from water.models import WaterRate, WaterReading
+
+
+class SecretKeySettingsTests(TestCase):
+    """Keep production secret validation independent from local settings."""
+
+    project_root = Path(__file__).resolve().parent.parent
+
+    def _import_settings(self, module, **environment):
+        env = os.environ.copy()
+        env.update(environment)
+        return subprocess.run(
+            [sys.executable, "-c", f"import {module}"],
+            cwd=self.project_root,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    def test_production_settings_require_secret_key(self):
+        result = self._import_settings(
+            "RealEstateDemo.settings",
+            ENVIRONMENT="production",
+            SECRET_KEY="",
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Production SECRET_KEY is missing", result.stderr)
+
+    def test_local_settings_remain_usable_without_secret_key(self):
+        result = self._import_settings(
+            "RealEstateDemo.settings_local",
+            ENVIRONMENT="local",
+            SECRET_KEY="",
+            LOCAL_DB_NAME="local_settings_test",
+            LOCAL_DB_USER="local_settings_user",
+            LOCAL_DB_PASSWORD="local-settings-test-password",
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
 
 
 class AccountProfileTests(TestCase):
@@ -1462,7 +1506,9 @@ class AdminBillingSettlementWarningTests(TestCase):
             is_active=True,
         )
 
-        call_command("ensure_current_bills")
+        today = timezone.localdate()
+        ensure_current_month_bill_for_lease(old_lease, today=today)
+        ensure_current_month_bill_for_lease(new_lease, today=today)
         self.client.force_login(self.admin)
 
         response = self.client.get(reverse("admin_billing"))
@@ -1470,8 +1516,8 @@ class AdminBillingSettlementWarningTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["current_bills_count"], 2)
         bill_ids = [bill.id for bill in response.context["page_obj"]]
-        self.assertIn(MonthlyBill.objects.get(lease=old_lease, billing_month=date.today().replace(day=1)).id, bill_ids)
-        self.assertIn(MonthlyBill.objects.get(lease=new_lease, billing_month=date.today().replace(day=1)).id, bill_ids)
+        self.assertIn(MonthlyBill.objects.get(lease=old_lease, billing_month=today.replace(day=1)).id, bill_ids)
+        self.assertIn(MonthlyBill.objects.get(lease=new_lease, billing_month=today.replace(day=1)).id, bill_ids)
 
 
 class AdminNotificationBehaviorTests(TestCase):

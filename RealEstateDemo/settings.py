@@ -33,7 +33,15 @@ IS_PRODUCTION = ENVIRONMENT == 'production'
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-sbxp8ed7w((5*+@u9^4@l1p531h8ig(&_0wztx^9-*o98kld#w')
+_secret_key = os.environ.get("SECRET_KEY")
+if IS_PRODUCTION and not _secret_key:
+    raise ImproperlyConfigured(
+        "Production SECRET_KEY is missing. Set the SECRET_KEY environment variable."
+    )
+
+# A local development fallback keeps the explicitly selected local settings
+# usable without introducing a production secret fallback.
+SECRET_KEY = _secret_key or "django-insecure-sbxp8ed7w((5*+@u9^4@l1p531h8ig(&_0wztx^9-*o98kld#w"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = not IS_PRODUCTION

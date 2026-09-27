@@ -1,13 +1,130 @@
 from datetime import date
+import importlib
 from decimal import Decimal
 
-from django.test import TestCase
+from django.db import IntegrityError
+from django.test import SimpleTestCase, TestCase, TransactionTestCase
 
 from accounts.models import User
 from billing.models import MonthlyBill
 from rentals.models import Lease, Unit
 from water.models import WaterBillingSettings, WaterRate, WaterReading
-from water.services import compute_water_reading, create_or_update_monthly_bill_from_reading
+from water.services import (
+    compute_water_reading,
+    create_or_update_monthly_bill_from_reading,
+    get_active_rate_for_date,
+)
+
+
+class WaterRateConstraintTests(TransactionTestCase):
+    def test_database_allows_one_active_rate_per_effective_date(self):
+        effective_date = date(2026, 7, 1)
+        WaterRate.objects.create(
+            effective_date=effective_date,
+            rate_per_cu_m=Decimal("45.00"),
+            is_active=True,
+        )
+
+        with self.assertRaises(IntegrityError):
+            WaterRate.objects.create(
+                effective_date=effective_date,
+                rate_per_cu_m=Decimal("55.00"),
+                is_active=True,
+            )
+
+        WaterRate.objects.create(
+            effective_date=effective_date,
+            rate_per_cu_m=Decimal("40.00"),
+            is_active=False,
+        )
+        WaterRate.objects.create(
+            effective_date=effective_date,
+            rate_per_cu_m=Decimal("35.00"),
+            is_active=False,
+        )
+        WaterRate.objects.create(
+            effective_date=date(2026, 8, 1),
+            rate_per_cu_m=Decimal("60.00"),
+            is_active=True,
+        )
+
+        self.assertEqual(
+            WaterRate.objects.filter(effective_date=effective_date, is_active=True).count(),
+            1,
+        )
+        self.assertEqual(
+            WaterRate.objects.filter(effective_date=effective_date, is_active=False).count(),
+            2,
+        )
+
+    def test_rate_selection_uses_latest_applicable_effective_date(self):
+        WaterRate.objects.create(
+            effective_date=date(2026, 6, 1),
+            rate_per_cu_m=Decimal("40.00"),
+        )
+        latest_rate = WaterRate.objects.create(
+            effective_date=date(2026, 7, 1),
+            rate_per_cu_m=Decimal("50.00"),
+        )
+
+        self.assertEqual(
+            get_active_rate_for_date(date(2026, 7, 31)).pk,
+            latest_rate.pk,
+        )
+
+
+class WaterRateMigrationGuardTests(SimpleTestCase):
+    def test_guard_reports_conflicting_effective_date_and_rate_ids(self):
+        migration_module = importlib.import_module(
+            "water.migrations.0005_unique_active_water_rate_per_effective_date"
+        )
+
+        class DuplicateQuery:
+            def values(self, *args):
+                return self
+
+            def annotate(self, **kwargs):
+                return self
+
+            def filter(self, **kwargs):
+                return self
+
+            def order_by(self, *args):
+                return [
+                    {
+                        "effective_date": date(2026, 7, 1),
+                        "active_rate_count": 2,
+                    }
+                ]
+
+        class RateIdQuery:
+            def order_by(self, *args):
+                return self
+
+            def values_list(self, *args, **kwargs):
+                return [41, 42]
+
+        class FakeManager:
+            def filter(self, **kwargs):
+                if "effective_date" in kwargs:
+                    return RateIdQuery()
+                return DuplicateQuery()
+
+        class FakeWaterRate:
+            objects = FakeManager()
+
+        class FakeApps:
+            def get_model(self, app_label, model_name):
+                return FakeWaterRate
+
+        with self.assertRaisesRegex(
+            RuntimeError,
+            r"effective_date=2026-07-01 rate_ids=\[41, 42\]",
+        ):
+            migration_module.reject_existing_active_water_rate_duplicates(
+                FakeApps(),
+                None,
+            )
 
 
 class WaterComputationTests(TestCase):

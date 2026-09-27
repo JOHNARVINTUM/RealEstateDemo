@@ -44,6 +44,13 @@ class WaterRate(models.Model):
         ordering = ['-effective_date', '-created_at', '-pk']
         verbose_name = "Water Rate"
         verbose_name_plural = "Water Rates"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["effective_date"],
+                condition=models.Q(is_active=True),
+                name="unique_active_water_rate_per_effective_date",
+            ),
+        ]
     
     def __str__(self):
         return f"₱{self.rate_per_cu_m}/m³ (from {self.effective_date})"

@@ -123,7 +123,7 @@
   <!-- Key Metrics Counters (Highly Readable & High Contrast) -->
   <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
     
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-blue-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+    <a href="{% url 'admin_tenants' %}" aria-label="View tenants" class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-blue-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-300">
       <div>
         <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Active Tenants</span>
         <div class="text-3xl font-black text-slate-900 tracking-tight">{{ total_tenants|intcomma }}<span class="text-xl text-slate-400 font-medium"> / {{ total_units }}</span></div>
@@ -131,10 +131,10 @@
       <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
         <span class="text-blue-600 font-bold">&bull;</span> {{ available_units|default:vacant_units }} slots available
       </div>
-    </div>
+    </a>
 
     <!-- Available Units -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-purple-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+    <a href="{% url 'admin_units' %}" aria-label="View units" class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-purple-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 hover:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all duration-300">
       <div>
         <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Empty Units</span>
         <div class="text-3xl font-black text-slate-900 tracking-tight">{{ available_units|intcomma }}<span class="text-xl text-slate-400 font-medium"> / {{ total_units }}</span></div>
@@ -142,7 +142,7 @@
       <div class="text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
         <span class="text-purple-600 font-bold">&bull;</span> Ready for intake
       </div>
-    </div>
+    </a>
 
     <!-- Rent Collection Status -->
     <a href="{% url 'admin_billed_this_month' %}?month={{ current_month_str }}" class="relative bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-slate-700 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 hover:border-slate-400 transition-all duration-300 group">

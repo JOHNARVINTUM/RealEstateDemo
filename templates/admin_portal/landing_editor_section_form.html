@@ -31,16 +31,70 @@
         </div>
       {% endif %}
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {% for field in form %}
-          <div class="{% if field.widget_type == 'textarea' %}md:col-span-2{% endif %}">
-            <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">{{ field.label }}</label>
-            {{ field }}
-            {% if field.help_text %}<p class="text-xs text-slate-400 mt-2">{{ field.help_text }}</p>{% endif %}
-            {% if field.errors %}<span class="block text-sm font-bold text-rose-600 mt-2">{{ field.errors.0 }}</span>{% endif %}
+      {% if section_name == "Services Section" %}
+        <div class="space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-slate-100">
+            <div>
+              <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">{{ form.services_title.label }}</label>
+              {{ form.services_title }}
+              {% if form.services_title.errors %}<span class="block text-sm font-bold text-rose-600 mt-2">{{ form.services_title.errors.0 }}</span>{% endif %}
+            </div>
+            <div class="md:col-span-2">
+              <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">{{ form.services_description.label }}</label>
+              {{ form.services_description }}
+              {% if form.services_description.errors %}<span class="block text-sm font-bold text-rose-600 mt-2">{{ form.services_description.errors.0 }}</span>{% endif %}
+            </div>
           </div>
-        {% endfor %}
-      </div>
+
+          {% for service_number in "123" %}
+            {% if service_number == "1" %}
+              {% with title_field=form.service_1_title description_field=form.service_1_description image_field=form.service_1_image %}
+                <fieldset class="rounded-2xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6">
+                  <legend class="px-2 text-sm font-black text-slate-800">Service 1</legend>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div><label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">{{ title_field.label }}</label>{{ title_field }}{% if title_field.errors %}<span class="block text-sm font-bold text-rose-600 mt-2">{{ title_field.errors.0 }}</span>{% endif %}</div>
+                    <div><label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">{{ image_field.label }}</label>{{ image_field }}{% if image_field.errors %}<span class="block text-sm font-bold text-rose-600 mt-2">{{ image_field.errors.0 }}</span>{% endif %}</div>
+                    <div class="md:col-span-2"><label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">{{ description_field.label }}</label>{{ description_field }}{% if description_field.errors %}<span class="block text-sm font-bold text-rose-600 mt-2">{{ description_field.errors.0 }}</span>{% endif %}</div>
+                  </div>
+                </fieldset>
+              {% endwith %}
+            {% elif service_number == "2" %}
+              {% with title_field=form.service_2_title description_field=form.service_2_description image_field=form.service_2_image %}
+                <fieldset class="rounded-2xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6">
+                  <legend class="px-2 text-sm font-black text-slate-800">Service 2</legend>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div><label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">{{ title_field.label }}</label>{{ title_field }}{% if title_field.errors %}<span class="block text-sm font-bold text-rose-600 mt-2">{{ title_field.errors.0 }}</span>{% endif %}</div>
+                    <div><label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">{{ image_field.label }}</label>{{ image_field }}{% if image_field.errors %}<span class="block text-sm font-bold text-rose-600 mt-2">{{ image_field.errors.0 }}</span>{% endif %}</div>
+                    <div class="md:col-span-2"><label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">{{ description_field.label }}</label>{{ description_field }}{% if description_field.errors %}<span class="block text-sm font-bold text-rose-600 mt-2">{{ description_field.errors.0 }}</span>{% endif %}</div>
+                  </div>
+                </fieldset>
+              {% endwith %}
+            {% else %}
+              {% with title_field=form.service_3_title description_field=form.service_3_description image_field=form.service_3_image %}
+                <fieldset class="rounded-2xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6">
+                  <legend class="px-2 text-sm font-black text-slate-800">Service 3</legend>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div><label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">{{ title_field.label }}</label>{{ title_field }}{% if title_field.errors %}<span class="block text-sm font-bold text-rose-600 mt-2">{{ title_field.errors.0 }}</span>{% endif %}</div>
+                    <div><label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">{{ image_field.label }}</label>{{ image_field }}{% if image_field.errors %}<span class="block text-sm font-bold text-rose-600 mt-2">{{ image_field.errors.0 }}</span>{% endif %}</div>
+                    <div class="md:col-span-2"><label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">{{ description_field.label }}</label>{{ description_field }}{% if description_field.errors %}<span class="block text-sm font-bold text-rose-600 mt-2">{{ description_field.errors.0 }}</span>{% endif %}</div>
+                  </div>
+                </fieldset>
+              {% endwith %}
+            {% endif %}
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {% for field in form %}
+            <div class="{% if field.widget_type == 'textarea' %}md:col-span-2{% endif %}">
+              <label class="block text-xs font-black text-slate-500 mb-2 uppercase tracking-widest">{{ field.label }}</label>
+              {{ field }}
+              {% if field.help_text %}<p class="text-xs text-slate-400 mt-2">{{ field.help_text }}</p>{% endif %}
+              {% if field.errors %}<span class="block text-sm font-bold text-rose-600 mt-2">{{ field.errors.0 }}</span>{% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
 
       <div class="pt-6 border-t border-slate-100 flex flex-col sm:flex-row gap-3 justify-end">
         <a href="{{ back_url }}" class="w-full sm:w-auto px-6 py-3 rounded-xl border-2 border-slate-200 bg-white text-slate-700 font-black text-sm text-center hover:bg-slate-50 transition-all">Cancel</a>

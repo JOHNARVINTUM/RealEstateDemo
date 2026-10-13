@@ -85,6 +85,32 @@ def _bill_is_coming_soon(bill, current_month):
     return _bill_month_start(bill) > current_month and _bill_has_remaining_balance(bill)
 
 
+def _bill_operational_state(bill, today):
+    """Return the presentation state without mutating billing state."""
+    if _bill_is_paid(bill):
+        return "PAID"
+    if _bill_is_late(bill, today):
+        return "OVERDUE"
+    if _bill_has_any_applied_payment(bill):
+        return "PARTIAL"
+    return "UNPAID"
+
+
+def _operational_bill_sort_key(bill, today):
+    priority = {
+        "OVERDUE": 0,
+        "UNPAID": 1,
+        "PARTIAL": 2,
+        "PAID": 3,
+    }[_bill_operational_state(bill, today)]
+    return (
+        priority,
+        bill.due_date or date.max,
+        (getattr(bill.lease.unit, "number", "") or "").upper(),
+        bill.pk,
+    )
+
+
 def _selected_scope_month(month_filter, year_filter, fallback_month):
     if month_filter and year_filter and month_filter.isdigit() and year_filter.isdigit():
         try:
@@ -95,15 +121,22 @@ def _selected_scope_month(month_filter, year_filter, fallback_month):
 
 
 def _filtered_admin_billing_rows(bills, *, scope_month, today, status_filter):
+    # scope_month is retained for callers/tests that use the historic helper
+    # signature.  `bills` is already the selected operational scope.
+    operational_bills = [
+        bill for bill in bills if not _bill_is_coming_soon(bill, today.replace(day=1))
+    ]
     if status_filter == "UNPAID":
-        return [bill for bill in bills if _bill_is_current_scope_unpaid(bill, scope_month)]
-    if status_filter == "PARTIAL":
-        return [bill for bill in bills if _bill_is_current_scope_partial(bill, scope_month)]
-    if status_filter == "OVERDUE":
-        return [bill for bill in bills if _bill_is_late(bill, today)]
-    if status_filter == "PAID":
-        return [bill for bill in bills if _bill_month_start(bill) == scope_month and _bill_is_paid(bill)]
-    return [bill for bill in bills if _bill_is_current_scope_outstanding(bill, scope_month)]
+        filtered = [bill for bill in operational_bills if _bill_operational_state(bill, today) == "UNPAID"]
+    elif status_filter == "PARTIAL":
+        filtered = [bill for bill in operational_bills if _bill_operational_state(bill, today) == "PARTIAL"]
+    elif status_filter == "OVERDUE":
+        filtered = [bill for bill in operational_bills if _bill_operational_state(bill, today) == "OVERDUE"]
+    elif status_filter == "PAID":
+        filtered = [bill for bill in operational_bills if _bill_operational_state(bill, today) == "PAID"]
+    else:
+        filtered = operational_bills
+    return sorted(filtered, key=lambda bill: _operational_bill_sort_key(bill, today))
 
 
 def _refresh_bill_for_settlement_display(bill, today=None):
@@ -391,22 +424,42 @@ def admin_billing(request):
 
     base_bills = [bill for bill in base_qs.order_by("-billing_month", "-id") if not _is_unpaid_duplicate_shell(bill)]
 
-    current_bills_count = sum(1 for bill in base_bills if _bill_is_current_scope_outstanding(bill, current_month))
-    paid_count = sum(1 for bill in base_bills if _bill_month_start(bill) == current_month and _bill_is_paid(bill))
-    unpaid_count = sum(1 for bill in base_bills if _bill_is_current_scope_unpaid(bill, current_month))
-    partial_count = sum(1 for bill in base_bills if _bill_is_current_scope_partial(bill, current_month))
-    overdue_count = sum(1 for bill in base_bills if _bill_is_late(bill, today))
+    if month_filter or year_filter:
+        scoped_bills = base_bills
+    else:
+        scoped_bills = [
+            bill for bill in base_bills if _bill_month_start(bill) == current_month
+        ]
+    operational_bills = [
+        bill for bill in scoped_bills if not _bill_is_coming_soon(bill, current_month)
+    ]
+    operational_states = {
+        bill.id: _bill_operational_state(bill, today) for bill in operational_bills
+    }
+    current_bills_count = len(operational_bills)
+    paid_count = sum(1 for state in operational_states.values() if state == "PAID")
+    unpaid_count = sum(1 for state in operational_states.values() if state == "UNPAID")
+    partial_count = sum(1 for state in operational_states.values() if state == "PARTIAL")
+    overdue_count = sum(1 for state in operational_states.values() if state == "OVERDUE")
     upcoming_count = sum(1 for bill in base_bills if _bill_is_coming_soon(bill, current_month))
 
     if active_tab == "active":
         display_bills = _filtered_admin_billing_rows(
-            base_bills,
+            scoped_bills,
             scope_month=scope_month,
             today=today,
             status_filter=status_filter,
         )
     else:
-        display_bills = [bill for bill in base_bills if _bill_is_coming_soon(bill, current_month)]
+        display_bills = sorted(
+            [bill for bill in base_bills if _bill_is_coming_soon(bill, current_month)],
+            key=lambda bill: (
+                _bill_month_start(bill),
+                bill.due_date or date.max,
+                (getattr(bill.lease.unit, "number", "") or "").upper(),
+                bill.pk,
+            ),
+        )
 
     active_count = len(display_bills)
     paginator = Paginator(display_bills, 10)

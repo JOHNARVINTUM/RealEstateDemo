@@ -126,7 +126,7 @@ class MoveInPaymentNotificationTests(TestCase):
 
     def test_move_in_notification_uses_tenant_identity(self):
         payment = ManualPayment.objects.create(
-            user=self.admin,
+            user=self.tenant,
             payment_type="move_in",
             payment_method="PAYMONGO",
             amount=Decimal("49896.00"),
@@ -219,7 +219,7 @@ class MoveInPaymentNotificationTests(TestCase):
         self.assertEqual(first_bill.status, "PAID")
         self.assertEqual(first_bill.payment_reference, "REF-PM-ACTIVE")
 
-    def test_stale_move_in_lease_id_falls_back_to_current_pending_lease(self):
+    def test_stale_move_in_lease_id_requires_manual_review_without_guessing(self):
         self.lease.status = Lease.STATUS_TERMINATED
         self.lease.is_active = False
         self.lease.save(update_fields=["status", "is_active"])
@@ -267,13 +267,11 @@ class MoveInPaymentNotificationTests(TestCase):
 
         payment.refresh_from_db()
         replacement_lease.refresh_from_db()
-        first_bill = MonthlyBill.objects.get(lease=replacement_lease, billing_month=date(2026, 6, 1))
-        self.assertEqual(payment.status, "APPROVED")
-        self.assertEqual(payment.metadata["lease_id"], str(replacement_lease.id))
-        self.assertEqual(replacement_lease.status, Lease.STATUS_ACTIVE)
-        self.assertTrue(replacement_lease.is_active)
-        self.assertEqual(payment.bill_ids, str(first_bill.id))
-        self.assertEqual(first_bill.status, "PAID")
+        self.assertEqual(payment.status, "PENDING")
+        self.assertEqual(payment.metadata["lease_id"], str(stale_lease_id))
+        self.assertEqual(replacement_lease.status, Lease.STATUS_PENDING_PAYMENT)
+        self.assertFalse(replacement_lease.is_active)
+        self.assertFalse(MonthlyBill.objects.filter(lease=replacement_lease).exists())
     def test_admin_payment_queryset_excludes_unpaid_paymongo_checkout_drafts(self):
         draft = ManualPayment.objects.create(
             user=self.tenant,

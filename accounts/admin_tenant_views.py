@@ -2,6 +2,7 @@ from datetime import date
 from decimal import Decimal
 import logging
 import mimetypes
+from types import SimpleNamespace
 
 from django.contrib import messages
 from django.core.paginator import Paginator
@@ -16,7 +17,7 @@ from django.views.decorators.http import require_GET
 from billing.models import MonthlyBill
 from maintenance.models import MaintenanceRequest
 from payments.models import ManualPayment
-from rentals.models import Lease, Notification, TenantAttachment, TenantProfile, Unit
+from rentals.models import Lease, LeaseContractEvent, Notification, TenantAttachment, TenantProfile, Unit
 from rentals.services import TenantRiskService
 
 from .admin_portal_forms import ComprehensiveTenantEditForm, TenantProfileForm
@@ -133,8 +134,15 @@ def admin_tenants(request):
         has_active_lease=Exists(
             Lease.objects.filter(
                 tenant=OuterRef("user"),
+                status=Lease.STATUS_ACTIVE,
                 start_date__lte=today,
             ).filter(Q(end_date__isnull=True) | Q(end_date__gte=today))
+        ),
+        has_pending_move_in=Exists(
+            Lease.objects.filter(
+                tenant=OuterRef("user"),
+                status=Lease.STATUS_PENDING_PAYMENT,
+            )
         )
     )
     if q:
@@ -142,8 +150,13 @@ def admin_tenants(request):
 
     if lease_filter == "active":
         tenants_list = tenants_list.filter(has_active_lease=True)
+    elif lease_filter == "pending":
+        tenants_list = tenants_list.filter(has_pending_move_in=True)
     elif lease_filter == "none":
-        tenants_list = tenants_list.filter(has_active_lease=False)
+        tenants_list = tenants_list.filter(
+            has_active_lease=False,
+            has_pending_move_in=False,
+        )
 
     tenants_list = tenants_list.order_by("first_name", "last_name")
 
@@ -235,6 +248,65 @@ def admin_tenant_detail(request, tenant_id: int):
         payment.covered_months = _format_covered_months(
             [bills_by_id[bill_id] for bill_id in payment_bill_ids.get(payment.id, []) if bill_id in bills_by_id]
         )
+
+    contract_events = list(
+        LeaseContractEvent.objects.filter(lease_id__in=lease_ids)
+        .select_related("lease__unit", "source_payment")
+        .order_by("occurred_at", "id")
+    )
+    event_payment_ids = {event.source_payment_id for event in contract_events}
+    leases_by_id = {lease.id: lease for lease in leases}
+    legacy_payments = (
+        ManualPayment.objects.filter(
+            user=tenant.user,
+            payment_type="move_in",
+            status="APPROVED",
+        )
+        .exclude(pk__in=event_payment_ids)
+        .select_related("lease")
+        .order_by("created_at", "id")
+    )
+    for payment in legacy_payments:
+        linked_lease = payment.lease if payment.lease_id in leases_by_id else None
+        if linked_lease is None and isinstance(payment.metadata, dict):
+            try:
+                metadata_lease_id = int(payment.metadata.get("lease_id"))
+            except (TypeError, ValueError):
+                metadata_lease_id = None
+            candidate = leases_by_id.get(metadata_lease_id)
+            if candidate and candidate.tenant_id == payment.user_id:
+                linked_lease = candidate
+
+        if linked_lease is None:
+            candidate_leases = set()
+            for bill_id in _parse_payment_bill_ids(payment.bill_ids):
+                bill = MonthlyBill.objects.filter(pk=bill_id, lease_id__in=lease_ids).select_related("lease").first()
+                if bill and bill.billing_month.replace(day=1) == bill.lease.start_date.replace(day=1):
+                    candidate_leases.add(bill.lease_id)
+            if len(candidate_leases) == 1:
+                linked_lease = leases_by_id[candidate_leases.pop()]
+
+        if linked_lease is None:
+            continue
+
+        occurred_at = payment.approved_at
+        legacy_derived = False
+        if occurred_at is None:
+            occurred_at = linked_lease.activated_at or payment.created_at
+            legacy_derived = True
+        contract_events.append(
+            SimpleNamespace(
+                lease=linked_lease,
+                event_type=LeaseContractEvent.EVENT_TYPE_MOVE_IN_PAYMENT,
+                status=LeaseContractEvent.STATUS_APPROVED,
+                occurred_at=occurred_at,
+                payment_reference=payment.reference_code,
+                payment_method=payment.get_payment_method_display(),
+                amount=payment.amount,
+                legacy_derived=legacy_derived,
+            )
+        )
+    contract_events.sort(key=lambda event: (event.occurred_at, getattr(event, "id", 0)))
     next_url = request.GET.get("next", "")
     back_url = (
         next_url
@@ -252,6 +324,7 @@ def admin_tenant_detail(request, tenant_id: int):
             "attachments": attachments,
             "bill_history": bill_history,
             "manual_payments": manual_payments,
+            "contract_events": contract_events,
             "back_url": back_url,
         },
     )

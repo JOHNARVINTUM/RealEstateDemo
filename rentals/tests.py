@@ -10,7 +10,7 @@ from django.test import TestCase, TransactionTestCase
 from accounts.models import User
 from billing.models import BillLineItem, MonthlyBill
 from payments.models import ManualPayment
-from rentals.models import Lease, TenantProfile, Unit
+from rentals.models import Lease, LeaseContractEvent, TenantProfile, Unit
 from rentals.services import (
     LeaseActivationService,
     LeaseSchedulingService,
@@ -61,6 +61,110 @@ class ActiveLeaseConstraintTests(TransactionTestCase):
         self.assertEqual(Lease.objects.filter(unit=unit, status=Lease.STATUS_ACTIVE).count(), 1)
         self.assertEqual(Lease.objects.filter(unit=unit, status=Lease.STATUS_TERMINATED).count(), 1)
         self.assertEqual(Lease.objects.filter(unit=other_unit, status=Lease.STATUS_ACTIVE).count(), 1)
+
+
+class MoveInContractLedgerTests(TestCase):
+    def setUp(self):
+        self.tenant = User.objects.create_user(
+            email="ledger-tenant@example.com",
+            username="ledgertenant",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        TenantProfile.objects.create(
+            user=self.tenant,
+            first_name="Ledger",
+            last_name="Tenant",
+            password_change_required=False,
+        )
+        self.unit = Unit.objects.create(number="LED-101", monthly_rent=Decimal("10000.00"))
+        self.lease = Lease.objects.create(
+            tenant=self.tenant,
+            unit=self.unit,
+            monthly_rent=Decimal("10000.00"),
+            due_day=5,
+            start_date=date(2026, 6, 1),
+            status=Lease.STATUS_PENDING_PAYMENT,
+            is_active=False,
+        )
+        self.payment = ManualPayment.objects.create(
+            user=self.tenant,
+            lease=self.lease,
+            payment_type="move_in",
+            payment_method="CASH",
+            amount=self.lease.total_move_in_cost,
+            reference_code="REF-LEDGER-MOVEIN",
+            status="PENDING",
+        )
+
+    def test_confirmation_creates_one_immutable_contract_event_and_is_idempotent(self):
+        with patch("rentals.services.LeaseActivationService._send_activation_welcome"), patch(
+            "billing.services.create_and_send_invoice_for_payment"
+        ):
+            first = LeaseActivationService.activate_lease_after_payment(
+                lease_id=self.lease.id,
+                payment_method="CASH",
+                payment_reference=self.payment.reference_code,
+                amount=self.payment.amount,
+                existing_payment=self.payment,
+            )
+            self.payment.refresh_from_db()
+            approved_at = self.payment.approved_at
+            second = LeaseActivationService.activate_lease_after_payment(
+                lease_id=self.lease.id,
+                payment_method="CASH",
+                payment_reference=self.payment.reference_code,
+                amount=self.payment.amount,
+                existing_payment=self.payment,
+            )
+
+        self.assertTrue(first[0])
+        self.assertTrue(second[0])
+        self.payment.refresh_from_db()
+        self.lease.refresh_from_db()
+        self.unit.refresh_from_db()
+        self.assertEqual(self.payment.status, "APPROVED")
+        self.assertEqual(self.payment.lease_id, self.lease.id)
+        self.assertEqual(self.payment.approved_at, approved_at)
+        self.assertEqual(self.lease.status, Lease.STATUS_ACTIVE)
+        self.assertTrue(self.lease.is_active)
+        self.assertEqual(self.unit.status, "OCCUPIED")
+        self.assertEqual(
+            LeaseContractEvent.objects.filter(
+                source_payment=self.payment,
+                event_type=LeaseContractEvent.EVENT_TYPE_MOVE_IN_PAYMENT,
+            ).count(),
+            1,
+        )
+        self.assertEqual(MonthlyBill.objects.filter(lease=self.lease).count(), 1)
+
+    def test_conflicting_payment_lease_is_rejected_without_reassignment(self):
+        other_unit = Unit.objects.create(number="LED-102")
+        other_lease = Lease.objects.create(
+            tenant=self.tenant,
+            unit=other_unit,
+            monthly_rent=Decimal("10000.00"),
+            due_day=5,
+            start_date=date(2026, 6, 1),
+            status=Lease.STATUS_PENDING_PAYMENT,
+            is_active=False,
+        )
+        self.payment.lease = other_lease
+        self.payment.save(update_fields=["lease"])
+
+        success, message = LeaseActivationService.activate_lease_after_payment(
+            lease_id=self.lease.id,
+            payment_method="CASH",
+            payment_reference=self.payment.reference_code,
+            amount=self.payment.amount,
+            existing_payment=self.payment,
+        )
+
+        self.payment.refresh_from_db()
+        self.assertFalse(success)
+        self.assertIn("different lease", message)
+        self.assertEqual(self.payment.lease_id, other_lease.id)
+        self.assertFalse(LeaseContractEvent.objects.exists())
 
 
 class TenantViewWorkflowTests(TestCase):

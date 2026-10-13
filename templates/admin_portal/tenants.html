@@ -100,6 +100,10 @@
              class="px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors {% if lease_filter == 'active' %}bg-emerald-700 text-white border-emerald-700{% else %}bg-white text-slate-700 border-slate-300 hover:bg-slate-100{% endif %}">
             Active Lease
           </a>
+          <a href="?{% if q %}q={{ q }}&{% endif %}lease=pending"
+             class="px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors {% if lease_filter == 'pending' %}bg-sky-700 text-white border-sky-700{% else %}bg-white text-slate-700 border-slate-300 hover:bg-slate-100{% endif %}">
+            Awaiting Move-in
+          </a>
           <a href="?{% if q %}q={{ q }}&{% endif %}lease=none" 
              class="px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors {% if lease_filter == 'none' %}bg-rose-700 text-white border-rose-700{% else %}bg-white text-slate-700 border-slate-300 hover:bg-slate-100{% endif %}">
             No Lease
@@ -163,6 +167,11 @@
                     <span class="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-bold bg-blue-50 text-blue-800 border border-blue-200">
                       <span class="w-2 h-2 rounded-full bg-blue-600"></span>
                       Active Lease
+                    </span>
+                  {% elif t.has_pending_move_in %}
+                    <span class="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-bold bg-sky-50 text-sky-800 border border-sky-200">
+                      <span class="w-2 h-2 rounded-full bg-sky-600"></span>
+                      Awaiting Move-in
                     </span>
                   {% else %}
                     <span class="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">

@@ -243,6 +243,7 @@ def admin_lease_payment(request, lease_id: int):
             payment_reference = _build_cash_move_in_reference(lease)
             payment = ManualPayment.objects.create(
                 user=lease.tenant,
+                lease=lease,
                 payment_type="move_in",
                 payment_method="CASH",
                 amount=lease.total_move_in_cost,

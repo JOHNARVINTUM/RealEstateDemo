@@ -35,12 +35,12 @@
   <div class="min-h-screen flex font-['Outfit',_sans-serif]">
     <!-- Mobile Header -->
     <div class="mobile-nav-header">
-      <div class="flex items-center gap-3">
+      <a href="{% url 'admin_dashboard' %}" aria-label="Go to dashboard" class="flex items-center gap-3 rounded-xl focus:outline-none">
         <div class="brand-logo-shell w-9 h-9 bg-white rounded-xl flex justify-center items-center shrink-0 shadow-sm p-1.5">
           <img src="{% static 'img/accounts/RealEstate360+ Logo2 jpg.jpg' %}" alt="Logo" class="w-full h-full object-contain">
         </div>
         <span class="text-white font-display font-semibold text-lg">RealEstate360<span class="text-blue-500">+</span></span>
-      </div>
+      </a>
       <button id="mobileSidebarToggle" class="p-2 text-white hover:bg-blue-900/50 rounded-lg transition-colors">
         <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>

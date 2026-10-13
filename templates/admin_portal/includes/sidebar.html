@@ -5,7 +5,7 @@
   <div class="px-6 py-8 transition-all duration-300 brand-container">
     <!-- Header: Logo + Name -->
     <div class="brand-header mb-10">
-      <div class="flex items-center justify-start gap-3 w-fit brand-logo-container">
+      <a href="{% url 'admin_dashboard' %}" aria-label="Go to dashboard" class="flex items-center justify-start gap-3 w-fit brand-logo-container rounded-xl focus:outline-none">
         <div class="brand-logo-shell w-11 h-11 bg-white rounded-xl flex justify-center items-center shrink-0 shadow-lg transition-all duration-300 cursor-pointer p-1.5 flex-none">
           <img src="{% static 'img/accounts/RealEstate360+ Logo2 jpg.jpg' %}" alt="Logo"
                class="w-full h-full object-contain transition-transform duration-300 hover:scale-105">
@@ -13,7 +13,7 @@
         <div class="text-xl font-semibold tracking-tight text-white brand-name whitespace-nowrap transition-all duration-300 -mt-2.5 flex-none font-display">
           RealEstate360<span class="text-[#3B7CE6]">+</span>
         </div>
-      </div>
+      </a>
     </div>
 
     <!-- Welcome Section -->

@@ -443,57 +443,19 @@ def apply_paymongo_payment_source(payment, payments_list):
     payment.save(update_fields=["paid_via", "paymongo_payment_id"])
 
 
-def get_pending_move_in_lease(payment, *, exclude_lease_id=None):
-    from rentals.models import Lease
-
-    tenant_user = resolve_payment_tenant_user(payment)
-    if not tenant_user:
-        return None
-
-    leases = Lease.objects.filter(
-        tenant=tenant_user,
-        status=Lease.STATUS_PENDING_PAYMENT,
-    )
-    if exclude_lease_id:
-        leases = leases.exclude(pk=exclude_lease_id)
-    return leases.order_by("-start_date", "-id").first()
-
-
-def _update_payment_lease_id(payment, lease_id):
-    metadata = _payment_metadata(payment).copy()
-    metadata["lease_id"] = str(lease_id)
-    payment.metadata = metadata
-    payment.save(update_fields=["metadata"])
-
-
-def _fallback_move_in_lease_id(payment, *, exclude_lease_id=None):
-    pending_lease = get_pending_move_in_lease(payment, exclude_lease_id=exclude_lease_id)
-    if not pending_lease:
-        return None
-
-    previous_lease_id = exclude_lease_id or _payment_lease_id(payment)
-    _update_payment_lease_id(payment, pending_lease.id)
-    logger.warning(
-        "Payment %s had stale or missing move-in lease reference %s; switched to pending lease %s",
-        payment.id,
-        previous_lease_id,
-        pending_lease.id,
-    )
-    return pending_lease.id
-
-
 def activate_paymongo_move_in_lease(payment):
     if payment.payment_type != "move_in":
         return False
 
-    original_lease_id = _payment_lease_id(payment)
-    lease_id = original_lease_id
+    lease_id = payment.lease_id or _payment_lease_id(payment)
     if not lease_id:
-        lease_id = _fallback_move_in_lease_id(payment)
-        if lease_id:
-            logger.info(f"Found pending lease {lease_id} for move-in payment {payment.id} via fallback")
+        logger.warning("Move-in payment %s has no explicit lease link; manual review is required", payment.id)
+        return False
 
-    if not lease_id:
+    try:
+        lease_id = int(lease_id)
+    except (TypeError, ValueError):
+        logger.warning("Move-in payment %s has an invalid lease link; manual review is required", payment.id)
         return False
 
     from rentals.services import LeaseActivationService
@@ -509,21 +471,6 @@ def activate_paymongo_move_in_lease(payment):
         logger.info(f"Lease {lease_id} activated via PayMongo webhook")
         return True
 
-    if original_lease_id:
-        fallback_lease_id = _fallback_move_in_lease_id(payment, exclude_lease_id=original_lease_id)
-        if fallback_lease_id and str(fallback_lease_id) != str(lease_id):
-            success, message = LeaseActivationService.activate_lease_after_payment(
-                lease_id=int(fallback_lease_id),
-                payment_method="PAYMONGO",
-                payment_reference=payment.reference_code,
-                amount=payment.amount,
-                existing_payment=payment,
-            )
-            if success:
-                logger.info(f"Lease {fallback_lease_id} activated via PayMongo webhook fallback")
-                return True
-            lease_id = fallback_lease_id
-
     logger.warning(f"Lease activation failed for {lease_id}: {message}")
     return False
 
@@ -536,12 +483,6 @@ def approve_regular_paymongo_payment(payment):
     except Exception as e:
         logger.exception(f"Failed to auto-approve PayMongo payment {payment.id}: {e}")
         return False
-
-
-def _mark_paymongo_payment_approved(payment):
-    payment.status = "APPROVED"
-    payment.save(update_fields=["status"])
-    logger.info(f"Move-in payment {payment.id} marked as APPROVED after lease activation")
 
 
 def _notify_admin_about_paymongo_payment(payment, lease_activated):
@@ -586,6 +527,11 @@ def notify_admin_about_paymongo_payment(payment, lease_activated):
 
 def auto_approve_paymongo_payment(payment):
     if payment.status == "APPROVED":
+        # A duplicate webhook/success callback may arrive after the payment
+        # status was committed. Re-run only the idempotent move-in projection
+        # path so a missing event/bill is repaired without changing approval.
+        if payment.payment_type == "move_in":
+            activate_paymongo_move_in_lease(payment)
         return
 
     lease_activated = False
@@ -597,9 +543,6 @@ def auto_approve_paymongo_payment(payment):
     _approve_regular_paymongo_payment_if_needed(payment, lease_activated)
     if not lease_activated:
         payment.refresh_from_db(fields=["status"])
-
-    if lease_activated:
-        _mark_paymongo_payment_approved(payment)
 
     if lease_activated or payment.status == "APPROVED":
         _notify_admin_about_paymongo_payment(payment, lease_activated)

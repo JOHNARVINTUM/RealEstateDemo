@@ -2,6 +2,67 @@
 {% load humanize %}
 {% block title %}{{ tenant.first_name }} {{ tenant.last_name }} | Tenant Portfolio{% endblock %}
 
+{% block extra_head %}
+<style>
+  .contract-table-stack {
+    box-sizing: border-box;
+    display: grid;
+    gap: 1rem;
+    width: 100%;
+    max-width: 100%;
+    padding: 1.25rem;
+  }
+
+  .contract-table-card {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+  }
+
+  .contract-table {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    border-collapse: collapse;
+    table-layout: auto;
+  }
+
+  .contract-table thead tr {
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .contract-table th {
+    padding: 0.75rem 1.25rem;
+    vertical-align: middle;
+    color: #94a3b8;
+    font-size: 0.625rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    line-height: 1rem;
+    text-transform: uppercase;
+  }
+
+  .contract-table td {
+    padding: 0.75rem 1.25rem;
+    vertical-align: middle;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+
+  .contract-table tbody tr {
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .contract-table tbody tr:last-child {
+    border-bottom: 0;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="tenant-detail-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12">
   
@@ -334,18 +395,55 @@
             <p class="text-xs font-bold text-slate-500 mt-1">All contract months, paid status, and upcoming billing cycles.</p>
           </div>
           
-          <div class="flex items-center p-1 bg-slate-100 rounded-lg">
-            <button onclick="togglePaymentSection('history')" id="btn-payment-history" class="px-4 py-2 text-sm font-extrabold rounded-md transition-all bg-white text-slate-900 shadow-sm">Contract Ledger</button>
+          <div class="grid w-full sm:w-[320px] {% if manual_payments %}grid-cols-2{% else %}grid-cols-1{% endif %} items-center gap-1 p-1 bg-slate-100 rounded-lg">
+            <button onclick="togglePaymentSection('history')" id="btn-payment-history" class="w-full px-4 py-2 text-sm font-extrabold rounded-md transition-all bg-white text-slate-900 shadow-sm">Contract Ledger</button>
             {% if manual_payments %}
-            <button onclick="togglePaymentSection('submissions')" id="btn-payment-submissions" class="px-4 py-2 text-sm font-bold rounded-md transition-all text-slate-600 hover:text-slate-900">Payment Submissions</button>
+            <button onclick="togglePaymentSection('submissions')" id="btn-payment-submissions" class="w-full px-4 py-2 text-sm font-bold rounded-md transition-all text-slate-600 hover:text-slate-900">Payment Submissions</button>
             {% endif %}
           </div>
         </div>
 
         <!-- History Table -->
         <div id="payment-history-section" class="w-full transition-all duration-500">
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm" id="paymentHistoryTable">
+          <div class="contract-table-stack">
+            {% if contract_events %}
+            <div class="w-full max-w-full">
+              <p class="mb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Confirmed contract events</p>
+              <div class="contract-table-card">
+                <table class="contract-table">
+                <thead>
+                  <tr class="bg-slate-50/30 border-b border-slate-100">
+                    <th class="text-left px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Event</th>
+                    <th class="text-left px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Confirmed</th>
+                    <th class="text-left px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Unit</th>
+                    <th class="text-left px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Reference</th>
+                    <th class="text-left px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Method</th>
+                    <th class="text-right px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount</th>
+                    <th class="text-center px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  {% for event in contract_events %}
+                  <tr class="hover:bg-slate-50/50 transition-colors">
+                    <td class="px-5 py-3 font-bold text-slate-800">Move-in Payment</td>
+                    <td class="px-5 py-3 text-slate-600 font-medium whitespace-nowrap">
+                      {{ event.occurred_at|date:"M d, Y" }}
+                      {% if event.legacy_derived %}<span class="ml-1 text-[10px] text-slate-400">legacy-derived</span>{% endif %}
+                    </td>
+                    <td class="px-5 py-3 text-slate-600 font-medium">#{{ event.lease.unit.number }}</td>
+                    <td class="px-5 py-3 text-slate-500 font-mono text-xs">{{ event.payment_reference|default:"—" }}</td>
+                    <td class="px-5 py-3 text-slate-600 font-medium">{{ event.payment_method }}</td>
+                    <td class="px-5 py-3 text-right font-black text-slate-900">₱{{ event.amount|floatformat:2|intcomma }}</td>
+                    <td class="px-5 py-3 text-center"><span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">APPROVED</span></td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+                </table>
+              </div>
+            </div>
+            {% endif %}
+            <div class="contract-table-card">
+              <table class="contract-table" id="paymentHistoryTable">
               <thead>
                 <tr class="bg-slate-50/30 border-b border-slate-100">
                   <th class="text-left px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Month</th>
@@ -392,9 +490,10 @@
                 </tr>
                 {% endfor %}
               </tbody>
-            </table>
+              </table>
+            </div>
           </div>
-          <div id="paymentHistoryControls"></div>
+          <div id="paymentHistoryControls" class="px-5 pb-5"></div>
         </div>
 
         <!-- Submissions Table -->

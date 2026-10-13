@@ -1008,7 +1008,7 @@ def admin_edit_landing_hero(request):
         request,
         title="Edit Hero Section",
         section_name="Hero Section",
-        subtitle="Update the main headline, supporting copy, button, and hero image.",
+        subtitle="Update the main headline, supporting copy, button label, and hero image. The button always opens the About section.",
         form_class=HeroSectionForm,
         success_message="Hero section updated successfully.",
     )

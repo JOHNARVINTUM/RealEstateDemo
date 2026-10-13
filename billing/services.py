@@ -1076,9 +1076,21 @@ def _payment_is_move_in(payment) -> bool:
 def _get_pending_move_in_lease(payment):
     from rentals.models import Lease
 
+    lease_id = payment.lease_id
+    if not lease_id and isinstance(payment.metadata, dict):
+        lease_id = payment.metadata.get("lease_id")
+    if not lease_id:
+        return None
+
+    try:
+        lease_id = int(lease_id)
+    except (TypeError, ValueError):
+        return None
+
     return Lease.objects.filter(
+        pk=lease_id,
         tenant=payment.user,
-        status=Lease.STATUS_PENDING_PAYMENT,
+        status__in=(Lease.STATUS_PENDING_PAYMENT, Lease.STATUS_ACTIVE),
     ).select_related("unit").first()
 
 
@@ -1088,9 +1100,11 @@ def _approve_move_in_payment(payment, logger):
     try:
         pending_lease = _get_pending_move_in_lease(payment)
         if not pending_lease:
-            return None
+            raise ValidationError(
+                "Move-in payment requires an explicit, tenant-owned lease link before approval."
+            )
 
-        logger.info(f"Found pending lease {pending_lease.id} for move-in payment {payment.id}")
+        logger.info(f"Found explicit lease {pending_lease.id} for move-in payment {payment.id}")
         success, message = LeaseActivationService.activate_lease_after_payment(
             lease_id=pending_lease.id,
             payment_method=payment.payment_method,
@@ -1100,11 +1114,10 @@ def _approve_move_in_payment(payment, logger):
         )
         if not success:
             logger.error(f"Lease activation failed: {message}")
-            return None
+            raise ValidationError(message)
 
-        payment.status = "APPROVED"
-        payment.save(update_fields=["status"])
         logger.info(f"Lease {pending_lease.id} activated via manual payment approval")
+        payment.refresh_from_db()
         return payment
     except Exception as e:
         logger.exception(f"Error checking lease activation for payment {payment.id}: {e}")

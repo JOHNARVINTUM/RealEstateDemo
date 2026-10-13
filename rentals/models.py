@@ -259,6 +259,60 @@ class Lease(models.Model):
         }
         return status_map.get(self.status, self.status)
 
+
+class LeaseContractEvent(models.Model):
+    """Immutable contract-history projection of a confirmed lease event.
+
+    Financial balances and allocations remain owned by the billing and payment
+    models.  The copied values here are audit snapshots for the contract
+    timeline only.
+    """
+
+    EVENT_TYPE_MOVE_IN_PAYMENT = "MOVE_IN_PAYMENT"
+    EVENT_TYPE_CHOICES = [
+        (EVENT_TYPE_MOVE_IN_PAYMENT, "Move-in Payment"),
+    ]
+    STATUS_APPROVED = "APPROVED"
+    STATUS_CHOICES = [
+        (STATUS_APPROVED, "Approved"),
+    ]
+
+    lease = models.ForeignKey(
+        Lease,
+        on_delete=models.PROTECT,
+        related_name="contract_events",
+    )
+    event_type = models.CharField(max_length=32, choices=EVENT_TYPE_CHOICES)
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES)
+    occurred_at = models.DateTimeField()
+    source_payment = models.ForeignKey(
+        "payments.ManualPayment",
+        on_delete=models.PROTECT,
+        related_name="contract_events",
+    )
+    payment_reference = models.CharField(max_length=80, blank=True, default="")
+    payment_method = models.CharField(max_length=30, blank=True, default="")
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["occurred_at", "id"]
+        indexes = [
+            models.Index(
+                fields=["lease", "occurred_at"],
+                name="lease_contract_event_idx",
+            ),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["source_payment", "event_type"],
+                name="unique_contract_event_per_payment_type",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.lease} - {self.get_event_type_display()}"
+
 class Notification(models.Model):
     NOTIFICATION_TYPES = [
         ('INFO', 'Information'),

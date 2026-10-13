@@ -58,14 +58,17 @@ def _default_business_profile():
 
 
 def _build_landing_service_cards(profile_data):
-    defaults = _default_landing_page_content()
     cards = []
     for index in range(1, 4):
+        title = (profile_data.get(f"service_{index}_title") or "").strip()
+        description = (profile_data.get(f"service_{index}_description") or "").strip()
+        if not title and not description:
+            continue
         cards.append({
-            "title": profile_data.get(f"service_{index}_title") or defaults[f"service_{index}_title"],
-            "description": profile_data.get(f"service_{index}_description") or defaults[f"service_{index}_description"],
-            "image_url": profile_data.get(f"service_{index}_image_url") or defaults[f"service_{index}_image_url"],
-            "icon_label": f"Feature {index}",
+            "title": title,
+            "description": description,
+            "image_url": profile_data.get(f"service_{index}_image_url") or "",
+            "icon_label": f"Service {index}",
             "is_active": True,
         })
     return cards
@@ -110,15 +113,15 @@ def _get_public_business_profile():
         "about_image_url": profile.about_image_url or defaults["about_image_url"],
         "services_title": profile.services_title or defaults["services_title"],
         "services_description": profile.services_description or defaults["services_description"],
-        "service_1_title": profile.service_1_title or defaults["service_1_title"],
-        "service_1_description": profile.service_1_description or defaults["service_1_description"],
-        "service_1_image_url": profile.service_1_image_url or defaults["service_1_image_url"],
-        "service_2_title": profile.service_2_title or defaults["service_2_title"],
-        "service_2_description": profile.service_2_description or defaults["service_2_description"],
-        "service_2_image_url": profile.service_2_image_url or defaults["service_2_image_url"],
-        "service_3_title": profile.service_3_title or defaults["service_3_title"],
-        "service_3_description": profile.service_3_description or defaults["service_3_description"],
-        "service_3_image_url": profile.service_3_image_url or defaults["service_3_image_url"],
+        "service_1_title": profile.service_1_title,
+        "service_1_description": profile.service_1_description,
+        "service_1_image_url": profile.service_1_image_url,
+        "service_2_title": profile.service_2_title,
+        "service_2_description": profile.service_2_description,
+        "service_2_image_url": profile.service_2_image_url,
+        "service_3_title": profile.service_3_title,
+        "service_3_description": profile.service_3_description,
+        "service_3_image_url": profile.service_3_image_url,
         "contact_title": profile.contact_title or defaults["contact_title"],
         "contact_description": profile.contact_description or defaults["contact_description"],
         "contact_email": profile.contact_email or defaults["contact_email"],

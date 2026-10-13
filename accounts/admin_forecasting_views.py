@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from decimal import Decimal
 import logging
 
 from django.db.models import Sum, Q
@@ -501,7 +502,7 @@ def _build_forecasting_context(request):
 
 @admin_required
 def admin_billed_this_month(request):
-    """Breakdown of all bills generated this month."""
+    """Monthly billing breakdown, filtered by whether a payment was received."""
     today = timezone.now().date()
 
     month_str = request.GET.get("month", "").strip()
@@ -522,11 +523,40 @@ def admin_billed_this_month(request):
         .order_by("lease__unit__number")
     )
 
-    bills_with_payment = [
+    payment_filter = (request.GET.get("payment_status") or "paid").lower()
+    if payment_filter not in {"paid", "unpaid"}:
+        payment_filter = "paid"
+
+    paid_bills = [
         bill for bill in all_bills if bill.rent_paid > 0 or bill.water_paid > 0 or bill.parking_paid > 0
     ]
-    for bill in bills_with_payment:
-        bill.total_collected_amount = bill.rent_paid + bill.water_paid + bill.parking_paid
+    unpaid_bills = [bill for bill in all_bills if bill.status == "UNPAID" and bill.total_balance > 0]
+
+    bills = paid_bills if payment_filter == "paid" else unpaid_bills
+    for bill in bills:
+        if payment_filter == "paid":
+            bill.display_rent = bill.rent_paid
+            bill.display_water = bill.water_paid
+            bill.display_parking = bill.parking_paid
+            bill.display_interest = bill.interest if bill.status == "PAID" else Decimal("0")
+            bill.display_total = (
+                bill.display_rent
+                + bill.display_water
+                + bill.display_parking
+                + bill.display_interest
+            )
+        else:
+            bill.display_rent = bill.rent_balance
+            bill.display_water = bill.water_balance
+            bill.display_parking = bill.parking_balance
+            bill.display_interest = bill.interest
+            bill.display_total = bill.total_balance
+
+    table_total_rent = sum((bill.display_rent for bill in bills), Decimal("0"))
+    table_total_water = sum((bill.display_water for bill in bills), Decimal("0"))
+    table_total_parking = sum((bill.display_parking for bill in bills), Decimal("0"))
+    table_total_interest = sum((bill.display_interest for bill in bills), Decimal("0"))
+    table_grand_total = sum((bill.display_total for bill in bills), Decimal("0"))
 
     fully_paid_count = sum(1 for bill in all_bills if bill.status == "PAID")
     unpaid_count = sum(1 for bill in all_bills if bill.status == "UNPAID")
@@ -542,7 +572,8 @@ def admin_billed_this_month(request):
         request,
         "admin_portal/billed_this_month.html",
         {
-            "bills": bills_with_payment,
+            "bills": bills,
+            "payment_filter": payment_filter,
             "total_bills": len(all_bills),
             "fully_paid_count": fully_paid_count,
             "unpaid_count": unpaid_count,
@@ -552,6 +583,11 @@ def admin_billed_this_month(request):
             "total_parking": total_parking,
             "total_interest": total_interest,
             "grand_total": grand_total,
+            "table_total_rent": table_total_rent,
+            "table_total_water": table_total_water,
+            "table_total_parking": table_total_parking,
+            "table_total_interest": table_total_interest,
+            "table_grand_total": table_grand_total,
             "target_month": target,
             "current_month_str": today.strftime("%Y-%m"),
             "unread_count": Notification.objects.filter(is_read=False).count(),

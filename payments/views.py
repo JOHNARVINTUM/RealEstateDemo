@@ -486,6 +486,7 @@ def admin_paymongo_checkout_generate(request):
     # Create payment record with PENDING status
     payment = ManualPayment.objects.create(
         user=tenant_user,
+        lease=lease,
         payment_type="move_in",
         payment_method="PAYMONGO",
         amount=amount,

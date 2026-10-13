@@ -22,16 +22,29 @@
         <span class="inline-block w-3 h-3 rounded-full bg-emerald-500"></span>
         <span class="text-sm font-semibold text-slate-700">Financial Analytics</span>
       </div>
-      <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 leading-tight">Collected This Month</h1>
-      <p class="text-base text-slate-700 mt-1 leading-relaxed">{{ target_month|date:"F Y" }} — all payments received (rent, water, parking)</p>
+      <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 leading-tight">{% if payment_filter == "unpaid" %}Unpaid Bills This Month{% else %}Collected This Month{% endif %}</h1>
+      <p class="text-base text-slate-700 mt-1 leading-relaxed">
+        {% if payment_filter == "unpaid" %}
+          {{ target_month|date:"F Y" }} — bills with no payment recorded yet.
+        {% else %}
+          {{ target_month|date:"F Y" }} — payments received for rent, water, parking, and interest.
+        {% endif %}
+      </p>
     </div>
 
     <!-- Month Switcher -->
-    <form method="get" class="flex items-center gap-2">
+    <form method="get" class="flex flex-wrap items-center gap-2">
       <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">View Month:</label>
       <input type="month" name="month" value="{{ target_month|date:'Y-m' }}"
              class="px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-800 focus:ring-2 focus:ring-slate-400 outline-none"
              onchange="this.form.submit()">
+      <label for="payment-status" class="text-xs font-bold text-slate-500 uppercase tracking-wider">Show:</label>
+      <select id="payment-status" name="payment_status"
+              class="px-3 py-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-slate-400 outline-none"
+              onchange="this.form.submit()">
+        <option value="paid" {% if payment_filter == "paid" %}selected{% endif %}>Paid</option>
+        <option value="unpaid" {% if payment_filter == "unpaid" %}selected{% endif %}>Unpaid</option>
+      </select>
     </form>
   </header>
 
@@ -42,7 +55,9 @@
         <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Total Collected</p>
         <p class="text-3xl font-black text-slate-900 tracking-tight">₱{{ grand_total|floatformat:2|intcomma }}</p>
       </div>
-      <p class="text-xs font-bold text-slate-500 mt-3">{{ bills|length }} paid bill{{ bills|length|pluralize }} / {{ total_bills }} total</p>
+      <p class="text-xs font-bold text-slate-500 mt-3">
+        {{ bills|length }} {% if payment_filter == "unpaid" %}unpaid bill{{ bills|length|pluralize }}{% else %}bill{{ bills|length|pluralize }} with payment{% endif %} / {{ total_bills }} total
+      </p>
     </div>
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm border-t-4 border-t-blue-500 flex flex-col justify-between hover:shadow-md transition-all hover:shadow-md hover:-translate-y-1 transition-all duration-300">
       <div>
@@ -90,8 +105,8 @@
   <!-- Bills Table -->
   <div class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
     <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-      <h2 class="text-sm font-extrabold text-slate-700 uppercase tracking-wider">Paid Bills Breakdown</h2>
-      <span class="text-xs text-slate-400 font-medium">Total Collected = Rent + Water + Parking + Interest</span>
+      <h2 class="text-sm font-extrabold text-slate-700 uppercase tracking-wider">{% if payment_filter == "unpaid" %}Unpaid Bills Breakdown{% else %}Paid Bills Breakdown{% endif %}</h2>
+      <span class="text-xs text-slate-400 font-medium">{% if payment_filter == "unpaid" %}Outstanding = remaining bill balance{% else %}Total Collected = Rent + Water + Parking + Interest{% endif %}</span>
     </div>
     <div class="overflow-x-auto">
       <table class="w-full text-sm text-left">
@@ -103,7 +118,7 @@
             <th class="px-4 py-3 text-right">Water</th>
             <th class="px-4 py-3 text-right">Parking</th>
             <th class="px-4 py-3 text-right">Interest</th>
-            <th class="px-4 py-3 text-right font-black text-slate-800">Total</th>
+            <th class="px-4 py-3 text-right font-black text-slate-800">{% if payment_filter == "unpaid" %}Outstanding{% else %}Total{% endif %}</th>
             <th class="px-4 py-3 text-center">Status</th>
           </tr>
         </thead>
@@ -116,19 +131,19 @@
               {% if tenant.tenantprofile %}{{ tenant.tenantprofile.full_name }}{% else %}{{ tenant.email }}{% endif %}
             </td>
             <td class="px-4 py-3 text-right font-medium text-slate-800">
-              {% if bill.rent_paid > 0 %}₱{{ bill.rent_paid|floatformat:2|intcomma }}{% else %}<span class="text-slate-300">—</span>{% endif %}
+              {% if bill.display_rent > 0 %}₱{{ bill.display_rent|floatformat:2|intcomma }}{% else %}<span class="text-slate-300">—</span>{% endif %}
             </td>
             <td class="px-4 py-3 text-right text-slate-600">
-              {% if bill.water_paid > 0 %}₱{{ bill.water_paid|floatformat:2|intcomma }}{% else %}<span class="text-slate-300">—</span>{% endif %}
+              {% if bill.display_water > 0 %}₱{{ bill.display_water|floatformat:2|intcomma }}{% else %}<span class="text-slate-300">—</span>{% endif %}
             </td>
             <td class="px-4 py-3 text-right text-amber-700 font-medium">
-              {% if bill.parking_paid > 0 %}₱{{ bill.parking_paid|floatformat:2|intcomma }}{% else %}<span class="text-slate-300">—</span>{% endif %}
+              {% if bill.display_parking > 0 %}₱{{ bill.display_parking|floatformat:2|intcomma }}{% else %}<span class="text-slate-300">—</span>{% endif %}
             </td>
             <td class="px-4 py-3 text-right text-rose-600 font-medium">
-              {% if bill.interest and bill.status == "PAID" %}₱{{ bill.interest|floatformat:2|intcomma }}{% else %}<span class="text-slate-300">—</span>{% endif %}
+              {% if bill.display_interest > 0 %}₱{{ bill.display_interest|floatformat:2|intcomma }}{% else %}<span class="text-slate-300">—</span>{% endif %}
             </td>
             <td class="px-4 py-3 text-right font-black text-slate-900">
-              ₱{{ bill.total_collected_amount|floatformat:2|intcomma }}
+              ₱{{ bill.display_total|floatformat:2|intcomma }}
             </td>
             <td class="px-4 py-3 text-center">
               {% if bill.status == "PAID" %}
@@ -144,7 +159,7 @@
           {% empty %}
           <tr>
             <td colspan="8" class="px-6 py-12 text-center text-slate-400 font-medium">
-              No paid bills for {{ target_month|date:"F Y" }} yet.
+              No {% if payment_filter == "unpaid" %}unpaid{% else %}paid{% endif %} bills for {{ target_month|date:"F Y" }} yet.
             </td>
           </tr>
           {% endfor %}
@@ -154,11 +169,11 @@
         <tfoot class="bg-slate-100 border-t-2 border-slate-300 text-sm font-extrabold text-slate-900">
           <tr>
             <td colspan="2" class="px-4 py-3 uppercase tracking-wider text-xs text-slate-600">Total ({{ bills|length }} bills)</td>
-            <td class="px-4 py-3 text-right">₱{{ total_rent|floatformat:2|intcomma }}</td>
-            <td class="px-4 py-3 text-right">₱{{ total_water|floatformat:2|intcomma }}</td>
-            <td class="px-4 py-3 text-right text-amber-700">₱{{ total_parking|floatformat:2|intcomma }}</td>
-            <td class="px-4 py-3 text-right text-rose-600">₱{{ total_interest|floatformat:2|intcomma }}</td>
-            <td class="px-4 py-3 text-right text-slate-900 text-base">₱{{ grand_total|floatformat:2|intcomma }}</td>
+            <td class="px-4 py-3 text-right">₱{{ table_total_rent|floatformat:2|intcomma }}</td>
+            <td class="px-4 py-3 text-right">₱{{ table_total_water|floatformat:2|intcomma }}</td>
+            <td class="px-4 py-3 text-right text-amber-700">₱{{ table_total_parking|floatformat:2|intcomma }}</td>
+            <td class="px-4 py-3 text-right text-rose-600">₱{{ table_total_interest|floatformat:2|intcomma }}</td>
+            <td class="px-4 py-3 text-right text-slate-900 text-base">₱{{ table_grand_total|floatformat:2|intcomma }}</td>
             <td></td>
           </tr>
         </tfoot>

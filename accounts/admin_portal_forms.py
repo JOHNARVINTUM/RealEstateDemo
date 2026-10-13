@@ -1143,7 +1143,6 @@ class HeroSectionForm(BusinessProfileForm):
             "hero_subtitle",
             "hero_description",
             "hero_button_text",
-            "hero_button_url",
             "hero_image",
         ]
         widgets = {
@@ -1160,11 +1159,19 @@ class AboutSectionForm(BusinessProfileForm):
         fields = [
             "about_title",
             "about_description",
+            "about_text",
             "about_image",
         ]
         widgets = {
             "about_description": forms.Textarea(attrs={"rows": 4}),
+            "about_text": forms.Textarea(attrs={"rows": 4}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["about_title"].label = "About heading"
+        self.fields["about_description"].label = "Primary about content"
+        self.fields["about_text"].label = "Secondary about content"
 
 
 class ServicesSectionForm(BusinessProfileForm):

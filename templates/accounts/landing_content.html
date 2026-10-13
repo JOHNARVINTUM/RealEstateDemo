@@ -53,20 +53,17 @@
       <!-- Carousel Visual Layer -->
       <div class="lp-hero-visual" data-reveal="right">
         <div class="lp-carousel">
-          {% if landing_visual_features %}
-            {% for feature in landing_visual_features %}
-              <div class="lp-slide {% if forloop.first %}active{% endif %}"><img src="{{ feature.image_url }}" alt="{{ feature.title }}"></div>
-            {% endfor %}
-          {% else %}
-            <div class="lp-slide active"><img src="{% static 'img/accounts/img 1.jpg' %}" alt="Sta Maria Img 1"></div>
-            <div class="lp-slide"><img src="{% static 'img/accounts/img 2.jpg' %}" alt="Sta Maria Img 2"></div>
-            <div class="lp-slide"><img src="{% static 'img/accounts/img 3.jpg' %}" alt="Sta Maria Img 3"></div>
-            <div class="lp-slide"><img src="{% static 'img/accounts/img 4.jpg' %}" alt="Sta Maria Img 4"></div>
-            <div class="lp-slide"><img src="{% static 'img/accounts/img 5.jpg' %}" alt="Sta Maria Img 5"></div>
-            <div class="lp-slide"><img src="{% static 'img/accounts/img 6.jpg' %}" alt="Sta Maria Img 6"></div>
-            <div class="lp-slide"><img src="{% static 'img/accounts/img 7.jpg' %}" alt="Sta Maria Img 7"></div>
-            <div class="lp-slide"><img src="{% static 'img/accounts/img 8.jpg' %}" alt="Sta Maria Img 8"></div>
+          {% if business_profile.hero_image_url %}
+            <div class="lp-slide active"><img src="{{ business_profile.hero_image_url }}" alt="{{ business_profile.hero_title|default:'Property exterior' }}"></div>
           {% endif %}
+          <div class="lp-slide {% if not business_profile.hero_image_url %}active{% endif %}"><img src="{% static 'img/accounts/img 1.jpg' %}" alt="Property exterior"></div>
+          <div class="lp-slide"><img src="{% static 'img/accounts/img 2.jpg' %}" alt="Property exterior"></div>
+          <div class="lp-slide"><img src="{% static 'img/accounts/img 3.jpg' %}" alt="Property exterior"></div>
+          <div class="lp-slide"><img src="{% static 'img/accounts/img 4.jpg' %}" alt="Property exterior"></div>
+          <div class="lp-slide"><img src="{% static 'img/accounts/img 5.jpg' %}" alt="Property exterior"></div>
+          <div class="lp-slide"><img src="{% static 'img/accounts/img 6.jpg' %}" alt="Property exterior"></div>
+          <div class="lp-slide"><img src="{% static 'img/accounts/img 7.jpg' %}" alt="Property interior"></div>
+          <div class="lp-slide"><img src="{% static 'img/accounts/img 8.jpg' %}" alt="Property interior"></div>
         </div>
         
         <div class="lp-glass-badge">
@@ -77,20 +74,15 @@
         <button class="lp-carousel-btn prev" id="carouselPrev">&#10094;</button>
         <button class="lp-carousel-btn next" id="carouselNext">&#10095;</button>
         <div class="lp-carousel-nav">
-          {% if landing_visual_features %}
-            {% for feature in landing_visual_features %}
-              <button class="lp-dot {% if forloop.first %}active{% endif %}" data-slide="{{ forloop.counter0 }}"></button>
-            {% endfor %}
-          {% else %}
-            <button class="lp-dot active" data-slide="0"></button>
-            <button class="lp-dot" data-slide="1"></button>
-            <button class="lp-dot" data-slide="2"></button>
-            <button class="lp-dot" data-slide="3"></button>
-            <button class="lp-dot" data-slide="4"></button>
-            <button class="lp-dot" data-slide="5"></button>
-            <button class="lp-dot" data-slide="6"></button>
-            <button class="lp-dot" data-slide="7"></button>
-          {% endif %}
+          {% if business_profile.hero_image_url %}<button class="lp-dot active" data-slide="0" aria-label="Show uploaded hero image"></button>{% endif %}
+          <button class="lp-dot {% if not business_profile.hero_image_url %}active{% endif %}" data-slide="{% if business_profile.hero_image_url %}1{% else %}0{% endif %}" aria-label="Show property image 1"></button>
+          <button class="lp-dot" data-slide="{% if business_profile.hero_image_url %}2{% else %}1{% endif %}" aria-label="Show property image 2"></button>
+          <button class="lp-dot" data-slide="{% if business_profile.hero_image_url %}3{% else %}2{% endif %}" aria-label="Show property image 3"></button>
+          <button class="lp-dot" data-slide="{% if business_profile.hero_image_url %}4{% else %}3{% endif %}" aria-label="Show property image 4"></button>
+          <button class="lp-dot" data-slide="{% if business_profile.hero_image_url %}5{% else %}4{% endif %}" aria-label="Show property image 5"></button>
+          <button class="lp-dot" data-slide="{% if business_profile.hero_image_url %}6{% else %}5{% endif %}" aria-label="Show property image 6"></button>
+          <button class="lp-dot" data-slide="{% if business_profile.hero_image_url %}7{% else %}6{% endif %}" aria-label="Show property image 7"></button>
+          <button class="lp-dot" data-slide="{% if business_profile.hero_image_url %}8{% else %}7{% endif %}" aria-label="Show property image 8"></button>
         </div>
       </div>
 
@@ -104,7 +96,7 @@
         {% endif %}
         <h1>{{ business_profile.hero_title|linebreaksbr }} <i>{{ business_profile.hero_subtitle }}</i></h1>
         <p>{{ business_profile.hero_description }}</p>
-        <a href="{{ business_profile.hero_button_url|default:'#about' }}" class="lp-btn-primary">{{ business_profile.hero_button_text|default:"Explore RealEstate360+" }}</a>
+        <a href="#about" class="lp-btn-primary">{{ business_profile.hero_button_text|default:"Explore RealEstate360+" }}</a>
       </div>
     </div>
   </section>
@@ -147,26 +139,27 @@
         <!-- Medium Text Card -->
         <div class="lp-bento-card col-span-1 row-span-1 bg-white border-card" data-reveal="up" style="transition-delay: 0.2s;">
           <span class="lp-section-subtitle">The Future</span>
-          <h2>{{ business_profile.services_title|default:"Growing With You" }}</h2>
-          <p>{{ business_profile.services_description|default:"The platform can scale across different properties by updating public-facing business content directly from the admin CMS instead of editing code." }}</p>
+          <h2>{{ business_profile.about_title|default:"Growing With You" }}</h2>
+          <p>{{ business_profile.about_text }}</p>
         </div>
 
       </div>
     </div>
   </section>
 
+  {% if landing_service_cards %}
   <section class="lp-section">
     <div class="lp-container" data-reveal="up">
-      <div class="mb-10 text-center">
+      <div class="mb-10 text-left">
         {% if cms_preview and landing_editor_urls.services %}
-        <div class="lp-cms-toolbar lp-cms-toolbar-center">
+        <div class="lp-cms-toolbar">
           <span class="lp-cms-toolbar-label">Services Section</span>
           <a href="{{ landing_editor_urls.services }}" class="lp-cms-edit-link">Edit Section</a>
         </div>
         {% endif %}
         <span class="lp-section-subtitle">Property Highlights</span>
         <h2 class="text-slate-900 text-[clamp(2rem,4vw,3rem)] font-[800] leading-[1.05] mt-3">{{ business_profile.services_title|default:"What You Can Expect" }}</h2>
-        <p class="text-slate-500 max-w-3xl mx-auto mt-4 text-lg leading-8">{{ business_profile.services_description }}</p>
+        <p class="text-slate-500 max-w-3xl mt-4 text-lg leading-8">{{ business_profile.services_description }}</p>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {% for feature in landing_service_cards %}
@@ -177,13 +170,14 @@
             </div>
           {% endif %}
           <span class="lp-section-subtitle">{{ feature.icon_label|default:"Feature" }}</span>
-          <h2>{{ feature.title }}</h2>
-          <p>{{ feature.description }}</p>
+          {% if feature.title %}<h2>{{ feature.title }}</h2>{% endif %}
+          {% if feature.description %}<p>{{ feature.description }}</p>{% endif %}
         </article>
         {% endfor %}
       </div>
     </div>
   </section>
+  {% endif %}
 
   <!-- Call to Action -->
   <section class="lp-section cta-wrapper">

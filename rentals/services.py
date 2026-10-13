@@ -6,7 +6,13 @@ from dataclasses import dataclass
 from django.db import transaction
 from django.db.models import Count, Q, Avg, Max, F, Min
 from django.conf import settings
-from rentals.models import TenantRiskClassification, Lease, CalendarEvent, Notification
+from rentals.models import (
+    TenantRiskClassification,
+    Lease,
+    CalendarEvent,
+    LeaseContractEvent,
+    Notification,
+)
 from billing.models import MonthlyBill
 from payments.models import ManualPayment
 import logging
@@ -21,25 +27,20 @@ def _repair_get_lease_id_from_payment(payment):
 
 
 def _repair_candidate_leases(payment, lease_id=None):
-    tenant_id = payment.user_id
-    if isinstance(payment.metadata, dict):
-        tenant_id = payment.metadata.get("tenant_id") or tenant_id
-
-    lease_qs = Lease.objects.select_for_update().filter(tenant_id=tenant_id).select_related("unit")
-    if lease_id:
-        lease = lease_qs.filter(id=lease_id).first()
-        if lease:
-            return lease
-
-    lease = lease_qs.filter(status=Lease.STATUS_ACTIVE).order_by("-start_date").first()
-    if lease:
-        return lease
-
-    lease = lease_qs.filter(status=Lease.STATUS_PENDING_PAYMENT).order_by("-start_date", "-id").first()
-    if lease:
-        return lease
-
-    return lease_qs.order_by("-start_date", "-id").first()
+    """Historical repair requires an explicit, tenant-owned lease reference."""
+    lease_id = payment.lease_id or lease_id
+    if not lease_id:
+        return None
+    try:
+        lease_id = int(lease_id)
+    except (TypeError, ValueError):
+        return None
+    return (
+        Lease.objects.select_for_update()
+        .filter(id=lease_id, tenant_id=payment.user_id)
+        .select_related("unit")
+        .first()
+    )
 
 
 def _repair_activate_pending_lease(lease, payment):
@@ -54,6 +55,14 @@ def _repair_activate_pending_lease(lease, payment):
 def _repair_finalize_payment_record(payment, first_bill):
     update_fields = ["status"]
     payment.status = "APPROVED"
+    if payment.lease_id is None:
+        lease_id = getattr(first_bill, "lease_id", None)
+        if lease_id:
+            payment.lease_id = lease_id
+            update_fields.append("lease")
+    if payment.approved_at is None:
+        payment.approved_at = payment.created_at or timezone.now()
+        update_fields.append("approved_at")
     if first_bill and payment.bill_ids != str(first_bill.id):
         payment.bill_ids = str(first_bill.id)
         update_fields.append("bill_ids")
@@ -92,6 +101,7 @@ def repair_historical_move_in_payment(payment):
     )
 
     _repair_finalize_payment_record(payment, first_bill)
+    LeaseActivationService._record_contract_event(payment, lease)
 
     return True, "Historical move-in payment repaired successfully."
 
@@ -1061,16 +1071,11 @@ class LeaseActivationService:
         try:
             return Lease.objects.select_for_update().get(
                 id=lease_id,
-                status=Lease.STATUS_PENDING_PAYMENT
+                status__in=(Lease.STATUS_PENDING_PAYMENT, Lease.STATUS_ACTIVE),
             ), None
         except Lease.DoesNotExist:
-            try:
-                lease = Lease.objects.get(id=lease_id, status=Lease.STATUS_ACTIVE)
-                logger.info(f"Lease {lease_id} already active, skipping activation")
-                return lease, (True, "Lease already active")
-            except Lease.DoesNotExist:
-                logger.error(f"Lease {lease_id} not found or not in PENDING_PAYMENT status")
-                return None, (False, "Lease not found or invalid status")
+            logger.error(f"Lease {lease_id} not found or not in a confirmable status")
+            return None, (False, "Lease not found or invalid status")
 
     @staticmethod
     def _activate_pending_lease(lease, lease_id: int, activated_at):
@@ -1113,6 +1118,7 @@ class LeaseActivationService:
         payment_reference: str,
         amount: Decimal,
         first_bill,
+        approved_at,
         existing_payment=None,
     ):
         bill_ids = str(first_bill.id) if first_bill else ""
@@ -1124,6 +1130,9 @@ class LeaseActivationService:
             payment.amount = amount
             payment.reference_code = payment_reference
             payment.status = "APPROVED"
+            payment.lease = lease
+            if payment.approved_at is None:
+                payment.approved_at = approved_at
             payment.bill_ids = bill_ids
             if not payment.tenant_note:
                 payment.tenant_note = f"Move-in payment via {payment_method}"
@@ -1134,6 +1143,8 @@ class LeaseActivationService:
                     "amount",
                     "reference_code",
                     "status",
+                    "lease",
+                    "approved_at",
                     "bill_ids",
                     "tenant_note",
                 ]
@@ -1147,8 +1158,38 @@ class LeaseActivationService:
             amount=amount,
             reference_code=payment_reference,
             status="APPROVED",
+            lease=lease,
+            approved_at=approved_at,
             bill_ids=bill_ids,
             tenant_note=f"Move-in payment via {payment_method}",
+        )
+
+    @staticmethod
+    def _validate_move_in_payment(payment, lease):
+        if payment.payment_type != "move_in":
+            return "Only move-in payments can activate a lease."
+        if payment.status == "REJECTED":
+            return "Rejected move-in payments cannot activate a lease."
+        if payment.user_id != lease.tenant_id:
+            return "Move-in payment tenant does not match the lease tenant."
+        if payment.lease_id and payment.lease_id != lease.id:
+            return "Move-in payment is already linked to a different lease."
+        return ""
+
+    @staticmethod
+    def _record_contract_event(payment, lease):
+        """Create the audit projection once; never use it for calculations."""
+        LeaseContractEvent.objects.get_or_create(
+            source_payment=payment,
+            event_type=LeaseContractEvent.EVENT_TYPE_MOVE_IN_PAYMENT,
+            defaults={
+                "lease": lease,
+                "status": LeaseContractEvent.STATUS_APPROVED,
+                "occurred_at": payment.approved_at,
+                "payment_reference": payment.reference_code,
+                "payment_method": payment.payment_method,
+                "amount": payment.amount,
+            },
         )
 
     @staticmethod
@@ -1221,43 +1262,58 @@ class LeaseActivationService:
         
         try:
             with transaction.atomic():
+                locked_payment = None
+                if existing_payment is not None:
+                    locked_payment = ManualPayment.objects.select_for_update().get(
+                        pk=existing_payment.pk
+                    )
                 lease, early_result = LeaseActivationService._get_pending_or_active_lease(lease_id)
                 if early_result:
-                    if early_result[0] and lease and existing_payment is not None:
-                        first_bill = None
-                        if not skip_billing_generation:
-                            first_bill = LeaseActivationService._generate_initial_billing(
-                                lease,
-                                payment_reference,
-                                activated_at,
-                            )
-                        LeaseActivationService._record_move_in_payment(
-                            lease=lease,
-                            payment_method=payment_method,
-                            payment_reference=payment_reference,
-                            amount=amount,
-                            first_bill=first_bill,
-                            existing_payment=existing_payment,
-                        )
                     return early_result
 
-                activated, activation_message = LeaseActivationService._activate_pending_lease(
-                    lease,
-                    lease_id,
-                    activated_at,
-                )
-                if not activated:
-                    return True, activation_message
+                if locked_payment is not None:
+                    validation_error = LeaseActivationService._validate_move_in_payment(
+                        locked_payment, lease
+                    )
+                    if validation_error:
+                        return False, validation_error
 
+                confirmed_at = activated_at or timezone.now()
+                newly_activated = lease.status == Lease.STATUS_PENDING_PAYMENT
+
+                if newly_activated:
+                    activated, activation_message = LeaseActivationService._activate_pending_lease(
+                        lease,
+                        lease_id,
+                        confirmed_at,
+                    )
+                    if not activated:
+                        return True, activation_message
+                # An ACTIVE lease is the authoritative occupancy relationship;
+                # this also heals a stale unit state during a safe retry.
                 LeaseActivationService._mark_unit_occupied(lease)
 
                 first_bill = None
                 if not skip_billing_generation:
-                    first_bill = LeaseActivationService._generate_initial_billing(
-                        lease,
-                        payment_reference,
-                        activated_at,
-                    )
+                    if newly_activated:
+                        first_bill = LeaseActivationService._generate_initial_billing(
+                            lease,
+                            payment_reference,
+                            confirmed_at,
+                        )
+                    else:
+                        from billing.services import month_start
+
+                        first_bill = MonthlyBill.objects.filter(
+                            lease=lease,
+                            billing_month=month_start(lease.start_date),
+                        ).first()
+                        if first_bill is None:
+                            first_bill = LeaseActivationService._generate_initial_billing(
+                                lease,
+                                payment_reference,
+                                confirmed_at,
+                            )
 
                 payment_record = LeaseActivationService._record_move_in_payment(
                     lease=lease,
@@ -1265,9 +1321,12 @@ class LeaseActivationService:
                     payment_reference=payment_reference,
                     amount=amount,
                     first_bill=first_bill,
-                    existing_payment=existing_payment,
+                    approved_at=confirmed_at,
+                    existing_payment=locked_payment,
                 )
-                if payment_record and first_bill:
+                LeaseActivationService._record_contract_event(payment_record, lease)
+
+                if newly_activated and payment_record and first_bill:
                     from billing.services import create_and_send_invoice_for_payment
 
                     move_in_line = {
@@ -1288,11 +1347,12 @@ class LeaseActivationService:
                         payment_record,
                         [first_bill],
                         "move_in",
-                        activated_at or timezone.now(),
+                        confirmed_at,
                         lines=[move_in_line],
                         logger=logger,
                     )
-                LeaseActivationService._send_activation_welcome(lease)
+                if newly_activated:
+                    LeaseActivationService._send_activation_welcome(lease)
                 
                 logger.info(
                     f"Lease {lease_id} activated successfully. "
@@ -1300,7 +1360,9 @@ class LeaseActivationService:
                     f"Amount: {amount}"
                 )
                 
-                return True, f"Lease activated successfully. Payment recorded."
+                if newly_activated:
+                    return True, "Lease activated successfully. Payment recorded."
+                return True, "Lease was already active. Payment confirmation was reconciled."
                 
         except Exception as e:
             logger.exception(f"Failed to activate lease {lease_id}: {e}")

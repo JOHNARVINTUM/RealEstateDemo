@@ -103,7 +103,7 @@ class MaintenanceSubmissionTests(TestCase):
             },
         )
 
-        self.assertRedirects(response, reverse("maintenance_list"))
+        self.assertRedirects(response, reverse("report_issue"))
 
         request_obj = MaintenanceRequest.objects.get()
         self.assertEqual(request_obj.category, "PLUMBING")
@@ -113,6 +113,81 @@ class MaintenanceSubmissionTests(TestCase):
         self.assertEqual(timezone.localtime(request_obj.requested_schedule_at).replace(tzinfo=None), datetime(2026, 6, 15, 13, 0))
         self.assertEqual(request_obj.review_status, "PENDING")
         self.assertIsNone(request_obj.assigned_staff)
+
+    @patch("accounts.ml.maintenance_nlp.predict_priority", return_value={"available": True, "priority": "HIGH", "confidence": 0.9})
+    def test_success_feedback_shows_request_summary_and_preserves_notification(self, _mock_predict_priority):
+        response = self.client.post(
+            reverse("report_issue"),
+            {
+                "title": "Leaking bathroom faucet",
+                "description": "The bathroom faucet leaks when turned off.",
+                "requested_schedule_at": "2026-06-15T13:00",
+            },
+        )
+
+        self.assertRedirects(response, reverse("report_issue"), fetch_redirect_response=False)
+        self.assertEqual(MaintenanceRequest.objects.filter(tenant=self.user).count(), 1)
+        self.assertEqual(Notification.objects.filter(recipient_type="ADMIN", notification_type="MAINTENANCE").count(), 1)
+        notification = Notification.objects.get(recipient_type="ADMIN", notification_type="MAINTENANCE")
+        self.assertEqual(notification.related_tenant, self.user)
+        self.assertEqual(notification.related_unit, self.unit)
+
+        confirmation = self.client.get(response.url)
+        self.assertEqual(confirmation.status_code, 200)
+        self.assertContains(confirmation, "Maintenance request submitted")
+        self.assertContains(confirmation, "Thanks for letting us know.")
+        self.assertContains(confirmation, "Leaking bathroom faucet")
+        self.assertContains(confirmation, "Room 101")
+        self.assertContains(confirmation, "High")
+        self.assertContains(confirmation, reverse("maintenance_list"), html=False)
+        self.assertContains(confirmation, reverse("report_issue"), html=False)
+
+        # Refreshing the confirmation GET returns to the form instead of replaying the POST.
+        refreshed = self.client.get(response.url)
+        self.assertNotContains(refreshed, "Maintenance request submitted")
+        self.assertEqual(MaintenanceRequest.objects.filter(tenant=self.user).count(), 1)
+        self.assertEqual(Notification.objects.filter(recipient_type="ADMIN", notification_type="MAINTENANCE").count(), 1)
+
+    def test_invalid_report_preserves_input_and_displays_field_errors_without_saving(self):
+        response = self.client.post(
+            reverse("report_issue"),
+            {
+                "title": "",
+                "description": "",
+                "requested_schedule_at": "2026-06-15T13:00",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Please review the highlighted fields and try again.")
+        self.assertContains(response, "This field is required.")
+        self.assertEqual(response.context["form"]["title"].value(), "")
+        self.assertEqual(MaintenanceRequest.objects.filter(tenant=self.user).count(), 0)
+        self.assertEqual(Notification.objects.filter(recipient_type="ADMIN", notification_type="MAINTENANCE").count(), 0)
+
+    def test_save_failure_shows_safe_error_without_exposing_exception(self):
+        with patch("maintenance.views.MaintenanceRequest.save", side_effect=RuntimeError("database connection details")):
+            response = self.client.post(
+                reverse("report_issue"),
+                {
+                    "title": "Broken light",
+                    "description": "The bedroom light will not turn on.",
+                    "requested_schedule_at": "2026-06-15T13:00",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Couldn't submit your maintenance request.")
+        self.assertContains(response, "Please try again. Your request was not submitted.")
+        self.assertNotContains(response, "database connection details")
+        self.assertEqual(MaintenanceRequest.objects.filter(tenant=self.user).count(), 0)
+
+    def test_report_form_disables_submit_button_and_shows_loading_state(self):
+        response = self.client.get(reverse("report_issue"))
+
+        self.assertContains(response, "Submitting request...")
+        self.assertContains(response, "submitButton.disabled = true")
+        self.assertContains(response, "maintenanceReportForm")
 
     def test_admin_approval_uses_tenant_requested_schedule_when_blank(self):
         request_obj = MaintenanceRequest.objects.create(
@@ -155,7 +230,7 @@ class MaintenanceSubmissionTests(TestCase):
             },
         )
 
-        self.assertRedirects(response, reverse("maintenance_list"))
+        self.assertRedirects(response, reverse("report_issue"))
         request_obj = MaintenanceRequest.objects.latest("id")
         self.assertEqual(request_obj.lease_id, self.lease.id)
 

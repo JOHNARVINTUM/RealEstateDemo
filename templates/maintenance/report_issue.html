@@ -49,25 +49,79 @@
 
     <!-- Problem Details -->
     <div class="lg:col-span-8 flex flex-col gap-6">
+      {% if success_report %}
+      <section class="bg-white border border-emerald-200 rounded-[2.5rem] p-8 sm:p-10 shadow-sm" role="status" aria-live="polite" aria-atomic="true">
+        <div class="flex items-start gap-4">
+          <span class="w-12 h-12 shrink-0 rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center" aria-hidden="true">
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m5 12 4 4L19 6" />
+            </svg>
+          </span>
+          <div class="min-w-0">
+            <h2 class="text-2xl sm:text-3xl font-black text-slate-900">Maintenance request submitted</h2>
+            <p class="mt-2 text-sm sm:text-base leading-relaxed text-slate-600">Thanks for letting us know. Your maintenance request has been received and will be reviewed by our team.</p>
+          </div>
+        </div>
+
+        <dl class="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="min-w-0 rounded-2xl border border-slate-200 bg-slate-50 p-5 sm:col-span-2">
+            <dt class="text-[10px] font-black uppercase tracking-widest text-slate-500">Request</dt>
+            <dd class="mt-1 break-words text-base font-bold text-slate-900">{{ success_report.title }}</dd>
+          </div>
+          {% if success_report.unit_number %}
+          <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <dt class="text-[10px] font-black uppercase tracking-widest text-slate-500">Room</dt>
+            <dd class="mt-1 break-words text-base font-bold text-slate-900">Room {{ success_report.unit_number }}</dd>
+          </div>
+          {% endif %}
+          <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <dt class="text-[10px] font-black uppercase tracking-widest text-slate-500">Priority</dt>
+            <dd class="mt-1 text-base font-bold text-slate-900">{{ success_report.priority }}</dd>
+          </div>
+        </dl>
+
+        <div class="mt-8 flex flex-col sm:flex-row gap-3">
+          <a href="{% url 'maintenance_list' %}" class="inline-flex min-h-12 items-center justify-center rounded-xl bg-slate-900 px-6 py-3 text-center text-sm font-black text-white hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900">View My Requests</a>
+          <a href="{% url 'report_issue' %}" class="inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-300 bg-white px-6 py-3 text-center text-sm font-black text-slate-700 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-700">Report Another Problem</a>
+        </div>
+      </section>
+      {% else %}
       <div class="bg-white border border-slate-200 rounded-[2.5rem] p-8 sm:p-10 shadow-sm flex flex-col justify-between h-full">
         <div class="border-b border-slate-100 pb-6 mb-8">
           <h2 class="text-2xl font-black text-slate-900">What's wrong?</h2>
           <p class="text-sm font-semibold text-slate-500 mt-1">Please fill out the form below.</p>
         </div>
 
+        {% if submission_error %}
+          <div class="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-rose-800" role="alert" aria-live="assertive">
+            <p class="font-black">Couldn't submit your maintenance request.</p>
+            <p class="mt-1 text-sm font-medium">Please try again. Your request was not submitted.</p>
+          </div>
+        {% elif form.errors %}
+          <div class="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-amber-900" role="alert" aria-live="assertive">
+            <p class="font-bold">Please review the highlighted fields and try again.</p>
+          </div>
+        {% endif %}
+
         <form method="post" enctype="multipart/form-data" class="space-y-6 tenant-form flex flex-col h-full" id="maintenanceReportForm">
           {% csrf_token %}
           
           <!-- Title -->
           <div class="space-y-2">
-            <label class="block text-[10px] font-black text-slate-600 uppercase tracking-widest">Short Title</label>
+            <label for="{{ form.title.id_for_label }}" class="block text-[10px] font-black text-slate-600 uppercase tracking-widest">Short Title</label>
             {{ form.title }}
+            {% if form.title.errors %}
+              <p class="text-sm font-bold text-rose-700" role="alert">{{ form.title.errors|striptags }}</p>
+            {% endif %}
           </div>
 
           <!-- Description -->
           <div class="space-y-2">
-            <label class="block text-[10px] font-black text-slate-600 uppercase tracking-widest">Description</label>
+            <label for="{{ form.description.id_for_label }}" class="block text-[10px] font-black text-slate-600 uppercase tracking-widest">Description</label>
             {{ form.description }}
+            {% if form.description.errors %}
+              <p class="text-sm font-bold text-rose-700" role="alert">{{ form.description.errors|striptags }}</p>
+            {% endif %}
             <p class="text-xs text-slate-500 font-medium mt-2">* Tell us exactly what and where the problem is (e.g. kitchen sink, bedroom light).</p>
           </div>
 
@@ -81,7 +135,7 @@
             {{ form.requested_schedule_at }}
             <p class="text-xs text-slate-500 font-medium mt-2">* Choose your preferred visit date and time. Admin will confirm or reschedule it.</p>
             {% if form.requested_schedule_at.errors %}
-              <div class="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">
+              <div class="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700" role="alert">
                 {{ form.requested_schedule_at.errors|striptags }}
               </div>
             {% endif %}
@@ -91,6 +145,9 @@
           <div class="space-y-2">
             <label class="block text-[10px] font-black text-slate-600 uppercase tracking-widest">Attach a Photo (Optional)</label>
             {{ form.photo }}
+            {% if form.photo.errors %}
+              <p class="text-sm font-bold text-rose-700" role="alert">{{ form.photo.errors|striptags }}</p>
+            {% endif %}
             <p class="text-xs text-slate-500 font-medium mt-2">* A clear picture helps our maintenance team resolve the issue faster.</p>
           </div>
 
@@ -100,8 +157,8 @@
                     id="maintenanceSubmitButton"
                     class="w-full bg-slate-900 hover:bg-slate-800 disabled:bg-slate-800 disabled:cursor-wait text-white font-black py-5 rounded-2xl text-lg shadow-lg active:translate-y-0 hover:-translate-y-0.5 transition-all flex items-center justify-center">
               <span class="maintenance-submit-idle">Submit Report</span>
-              <span class="maintenance-submit-loading hidden items-center justify-center gap-2">
-                <span>Submitting your issue</span>
+              <span class="maintenance-submit-loading hidden items-center justify-center gap-2" aria-live="polite">
+                <span>Submitting request...</span>
                 <span class="maintenance-loading-dots" aria-hidden="true">
                   <span></span>
                   <span></span>
@@ -112,6 +169,7 @@
           </div>
         </form>
       </div>
+      {% endif %}
     </div>
 
     <!-- Right Side Info -->
@@ -191,6 +249,12 @@
       opacity: 1;
     }
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    .maintenance-loading-dots span {
+      animation: none;
+    }
+  }
 </style>
 
 <script>
@@ -213,6 +277,7 @@
         }
 
         submitButton.disabled = true;
+        submitButton.setAttribute('aria-disabled', 'true');
         const idle = submitButton.querySelector('.maintenance-submit-idle');
         const loading = submitButton.querySelector('.maintenance-submit-loading');
         if (idle && loading) {

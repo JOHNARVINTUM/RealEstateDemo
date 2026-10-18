@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect
 import logging
+from django.db import transaction
 from django.utils import timezone
 
 from accounts.decorators import tenant_required
@@ -41,6 +42,11 @@ def report_issue(request):
     user = request.user
     lease = _current_maintenance_lease(user)
 
+    if request.method == "GET":
+        success_report = request.session.pop("maintenance_report_success", None)
+    else:
+        success_report = None
+
     if request.method == "POST":
         form = MaintenanceRequestForm(request.POST, request.FILES)
         if form.is_valid():
@@ -65,7 +71,21 @@ def report_issue(request):
                     obj.priority = result["priority"]
             except Exception:
                 pass
-            obj.save()
+            try:
+                with transaction.atomic():
+                    obj.save()
+            except Exception:
+                logger.exception("Failed to save maintenance request for user %s", user.pk)
+                return render(
+                    request,
+                    "maintenance/report_issue.html",
+                    {
+                        "form": form,
+                        "lease": lease,
+                        "submission_error": True,
+                    },
+                )
+
             try:
                 unit = lease.unit if lease else None
                 try:
@@ -86,7 +106,12 @@ def report_issue(request):
                 )
             except Exception as exc:
                 logger.exception("Failed to create admin maintenance notification: %s", exc)
-            return redirect("maintenance_list")
+            request.session["maintenance_report_success"] = {
+                "title": obj.title,
+                "unit_number": lease.unit.number if lease else "",
+                "priority": obj.get_priority_display(),
+            }
+            return redirect("report_issue")
     else:
         form = MaintenanceRequestForm()
 
@@ -94,6 +119,8 @@ def report_issue(request):
     context = {
         "form": form,
         "lease": lease,
+        "success_report": success_report,
+        "submission_error": False,
     }
     return render(request, "maintenance/report_issue.html", context)
 

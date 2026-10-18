@@ -107,6 +107,41 @@ def _format_covered_months(bills):
     return f"{ordered[0].billing_month.strftime('%b %Y')} - {ordered[-1].billing_month.strftime('%b %Y')}"
 
 
+def _monthly_bill_payment_method_summary(payments):
+    method_labels = []
+    has_paymongo = False
+
+    for payment in payments:
+        if payment.payment_method == "PAYMONGO":
+            has_paymongo = True
+            actual_method = (payment.paid_via or "").strip().lower()
+            if actual_method in {"", "unknown", "online"}:
+                label = "PayMongo"
+            else:
+                label = {
+                    "gcash": "GCash",
+                    "card": "Card",
+                    "grab_pay": "GrabPay",
+                }.get(actual_method, actual_method.replace("_", " ").title())
+        elif payment.payment_method == "GCASH":
+            label = "GCash"
+        elif payment.payment_method == "CASH":
+            label = "Cash"
+        else:
+            label = payment.get_payment_method_display() or ""
+
+        if label and label not in method_labels:
+            method_labels.append(label)
+
+    provider_label = ""
+    if has_paymongo and len(method_labels) == 1 and method_labels[0] != "PayMongo":
+        provider_label = "via PayMongo"
+    elif has_paymongo and len(method_labels) > 1:
+        provider_label = "Includes PayMongo"
+
+    return " + ".join(method_labels), provider_label
+
+
 def deactivate_tenant(tenant):
     """Deactivate tenant: disable login, close active leases, free units."""
     today = date.today()
@@ -227,11 +262,29 @@ def admin_tenant_detail(request, tenant_id: int):
 
     lease_ids = [lease.id for lease in leases]
     current_month = timezone.localdate().replace(day=1)
-    bill_history = MonthlyBill.objects.filter(
+    bill_history = list(MonthlyBill.objects.filter(
         lease_id__in=lease_ids,
     ).filter(
         Q(billing_month__lte=current_month) | Q(status="PAID")
-    ).select_related("lease__unit").order_by("billing_month", "id")[:24]
+    ).select_related("lease__unit").order_by("billing_month", "id")[:24])
+
+    bill_ids_for_history = {bill.pk for bill in bill_history}
+    payments_by_bill_id = {}
+    approved_bill_payments = (
+        ManualPayment.objects.filter(user=tenant.user, status="APPROVED")
+        .exclude(bill_ids="")
+        .only("id", "bill_ids", "payment_method", "paid_via")
+        .order_by("created_at", "id")
+    )
+    for payment in approved_bill_payments:
+        for bill_id in _parse_payment_bill_ids(payment.bill_ids):
+            if bill_id in bill_ids_for_history:
+                payments_by_bill_id.setdefault(bill_id, []).append(payment)
+
+    for bill in bill_history:
+        bill.payment_method_label, bill.payment_method_provider = _monthly_bill_payment_method_summary(
+            payments_by_bill_id.get(bill.pk, [])
+        )
 
     manual_payments = list(ManualPayment.objects.filter(user=tenant.user).order_by("-created_at")[:20])
     payment_bill_ids = {}

@@ -2485,6 +2485,187 @@ class AdminTenantPaymentHistoryTests(TestCase):
         self.assertNotContains(response, "Nov 2026")
 
 
+class AdminTenantMonthlyLedgerPaymentMethodTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            email="monthly-ledger-admin@example.com",
+            username="monthlyledgeradmin",
+            password="password123",
+        )
+        self.tenant = User.objects.create_user(
+            email="monthly-ledger-tenant@example.com",
+            username="monthlyledgertenant",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        self.profile = TenantProfile.objects.create(
+            user=self.tenant,
+            first_name="Ledger",
+            last_name="Tenant",
+            password_change_required=False,
+            created_by=self.admin,
+        )
+        self.unit = Unit.objects.create(number="PM-101", status="OCCUPIED")
+        self.lease = Lease.objects.create(
+            tenant=self.tenant,
+            unit=self.unit,
+            monthly_rent=Decimal("10000.00"),
+            due_day=5,
+            start_date=timezone.localdate().replace(day=1),
+            status=Lease.STATUS_ACTIVE,
+            is_active=True,
+        )
+        self.client.force_login(self.admin)
+
+    def _create_bill(self, *, status="PAID"):
+        month = timezone.localdate().replace(day=1)
+        return MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=month,
+            due_date=month.replace(day=5),
+            base_rent=Decimal("10000.00"),
+            water_amount=Decimal("500.00"),
+            parking_fee=Decimal("0.00"),
+            interest=Decimal("0.00"),
+            total_due=Decimal("10500.00"),
+            rent_paid=(
+                Decimal("5000.00")
+                if status == "PARTIALLY_PAID"
+                else Decimal("10000.00") if status == "PAID" else Decimal("0.00")
+            ),
+            water_paid=Decimal("500.00") if status == "PAID" else Decimal("0.00"),
+            status=status,
+        )
+
+    def _add_payment(self, bill, *, method, paid_via="", status="APPROVED", payment_type="full", amount=Decimal("10500.00")):
+        return ManualPayment.objects.create(
+            user=self.tenant,
+            bill_ids=str(bill.pk),
+            payment_type=payment_type,
+            payment_method=method,
+            paid_via=paid_via,
+            amount=amount,
+            status=status,
+            reference_code=f"LEDGER-{method}-{ManualPayment.objects.count() + 1}",
+        )
+
+    def _detail_response(self):
+        return self.client.get(reverse("admin_tenant_detail", args=[self.profile.pk]))
+
+    def test_paid_gcash_bill_shows_human_readable_method_without_changing_amount_or_status(self):
+        bill = self._create_bill()
+        self._add_payment(bill, method="GCASH")
+
+        response = self._detail_response()
+
+        displayed_bill = response.context["bill_history"][0]
+        self.assertEqual(displayed_bill.payment_method_label, "GCash")
+        self.assertEqual(displayed_bill.payment_method_provider, "")
+        self.assertEqual(displayed_bill.total_due, Decimal("10500.00"))
+        self.assertEqual(displayed_bill.status, "PAID")
+        self.assertContains(response, "Payment Method")
+        self.assertContains(response, "GCash")
+        self.assertContains(response, "10,500")
+
+    def test_paymongo_gcash_shows_actual_method_and_provider_secondary(self):
+        bill = self._create_bill()
+        self._add_payment(bill, method="PAYMONGO", paid_via="gcash")
+
+        response = self._detail_response()
+
+        displayed_bill = response.context["bill_history"][0]
+        self.assertEqual(displayed_bill.payment_method_label, "GCash")
+        self.assertEqual(displayed_bill.payment_method_provider, "via PayMongo")
+        self.assertContains(response, "GCash")
+        self.assertContains(response, "via PayMongo")
+
+    def test_paymongo_without_known_channel_uses_truthful_provider_fallback(self):
+        bill = self._create_bill()
+        self._add_payment(bill, method="PAYMONGO", paid_via="unknown")
+
+        response = self._detail_response()
+
+        displayed_bill = response.context["bill_history"][0]
+        self.assertEqual(displayed_bill.payment_method_label, "PayMongo")
+        self.assertEqual(displayed_bill.payment_method_provider, "")
+        self.assertContains(response, "PayMongo")
+
+    def test_cash_payment_shows_cash(self):
+        bill = self._create_bill()
+        self._add_payment(bill, method="CASH")
+
+        response = self._detail_response()
+
+        self.assertEqual(response.context["bill_history"][0].payment_method_label, "Cash")
+
+    def test_unpaid_bill_without_approved_payment_shows_dash(self):
+        bill = self._create_bill(status="UNPAID")
+        self._add_payment(bill, method="CASH", status="PENDING", amount=Decimal("1000.00"))
+
+        response = self._detail_response()
+
+        displayed_bill = response.context["bill_history"][0]
+        self.assertEqual(displayed_bill.payment_method_label, "")
+        self.assertEqual(displayed_bill.status, "UNPAID")
+        self.assertContains(response, "—")
+
+    def test_multiple_approved_methods_are_listed_once_and_not_guessed(self):
+        bill = self._create_bill()
+        self._add_payment(bill, method="PAYMONGO", paid_via="gcash", amount=Decimal("5250.00"))
+        self._add_payment(bill, method="CASH", amount=Decimal("5250.00"))
+
+        response = self._detail_response()
+
+        displayed_bill = response.context["bill_history"][0]
+        self.assertEqual(displayed_bill.payment_method_label, "GCash + Cash")
+        self.assertEqual(displayed_bill.payment_method_provider, "Includes PayMongo")
+        self.assertContains(response, "GCash + Cash")
+
+    def test_partial_bill_shows_method_as_partial_without_changing_status(self):
+        bill = self._create_bill(status="PARTIALLY_PAID")
+        self._add_payment(bill, method="CASH", amount=Decimal("5000.00"))
+
+        response = self._detail_response()
+
+        displayed_bill = response.context["bill_history"][0]
+        self.assertEqual(displayed_bill.payment_method_label, "Cash")
+        self.assertEqual(displayed_bill.status, "PARTIALLY_PAID")
+        self.assertEqual(displayed_bill.total_due, Decimal("10500.00"))
+        self.assertContains(response, "Partial payment")
+        self.assertContains(response, "PARTIAL")
+
+    def test_confirmed_contract_event_table_remains_unchanged(self):
+        bill = self._create_bill()
+        monthly_payment = self._add_payment(bill, method="CASH")
+        move_in_payment = ManualPayment.objects.create(
+            user=self.tenant,
+            lease=self.lease,
+            payment_type="move_in",
+            payment_method="PAYMONGO",
+            paid_via="gcash",
+            amount=Decimal("10000.00"),
+            status="APPROVED",
+            reference_code="MOVE-IN-LEDGER",
+        )
+        LeaseContractEvent.objects.create(
+            lease=self.lease,
+            event_type=LeaseContractEvent.EVENT_TYPE_MOVE_IN_PAYMENT,
+            status=LeaseContractEvent.STATUS_APPROVED,
+            occurred_at=timezone.now(),
+            source_payment=move_in_payment,
+            payment_reference=move_in_payment.reference_code,
+            payment_method="GCash",
+            amount=move_in_payment.amount,
+        )
+
+        response = self._detail_response()
+
+        self.assertEqual(response.context["contract_events"][0].payment_method, "GCash")
+        self.assertEqual(response.context["bill_history"][0].payment_method_label, "Cash")
+        self.assertContains(response, "Confirmed contract events")
+        self.assertEqual(monthly_payment.payment_method, "CASH")
+
+
 class AdminTenantAndUnitSearchTests(TestCase):
     def setUp(self):
         self.admin = User.objects.create_superuser(

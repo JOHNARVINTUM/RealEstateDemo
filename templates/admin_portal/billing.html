@@ -3,28 +3,66 @@
 {% block title %}Billing & Ledger | Real Estate Administration{% endblock %}
 
 {% block content %}
-<div class="billing-ledger-wrapper max-w-7xl mx-auto font-sans text-slate-900 space-y-6 pb-12 px-2 sm:px-4 lg:px-6 py-4 sm:py-6 overflow-x-hidden w-full max-w-full">
+<style>
+  .billing-summary-grid > .billing-upcoming-metric {
+    grid-column: 1 / -1;
+    justify-self: end;
+    width: max-content;
+    max-width: 100%;
+    min-height: 0;
+    padding: .2rem .35rem;
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    gap: .45rem;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .billing-upcoming-metric > div:first-child { display: flex; align-items: baseline; gap: .35rem; }
+  .billing-upcoming-metric > div:first-child span { margin: 0; font-size: .7rem; }
+  .billing-upcoming-metric > div:first-child div { font-size: .8rem; line-height: 1; }
+  .billing-upcoming-metric > div:last-child { margin: 0; font-size: .68rem; }
+  .billing-upcoming-metric > div:last-child > span { display: none; }
+  .billing-summary-grid > div:not(.billing-upcoming-metric) > div:last-child { font-size: .7rem; }
+  .billing-summary-grid > div:not(.billing-upcoming-metric) > div:last-child > span {
+    display: inline-block;
+    width: .35rem;
+    height: .35rem;
+    overflow: hidden;
+    border-radius: 9999px;
+    font-size: 0;
+  }
+  .billing-summary-grid > div:nth-child(1) > div:last-child > span { background: #059669; }
+  .billing-summary-grid > div:nth-child(2) > div:last-child > span { background: #e11d48; }
+  .billing-summary-grid > div:nth-child(3) > div:last-child > span { background: #ea580c; }
+  .billing-summary-grid > div:nth-child(4) > div:last-child > span { background: #d97706; }
+  .billing-table-scroll { width: 100%; max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; }
+  .billing-table { width: 100%; min-width: 1080px; max-width: none; table-layout: fixed; }
+  .billing-table th, .billing-table td { vertical-align: middle; }
+</style>
+<div class="billing-ledger-wrapper w-full max-w-full min-w-0 overflow-x-clip mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-5 pb-10 font-sans text-slate-900 space-y-4">
   
   <!-- Studio Top Title Block -->
-  <header class="bg-white border border-slate-200 rounded-[1.75rem] p-6 sm:p-7 shadow-sm">
+  <header class="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm">
     <div>
       <div class="flex items-center gap-2 mb-2">
         <span class="inline-block w-2.5 h-2.5 rounded-full bg-slate-900"></span>
         <span class="text-xs font-black uppercase tracking-[0.22em] text-slate-500">Manage Finances</span>
       </div>
-      <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 leading-tight">Rent & Bills</h1>
-      <p class="text-sm sm:text-base text-slate-600 mt-2 leading-relaxed max-w-3xl">Review collection status, filter contract months fast, and export the active ledger when needed.</p>
+      <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">Rent & Bills</h1>
+      <p class="text-sm text-slate-600 mt-1.5 leading-relaxed max-w-3xl">Track rent, payments, and outstanding balances at a glance.</p>
     </div>
   </header>
 
   <!-- Summary Metric Overview Cards -->
-  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+  <section aria-label="Billing summary" class="billing-summary-grid grid grid-cols-2 min-[700px]:grid-cols-4 gap-2.5 sm:gap-3">
     
     <!-- Paid Sum Box -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-emerald-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+    <div class="min-w-0 bg-white border border-slate-200 rounded-xl p-3 sm:p-3.5 shadow-sm border-l-[3px] border-l-emerald-600">
       <div>
-        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Paid</span>
-        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ paid_count }}</div>
+        <span class="text-xs font-bold text-slate-600 block mb-0.5">Paid</span>
+        <div class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">{{ paid_count }}</div>
       </div>
       <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
         <span class="text-emerald-600 font-bold">●</span> Cleared ledgers
@@ -32,10 +70,10 @@
     </div>
 
     <!-- Unpaid Sum Box -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-rose-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+    <div class="min-w-0 bg-white border border-slate-200 rounded-xl p-3 sm:p-3.5 shadow-sm border-l-[3px] border-l-rose-600">
       <div>
-        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Unpaid</span>
-        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ unpaid_count }}</div>
+        <span class="text-xs font-bold text-slate-600 block mb-0.5">Unpaid</span>
+        <div class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">{{ unpaid_count }}</div>
       </div>
       <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
         <span class="text-rose-600 font-bold">●</span> Outstanding bills
@@ -43,10 +81,10 @@
     </div>
 
     <!-- Overdue Sum Box -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-orange-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+    <div class="min-w-0 bg-white border border-slate-200 rounded-xl p-3 sm:p-3.5 shadow-sm border-l-[3px] border-l-orange-600">
       <div>
-        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Late</span>
-        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ overdue_count }}</div>
+        <span class="text-xs font-bold text-slate-600 block mb-0.5">Late</span>
+        <div class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">{{ overdue_count }}</div>
       </div>
       <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
         <span class="text-orange-600 font-bold">●</span> Immediate attention
@@ -54,10 +92,10 @@
     </div>
 
     <!-- Partial Sum Box -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-amber-600 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+    <div class="min-w-0 bg-white border border-slate-200 rounded-xl p-3 sm:p-3.5 shadow-sm border-l-[3px] border-l-amber-600">
       <div>
-        <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Partly Paid</span>
-        <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ partial_count }}</div>
+        <span class="text-xs font-bold text-slate-600 block mb-0.5">Partly Paid</span>
+        <div class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">{{ partial_count }}</div>
       </div>
       <div class="text-xs sm:text-sm text-slate-600 mt-2 font-medium flex items-center gap-1.5">
         <span class="text-amber-600 font-bold">●</span> Partially remitted
@@ -65,7 +103,7 @@
     </div>
 
     <!-- Upcoming Sum Box -->
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-slate-700 flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+    <div class="billing-upcoming-metric bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-slate-700 flex flex-col justify-between">
       <div>
         <span class="text-xs sm:text-sm font-bold text-slate-700 block mb-1">Coming Soon</span>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{{ upcoming_count }}</div>
@@ -80,24 +118,15 @@
   <!-- Filter Shell & Main Data Ledger Card -->
   <div class="bg-white border border-slate-200 rounded-[1.75rem] shadow-sm overflow-hidden">
     
-    <!-- Tab Navigation Strips -->
-    <div class="px-5 sm:px-6 pt-5 sm:pt-6 bg-white border-b border-slate-200">
-      <a href="?tab=active&q={{ q }}&status={{ status_filter }}&month={{ month_filter }}&year={{ year_filter }}"
-         class="inline-flex items-center gap-2 px-1 pb-3 text-sm font-bold transition-colors border-b-[3px] {% if active_tab == 'active' %}border-slate-900 text-slate-900 font-extrabold{% else %}border-transparent text-slate-600 hover:text-slate-900{% endif %}">
-        <span>Current Bills</span>
-        <span class="px-2 py-0.5 rounded text-xs {% if active_tab == 'active' %}bg-slate-900 text-white font-bold{% else %}bg-slate-200 text-slate-700{% endif %}">{{ current_bills_count }}</span>
-      </a>
-    </div>
-
     <!-- Filter Control Row -->
-    <div class="p-5 sm:p-6 bg-gradient-to-b from-slate-50/90 to-white border-b border-slate-200">
-      <form class="grid grid-cols-1 xl:grid-cols-[minmax(220px,1.35fr)_minmax(140px,0.8fr)_minmax(140px,0.8fr)_minmax(150px,0.9fr)_minmax(150px,0.9fr)_minmax(160px,1fr)] gap-3 items-stretch" method="get">
+    <div class="p-3.5 sm:p-4 bg-slate-50/70 border-b border-slate-200">
+      <form class="space-y-2.5" method="get">
         <input type="hidden" name="tab" value="{{ active_tab }}" />
         
         <!-- Filter Search String Input -->
-        <div class="relative w-full min-w-[220px]">
+        <div class="relative w-full min-w-0">
           <input type="text" name="q" value="{{ q }}" placeholder="Search tenant, unit, or reference" 
-                 class="w-full pl-10 pr-3 py-3 bg-white border border-slate-300 rounded-2xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 transition-all outline-none shadow-sm">
+                 class="w-full pl-10 pr-3 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-blue-600/25 focus:border-blue-600 transition-all shadow-sm">
           <span class="absolute left-3 top-1/2 -translate-y-1/2 flex h-4 w-4 items-center justify-center text-slate-400 pointer-events-none">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
@@ -105,8 +134,9 @@
           </span>
         </div>
 
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-2.5">
         <!-- Target Month Choice Dropdown -->
-        <select name="month" class="w-full bg-white border border-slate-300 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-slate-500/20 outline-none cursor-pointer shadow-sm">
+        <select name="month" class="min-w-0 w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-blue-600/25 focus:border-blue-600 cursor-pointer shadow-sm">
           <option value="">All Months</option>
           {% for month_num, month_name in month_choices %}
             <option value="{{ month_num }}" {% if month_filter == month_num|stringformat:"s" %}selected{% endif %}>{{ month_name }}</option>
@@ -114,7 +144,7 @@
         </select>
 
         <!-- Target Year Choice Dropdown -->
-        <select name="year" class="w-full bg-white border border-slate-300 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-slate-500/20 outline-none cursor-pointer shadow-sm">
+        <select name="year" class="min-w-0 w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-blue-600/25 focus:border-blue-600 cursor-pointer shadow-sm">
           <option value="">All Years</option>
           {% for year in year_choices %}
             <option value="{{ year }}" {% if year_filter == year|stringformat:"s" %}selected{% endif %}>{{ year }}</option>
@@ -123,7 +153,7 @@
 
         <!-- Dynamic Status Choices (Active Mode Only) -->
         {% if active_tab == "active" %}
-        <select name="status" class="w-full bg-white border border-slate-300 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-slate-500/20 outline-none cursor-pointer shadow-sm">
+        <select name="status" class="min-w-0 w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-blue-600/25 focus:border-blue-600 cursor-pointer shadow-sm">
           <option value="">All Statuses</option>
           <option value="UNPAID" {% if status_filter == "UNPAID" %}selected{% endif %}>Unpaid Only</option>
           <option value="OVERDUE" {% if status_filter == "OVERDUE" %}selected{% endif %}>Late / Overdue</option>
@@ -131,17 +161,19 @@
           <option value="PAID" {% if status_filter == "PAID" %}selected{% endif %}>Fully Settled</option>
         </select>
         {% endif %}
+        </div>
 
         <!-- Form Commit Execution Command -->
-        <button type="submit" class="w-full bg-slate-900 hover:bg-slate-950 text-white px-5 py-3 rounded-2xl text-sm font-extrabold transition-colors flex items-center justify-center gap-1.5 shadow-sm min-h-[48px]">
+        <div class="grid grid-cols-2 gap-2.5">
+        <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white px-3 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm min-h-[44px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700">
           <span>Apply Filters</span>
         </button>
 
-        <div class="flex items-center justify-center gap-3 min-h-[48px]">
+        <div class="flex items-center justify-center gap-3 min-h-[44px]">
           <a href="{% url 'admin_billing_export_csv' %}?month={{ month_filter }}&year={{ year_filter }}&status={{ status_filter }}"
              data-skip-loader
              onclick="var loader=document.querySelector('[data-ux-loader]'); if(loader){loader.classList.remove('is-visible'); loader.setAttribute('aria-hidden','true');}"
-             class="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl text-sm font-extrabold transition-colors shadow-sm min-h-[48px]"
+             class="w-full inline-flex items-center justify-center gap-2 px-3 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-sm font-bold transition-colors shadow-sm min-h-[44px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-800"
              title="Export current filters to CSV">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
@@ -149,35 +181,55 @@
             <span>Export Report</span>
           </a>
         </div>
+        </div>
       </form>
       {% if q or status_filter or month_filter or year_filter %}
-        <div class="mt-3">
+        <div class="mt-2">
           <a href="?tab={{ active_tab }}" class="text-xs font-extrabold text-slate-600 hover:text-slate-900 whitespace-nowrap underline">Clear Filters</a>
         </div>
       {% endif %}
     </div>
 
+    <!-- Current Bills section header -->
+    <div class="px-4 sm:px-5 py-3 bg-white border-b border-slate-200 flex items-center justify-between">
+      <a href="?tab=active&q={{ q }}&status={{ status_filter }}&month={{ month_filter }}&year={{ year_filter }}"
+         class="inline-flex items-center gap-2 text-sm font-bold text-slate-900 hover:text-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 rounded">
+        <span>Current Bills</span>
+        <span class="px-2 py-0.5 rounded-md text-xs {% if active_tab == 'active' %}bg-slate-900 text-white font-bold{% else %}bg-slate-200 text-slate-700{% endif %}">{{ current_bills_count }}</span>
+      </a>
+    </div>
+
     <!-- Master Ledger Data Table -->
-    <div class="overflow-x-auto custom-scrollbar">
-      <table class="w-full text-left border-collapse min-w-[1000px]">
+    <div class="billing-table-scroll custom-scrollbar" role="region" aria-label="Billing records" tabindex="0">
+      <table class="billing-table text-left border-collapse">
+        <colgroup>
+          <col style="width: 225px">
+          <col style="width: 92px">
+          <col style="width: 100px">
+          <col style="width: 125px">
+          <col style="width: 120px">
+          <col style="width: 100px">
+          <col style="width: 150px">
+          <col style="width: 170px">
+        </colgroup>
         <thead>
           <tr class="bg-slate-50 border-b border-slate-200">
-            <th class="px-5 py-3 text-xs font-bold text-slate-700">Tenant</th>
-            <th class="px-5 py-3 text-xs font-bold text-slate-700">Month</th>
-            <th class="px-5 py-3 text-xs font-bold text-slate-700">Due Date</th>
-            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Total Amount</th>
-            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Still Owed</th>
-            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-center">Status</th>
-            <th class="px-5 py-3 text-xs font-bold text-slate-700">Reference #</th>
-            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Actions</th>
+            <th scope="col" class="px-3 py-2.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide text-slate-600">Tenant</th>
+            <th scope="col" class="px-3 py-2.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide text-slate-600">Month</th>
+            <th scope="col" class="px-3 py-2.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide text-slate-600">Due Date</th>
+            <th scope="col" class="px-3 py-2.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide text-slate-600 text-right">Total Amount</th>
+            <th scope="col" class="px-3 py-2.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide text-slate-600 text-right">Still Owed</th>
+            <th scope="col" class="px-3 py-2.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide text-slate-600 text-center">Status</th>
+            <th scope="col" class="px-3 py-2.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide text-slate-600">Reference #</th>
+            <th scope="col" class="px-3 py-2.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide text-slate-600 text-right">Actions</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-200 text-sm">
           {% for b in page_obj %}
-          <tr class="hover:bg-slate-50 transition-colors group">
+          <tr class="group transition-colors hover:bg-blue-50/40 {% if b.billing_state == 'PAID' %}bg-slate-50/50{% endif %}">
             
             <!-- Account Information Mapping Column -->
-            <td class="px-5 py-3.5">
+            <td class="px-3 py-3">
               {% with tp=b.lease.tenant.tenantprofile %}
               <a href="{% if tp %}{% url 'admin_tenant_detail' tp.id %}{% else %}#{% endif %}"
                  class="flex items-center gap-2.5 hover:no-underline">
@@ -195,17 +247,17 @@
             </td>
 
             <!-- Target Cycle Scope Column -->
-            <td class="px-5 py-3.5 font-bold text-slate-800">
+            <td class="px-3 py-3 font-bold text-slate-800">
               {{ b.billing_month|date:"M Y" }}
             </td>
 
             <!-- Due Bound Column -->
-            <td class="px-5 py-3.5 text-slate-700 font-medium">
+            <td class="px-3 py-3 text-slate-700 font-medium">
               {{ b.due_date|date:"n/j/Y"|default:"-" }}
             </td>
 
             <!-- Original Sum Base Column -->
-            <td class="px-5 py-3.5 text-right font-bold text-slate-700">
+            <td class="px-3 py-3 text-right font-bold {% if b.billing_state == 'PAID' %}text-slate-500{% else %}text-slate-700{% endif %}">
               ₱{{ b.total_due|floatformat:0|intcomma }}
               {% if b.maintenance_amount > 0 %}
                 <div class="mt-1 text-[10px] font-bold uppercase tracking-wide text-indigo-600">
@@ -215,7 +267,7 @@
             </td>
 
             <!-- Remaining Unpaid Logic Calculation Column -->
-            <td class="px-5 py-3.5 text-right">
+            <td class="px-3 py-3 text-right">
               {% if b.total_balance > 0 %}
                 <strong class="text-rose-700 font-black">₱{{ b.total_balance|floatformat:0|intcomma }}</strong>
               {% elif b.status != "PAID" %}
@@ -226,26 +278,26 @@
             </td>
 
             <!-- Current Core Ledger Tag Column -->
-            <td class="px-5 py-3.5 text-center">
+            <td class="px-3 py-3 text-center">
               <div class="flex flex-col items-center gap-1">
                 {% if b.billing_state == "PAID" %}
-                  <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-extrabold text-[10px] uppercase">Paid</span>
+                  <span class="px-2 py-1 rounded-full bg-emerald-100 text-emerald-800 font-extrabold text-[10px] uppercase">Paid</span>
                 {% elif b.billing_state == "OVERDUE" %}
-                  <span class="px-2 py-0.5 rounded bg-rose-600 text-white font-extrabold text-[10px] uppercase tracking-wide">Late</span>
+                  <span class="px-2 py-1 rounded-full bg-rose-600 text-white font-extrabold text-[10px] uppercase tracking-wide">Late</span>
                 {% elif b.billing_state == "DUE" %}
-                  <span class="px-2 py-0.5 rounded bg-orange-100 text-orange-800 font-extrabold text-[10px] uppercase">Due</span>
+                  <span class="px-2 py-1 rounded-full bg-orange-100 text-orange-800 font-extrabold text-[10px] uppercase">Due</span>
                 {% elif b.billing_state == "UPCOMING" %}
-                  <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-bold text-[10px] uppercase">Upcoming</span>
+                  <span class="px-2 py-1 rounded-full bg-slate-100 text-slate-700 font-bold text-[10px] uppercase">Upcoming</span>
                 {% endif %}
                 
                 {% if b.status == "PARTIALLY_PAID" and b.billing_state != "PAID" %}
-                  <span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold text-[9px] uppercase block">Partial Credit</span>
+                  <span class="px-2 py-1 rounded-full bg-amber-100 text-amber-800 font-bold text-[9px] uppercase block">Partial Credit</span>
                 {% endif %}
               </div>
             </td>
 
             <!-- Secondary Reference Column -->
-            <td class="px-5 py-3.5 relative group/ref">
+            <td class="px-3 py-3 relative group/ref">
               <div class="text-xs font-mono font-bold text-slate-800 {% if b.paid_at %}cursor-help inline-block border-b border-dashed border-slate-300{% endif %}">
                 {{ b.payment_reference|default:"-" }}
               </div>
@@ -258,7 +310,7 @@
             </td>
 
             <!-- Data Operations inline Forms Column -->
-            <td class="px-5 py-3.5 text-right">
+            <td class="px-3 py-3 text-right">
               <div class="flex justify-end items-center gap-1.5">
                 {% if active_tab == "active" %}
                   {% if b.status != "PAID" %}

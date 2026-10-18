@@ -194,6 +194,18 @@ class AdminBillingPrioritizationTests(TestCase):
             status=status,
         )
 
+    def test_rent_and_bills_page_uses_compact_tablet_layout(self):
+        response = self.client.get(reverse("admin_billing"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Track rent, payments, and outstanding balances at a glance.")
+        self.assertContains(response, 'class="billing-summary-grid')
+        self.assertContains(response, 'class="billing-table-scroll custom-scrollbar"')
+        self.assertContains(response, "min-width: 1080px")
+        self.assertContains(response, 'name="month"')
+        self.assertContains(response, 'name="year"')
+        self.assertContains(response, 'name="status"')
+
     def test_default_current_month_queue_includes_and_prioritizes_all_states(self):
         late = self._bill("01", due_date=self.today - timedelta(days=1), status="UNPAID")
         unpaid = self._bill("02", due_date=self.today, status="UNPAID")

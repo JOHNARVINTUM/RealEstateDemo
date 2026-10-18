@@ -14,6 +14,7 @@ from .settings import *  # noqa: F403
 ENVIRONMENT = "local"
 IS_PRODUCTION = False
 DEBUG = True
+UPLOAD_STORAGE_BACKEND = "filesystem"
 
 _required = (
     "LOCAL_DB_NAME",

@@ -1,20 +1,20 @@
-"""
-Supabase Storage backend for Django.
-Uploads files to Supabase Storage instead of local filesystem.
-"""
+"""Explicit local-filesystem / production-Supabase storage for Django uploads."""
 import os
 import uuid
 import mimetypes
 from urllib.parse import urlparse
 from django.conf import settings
-from django.core.files.storage import Storage
+from django.core.exceptions import ImproperlyConfigured
+from django.core.files.storage import FileSystemStorage, Storage
 from django.utils.deconstruct import deconstructible
 @deconstructible
 class SupabaseStorage(Storage):
     """
-    Django storage backend for Supabase Storage.
-    
-    Required settings in .env:
+    Compatibility-stable storage class. It selects filesystem storage only
+    when UPLOAD_STORAGE_BACKEND explicitly requests it; otherwise it uses
+    Supabase. Keeping this class path preserves existing migration state.
+
+    Supabase settings in the environment:
     - SUPABASE_URL=https://your-project.supabase.co
     - SUPABASE_KEY=your-service-role-key
     - SUPABASE_BUCKET=unit-images
@@ -27,6 +27,19 @@ class SupabaseStorage(Storage):
         self.supabase_key = os.environ.get('SUPABASE_KEY', '')
         self._client = None
         super().__init__(**kwargs)
+
+    def _local_storage(self):
+        """Return filesystem storage only when explicitly selected by settings."""
+        backend = getattr(settings, "UPLOAD_STORAGE_BACKEND", "supabase")
+        if getattr(settings, "IS_PRODUCTION", False) and backend != "supabase":
+            raise ImproperlyConfigured("Production uploads must use Supabase storage.")
+        if backend == "filesystem":
+            return FileSystemStorage(location=settings.MEDIA_ROOT, base_url=settings.MEDIA_URL)
+        if backend == "supabase":
+            return None
+        raise ImproperlyConfigured(
+            "UPLOAD_STORAGE_BACKEND must be either 'filesystem' or 'supabase'."
+        )
     
     @property
     def client(self):
@@ -39,7 +52,11 @@ class SupabaseStorage(Storage):
         return self._client
     
     def _open(self, name, mode='rb'):
-        """Open file from Supabase - returns file-like object."""
+        """Open from the explicitly selected backend."""
+        local_storage = self._local_storage()
+        if local_storage:
+            return local_storage.open(name, mode)
+
         from django.core.files.base import ContentFile
         
         try:
@@ -55,6 +72,12 @@ class SupabaseStorage(Storage):
         folder = os.path.dirname(name).replace("\\", "/").strip("/")
         unique_filename = f"{uuid.uuid4().hex}{ext}"
         unique_name = f"{folder}/{unique_filename}" if folder else unique_filename
+
+        local_storage = self._local_storage()
+        if local_storage:
+            if hasattr(content, 'seek'):
+                content.seek(0)
+            return local_storage.save(unique_name, content)
         
         # Read file content
         if hasattr(content, 'seek'):
@@ -90,7 +113,10 @@ class SupabaseStorage(Storage):
             raise
     
     def delete(self, name):
-        """Delete file from Supabase."""
+        """Delete a file from the explicitly selected upload backend."""
+        local_storage = self._local_storage()
+        if local_storage:
+            return local_storage.delete(name)
         try:
             self.client.storage.from_(self.bucket_name).remove([name])
         except Exception:
@@ -98,7 +124,10 @@ class SupabaseStorage(Storage):
             pass
     
     def exists(self, name):
-        """Check if file exists in Supabase."""
+        """Check whether a file exists in the selected upload backend."""
+        local_storage = self._local_storage()
+        if local_storage:
+            return local_storage.exists(name)
         try:
             # Try to get file info
             self.client.storage.from_(self.bucket_name).list(name.rsplit('/', 1)[0] if '/' in name else '')
@@ -110,6 +139,10 @@ class SupabaseStorage(Storage):
         """Return the public URL for the file."""
         if not name:
             return None
+
+        local_storage = self._local_storage()
+        if local_storage:
+            return local_storage.url(name)
 
         bucket = self.client.storage.from_(self.bucket_name)
         signed_bucket_name = os.environ.get('SUPABASE_USER_FILES_BUCKET', 'user-files')
@@ -134,11 +167,47 @@ class SupabaseStorage(Storage):
     
     def size(self, name):
         """Return file size in bytes."""
+        local_storage = self._local_storage()
+        if local_storage:
+            return local_storage.size(name)
         # This is expensive in Supabase, return 0 for now
         return 0
+
+    def path(self, name):
+        local_storage = self._local_storage()
+        if local_storage:
+            return local_storage.path(name)
+        return super().path(name)
+
+    def listdir(self, path):
+        local_storage = self._local_storage()
+        if local_storage:
+            return local_storage.listdir(path)
+        return super().listdir(path)
+
+    def get_accessed_time(self, name):
+        local_storage = self._local_storage()
+        if local_storage:
+            return local_storage.get_accessed_time(name)
+        return super().get_accessed_time(name)
+
+    def get_created_time(self, name):
+        local_storage = self._local_storage()
+        if local_storage:
+            return local_storage.get_created_time(name)
+        return super().get_created_time(name)
+
+    def get_modified_time(self, name):
+        local_storage = self._local_storage()
+        if local_storage:
+            return local_storage.get_modified_time(name)
+        return super().get_modified_time(name)
     
     def get_available_name(self, name, max_length=None):
         """Generate a unique name for the file."""
+        local_storage = self._local_storage()
+        if local_storage:
+            return local_storage.get_available_name(name, max_length)
         return name
 
 

@@ -339,7 +339,7 @@ class TenantProfileForm(forms.ModelForm):
     contract_file = forms.FileField(
         required=False,
         label="Contract Document",
-        help_text="Accepted formats: PDF contracts, PNG, JPG/JPEG, HEIC/HEIF iPhone photos. Max 10MB."
+        help_text="Accepted formats: PDF, DOC, DOCX, PNG, JPG, JPEG. Max 10MB."
     )
     contract_description = forms.CharField(
         required=False,
@@ -350,7 +350,7 @@ class TenantProfileForm(forms.ModelForm):
     valid_id_file = forms.FileField(
         required=False,
         label="Valid ID",
-        help_text="Accepted formats: PNG, JPG/JPEG, HEIC/HEIF iPhone photos, or PDF. Max 10MB."
+        help_text="Accepted formats: PDF, DOC, DOCX, PNG, JPG, JPEG. Max 10MB."
     )
     valid_id_description = forms.CharField(
         required=False,
@@ -552,7 +552,7 @@ class ComprehensiveTenantEditForm(forms.Form):
     contract_file = forms.FileField(
         required=False,
         label="Contract Document",
-        help_text="Accepted formats: PDF contracts, PNG, JPG/JPEG, HEIC/HEIF iPhone photos. Max 10MB."
+        help_text="Accepted formats: PDF, DOC, DOCX, PNG, JPG, JPEG. Max 10MB."
     )
     contract_description = forms.CharField(
         required=False,
@@ -563,7 +563,7 @@ class ComprehensiveTenantEditForm(forms.Form):
     valid_id_file = forms.FileField(
         required=False,
         label="Valid ID",
-        help_text="Accepted formats: PNG, JPG/JPEG, HEIC/HEIF iPhone photos, or PDF. Max 10MB."
+        help_text="Accepted formats: PDF, DOC, DOCX, PNG, JPG, JPEG. Max 10MB."
     )
     valid_id_description = forms.CharField(
         required=False,

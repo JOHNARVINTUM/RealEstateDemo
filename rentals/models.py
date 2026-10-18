@@ -3,8 +3,8 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 from PIL import Image, UnidentifiedImageError
-from io import BytesIO
 import os
+from zipfile import BadZipFile, ZipFile
 
 
 # Lazy import for Supabase storage to avoid circular imports
@@ -495,8 +495,11 @@ class UnitImage(models.Model):
 class TenantAttachment(models.Model):
     """Model for tenant attachments like contracts and valid IDs"""
     MAX_UPLOAD_SIZE = 10 * 1024 * 1024
-    ALLOWED_EXTENSIONS = {'.pdf', '.jpg', '.jpeg', '.png', '.heic', '.heif'}
-    ALLOWED_FORMATS_LABEL = "PDF, PNG, JPG/JPEG, HEIC/HEIF"
+    ALLOWED_EXTENSIONS = {'.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png'}
+    ALLOWED_FORMATS_LABEL = "PDF, Word document (.doc/.docx), PNG, or JPG/JPEG"
+    INVALID_TYPE_MESSAGE = (
+        "Invalid file type. Please upload a PDF, Word document (.doc/.docx), PNG, or JPG/JPEG file."
+    )
 
     ATTACHMENT_TYPES = [
         ('CONTRACT', 'Contract'),
@@ -570,29 +573,63 @@ def validate_tenant_attachment_upload(uploaded_file, *, label="File"):
 
     extension = os.path.splitext(uploaded_file.name or "")[1].lower()
     if extension not in TenantAttachment.ALLOWED_EXTENSIONS:
-        raise ValidationError(
-            f"Invalid {label.lower()} type. Accepted formats: {TenantAttachment.ALLOWED_FORMATS_LABEL}."
-        )
+        raise ValidationError(TenantAttachment.INVALID_TYPE_MESSAGE)
 
     header = uploaded_file.read(8192)
     uploaded_file.seek(0)
+    content_type = (getattr(uploaded_file, "content_type", "") or "").lower()
+    generic_content_types = {"", "application/octet-stream", "binary/octet-stream"}
+    allowed_content_types = {
+        ".pdf": {"application/pdf", "application/x-pdf"},
+        ".doc": {"application/msword", "application/vnd.ms-word", "application/x-msword"},
+        ".docx": {
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/zip",
+            "application/x-zip-compressed",
+        },
+        ".png": {"image/png"},
+        ".jpg": {"image/jpeg", "image/jpg", "image/pjpeg"},
+        ".jpeg": {"image/jpeg", "image/jpg", "image/pjpeg"},
+    }
+    if content_type not in generic_content_types | allowed_content_types[extension]:
+        raise ValidationError(TenantAttachment.INVALID_TYPE_MESSAGE)
 
     if extension == ".pdf":
         if not header.startswith(b"%PDF-"):
-            raise ValidationError(f"{label} must be a valid PDF file.")
+            raise ValidationError(TenantAttachment.INVALID_TYPE_MESSAGE)
         return uploaded_file
 
     if extension in {".jpg", ".jpeg", ".png"}:
         try:
-            Image.open(BytesIO(header)).verify()
-        except (UnidentifiedImageError, OSError):
-            raise ValidationError(f"{label} must be a valid image file.")
+            with Image.open(uploaded_file) as image:
+                detected_format = image.format
+                image.verify()
+            uploaded_file.seek(0)
+            expected_format = "PNG" if extension == ".png" else "JPEG"
+            if detected_format != expected_format:
+                raise ValidationError(TenantAttachment.INVALID_TYPE_MESSAGE)
+        except (UnidentifiedImageError, OSError, SyntaxError):
+            uploaded_file.seek(0)
+            raise ValidationError(TenantAttachment.INVALID_TYPE_MESSAGE)
         return uploaded_file
 
-    if extension in {".heic", ".heif"}:
-        content_type = (getattr(uploaded_file, "content_type", "") or "").lower()
-        if content_type not in {"image/heic", "image/heif", "application/octet-stream"}:
-            raise ValidationError(f"{label} must be a valid HEIC/HEIF image.")
+    if extension == ".doc" and not header.startswith(bytes.fromhex("D0CF11E0A1B11AE1")):
+        raise ValidationError(TenantAttachment.INVALID_TYPE_MESSAGE)
+
+    if extension == ".docx":
+        try:
+            with ZipFile(uploaded_file) as docx:
+                names = set(docx.namelist())
+                is_word_document = {
+                    "[Content_Types].xml",
+                    "word/document.xml",
+                }.issubset(names)
+        except (BadZipFile, OSError):
+            is_word_document = False
+        finally:
+            uploaded_file.seek(0)
+        if not is_word_document:
+            raise ValidationError(TenantAttachment.INVALID_TYPE_MESSAGE)
 
     return uploaded_file
 

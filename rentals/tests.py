@@ -1,16 +1,25 @@
 from datetime import date
 from datetime import datetime
 from decimal import Decimal
-from unittest.mock import patch
+from io import BytesIO
+from pathlib import Path
+import tempfile
+from unittest.mock import PropertyMock, patch
 import zoneinfo
 
+from PIL import Image
+from django.core.files.base import ContentFile
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import IntegrityError
-from django.test import TestCase, TransactionTestCase
+from django.test import TestCase, TransactionTestCase, override_settings
 
+from announcements.models import BusinessProfile, LandingPageFeature, LandingPageSection
 from accounts.models import User
 from billing.models import BillLineItem, MonthlyBill
+from maintenance.models import MaintenanceRequest
 from payments.models import ManualPayment
-from rentals.models import Lease, LeaseContractEvent, TenantProfile, Unit
+from rentals.models import Lease, LeaseContractEvent, Room, TenantAttachment, TenantProfile, Unit, UnitImage
+from rentals.storage import SupabaseStorage
 from rentals.services import (
     LeaseActivationService,
     LeaseSchedulingService,
@@ -26,6 +35,134 @@ from rentals.services import (
 from rentals.views import _dashboard_billing_context, _monthly_status_rows
 from water.models import WaterBill, WaterBillingSettings, WaterRate, WaterReading
 from water.services import compute_water_reading, create_or_update_monthly_bill_from_reading
+
+
+class LocalUploadStorageTests(TestCase):
+    def setUp(self):
+        self.media_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.media_dir.cleanup)
+        self.settings_override = override_settings(
+            UPLOAD_STORAGE_BACKEND="filesystem",
+            MEDIA_ROOT=Path(self.media_dir.name),
+            MEDIA_URL="/media/",
+            IS_PRODUCTION=False,
+        )
+        self.settings_override.enable()
+        self.addCleanup(self.settings_override.disable)
+        self.tenant = User.objects.create_user(
+            email="local-storage-tenant@example.test",
+            username="localstoragetenant",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+
+    @staticmethod
+    def _image_upload(name="test.png"):
+        image_data = BytesIO()
+        Image.new("RGB", (2, 2), color="navy").save(image_data, format="PNG")
+        return SimpleUploadedFile(name, image_data.getvalue(), content_type="image/png")
+
+    @staticmethod
+    def _assert_saved_file(test_case, field_file, expected_prefix):
+        test_case.assertTrue(field_file.name.startswith(expected_prefix))
+        test_case.assertTrue(field_file.storage.exists(field_file.name))
+        test_case.assertTrue(field_file.path.startswith(str(Path(test_case.media_dir.name))))
+        test_case.assertTrue(field_file.url.startswith("/media/"))
+        with field_file.open("rb") as saved_file:
+            test_case.assertTrue(saved_file.read())
+
+    def test_local_model_uploads_use_filesystem_storage_without_creating_supabase_client(self):
+        admin = User.objects.create_superuser(
+            email="local-storage-admin@example.test",
+            username="localstorageadmin",
+            password="password123",
+            role=User.Role.ADMIN,
+        )
+        unit = Unit.objects.create(number="LS-101")
+
+        with patch.object(SupabaseStorage, "client", new_callable=PropertyMock) as client:
+            attachment = TenantAttachment.objects.create(
+                tenant=self.tenant,
+                attachment_type="CONTRACT",
+                file=SimpleUploadedFile("contract.pdf", b"%PDF-1.4 local test", content_type="application/pdf"),
+                uploaded_by=admin,
+            )
+            unit_image = UnitImage.objects.create(unit=unit, image=self._image_upload("unit.png"))
+            room = Room.objects.create(name="Local Storage Room", price=Decimal("1000.00"), image=self._image_upload("room.png"))
+            request = MaintenanceRequest.objects.create(
+                tenant=self.tenant,
+                category="OTHER",
+                title="Local storage test",
+                description="Disposable image upload fixture.",
+                photo=self._image_upload("maintenance.png"),
+            )
+            section = LandingPageSection.objects.create(
+                section_key=LandingPageSection.SECTION_HERO,
+                image=self._image_upload("section.png"),
+            )
+            feature = LandingPageFeature.objects.create(
+                title="Local feature",
+                description="Disposable image upload fixture.",
+                image=self._image_upload("feature.png"),
+            )
+            profile = BusinessProfile.objects.create(
+                business_name="Local Test Property",
+                about_text="Disposable local storage fixture.",
+                contact_email="local-storage@example.test",
+                contact_phone="09170000000",
+                address="Local test address",
+                inquiry_text="Local test inquiry",
+                hero_image=self._image_upload("hero.png"),
+                about_image=self._image_upload("about.png"),
+                service_1_image=self._image_upload("service-1.png"),
+                service_2_image=self._image_upload("service-2.png"),
+                service_3_image=self._image_upload("service-3.png"),
+            )
+
+            for field_file, prefix in (
+                (attachment.file, "tenant_attachments/"),
+                (unit_image.image, "units/"),
+                (room.image, "rooms/"),
+                (request.photo, "maintenance/"),
+                (section.image, "landing/sections/"),
+                (feature.image, "landing/features/"),
+                (profile.hero_image, "landing/content/hero/"),
+                (profile.about_image, "landing/content/about/"),
+                (profile.service_1_image, "landing/content/services/service-1/"),
+                (profile.service_2_image, "landing/content/services/service-2/"),
+                (profile.service_3_image, "landing/content/services/service-3/"),
+            ):
+                with self.subTest(path=prefix):
+                    self._assert_saved_file(self, field_file, prefix)
+
+            client.assert_not_called()
+
+    def test_supabase_failure_in_production_does_not_fall_back_to_local_filesystem(self):
+        storage = SupabaseStorage(bucket="unit-images")
+
+        class FakeBucket:
+            @staticmethod
+            def upload(**kwargs):
+                raise OSError("simulated Supabase DNS failure")
+
+        class FakeStorageClient:
+            @staticmethod
+            def from_(bucket_name):
+                return FakeBucket()
+
+        class FakeClient:
+            storage = FakeStorageClient()
+
+        storage._client = FakeClient()
+        with override_settings(
+            UPLOAD_STORAGE_BACKEND="supabase",
+            IS_PRODUCTION=True,
+            MEDIA_ROOT=Path(self.media_dir.name),
+        ):
+            with self.assertRaisesRegex(OSError, "simulated Supabase DNS failure"):
+                storage._save("units/production-test.png", ContentFile(b"file bytes"))
+
+        self.assertFalse((Path(self.media_dir.name) / "units").exists())
 
 
 class ActiveLeaseConstraintTests(TransactionTestCase):

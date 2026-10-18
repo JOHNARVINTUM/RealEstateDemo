@@ -1,13 +1,17 @@
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
+from io import BytesIO
 import os
 from pathlib import Path
 import subprocess
 import sys
-from unittest.mock import patch
+import tempfile
+from unittest.mock import PropertyMock, patch
+from zipfile import ZipFile
 from dateutil.relativedelta import relativedelta
+from PIL import Image
 
-from django.test import RequestFactory, TestCase
+from django.test import RequestFactory, TestCase, override_settings
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
@@ -23,6 +27,7 @@ from billing.services import ensure_current_month_bill_for_lease
 from maintenance.models import MaintenanceRequest
 from payments.models import ManualPayment
 from rentals.models import ArchivedTenant, Lease, LeaseContractEvent, Notification, TenantAttachment, TenantProfile, Unit
+from rentals.storage import SupabaseStorage
 from water.models import WaterRate, WaterReading
 
 
@@ -421,7 +426,7 @@ class AccountProfileTests(TestCase):
 
         self.assertEqual(response.status_code, 404)
 
-    def test_tenant_profile_form_accepts_iphone_heic_attachment(self):
+    def test_tenant_profile_form_rejects_unsupported_heic_attachment(self):
         form = TenantProfileForm(
             data={
                 "email": "heic-tenant@gmail.com",
@@ -434,9 +439,15 @@ class AccountProfileTests(TestCase):
             },
         )
 
-        self.assertTrue(form.is_valid(), form.errors)
+        self.assertFalse(form.is_valid())
+        self.assertIn("valid_id_file", form.errors)
+        self.assertIn("Invalid file type", str(form.errors["valid_id_file"]))
 
-    def test_tenant_profile_form_rejects_unsupported_attachment_type(self):
+    def test_tenant_profile_form_accepts_valid_docx_attachment(self):
+        docx = BytesIO()
+        with ZipFile(docx, "w") as archive:
+            archive.writestr("[Content_Types].xml", "<Types/>")
+            archive.writestr("word/document.xml", "<document/>")
         form = TenantProfileForm(
             data={
                 "email": "docx-tenant@gmail.com",
@@ -447,14 +458,147 @@ class AccountProfileTests(TestCase):
             files={
                 "valid_id_file": SimpleUploadedFile(
                     "id.docx",
-                    b"sample",
+                    docx.getvalue(),
                     content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 ),
             },
         )
 
+        self.assertTrue(form.is_valid(), form.errors)
+
+
+class TenantAttachmentUploadValidationTests(TestCase):
+    @staticmethod
+    def _upload_for(extension):
+        content_types = {
+            ".pdf": "application/pdf",
+            ".doc": "application/msword",
+            ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ".png": "image/png",
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+        }
+        if extension == ".pdf":
+            content = b"%PDF-1.7\nlocal test document"
+        elif extension == ".doc":
+            content = bytes.fromhex("D0CF11E0A1B11AE1") + b"local test document"
+        elif extension == ".docx":
+            archive = BytesIO()
+            with ZipFile(archive, "w") as docx:
+                docx.writestr("[Content_Types].xml", "<Types/>")
+                docx.writestr("word/document.xml", "<document/>")
+            content = archive.getvalue()
+        else:
+            image_file = BytesIO()
+            image_format = "PNG" if extension == ".png" else "JPEG"
+            Image.new("RGB", (2, 2), color="navy").save(image_file, format=image_format)
+            content = image_file.getvalue()
+        return SimpleUploadedFile(f"sample{extension}", content, content_type=content_types[extension])
+
+    def _form(self, file):
+        return TenantProfileForm(
+            data={
+                "email": "upload.validation@example.test",
+                "first_name": "Upload",
+                "last_name": "Validation",
+                "contact_no": "09170000000",
+            },
+            files={"valid_id_file": file},
+        )
+
+    def test_all_documented_formats_are_accepted_by_server_validation(self):
+        for extension in (".pdf", ".doc", ".docx", ".png", ".jpg", ".jpeg"):
+            with self.subTest(extension=extension):
+                form = self._form(self._upload_for(extension))
+                self.assertTrue(form.is_valid(), form.errors)
+
+    def test_executable_text_archive_and_unsupported_images_are_rejected(self):
+        invalid_uploads = (
+            SimpleUploadedFile("malware.exe", b"MZ fake executable", content_type="application/octet-stream"),
+            SimpleUploadedFile("notes.txt", b"plain text", content_type="text/plain"),
+            SimpleUploadedFile("archive.zip", b"PK\x03\x04not a Word document", content_type="application/zip"),
+            SimpleUploadedFile("image.gif", b"GIF89a", content_type="image/gif"),
+        )
+        for uploaded_file in invalid_uploads:
+            with self.subTest(filename=uploaded_file.name):
+                form = self._form(uploaded_file)
+                self.assertFalse(form.is_valid())
+                self.assertIn("valid_id_file", form.errors)
+                self.assertIn("Invalid file type. Please upload", str(form.errors["valid_id_file"]))
+
+    def test_upload_over_10mb_is_rejected_by_server_validation(self):
+        oversized_pdf = SimpleUploadedFile(
+            "large.pdf",
+            b"%PDF-1.7" + b"0" * TenantAttachment.MAX_UPLOAD_SIZE,
+            content_type="application/pdf",
+        )
+        form = self._form(oversized_pdf)
+
         self.assertFalse(form.is_valid())
-        self.assertIn("Accepted formats", str(form.errors))
+        self.assertIn("valid_id_file", form.errors)
+        self.assertIn("less than 10MB", str(form.errors["valid_id_file"]))
+
+    def test_tenant_edit_form_uses_the_same_upload_validation(self):
+        tenant = User.objects.create_user(
+            email="edit-upload@example.test",
+            username="editupload",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        profile = TenantProfile.objects.create(
+            user=tenant,
+            first_name="Edit",
+            last_name="Upload",
+        )
+        form = ComprehensiveTenantEditForm(
+            profile,
+            data={
+                "email": tenant.email,
+                "username": tenant.username,
+                "role": tenant.role,
+                "is_active": "on",
+                "first_name": profile.first_name,
+                "last_name": profile.last_name,
+                "contact_no": "",
+                "new_password": "",
+                "confirm_password": "",
+            },
+            files={
+                "contract_file": SimpleUploadedFile(
+                    "contract.txt", b"plain text", content_type="text/plain"
+                ),
+            },
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("contract_file", form.errors)
+        self.assertIn("Invalid file type. Please upload", str(form.errors["contract_file"]))
+
+    def test_tenant_edit_page_renders_the_shared_upload_feedback_controls(self):
+        admin = User.objects.create_superuser(
+            email="upload-ui-admin@example.test",
+            username="uploaduiadmin",
+            password="password123",
+        )
+        tenant = User.objects.create_user(
+            email="upload-ui-tenant@example.test",
+            username="uploaduitenant",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        profile = TenantProfile.objects.create(
+            user=tenant,
+            first_name="Upload",
+            last_name="Tenant",
+        )
+        self.client.force_login(admin)
+
+        response = self.client.get(reverse("admin_edit_tenant", args=[profile.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "tenant-upload-validation.js")
+        self.assertContains(response, 'data-tenant-document-upload')
+        self.assertContains(response, 'aria-describedby="contract_file_help contract_file_error"')
 
 
 class StaffRoleFoundationTests(TestCase):

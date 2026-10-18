@@ -223,6 +223,10 @@ STATICFILES_DIRS = [
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# Upload model fields explicitly use SupabaseStorage; production must remain on
+# Supabase, while settings_local opts into local filesystem storage.
+UPLOAD_STORAGE_BACKEND = "supabase"
+
 GCASH_NUMBER = "09219429053"
 GCASH_NAME = "John Arvin Tumbagahon"
 GCASH_QR_URL = "/static/img/gcash_qr3.jpg"

@@ -1158,7 +1158,7 @@ class AdminPaymentTypeEditTests(TestCase):
         self.assertTrue(
             Notification.objects.filter(
                 user=self.tenant,
-                title="Cash Payment Appointment Rescheduled",
+                title="Cash payment appointment updated",
                 message__icontains="Please visit after lunch.",
             ).exists()
         )
@@ -2016,6 +2016,46 @@ class AdminNotificationBehaviorTests(TestCase):
         self.assertContains(response, "View Payment")
         self.assertContains(response, "Approve Payment")
 
+    def test_payment_reference_label_still_resolves_payment_link(self):
+        payment = ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="REF-MOVEIN-LINK",
+            payment_method="PAYMONGO",
+            payment_type="move_in",
+            amount=Decimal("45700.00"),
+            status="APPROVED",
+        )
+        notification = Notification.objects.create(
+            title="Move-in payment received",
+            message="Payment reference: REF-MOVEIN-LINK",
+            notification_type="PAYMENT",
+            recipient_type="ADMIN",
+            related_tenant=self.tenant,
+        )
+
+        target_url = resolve_notification_target_url(notification)
+
+        self.assertEqual(target_url, reverse("admin_payment_detail", args=[payment.id]))
+
+    def test_new_maintenance_copy_keeps_existing_maintenance_list_action(self):
+        MaintenanceRequest.objects.create(
+            tenant=self.tenant,
+            category="PLUMBING",
+            title="Leaking sink",
+            description="The sink is leaking.",
+        )
+        notification = Notification.objects.create(
+            title="Maintenance request received",
+            message="Maintenance request: Leaking sink\nNotify Tenant sent a plumbing request for Unit A-2.",
+            notification_type="MAINTENANCE",
+            recipient_type="ADMIN",
+            related_tenant=self.tenant,
+        )
+
+        target_url = resolve_notification_target_url(notification)
+
+        self.assertEqual(target_url, reverse("admin_maintenance"))
+
     def test_cash_schedule_notification_without_reference_prefers_pending_cash_payment(self):
         cash_payment = ManualPayment.objects.create(
             user=self.tenant,
@@ -2039,6 +2079,28 @@ class AdminNotificationBehaviorTests(TestCase):
                 f"{self.tenant.email} requested F2F cash payment of ₱9000.0 "
                 "on Jun 04, 2026 at 01:00 PM. Please confirm availability."
             ),
+            notification_type="PAYMENT",
+            recipient_type="ADMIN",
+            related_tenant=self.tenant,
+        )
+
+        target_url = resolve_notification_target_url(notification)
+
+        self.assertEqual(target_url, reverse("admin_payment_detail", args=[cash_payment.id]))
+        self.assertEqual(notification.target_label, "Approve Payment")
+
+    def test_new_cash_payment_copy_keeps_pending_payment_action_available_without_reference(self):
+        cash_payment = ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="REF-CASH-NO-MESSAGE-REF",
+            payment_method="CASH",
+            payment_type="rent_only",
+            amount=Decimal("9000.00"),
+            status="PENDING",
+        )
+        notification = Notification.objects.create(
+            title="Cash payment requested",
+            message="Tenant requested an appointment.",
             notification_type="PAYMENT",
             recipient_type="ADMIN",
             related_tenant=self.tenant,
@@ -3411,12 +3473,15 @@ class AdminCashMoveInNotificationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         notification = Notification.objects.filter(
-            title="Move-in Payment Received - Lease Activated",
+            title="Move-in payment received",
             related_tenant=self.tenant,
             recipient_type="ADMIN",
         ).latest("created_at")
         self.assertIn("John Constantine", notification.message)
-        self.assertIn("Face-to-Face Cash", notification.message)
+        self.assertIn("was successfully received as a cash payment.", notification.message)
+        self.assertIn("Lease activated", notification.message)
+        self.assertIn("First month's bill is paid.", notification.message)
+        self.assertIn("Payment reference:", notification.message)
         self.assertNotIn("admin-cash@gmail.com", notification.message)
 
     def test_new_lease_keeps_unit_available_until_move_in_payment(self):

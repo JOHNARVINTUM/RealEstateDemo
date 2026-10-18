@@ -140,8 +140,15 @@ class MoveInPaymentNotificationTests(TestCase):
 
         notify_mock.assert_called_once()
         kwargs = notify_mock.call_args.kwargs
+        self.assertEqual(kwargs["title"], "Move-in payment received")
+        self.assertEqual(kwargs["notification_type"], "PAYMENT")
+        self.assertEqual(kwargs["recipient_type"], "ADMIN")
         self.assertEqual(kwargs["related_tenant"], self.tenant)
         self.assertIn("John Constantine", kwargs["message"])
+        self.assertIn("₱49,896.00", kwargs["message"])
+        self.assertIn("Payment reference: REF-PM-772F8DF8", kwargs["message"])
+        self.assertIn("Lease activated", kwargs["message"])
+        self.assertIn("First month's bill is paid", kwargs["message"])
         self.assertNotIn("john.constantine@gmail.com", kwargs["message"])
         self.assertNotIn("stamaria@admin.com", kwargs["message"])
 

@@ -786,7 +786,7 @@ class BillingWorkflowTests(TestCase):
         reconcile_approved_payments_for_tenant(self.tenant)
 
         bill.refresh_from_db()
-        self.assertEqual(Notification.objects.filter(user=self.tenant, title="Payment Approved").count(), 0)
+        self.assertEqual(Notification.objects.filter(user=self.tenant, title="Payment received").count(), 0)
         self.assertEqual(bill.rent_paid, Decimal("10000.00"))
         self.assertEqual(bill.parking_paid, Decimal("350.00"))
         self.assertEqual(bill.water_balance, Decimal("900.00"))

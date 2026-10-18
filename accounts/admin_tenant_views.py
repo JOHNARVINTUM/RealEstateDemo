@@ -18,6 +18,7 @@ from billing.models import MonthlyBill
 from maintenance.models import MaintenanceRequest
 from payments.models import ManualPayment
 from rentals.models import Lease, LeaseContractEvent, Notification, TenantAttachment, TenantProfile, Unit
+from rentals.notification_copy import tenant_account_updated_notification_copy
 from rentals.services import TenantRiskService
 
 from .admin_portal_forms import ComprehensiveTenantEditForm, TenantProfileForm
@@ -469,10 +470,13 @@ def admin_edit_tenant(request, tenant_id: int):
                     changes_made.append("password")
 
                 if changes_made:
-                    change_list = ", ".join(changes_made)
+                    notification_title, notification_message = tenant_account_updated_notification_copy(
+                        tenant_name=f"{updated_tenant.first_name} {updated_tenant.last_name}".strip(),
+                        changed_fields=changes_made,
+                    )
                     Notification.create_notification(
-                        title="Tenant Account Updated",
-                        message=f"Admin updated {updated_tenant.first_name} {updated_tenant.last_name}'s account: {change_list}",
+                        title=notification_title,
+                        message=notification_message,
                         notification_type="SYSTEM",
                         recipient_type="ADMIN",
                         related_tenant=updated_tenant.user,

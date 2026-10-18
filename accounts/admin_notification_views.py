@@ -34,7 +34,11 @@ def notification_has_read_at_column() -> bool:
 def resolve_notification_target_url(notification):
     """Return the best action URL for a notification when one can be resolved safely."""
     if notification.notification_type == "PAYMENT":
-        reference_match = re.search(r"Reference:\s*([A-Za-z0-9_-]+)", notification.message or "")
+        reference_match = re.search(
+            r"(?:Payment )?Reference:\s*([A-Za-z0-9_-]+)",
+            notification.message or "",
+            flags=re.IGNORECASE,
+        )
         payment = None
         if reference_match:
             payment = ManualPayment.objects.filter(
@@ -42,7 +46,7 @@ def resolve_notification_target_url(notification):
             ).order_by("-created_at").first()
         if not payment and notification.related_tenant:
             payment_filters = {"user": notification.related_tenant}
-            if notification.title == "Cash Payment Scheduled":
+            if notification.title in {"Cash Payment Scheduled", "Cash payment requested"}:
                 payment_filters.update({
                     "payment_method": "CASH",
                     "status": "PENDING",

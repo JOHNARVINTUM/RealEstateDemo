@@ -87,8 +87,8 @@
           </a>
           <a href="{% url 'admin_notifications' %}" class="rounded-xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-slate-300 p-5 transition-all">
             <p class="text-xs font-black uppercase tracking-wider text-slate-500">Notifications</p>
-            <h3 class="mt-2 text-lg font-black text-slate-900">Monitor System Alerts</h3>
-            <p class="mt-2 text-sm text-slate-600">Track the latest maintenance assignments, repair updates, and operational alerts.</p>
+            <h3 class="mt-2 text-lg font-black text-slate-900">Recent updates</h3>
+            <p class="mt-2 text-sm text-slate-600">Keep up with payments, maintenance, and changes across your properties.</p>
           </a>
         </div>
       </section>
@@ -105,14 +105,14 @@
           {% for notification in notifications %}
             <div class="p-4 rounded-lg border transition-colors {% if not notification.is_read %}bg-slate-50 border-slate-300 border-l-4 border-l-slate-800{% else %}bg-white border-slate-200{% endif %}">
               <div class="mb-1">
-                <span class="text-sm font-extrabold text-slate-900 block leading-snug truncate">{{ notification.title }}</span>
+                <span class="text-sm font-bold text-slate-900 block leading-snug break-words">{{ notification.title }}</span>
                 <span class="text-xs text-slate-500 font-semibold block mt-0.5">{{ notification.created_at|timesince }} ago</span>
               </div>
-              <p class="text-sm text-slate-800 leading-relaxed mt-1.5 line-clamp-2">{{ notification.message }}</p>
+              <p class="text-sm text-slate-700 leading-relaxed mt-1.5 line-clamp-2 break-words">{{ notification.message }}</p>
             </div>
           {% empty %}
             <div class="text-center py-10 text-slate-500">
-              <p class="text-sm font-semibold">Everything is normal.</p>
+              <p class="text-sm font-semibold">No notifications yet.</p>
             </div>
           {% endfor %}
         </div>
@@ -261,14 +261,14 @@
           {% for notification in notifications %}
             <div class="p-4 rounded-lg border transition-colors {% if not notification.is_read %}bg-slate-50 border-slate-300 border-l-4 border-l-slate-800{% else %}bg-white border-slate-200{% endif %}">
               <div class="mb-1">
-                <span class="text-sm font-extrabold text-slate-900 block leading-snug truncate">{{ notification.title }}</span>
+                <span class="text-sm font-bold text-slate-900 block leading-snug break-words">{{ notification.title }}</span>
                 <span class="text-xs text-slate-500 font-semibold block mt-0.5">{{ notification.created_at|timesince }} ago</span>
               </div>
-              <p class="text-sm text-slate-800 leading-relaxed mt-1.5 line-clamp-2">{{ notification.message }}</p>
+              <p class="text-sm text-slate-700 leading-relaxed mt-1.5 line-clamp-2 break-words">{{ notification.message }}</p>
             </div>
           {% empty %}
             <div class="text-center py-10 text-slate-500">
-              <p class="text-sm font-semibold">Everything is normal.</p>
+              <p class="text-sm font-semibold">No notifications yet.</p>
             </div>
           {% endfor %}
         </div>

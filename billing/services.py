@@ -1418,11 +1418,19 @@ def _approve_payment_record(payment, was_previously_approved: bool):
 
 def _notify_payment_approved(payment, method_display: str, was_previously_approved: bool, logger):
     from rentals.models import Notification
+    from rentals.notification_copy import payment_approved_notification_copy
+
+    if was_previously_approved:
+        return
 
     try:
-        (Notification.create_tenant_notification if not was_previously_approved else (lambda **kwargs: None))(
-            title="Payment Approved",
-            message=f"Your {method_display} payment of â‚±{payment.amount:,.2f} has been approved and your bills have been updated.",
+        title, message = payment_approved_notification_copy(
+            payment_method=method_display,
+            amount=payment.amount,
+        )
+        Notification.create_tenant_notification(
+            title=title,
+            message=message,
             notification_type="PAYMENT",
             tenant_user=payment.user,
         )

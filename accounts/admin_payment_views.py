@@ -16,6 +16,10 @@ from payments.models import ManualPayment
 from payments.scheduling import OFFICE_HOURS_LABEL, f2f_time_slots, is_office_schedule
 from rentals.models import Lease, Notification
 from rentals.services import repair_historical_move_in_payment, send_email_via_resend
+from rentals.notification_copy import (
+    cash_appointment_confirmed_notification_copy,
+    cash_appointment_rescheduled_notification_copy,
+)
 
 from .admin_portal_views import admin_required, admin_password_verified, render_admin_password_confirm
 from .decorators import staff_or_admin_required
@@ -314,13 +318,17 @@ def admin_confirm_schedule(request, payment_id: int):
         # Notify tenant that schedule is confirmed
         try:
             from rentals.models import Notification
-            schedule_info = f"on {p.preferred_date.strftime('%B %d, %Y')}" if p.preferred_date else ""
+            schedule_info = p.preferred_date.strftime("%B %d, %Y") if p.preferred_date else "To be confirmed"
             if p.preferred_time:
                 schedule_info += f" at {p.preferred_time.strftime('%I:%M %p')}"
 
+            notification_title, notification_message = cash_appointment_confirmed_notification_copy(
+                amount=p.amount,
+                schedule=schedule_info,
+            )
             Notification.create_tenant_notification(
-                title="Cash Payment Appointment Confirmed",
-                message=f"Your face-to-face cash payment appointment has been confirmed.\n\nAmount: \u20b1{p.amount:,.2f}\nScheduled: {schedule_info}\n\nPlease bring the exact amount. See you then!",
+                title=notification_title,
+                message=notification_message,
                 notification_type='PAYMENT',
                 tenant_user=p.user
             )
@@ -684,19 +692,17 @@ def admin_reschedule_cash_payment(request, payment_id: int):
                     ]
                 )
 
-                notification_message = (
-                    "Your face-to-face cash payment appointment has been rescheduled.\n\n"
-                    f"Previous schedule: {old_schedule}\n"
-                    f"New schedule: {new_schedule}\n"
-                    f"Amount: PHP {payment.amount:,.2f}\n"
-                    f"Reference: {payment.reference_code or '-'}"
+                notification_title, notification_message = cash_appointment_rescheduled_notification_copy(
+                    amount=payment.amount,
+                    old_schedule=old_schedule,
+                    new_schedule=new_schedule,
+                    reference=payment.reference_code,
+                    admin_note=admin_note,
                 )
-                if admin_note:
-                    notification_message += f"\n\nAdmin note: {admin_note}"
 
                 try:
                     Notification.create_tenant_notification(
-                        title="Cash Payment Appointment Rescheduled",
+                        title=notification_title,
                         message=notification_message,
                         notification_type="PAYMENT",
                         tenant_user=payment.user,

@@ -13,6 +13,8 @@ from .models import ManualPayment
 from .paymongo import create_checkout_session, verify_webhook_signature
 from billing.services import approve_manual_payment
 from rentals.models import Notification
+from rentals.notification_copy import move_in_payment_notification_copy
+from rentals.notification_copy import online_payment_received_notification_copy
 
 logger = logging.getLogger(__name__)
 
@@ -503,17 +505,18 @@ def notify_admin_about_paymongo_payment(payment, lease_activated):
     paid_via_display = (payment.paid_via or "online").replace("_", " ").title()
 
     if lease_activated:
-        title = "Move-in Payment Received - Lease Activated"
-        message = (
-            f"{tenant_name} paid ₱{payment.amount:,.2f} via PayMongo ({paid_via_display}). "
-            f"Reference: {payment.reference_code}. "
-            "Lease has been automatically ACTIVATED and first month's bill marked as PAID."
+        title, message = move_in_payment_notification_copy(
+            tenant_name=tenant_name,
+            amount=payment.amount,
+            payment_method=paid_via_display,
+            reference=payment.reference_code,
         )
     else:
-        title = "Online Payment Received & Auto-Approved"
-        message = (
-            f"{tenant_name} paid ₱{payment.amount:,.2f} via PayMongo ({paid_via_display}). "
-            f"Reference: {payment.reference_code}. Bills have been automatically marked as PAID."
+        title, message = online_payment_received_notification_copy(
+            tenant_name=tenant_name,
+            amount=payment.amount,
+            method=paid_via_display,
+            reference=payment.reference_code,
         )
 
     Notification.create_notification(

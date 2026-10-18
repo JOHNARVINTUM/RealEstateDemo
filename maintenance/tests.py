@@ -348,7 +348,7 @@ class MaintenanceWorkflowTests(TestCase):
         )
 
         self.assertRedirects(response, reverse("admin_maintenance"))
-        notification = Notification.objects.filter(recipient_type="ADMIN", title="Maintenance Marked as Done").latest("created_at")
+        notification = Notification.objects.filter(recipient_type="ADMIN", title="Maintenance work marked complete").latest("created_at")
         self.assertIn("Pipe leak", notification.message)
         self.assertIn("Assigned Staff", notification.message)
         self.assertEqual(notification.related_tenant, self.tenant)
@@ -460,8 +460,8 @@ class MaintenanceChargeSuggestionWorkflowTests(TestCase):
         self.assertEqual(charge.diagnosis, "Updated diagnosis")
         self.assertEqual(charge.repair_notes, "Updated repair notes")
         self.assertEqual(charge.suggested_total, Decimal("625.00"))
-        notification = Notification.objects.filter(recipient_type="ADMIN", title="Repair Cost Suggestion Updated").latest("created_at")
-        self.assertIn("PHP 625.00", notification.message)
+        notification = Notification.objects.filter(recipient_type="ADMIN", title="Repair estimate updated").latest("created_at")
+        self.assertIn("₱625.00", notification.message)
         self.assertEqual(notification.related_tenant, self.tenant)
         self.assertEqual(notification.related_unit, self.unit)
 
@@ -480,9 +480,9 @@ class MaintenanceChargeSuggestionWorkflowTests(TestCase):
         )
 
         self.assertRedirects(response, self._charge_url())
-        notification = Notification.objects.filter(recipient_type="ADMIN", title="Repair Cost Suggestion Submitted").latest("created_at")
+        notification = Notification.objects.filter(recipient_type="ADMIN", title="Repair estimate received").latest("created_at")
         self.assertIn("Pipe repair", notification.message)
-        self.assertIn("PHP 1,000.00", notification.message)
+        self.assertIn("₱1,000.00", notification.message)
         self.assertEqual(notification.related_tenant, self.tenant)
         self.assertEqual(notification.related_unit, self.unit)
 

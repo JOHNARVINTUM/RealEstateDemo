@@ -13,6 +13,7 @@ from rentals.models import (
     LeaseContractEvent,
     Notification,
 )
+from rentals.notification_copy import activated_lease_welcome_notification_copy
 from billing.models import MonthlyBill
 from payments.models import ManualPayment
 import logging
@@ -1217,16 +1218,15 @@ class LeaseActivationService:
             if not email_sent:
                 logger.warning("Activation confirmation email failed for tenant %s", lease.tenant.email)
 
+            notification_title, notification_message = activated_lease_welcome_notification_copy(
+                unit=lease.unit.number,
+                monthly_rent=lease.monthly_rent,
+                start_date=lease.start_date.strftime("%B %d, %Y"),
+                due_day=lease.due_day,
+            )
             Notification.create_tenant_notification(
-                title=f"Welcome to Unit {lease.unit.number}",
-                message=(
-                    "Your move-in payment has been confirmed and your lease is now active.\n\n"
-                    f"Unit: {lease.unit.number}\n"
-                    f"Monthly Rent: PHP {lease.monthly_rent:,.2f}\n"
-                    f"Lease Start: {lease.start_date}\n"
-                    f"Rent Due Day: Every {lease.due_day} of the month\n\n"
-                    "Your tenant portal is ready. Use the credentials previously sent to your email."
-                ),
+                title=notification_title,
+                message=notification_message,
                 notification_type="SYSTEM",
                 tenant_user=lease.tenant,
                 related_unit=lease.unit,

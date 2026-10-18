@@ -250,9 +250,9 @@ document.addEventListener('submit', function(e) {
       </div>
       <p class="text-base text-slate-700 mt-1 leading-relaxed">
         {% if unread_count > 0 %}
-          Real-time event stream monitoring. <strong class="text-slate-900 font-bold">{{ unread_count }} unread</strong> notice{{ unread_count|pluralize }} requiring primary review.
+          You have <strong class="text-slate-900 font-bold">{{ unread_count }} unread</strong> update{{ unread_count|pluralize }} to review.
         {% else %}
-          Administrative events register is fully cleared. All local logging activities have been reviewed.
+          You’re all caught up. New updates will appear here.
         {% endif %}
       </p>
     </div>
@@ -298,11 +298,11 @@ document.addEventListener('submit', function(e) {
   </div>
 
   <!-- Feed Output Array Container -->
-  <div id="notification-feed" class="space-y-4">
+  <div id="notification-feed" class="space-y-3 sm:space-y-4">
     {% for notification in notifications %}
       
       <!-- Elevated Premium Entry Card -->
-      <div data-read-state="{% if notification.is_read %}read{% else %}unread{% endif %}" class="notification-item border rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 transition-all duration-300 hover:-translate-y-0.5 group/card
+      <div data-read-state="{% if notification.is_read %}read{% else %}unread{% endif %}" class="notification-item min-w-0 overflow-hidden border border-slate-200 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-start justify-between gap-4 sm:gap-5 transition-shadow duration-200 hover:shadow-md group/card
         {% if not notification.is_read %}
           bg-white border-slate-200 shadow-xs hover:shadow-md
           border-l-4
@@ -343,8 +343,8 @@ document.addEventListener('submit', function(e) {
           </div>
 
           <div class="flex-1 space-y-1.5 w-full">
-            <div class="flex flex-wrap items-center gap-2">
-              <strong class="text-base font-black text-slate-900 block leading-tight">
+            <div class="flex flex-wrap items-center gap-2 min-w-0">
+              <strong class="text-base sm:text-lg font-bold text-slate-900 block leading-snug break-words">
                 {{ notification.title }}
               </strong>
               
@@ -359,14 +359,14 @@ document.addEventListener('submit', function(e) {
               {% endif %}
             </div>
 
-            <span class="text-[10px] font-black {% if not notification.is_read %}text-blue-600{% else %}text-slate-400{% endif %} uppercase tracking-widest block flex items-center gap-1.5">
+            <span class="text-[11px] font-bold {% if not notification.is_read %}text-blue-700{% else %}text-slate-500{% endif %} uppercase tracking-wide block flex flex-wrap items-center gap-2">
               {{ notification.get_notification_type_display }}
               <span class="w-1 h-1 rounded-full bg-current opacity-40"></span>
               {{ notification.created_at|date:"M d, Y g:i A" }}
             </span>
 
-            <div class="text-sm {% if not notification.is_read %}text-slate-700 font-semibold{% else %}text-slate-600 font-medium{% endif %} leading-relaxed max-w-4xl pt-0.5">
-              {{ notification.message|linebreaks }}
+            <div class="text-sm {% if not notification.is_read %}text-slate-700{% else %}text-slate-600{% endif %} leading-relaxed max-w-4xl pt-1 whitespace-pre-line break-words [overflow-wrap:anywhere]">
+              {{ notification.message|linebreaksbr }}
             </div>
 
             <!-- Associated References Routing Links -->
@@ -417,7 +417,7 @@ document.addEventListener('submit', function(e) {
         </div>
 
         <!-- Right Side Inline Operational Actions -->
-        <div class="flex items-center gap-2.5 shrink-0 pt-4 sm:pt-0 border-t sm:border-t-0 border-slate-100 w-full sm:w-auto justify-end">
+          <div class="flex items-center gap-2.5 shrink-0 pt-3 md:pt-0 border-t md:border-t-0 border-slate-100 w-full md:w-auto justify-end self-stretch md:self-center">
           {% if not notification.is_read %}
             <form method="post" action="{% url 'admin_mark_notification_read' notification.id %}" class="inline">
               {% csrf_token %}
@@ -443,8 +443,8 @@ document.addEventListener('submit', function(e) {
       
       <!-- Cleared Stream Response State -->
       <div class="text-center py-16 bg-white border border-slate-200 rounded-xl p-6">
-        <strong class="text-xs sm:text-sm text-slate-800 font-bold block">No notifications instantiated within query stream</strong>
-        <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Your facility administration stream is perfectly aligned and up to date.</p>
+        <strong class="text-base text-slate-800 font-bold block">No notifications yet</strong>
+        <p class="text-sm text-slate-500 mt-1 max-w-sm mx-auto">Updates about payments, leases, and maintenance will appear here.</p>
       </div>
 
     {% endfor %}

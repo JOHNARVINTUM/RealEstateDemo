@@ -36,8 +36,17 @@ from .paymongo_workflow import (
 )
 from .scheduling import OFFICE_HOURS_LABEL, f2f_time_slots, is_office_schedule
 from rentals.models import Lease, Notification
+from rentals.notification_copy import (
+    cash_payment_scheduled_notification_copy,
+    payment_submitted_notification_copy,
+)
 
 MAX_ADVANCE_PAYMENT_MONTHS = 6
+
+
+def _notification_tenant_name(user):
+    profile = getattr(user, "tenantprofile", None)
+    return profile.full_name.strip() if profile and profile.full_name.strip() else user.email
 
 
 def _selected_bills_for_tenant(user, raw_bill_ids):
@@ -155,9 +164,15 @@ def manual_gcash_payment(request):
             from django.urls import reverse
             approval_url = reverse('admin_payments')
             
+            notification_title, notification_message = payment_submitted_notification_copy(
+                tenant_name=_notification_tenant_name(request.user),
+                amount=amount_to_pay,
+                method="GCash",
+                reference=reference_code,
+            )
             notification = Notification.create_notification(
-                title=f"New Payment Received",
-                message=f"{request.user.email} submitted a payment of ₱{amount_to_pay} with reference code {reference_code}. Please review and approve this payment.",
+                title=notification_title,
+                message=notification_message,
                 notification_type='PAYMENT',
                 recipient_type='ADMIN',
                 related_tenant=request.user
@@ -265,15 +280,18 @@ def f2f_cash_payment(request):
 
         # Create notification for admin
         try:
-            schedule_info = f"on {parsed_date.strftime('%b %d, %Y')}" if parsed_date else ""
+            schedule_info = parsed_date.strftime("%b %d, %Y") if parsed_date else "To be confirmed"
             if parsed_time:
                 schedule_info += f" at {parsed_time.strftime('%I:%M %p')}"
+            notification_title, notification_message = cash_payment_scheduled_notification_copy(
+                tenant_name=_notification_tenant_name(request.user),
+                amount=payment.amount,
+                schedule=schedule_info.strip(),
+                reference=payment.reference_code,
+            )
             Notification.create_notification(
-                title="Cash Payment Scheduled",
-                message=(
-                    f"{request.user.email} requested F2F cash payment of \u20b1{amount_to_pay} {schedule_info}. "
-                    f"Reference: {payment.reference_code}. Please confirm availability."
-                ),
+                title=notification_title,
+                message=notification_message,
                 notification_type='PAYMENT',
                 recipient_type='ADMIN',
                 related_tenant=request.user

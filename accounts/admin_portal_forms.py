@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from PIL import Image, UnidentifiedImageError
 from rentals.models import TenantProfile, Lease, Unit, UnitImage, TenantAttachment, validate_tenant_attachment_upload
+from rentals.notification_copy import tenant_added_notification_copy
 from rentals.services import generate_tenant_password, send_tenant_credentials_email
 from announcements.models import Announcement, HomepageBanner, BusinessProfile, LandingPageSection, LandingPageFeature
 from billing.models import MonthlyBill
@@ -455,7 +456,11 @@ class TenantProfileForm(forms.ModelForm):
                 try:
                     from rentals.models import Notification
                     # Create admin confirmation notification (prevent duplicates)
-                    admin_title = f"New Tenant Added - {instance.first_name} {instance.last_name}"
+                    tenant_name = f"{instance.first_name} {instance.last_name}".strip()
+                    admin_title, admin_message = tenant_added_notification_copy(
+                        tenant_name=tenant_name,
+                        email=email,
+                    )
                     existing_admin_notification = Notification.objects.filter(
                         recipient_type='ADMIN',
                         user=uploaded_by,
@@ -463,15 +468,6 @@ class TenantProfileForm(forms.ModelForm):
                     ).first()
                     
                     if not existing_admin_notification:
-                        admin_message = f"""New tenant has been successfully added:
-
-Tenant Name: {instance.first_name} {instance.last_name}
-Email: {email}
-{unit_details}
-Status: Account created; credentials email is sent immediately
-
-Email notification: Sent during tenant creation"""
-                        
                         Notification.create_admin_notification(
                             title=admin_title,
                             message=admin_message,

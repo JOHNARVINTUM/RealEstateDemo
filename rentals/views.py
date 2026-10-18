@@ -1000,6 +1000,30 @@ def tenant_notifications(request):
         notifications = notifications.filter(is_read=True)
         
     notifications = notifications.order_by('is_read', '-created_at')
+
+    # Add display-only structure for pending-lease notices without changing their
+    # stored SYSTEM type, message, links, or read state.
+    for notification in notifications:
+        if (
+            notification.notification_type == "SYSTEM"
+            and notification.title.startswith("Your lease for Unit ")
+        ):
+            sections = (notification.message or "").split("\n\n")
+            if len(sections) != 4:
+                continue
+
+            details = []
+            for section in sections[1:]:
+                lines = section.splitlines()
+                if len(lines) != 2:
+                    details = []
+                    break
+                details.append({"label": lines[0], "value": lines[1]})
+
+            if len(details) == 3:
+                notification.display_category = "LEASE"
+                notification.pending_lease_primary = sections[0]
+                notification.pending_lease_details = details
     
     # Calculate unread count (unfiltered)
     unread_count = base_notifications.filter(is_read=False).count()

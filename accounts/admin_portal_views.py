@@ -19,6 +19,7 @@ from django.utils.timezone import now
 import json
 from django.utils import timezone
 from rentals.models import Lease, Unit, UnitImage, TenantProfile, Notification, TenantRiskClassification, Room
+from rentals.notification_copy import unit_created_notification_copy
 from billing.models import MonthlyBill
 from billing.services import ensure_bills_since_move_in, set_bill_status, approve_manual_payment, reject_manual_payment, cleanup_duplicate_monthly_bills_for_lease
 from maintenance.models import MaintenanceRequest
@@ -647,9 +648,13 @@ def admin_create_unit(request):
                 
                 # Create real-time notification for admin
                 try:
+                    notification_title, notification_message = unit_created_notification_copy(
+                        unit_number=unit.number,
+                        unit_type=unit.get_unit_type_display(),
+                    )
                     Notification.create_notification(
-                        title=f"New Unit Created",
-                        message=f"Unit {unit.number} ({unit.get_unit_type_display()}) has been created successfully!",
+                        title=notification_title,
+                        message=notification_message,
                         notification_type='UNIT',
                         recipient_type="ADMIN",
                         related_unit=unit

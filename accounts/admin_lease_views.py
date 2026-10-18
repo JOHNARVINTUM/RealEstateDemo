@@ -10,6 +10,10 @@ from django.urls import reverse
 from billing.services import cleanup_duplicate_monthly_bills_for_lease, ensure_current_month_bill_for_lease
 from payments.models import ManualPayment
 from rentals.models import Lease, Notification, TenantProfile
+from rentals.notification_copy import (
+    move_in_payment_notification_copy,
+    pending_lease_welcome_notification_copy,
+)
 from rentals.unit_status import sync_unit_status
 
 from .admin_portal_forms import LeaseForm, _ordinal
@@ -35,13 +39,15 @@ def _tenant_display_name(user) -> str:
 
 def _create_cash_move_in_notification(lease, payment):
     tenant_name = _tenant_display_name(lease.tenant)
+    title, message = move_in_payment_notification_copy(
+        tenant_name=tenant_name,
+        amount=payment.amount,
+        payment_method="cash",
+        reference=payment.reference_code,
+    )
     Notification.create_notification(
-        title="Move-in Payment Received - Lease Activated",
-        message=(
-            f"{tenant_name} paid ₱{payment.amount:,.2f} via Face-to-Face Cash. "
-            f"Reference: {payment.reference_code}. "
-            "Lease has been activated and first month's bill marked as PAID."
-        ),
+        title=title,
+        message=message,
         notification_type="PAYMENT",
         recipient_type="ADMIN",
         related_tenant=lease.tenant,
@@ -71,33 +77,15 @@ def admin_create_lease(request):
                 lease = form.save()
 
                 try:
-                    welcome_message = (
-                        "Welcome to your new home at REALESTATE360+!\n\n"
-                        "Your lease has been successfully created. Here are your payment details:\n\n"
-                        "Unit Information:\n"
-                        f"• Unit Number: {lease.unit.number}\n"
-                        f"• Unit Type: {lease.unit.get_unit_type_display()}\n"
-                        f"• Floor Level: {lease.unit.floor_level}\n"
-                        f"• Size: {lease.unit.size_sqm} sqm\n\n"
-                        "Payment Schedule:\n"
-                        f"• Monthly Rent: ₱{lease.monthly_rent:,.2f}\n"
-                        f"• Security Deposit: ₱{lease.security_deposit:,.2f} (due on move-in)\n"
-                        f"• Contract Deposit: ₱{lease.contract_deposit:,.2f} ({lease.deposit_multiplier}x monthly rent)\n"
-                        f"• Total Move-in Cost: ₱{lease.total_move_in_cost:,.2f}\n"
-                        f"• Lease Start Date: {lease.start_date.strftime('%B %d, %Y')}\n"
-                        f"• First Regular Rent Due: {lease.first_rent_due_date.strftime('%B %d, %Y')}\n\n"
-                        f"Your unit features: {lease.unit.description or 'Modern living space with premium amenities.'}\n"
-                        f"Amenities included: {lease.unit.amenities or 'Contact admin for full amenities list.'}\n\n"
-                        "Payment Due Dates:\n"
-                        f"• Rent is due on the {_ordinal(lease.due_day)} of each month\n"
-                        f"• Your contract deposit is recorded separately from monthly rent\n"
-                        f"• Regular rent payments start {lease.first_rent_due_date.strftime('%B %d, %Y')}\n\n"
-                        "You can access your tenant portal to view bills, make payments, and request maintenance.\n\n"
-                        "Welcome aboard! We're excited to have you as part of our community!"
+                    notification_title, notification_message = pending_lease_welcome_notification_copy(
+                        unit=lease.unit.number,
+                        security_deposit=lease.security_deposit,
+                        total_move_in_cost=lease.total_move_in_cost,
+                        start_date=lease.start_date.strftime("%B %d, %Y"),
                     )
                     Notification.create_tenant_notification(
-                        title=f"Welcome to Your New Unit {lease.unit.number}!",
-                        message=welcome_message,
+                        title=notification_title,
+                        message=notification_message,
                         notification_type="SYSTEM",
                         tenant_user=lease.tenant,
                         related_unit=lease.unit,

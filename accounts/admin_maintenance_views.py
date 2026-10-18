@@ -12,6 +12,14 @@ from maintenance.forms import AdminMaintenanceChargeReviewForm, AdminMaintenance
 from maintenance.models import MaintenanceCharge, MaintenanceRequest
 from maintenance.services import post_maintenance_charge_to_billing
 from rentals.models import Lease, Notification
+from rentals.notification_copy import (
+    maintenance_assignment_notification_copy,
+    maintenance_request_received_notification_copy,
+    maintenance_resolved_notification_copy,
+    maintenance_review_notification_copy,
+    maintenance_schedule_notification_copy,
+    repair_estimate_notification_copy,
+)
 from rentals.services import send_email_via_resend
 
 from .admin_portal_forms import StaffAccountCreateForm, StaffAccountUpdateForm
@@ -175,29 +183,19 @@ def _notify_tenant_review_update(req, *, old_review_status):
     assigned_staff_name = _display_name(req.assigned_staff) if req.assigned_staff else "No staff assigned yet"
 
     if req.review_status == "ACCEPTED":
-        title = "Maintenance Request Accepted"
-        message = (
-            f"Your maintenance request '{req.title}' has been accepted.\n"
-            f"Assigned staff: {assigned_staff_name}\n"
-            f"Unit: {unit_number}"
-        )
         email_subject = f"[REALESTATE360+] Maintenance Request Accepted - {req.title}"
     elif req.review_status == "REJECTED":
-        title = "Maintenance Request Rejected"
-        reason = req.schedule_admin_note or "Please contact administration if you need clarification."
-        message = (
-            f"Your maintenance request '{req.title}' was not approved for dispatch.\n"
-            f"Unit: {unit_number}\n"
-            f"Admin note: {reason}"
-        )
         email_subject = f"[REALESTATE360+] Maintenance Request Rejected - {req.title}"
     else:
-        title = "Maintenance Request Review Reset"
-        message = (
-            f"Your maintenance request '{req.title}' is back in admin review.\n"
-            f"Unit: {unit_number}"
-        )
         email_subject = f"[REALESTATE360+] Maintenance Request Review Update - {req.title}"
+
+    title, message = maintenance_review_notification_copy(
+        review_status=req.review_status,
+        title=req.title,
+        unit_number=unit_number,
+        assigned_staff=assigned_staff_name,
+        note=req.schedule_admin_note,
+    )
 
     try:
         Notification.create_tenant_notification(
@@ -231,15 +229,16 @@ def _notify_staff_assignment(req, *, previous_staff_id):
 
     unit_number = req.lease.unit.number if req.lease and req.lease.unit else "N/A"
     tenant_name = _display_name(req.tenant)
-    assignment_message = (
-        f"You were assigned to maintenance request #{req.id}: {req.title}.\n"
-        f"Tenant: {tenant_name}\n"
-        f"Unit: {unit_number}"
+    assignment_title, assignment_message = maintenance_assignment_notification_copy(
+        request_id=req.id,
+        title=req.title,
+        tenant_name=tenant_name,
+        unit_number=unit_number,
     )
 
     try:
         Notification.create_notification(
-            title="Maintenance Request Assigned",
+            title=assignment_title,
             message=assignment_message,
             notification_type="MAINTENANCE",
             user=req.assigned_staff,
@@ -270,16 +269,17 @@ def _notify_admin_staff_marked_done(req, *, staff_user):
     unit_number = req.lease.unit.number if req.lease and req.lease.unit else "N/A"
     tenant_name = _display_name(req.tenant)
     fixed_by_text = req.fixed_by or _display_name(staff_user)
-    message = (
-        f"{_display_name(staff_user)} marked maintenance request #{req.id} as resolved.\n"
-        f"Request: {req.title}\n"
-        f"Tenant: {tenant_name}\n"
-        f"Unit: {unit_number}\n"
-        f"Completed by: {fixed_by_text}"
+    title, message = maintenance_resolved_notification_copy(
+        staff_name=_display_name(staff_user),
+        request_id=req.id,
+        title=req.title,
+        tenant_name=tenant_name,
+        unit_number=unit_number,
+        completed_by=fixed_by_text,
     )
     try:
         Notification.create_notification(
-            title="Maintenance Marked as Done",
+            title=title,
             message=message,
             notification_type="MAINTENANCE",
             related_unit=req.lease.unit if req.lease else None,
@@ -293,14 +293,14 @@ def _notify_admin_staff_marked_done(req, *, staff_user):
 def _notify_admin_charge_suggestion(req, charge, *, staff_user, is_update=False):
     unit_number = req.lease.unit.number if req.lease and req.lease.unit else "N/A"
     tenant_name = _display_name(req.tenant)
-    action_label = "updated" if is_update else "submitted"
-    title = "Repair Cost Suggestion Updated" if is_update else "Repair Cost Suggestion Submitted"
-    message = (
-        f"{_display_name(staff_user)} {action_label} a repair cost suggestion for maintenance request #{req.id}.\n"
-        f"Request: {req.title}\n"
-        f"Tenant: {tenant_name}\n"
-        f"Unit: {unit_number}\n"
-        f"Suggested total: PHP {charge.suggested_total:,.2f}"
+    title, message = repair_estimate_notification_copy(
+        staff_name=_display_name(staff_user),
+        request_id=req.id,
+        title=req.title,
+        tenant_name=tenant_name,
+        unit_number=unit_number,
+        amount=charge.suggested_total,
+        is_update=is_update,
     )
     try:
         Notification.create_notification(
@@ -505,16 +505,16 @@ def admin_update_maintenance(request, req_id: int):
                         )
                         visit_time = updated.admin_scheduled_at or updated.requested_schedule_at
                         visit_time_label = visit_time.strftime("%b %d, %Y at %I:%M %p") if visit_time else "To be confirmed"
-                        note_line = f"\nAdmin note: {updated.schedule_admin_note}" if updated.schedule_admin_note else ""
                         unit_number = updated.lease.unit.number if updated.lease and updated.lease.unit else "N/A"
-                        message = (
-                            f"Your maintenance visit schedule for '{updated.title}' is {decision_label.lower()}.\n"
-                            f"Visit time: {visit_time_label}\n"
-                            f"Unit: {unit_number}"
-                            f"{note_line}"
+                        notification_title, message = maintenance_schedule_notification_copy(
+                            title=updated.title,
+                            decision=decision_label,
+                            visit_time=visit_time_label,
+                            unit_number=unit_number,
+                            note=updated.schedule_admin_note,
                         )
                         Notification.create_tenant_notification(
-                            title="Maintenance Schedule Update",
+                            title=notification_title,
                             message=message,
                             notification_type="MAINTENANCE",
                             tenant_user=updated.tenant,

@@ -3587,6 +3587,135 @@ class TenantCreationEmailTests(TestCase):
         self.assertTrue(profile.credentials_email_sent)
         self.assertTrue(profile.user.check_password("ITenant"))
 
+
+class TenantCreationLocalStorageTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            email="local-tenant-admin@example.test",
+            username="localtenantadmin",
+            password="password123",
+        )
+        Unit.objects.create(number="TC-101")
+        self.client.force_login(self.admin)
+        self.media_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.media_dir.cleanup)
+        self.settings_override = override_settings(
+            UPLOAD_STORAGE_BACKEND="filesystem",
+            MEDIA_ROOT=Path(self.media_dir.name),
+            MEDIA_URL="/media/",
+            IS_PRODUCTION=False,
+        )
+        self.settings_override.enable()
+        self.addCleanup(self.settings_override.disable)
+
+    def _tenant_data(self, email):
+        return {
+            "email": email,
+            "first_name": "Local",
+            "last_name": "Tenant",
+            "contact_no": "09170000000",
+        }
+
+    def test_create_tenant_without_attachment_uses_no_external_storage(self):
+        with patch("accounts.admin_portal_forms.send_tenant_credentials_email", return_value=False), patch.object(
+            SupabaseStorage,
+            "client",
+            new_callable=PropertyMock,
+            side_effect=AssertionError("Local tenant creation must not initialize Supabase."),
+        ) as supabase_client:
+            response = self.client.post(
+                reverse("admin_create_tenant_profile"),
+                self._tenant_data("local-no-file@example.test"),
+            )
+
+        self.assertEqual(response.status_code, 302)
+        profile = TenantProfile.objects.get(user__email="local-no-file@example.test")
+        self.assertEqual(profile.user.role, User.Role.TENANT)
+        supabase_client.assert_not_called()
+
+    def test_create_tenant_with_contract_and_id_saves_both_attachments_locally(self):
+        data = self._tenant_data("local-with-files@example.test")
+        files = {
+            "contract_file": SimpleUploadedFile(
+                "contract.pdf", b"%PDF-1.4 local contract", content_type="application/pdf"
+            ),
+            "valid_id_file": SimpleUploadedFile(
+                "valid-id.pdf", b"%PDF-1.4 local id", content_type="application/pdf"
+            ),
+        }
+        data.update(files)
+
+        with patch("accounts.admin_portal_forms.send_tenant_credentials_email", return_value=False), patch.object(
+            SupabaseStorage,
+            "client",
+            new_callable=PropertyMock,
+            side_effect=AssertionError("Local tenant uploads must not initialize Supabase."),
+        ) as supabase_client:
+            response = self.client.post(reverse("admin_create_tenant_profile"), data)
+
+        self.assertEqual(response.status_code, 302)
+        profile = TenantProfile.objects.get(user__email="local-with-files@example.test")
+        attachments = list(TenantAttachment.objects.filter(tenant=profile.user).order_by("attachment_type"))
+        self.assertEqual({attachment.attachment_type for attachment in attachments}, {"CONTRACT", "VALID_ID"})
+        self.assertEqual(len(attachments), 2)
+        for attachment in attachments:
+            with self.subTest(attachment_type=attachment.attachment_type):
+                self.assertTrue(attachment.file.name.startswith("tenant_attachments/"))
+                self.assertTrue(attachment.file.path.startswith(self.media_dir.name))
+                self.assertTrue(attachment.file.url.startswith("/media/tenant_attachments/"))
+                with attachment.file.open("rb") as saved_file:
+                    self.assertTrue(saved_file.read().startswith(b"%PDF-1.4"))
+
+        profile.password_change_required = False
+        profile.save(update_fields=["password_change_required"])
+        self.client.force_login(profile.user)
+        owned_response = self.client.get(reverse("account_profile_attachment", args=[attachments[0].id]))
+        self.assertEqual(owned_response.status_code, 200)
+        self.assertTrue(b"%PDF-1.4" in b"".join(owned_response.streaming_content))
+
+        other_tenant = User.objects.create_user(
+            email="local-other-tenant@example.test",
+            username="localothertenant",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        self.client.force_login(other_tenant)
+        blocked_response = self.client.get(reverse("account_profile_attachment", args=[attachments[0].id]))
+        self.assertEqual(blocked_response.status_code, 404)
+
+        supabase_client.assert_not_called()
+
+    def test_invalid_tenant_upload_renders_field_error_without_creating_or_storing_file(self):
+        data = self._tenant_data("invalid-upload@example.test")
+        data["contract_description"] = "Lease document"
+        data["contract_file"] = SimpleUploadedFile(
+            "contract.exe", b"MZ fake executable", content_type="application/octet-stream"
+        )
+
+        with patch.object(
+            SupabaseStorage,
+            "client",
+            new_callable=PropertyMock,
+            side_effect=AssertionError("Invalid uploads must be rejected before storage."),
+        ) as supabase_client:
+            response = self.client.post(reverse("admin_create_tenant_profile"), data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "admin_portal/tenant_form.html")
+        self.assertContains(
+            response,
+            "Invalid file type. Please upload a PDF, Word document (.doc/.docx), PNG, or JPG/JPEG file.",
+        )
+        self.assertContains(response, 'id="contract_file_error"')
+        self.assertContains(response, 'aria-live="polite"')
+        self.assertContains(response, "invalid-upload@example.test")
+        self.assertContains(response, 'value="Lease document"')
+        self.assertFalse(User.objects.filter(email="invalid-upload@example.test").exists())
+        self.assertFalse(TenantAttachment.objects.filter(file__contains="contract.exe").exists())
+        self.assertEqual(list(Path(self.media_dir.name).rglob("*")), [])
+        supabase_client.assert_not_called()
+
+class TenantProfileFormValidationTests(TestCase):
     def test_tenant_form_blocks_duplicate_email_case_insensitively(self):
         User.objects.create_user(
             email="duplicate.base@gmail.com",

@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -18,10 +18,14 @@ from billing.services import (
     ensure_current_month_bills,
     ensure_bills_up_to,
     add_months,
+    ensure_bill_line_items_from_legacy,
+    get_or_update_monthly_bill,
     parse_bill_ids,
     repair_inflated_unpaid_late_fees,
     reconcile_approved_payments_for_tenant,
     _render_invoice_email,
+    sync_monthly_bill_from_line_items,
+    set_bill_line_item_amount,
 )
 from payments.models import ManualPayment
 from rentals.models import Lease, Notification, Unit
@@ -205,7 +209,9 @@ class BillingWorkflowTests(TestCase):
         self.assertEqual(invoice.snapshot["lines"][0]["water_charge"], "0.00")
         self.assertEqual(invoice.snapshot["lines"][0]["late_fee"], "300.00")
         self.assertEqual(invoice.snapshot["lines"][0]["amount_paid"], "10300.00")
-        self.assertEqual(bill.interest, Decimal("0.00"))
+        self.assertEqual(bill.interest, Decimal("300.00"))
+        self.assertEqual(bill.total_due, Decimal("10800.00"))
+        self.assertEqual(bill.total_balance, Decimal("500.00"))
         email_body = _render_invoice_email(invoice)
         self.assertIn("Paid This Transaction: PHP 10,300.00", email_body)
         self.assertIn("Status: PAID", email_body)
@@ -307,8 +313,8 @@ class BillingWorkflowTests(TestCase):
         self.assertEqual(payment.status, "APPROVED")
         self.assertEqual(bill.rent_paid, Decimal("10000.00"))
         self.assertEqual(bill.parking_paid, Decimal("500.00"))
-        self.assertEqual(bill.interest, Decimal("0.00"))
-        self.assertEqual(bill.total_due, Decimal("11700.00"))
+        self.assertEqual(bill.interest, Decimal("315.00"))
+        self.assertEqual(bill.total_due, Decimal("12015.00"))
         self.assertEqual(bill.water_paid, Decimal("0.00"))
         self.assertEqual(bill.water_balance, Decimal("1200.00"))
         self.assertEqual(bill.total_balance, Decimal("1200.00"))
@@ -761,6 +767,209 @@ class BillingWorkflowTests(TestCase):
         bill.refresh_from_db()
         self.assertEqual(updated_bill.interest, Decimal("310.50"))
         self.assertEqual(bill.interest, Decimal("310.50"))
+
+    def _assert_bill_ledger_totals(self, bill, *, expected_due, expected_balance):
+        lines = list(bill.line_items.all())
+        line_sum = sum((line.amount for line in lines), Decimal("0.00"))
+        balance_sum = sum((line.balance for line in lines), Decimal("0.00"))
+        self.assertEqual(line_sum, expected_due)
+        self.assertEqual(bill.total_due, line_sum)
+        self.assertEqual(balance_sum, expected_balance)
+        self.assertEqual(bill.total_balance, balance_sum)
+
+    def test_late_fee_boundaries_and_repeated_processing_keep_one_gross_fee(self):
+        self.lease.motorcycle_slots = 1
+        self.lease.due_day = 1
+        self.lease.save(update_fields=["motorcycle_slots", "due_day"])
+
+        scenarios = [
+            (date(2026, 1, 1), 0, Decimal("0.00")),
+            (date(2026, 2, 1), 1, Decimal("0.00")),
+            (date(2026, 3, 1), 13, Decimal("0.00")),
+            (date(2026, 4, 1), 14, Decimal("310.50")),
+            (date(2026, 5, 1), 15, Decimal("310.50")),
+        ]
+        bills_by_offset = {}
+
+        for billing_month, days_after_due, expected_fee in scenarios:
+            due_date = billing_month
+            bill = get_or_update_monthly_bill(
+                self.lease,
+                billing_month=billing_month,
+                today=due_date + timedelta(days=days_after_due),
+            )
+            bills_by_offset[days_after_due] = bill
+            bill.refresh_from_db()
+            fee_lines = bill.line_items.filter(line_type=BillLineItem.LINE_TYPE_LATE_FEE)
+            self.assertEqual(fee_lines.count(), int(expected_fee > 0))
+            self.assertEqual(bill._is_late, days_after_due > 0)
+            self.assertEqual(bill.interest, expected_fee)
+            self._assert_bill_ledger_totals(
+                bill,
+                expected_due=Decimal("10350.00") + expected_fee,
+                expected_balance=Decimal("10350.00") + expected_fee,
+            )
+
+        april_bill = bills_by_offset[14]
+        get_or_update_monthly_bill(
+            self.lease,
+            billing_month=date(2026, 4, 1),
+            today=date(2026, 4, 16),
+        )
+        april_bill.refresh_from_db()
+        fee_line = april_bill.line_items.get(line_type=BillLineItem.LINE_TYPE_LATE_FEE)
+        self.assertEqual(april_bill.line_items.filter(line_type=BillLineItem.LINE_TYPE_LATE_FEE).count(), 1)
+        self.assertEqual(fee_line.amount, Decimal("310.50"))
+        self.assertEqual(april_bill.total_due, Decimal("10660.50"))
+
+    @patch("billing.services._send_invoice_email")
+    def test_full_payment_preserves_gross_late_fee_through_repeated_sync(self, _send_email):
+        self.lease.motorcycle_slots = 1
+        self.lease.due_day = 1
+        self.lease.save(update_fields=["motorcycle_slots", "due_day"])
+        bill = get_or_update_monthly_bill(
+            self.lease,
+            billing_month=date(2026, 6, 1),
+            today=date(2026, 6, 15),
+        )
+        get_or_update_monthly_bill(
+            self.lease,
+            billing_month=date(2026, 7, 1),
+            today=date(2026, 7, 1),
+        )
+        bill.refresh_from_db()
+        self.assertEqual(bill.total_due, Decimal("10660.50"))
+        self._assert_bill_ledger_totals(
+            bill,
+            expected_due=Decimal("10660.50"),
+            expected_balance=Decimal("10660.50"),
+        )
+
+        payment = ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="REF-LATE-FULL",
+            bill_ids=str(bill.pk),
+            payment_type="full",
+            amount=Decimal("10660.50"),
+            status="PENDING",
+        )
+        approve_manual_payment(payment)
+
+        bill.refresh_from_db()
+        fee_line = bill.line_items.get(line_type=BillLineItem.LINE_TYPE_LATE_FEE)
+        self.assertEqual(fee_line.amount, Decimal("310.50"))
+        self.assertEqual(fee_line.paid_amount, Decimal("310.50"))
+        self.assertEqual(fee_line.balance, Decimal("0.00"))
+        self.assertEqual(bill.interest, Decimal("310.50"))
+        self.assertEqual(bill.status, "PAID")
+        self._assert_bill_ledger_totals(
+            bill,
+            expected_due=Decimal("10660.50"),
+            expected_balance=Decimal("0.00"),
+        )
+
+        # Reproduce the old zero-interest summary state and ensure legacy
+        # hydration cannot erase the already-paid fee line.
+        bill.interest = Decimal("0.00")
+        bill.save(update_fields=["interest"])
+        ensure_bill_line_items_from_legacy(bill)
+        fee_line.refresh_from_db()
+        self.assertEqual(fee_line.amount, Decimal("310.50"))
+        self.assertEqual(fee_line.paid_amount, Decimal("310.50"))
+        self.assertEqual(fee_line.balance, Decimal("0.00"))
+
+        sync_monthly_bill_from_line_items(bill)
+        bill.refresh_from_db()
+        self.assertEqual(bill.interest, Decimal("310.50"))
+        self.assertEqual(bill.total_due, Decimal("10660.50"))
+        self._assert_bill_ledger_totals(
+            bill,
+            expected_due=Decimal("10660.50"),
+            expected_balance=Decimal("0.00"),
+        )
+
+    @patch("billing.services._send_invoice_email")
+    def test_partial_water_balance_and_late_fee_are_reconciled_from_lines(self, _send_email):
+        self.lease.motorcycle_slots = 1
+        self.lease.due_day = 1
+        self.lease.save(update_fields=["motorcycle_slots", "due_day"])
+        bill = get_or_update_monthly_bill(
+            self.lease,
+            billing_month=date(2026, 8, 1),
+            today=date(2026, 8, 1),
+        )
+        bill.water_computed_from_system = True
+        bill.save(update_fields=["water_computed_from_system"])
+        set_bill_line_item_amount(
+            bill,
+            BillLineItem.LINE_TYPE_WATER,
+            amount=Decimal("100.00"),
+        )
+        bill.refresh_from_db()
+
+        payment = ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="REF-LATE-PARTIAL",
+            bill_ids=str(bill.pk),
+            payment_type="rent_only",
+            amount=Decimal("10350.00"),
+            status="PENDING",
+        )
+        approve_manual_payment(payment)
+        bill.refresh_from_db()
+        self.assertEqual(bill.status, "PARTIALLY_PAID")
+        self.assertEqual(bill.total_balance, Decimal("100.00"))
+
+        bill = get_or_update_monthly_bill(
+            self.lease,
+            billing_month=date(2026, 8, 1),
+            today=date(2026, 8, 15),
+        )
+        bill.refresh_from_db()
+        self.assertEqual(bill.interest, Decimal("310.50"))
+        self.assertEqual(bill.total_due, Decimal("10760.50"))
+        self._assert_bill_ledger_totals(
+            bill,
+            expected_due=Decimal("10760.50"),
+            expected_balance=Decimal("410.50"),
+        )
+
+    @patch("billing.services._send_invoice_email")
+    def test_bill_paid_before_late_fee_threshold_remains_unchanged(self, _send_email):
+        self.lease.motorcycle_slots = 1
+        self.lease.due_day = 1
+        self.lease.save(update_fields=["motorcycle_slots", "due_day"])
+        bill = get_or_update_monthly_bill(
+            self.lease,
+            billing_month=date(2026, 9, 1),
+            today=date(2026, 9, 1),
+        )
+        initial_total = bill.total_due
+        payment = ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="REF-LATE-ONTIME",
+            bill_ids=str(bill.pk),
+            payment_type="full",
+            amount=initial_total,
+            status="PENDING",
+        )
+        approve_manual_payment(payment)
+
+        bill.refresh_from_db()
+        before = (bill.interest, bill.total_due, bill.total_balance, bill.status)
+        get_or_update_monthly_bill(
+            self.lease,
+            billing_month=date(2026, 9, 1),
+            today=date(2026, 9, 16),
+        )
+        bill.refresh_from_db()
+        self.assertEqual(bill.line_items.filter(line_type=BillLineItem.LINE_TYPE_LATE_FEE).count(), 0)
+        self.assertEqual((bill.interest, bill.total_due, bill.total_balance, bill.status), before)
+        self._assert_bill_ledger_totals(
+            bill,
+            expected_due=initial_total,
+            expected_balance=Decimal("0.00"),
+        )
 
     def test_reconcile_approved_payment_repairs_unapplied_online_payment(self):
         bill = MonthlyBill.objects.create(

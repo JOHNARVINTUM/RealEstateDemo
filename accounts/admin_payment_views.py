@@ -225,7 +225,7 @@ def _payment_record_fallback_amounts(payment, bill, remaining_amount):
     if payment.payment_type == "rent_only":
         pay_rent = take(bill.base_rent)
         pay_parking = take(bill.parking_fee)
-        pay_penalty = take(bill.interest)
+        pay_penalty = take(bill.interest_balance)
     elif payment.payment_type == "water_only":
         pay_water = take(bill.water_amount)
     elif payment.payment_type == "maintenance_only":
@@ -235,7 +235,7 @@ def _payment_record_fallback_amounts(payment, bill, remaining_amount):
         pay_water = take(bill.water_amount)
         pay_parking = take(bill.parking_fee)
         pay_maintenance = take(bill.maintenance_amount)
-        pay_penalty = take(bill.interest)
+        pay_penalty = take(bill.interest_balance)
 
     if pay_rent + pay_water + pay_parking + pay_maintenance + pay_penalty == 0:
         if payment.payment_type == "water_only":
@@ -571,7 +571,7 @@ def admin_payment_detail(request, payment_id: int):
             pay_water = 0
             pay_parking = bill.parking_fee if is_settled_payment else bill.parking_balance
             pay_maintenance = 0
-            pay_penalty = bill.interest
+            pay_penalty = bill.interest if is_settled_payment else bill.interest_balance
         elif payment.payment_type == "water_only":
             pay_rent = 0
             pay_water = bill.water_amount if is_settled_payment else bill.water_balance
@@ -589,7 +589,7 @@ def admin_payment_detail(request, payment_id: int):
             pay_water = bill.water_amount if is_settled_payment else bill.water_balance
             pay_parking = bill.parking_fee if is_settled_payment else bill.parking_balance
             pay_maintenance = bill.maintenance_amount if is_settled_payment else bill.maintenance_balance
-            pay_penalty = bill.interest
+            pay_penalty = bill.interest if is_settled_payment else bill.interest_balance
 
         pay_total = pay_rent + pay_water + pay_parking + pay_maintenance + pay_penalty
         if pay_total == 0 and remaining_payment_amount > 0:

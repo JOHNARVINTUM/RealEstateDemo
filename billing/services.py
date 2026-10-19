@@ -10,8 +10,8 @@ from django.utils import timezone
 from billing.models import BillingInvoice, BillLineItem, MonthlyBill
 from water.models import WaterBill
 
-# 3% flat late interest (BASE RENT ONLY for now)
-WEEKLY_LATE_INTEREST_RATE = Decimal("0.03")
+# One-time 3% late fee on rent plus parking; water is excluded.
+FLAT_LATE_FEE_RATE = Decimal("0.03")
 
 
 def _money(value) -> str:
@@ -63,7 +63,7 @@ def normalized_monthly_rent(lease) -> Decimal:
 
 def compute_weekly_interest(charge_base: Decimal, due_date: date, today: date) -> tuple[Decimal, bool, int]:
     """
-    Flat 3% strategy after a 2-week grace period:
+    Legacy-named helper for a one-time flat 3% late fee after a 14-day grace period:
     - 0 to 13 days late => no penalty yet
     - 14+ days late => +3% once
     - penalty does not keep increasing after that
@@ -75,8 +75,8 @@ def compute_weekly_interest(charge_base: Decimal, due_date: date, today: date) -
     if days_late < 14:
         return Decimal("0.00"), True, 0
 
-    interest = (charge_base * WEEKLY_LATE_INTEREST_RATE).quantize(Decimal("0.01"))
-    return interest, True, 2
+    late_fee = (charge_base * FLAT_LATE_FEE_RATE).quantize(Decimal("0.01"))
+    return late_fee, True, 2
 
 
 def expected_flat_late_interest_for_bill(bill: MonthlyBill, today: date | None = None) -> Decimal:
@@ -466,14 +466,21 @@ def ensure_bill_line_items_from_legacy(bill: MonthlyBill):
         payment_reference=bill.payment_reference,
         source_water_reading=bill.source_water_reading,
     )
-    _upsert_line_item(
-        bill,
-        BillLineItem.LINE_TYPE_LATE_FEE,
-        amount=bill.interest,
-        paid_amount=bill.interest if bill.status == "PAID" else Decimal("0.00"),
-        paid_at=bill.paid_at,
-        payment_reference=bill.payment_reference,
-    )
+    late_fee_line = bill.line_items.filter(
+        line_type=BillLineItem.LINE_TYPE_LATE_FEE,
+    ).first()
+    # Once any part of a fee has been paid, the line is the durable charge and
+    # allocation record. Do not reconstruct it from a legacy summary field
+    # that may contain only the outstanding balance (or zero after payment).
+    if late_fee_line is None or late_fee_line.paid_amount <= 0:
+        _upsert_line_item(
+            bill,
+            BillLineItem.LINE_TYPE_LATE_FEE,
+            amount=bill.interest,
+            paid_amount=bill.interest if bill.status == "PAID" else Decimal("0.00"),
+            paid_at=bill.paid_at,
+            payment_reference=bill.payment_reference,
+        )
     return list(bill.line_items.all())
 
 
@@ -486,7 +493,6 @@ def sync_monthly_bill_from_line_items(bill: MonthlyBill):
     parking = lines.get(BillLineItem.LINE_TYPE_PARKING)
     water = lines.get(BillLineItem.LINE_TYPE_WATER)
     late_fee = lines.get(BillLineItem.LINE_TYPE_LATE_FEE)
-    maintenance = lines.get(BillLineItem.LINE_TYPE_MAINTENANCE)
 
     bill.base_rent = rent.amount if rent else Decimal("0.00")
     bill.rent_paid = rent.paid_amount if rent else Decimal("0.00")
@@ -496,9 +502,8 @@ def sync_monthly_bill_from_line_items(bill: MonthlyBill):
     bill.water_amount = water.amount if water else Decimal("0.00")
     bill.water_paid = water.paid_amount if water else Decimal("0.00")
     bill.water_paid_at = water.paid_at if water and water.paid_amount > 0 else None
-    bill.interest = late_fee.balance if late_fee else Decimal("0.00")
-    maintenance_amount = maintenance.amount if maintenance else Decimal("0.00")
-    bill.total_due = (bill.base_rent + bill.parking_fee + bill.water_amount + bill.interest + maintenance_amount).quantize(Decimal("0.01"))
+    bill.interest = late_fee.amount if late_fee else Decimal("0.00")
+    bill.total_due = sum((line.amount for line in lines.values()), Decimal("0.00")).quantize(Decimal("0.01"))
     if water and water.source_water_reading:
         bill.source_water_reading = water.source_water_reading
 
@@ -789,8 +794,8 @@ def _ensure_bills_for_range(
 def get_or_update_monthly_bill(lease, billing_month: date, today: date | None = None) -> MonthlyBill:
     """
     Creates/updates MonthlyBill totals for the month.
-    - Interest applies to BASE RENT only (as requested).
-    - Water is included in total_due (but no interest yet).
+    - A one-time 3% late fee applies to rent plus parking after 14 days.
+    - Water is included in total_due but excluded from the fee basis.
     """
     if today is None:
         today = timezone.localdate()

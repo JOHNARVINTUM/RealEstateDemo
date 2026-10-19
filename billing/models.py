@@ -118,15 +118,41 @@ class MonthlyBill(models.Model):
     def water_balance(self):
         """Remaining water amount to pay"""
         return max(self.water_amount - self.water_paid, 0)
+
+    @property
+    def interest_balance(self):
+        """Remaining unpaid late fee, falling back to the legacy summary field."""
+        line_items = getattr(self, "_prefetched_objects_cache", {}).get("line_items")
+        if line_items is not None:
+            for line in line_items:
+                if line.line_type == BillLineItem.LINE_TYPE_LATE_FEE:
+                    return line.balance
+            if self.status == "PAID":
+                return 0
+            return max(self.interest or 0, 0)
+
+        late_fee = self.line_items.filter(
+            line_type=BillLineItem.LINE_TYPE_LATE_FEE,
+        ).only("amount", "paid_amount").first()
+        if late_fee:
+            return late_fee.balance
+        if self.status == "PAID":
+            return 0
+        return max(self.interest or 0, 0)
     
     @property
     def total_balance(self):
-        """Total remaining balance including interest, parking, and maintenance"""
+        """Total unpaid balance, sourced from bill lines when they exist."""
+        line_items = getattr(self, "_prefetched_objects_cache", {}).get("line_items")
+        if line_items is None:
+            line_items = list(self.line_items.all())
+        if line_items:
+            return sum((line.balance for line in line_items), 0)
         if self.status == "PAID":
             return 0
         if self.base_rent == 0 and self.water_amount == 0 and self.total_due > 0:
             return max(self.total_due - (self.rent_paid + self.water_paid + self.parking_paid + self.maintenance_paid), 0)
-        return self.rent_balance + self.water_balance + self.parking_balance + self.maintenance_balance + self.interest
+        return self.rent_balance + self.water_balance + self.parking_balance + self.maintenance_balance + self.interest_balance
     
     @property
     def is_rent_paid(self):

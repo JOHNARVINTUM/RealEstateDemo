@@ -36,7 +36,7 @@ def refresh_bill_status_from_component_payments(bill: MonthlyBill) -> None:
         max(bill.base_rent - bill.rent_paid, Decimal("0.00"))
         + max(bill.water_amount - bill.water_paid, Decimal("0.00"))
         + max(bill.parking_fee - bill.parking_paid, Decimal("0.00"))
-        + bill.interest
+        + bill.interest_balance
     ).quantize(Decimal("0.01"))
     has_any_payment = bill.rent_paid > 0 or bill.water_paid > 0 or bill.parking_paid > 0
 

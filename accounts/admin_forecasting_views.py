@@ -520,6 +520,7 @@ def admin_billed_this_month(request):
             billing_month__month=target.month,
         )
         .select_related("lease", "lease__unit", "lease__tenant", "lease__tenant__tenantprofile")
+        .prefetch_related("line_items")
         .order_by("lease__unit__number")
     )
 
@@ -549,7 +550,7 @@ def admin_billed_this_month(request):
             bill.display_rent = bill.rent_balance
             bill.display_water = bill.water_balance
             bill.display_parking = bill.parking_balance
-            bill.display_interest = bill.interest
+            bill.display_interest = bill.interest_balance
             bill.display_total = bill.total_balance
 
     table_total_rent = sum((bill.display_rent for bill in bills), Decimal("0"))

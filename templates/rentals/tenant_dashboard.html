@@ -135,8 +135,8 @@
               <div class="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl px-5 py-3">Rent <strong class="text-slate-900 ml-2">&#8369;{{ current_balance.rent_balance|floatformat:2|intcomma }}</strong></div>
               <div class="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl px-5 py-3">Water <strong class="text-slate-900 ml-2">&#8369;{{ current_balance.water_balance|floatformat:2|intcomma }}</strong></div>
               <div class="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl px-5 py-3">Parking <strong class="text-slate-900 ml-2">&#8369;{{ current_balance.parking_balance|floatformat:2|intcomma }}</strong></div>
-              {% if current_balance.interest > 0 %}
-                <div class="bg-rose-50 border border-rose-200 rounded-2xl px-5 py-3 text-rose-700">Late Fee <strong class="ml-2">&#8369;{{ current_balance.interest|floatformat:2|intcomma }}</strong></div>
+              {% if current_balance.interest_balance > 0 %}
+                <div class="bg-rose-50 border border-rose-200 rounded-2xl px-5 py-3 text-rose-700">Late Fee <strong class="ml-2">&#8369;{{ current_balance.interest_balance|floatformat:2|intcomma }}</strong></div>
               {% endif %}
             </div>
           {% elif show_paid_hero %}

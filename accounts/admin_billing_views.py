@@ -201,7 +201,7 @@ def _bill_computation_rows(bills):
             "rent": bill.rent_balance,
             "water": bill.water_balance,
             "parking": bill.parking_balance,
-            "late_fee": bill.interest,
+            "late_fee": bill.interest_balance,
             "balance": _bill_balance_amount(bill),
         })
     return rows

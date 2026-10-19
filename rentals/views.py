@@ -209,7 +209,7 @@ def _dashboard_billing_context(user, lease, today):
     reconcile_approved_payments_for_tenant(user)
     ensure_current_month_bill_for_lease(lease, today=today)
 
-    all_bills = list(MonthlyBill.objects.filter(lease=lease).order_by("billing_month"))
+    all_bills = list(MonthlyBill.objects.filter(lease=lease).prefetch_related("line_items").order_by("billing_month"))
     context["partial_bill_alert"] = next(
         (
             bill
@@ -297,7 +297,7 @@ def _tenant_billing_filters(request):
 def _filtered_bills_for_statement(lease, billing_month_filter):
     bills_query = MonthlyBill.objects.filter(
         lease=lease
-    ).exclude(status="PAID").select_related("source_water_reading").order_by("-billing_month")
+    ).exclude(status="PAID").select_related("source_water_reading").prefetch_related("line_items").order_by("-billing_month")
     if lease.end_date:
         bills_query = bills_query.filter(billing_month__lte=month_start(lease.end_date))
 
@@ -560,7 +560,7 @@ def _advance_generation_end_month(lease, today_start, months_to_pay):
 
 
 def _contract_bounded_bills(lease):
-    bills_query = MonthlyBill.objects.filter(lease=lease)
+    bills_query = MonthlyBill.objects.filter(lease=lease).prefetch_related("line_items")
     if lease.end_date:
         bills_query = bills_query.filter(billing_month__lte=month_start(lease.end_date))
     return list(bills_query.order_by("billing_month"))
@@ -581,7 +581,7 @@ def _water_only_locked(existing_bills):
 
 
 def _bill_has_rent_due(bill):
-    return (bill.rent_balance + bill.parking_balance + bill.interest) > 0
+    return (bill.rent_balance + bill.parking_balance + bill.interest_balance) > 0
 
 
 def _bill_has_water_due(bill):
@@ -679,7 +679,7 @@ def _payment_amounts_for_bill(bill, payment_type):
         pay_water = Decimal("0.00")
         pay_parking = bill.parking_balance
         pay_maintenance = Decimal("0.00")
-        pay_penalty = bill.interest
+        pay_penalty = bill.interest_balance
         display_rent = float(pay_rent)
         display_water = 0
         display_parking = float(pay_parking)
@@ -709,7 +709,7 @@ def _payment_amounts_for_bill(bill, payment_type):
         pay_water = bill.water_balance
         pay_parking = bill.parking_balance
         pay_maintenance = bill.maintenance_balance
-        pay_penalty = bill.interest
+        pay_penalty = bill.interest_balance
         display_rent = float(bill.base_rent)
         display_water = float(bill.water_amount or 0)
         display_parking = float(bill.parking_fee or 0)

@@ -5,6 +5,7 @@ import csv
 from datetime import date, datetime
 from decimal import Decimal
 from calendar import monthrange
+from django.core.exceptions import ValidationError
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.contrib import messages
@@ -15,11 +16,14 @@ from django.views.decorators.http import require_http_methods
 from .decorators import admin_required, staff_or_admin_required
 from water.models import WaterBillingSettings, WaterReading, WaterRate
 from water.services import (
+    ActiveWaterRateConflict,
+    ACTIVE_WATER_RATE_CONFLICT_MESSAGE,
     compute_water_reading,
     create_or_update_monthly_bill_from_reading,
     get_water_billing_settings_for_month,
     is_water_bill_locked,
     previous_unpaid_water_balance,
+    save_water_rate,
 )
 from billing.models import MonthlyBill
 from rentals.models import Lease
@@ -512,13 +516,15 @@ def admin_water_rate(request):
         rate_value = Decimal(rate_per_cu_m)
         eff_date = datetime.strptime(effective_date, '%Y-%m-%d').date()
         
-        # Create new rate (allow multiple rates with different effective dates)
-        WaterRate.objects.create(
+        # Multiple effective dates form the historical schedule, but only one
+        # active rate may be configured for any single effective date.
+        rate = WaterRate(
             rate_per_cu_m=rate_value,
             effective_date=eff_date,
             notes=notes,
             created_by=request.user
         )
+        save_water_rate(rate)
         settings_date = datetime.strptime(settings_month, '%Y-%m-%d').date() if settings_month else date(eff_date.year, eff_date.month, 1)
         WaterBillingSettings.objects.update_or_create(
             reading_month=settings_date,
@@ -532,6 +538,12 @@ def admin_water_rate(request):
         
         messages.success(request, f"Water rate set to ₱{rate_value} per m³ effective {eff_date}")
         
+    except ActiveWaterRateConflict:
+        messages.error(request, ACTIVE_WATER_RATE_CONFLICT_MESSAGE)
+        return redirect('/admin-portal/water/')
+    except ValidationError as e:
+        messages.error(request, "; ".join(e.messages))
+        return redirect('/admin-portal/water/')
     except Exception as e:
         messages.error(request, f"Error setting water rate: {e}")
     

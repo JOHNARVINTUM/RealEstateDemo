@@ -1,10 +1,17 @@
 from django.contrib import admin, messages
+from django.shortcuts import redirect
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from decimal import Decimal
 
 from .models import WaterBill, WaterCharge, WaterRate, WaterReading, WaterComputationLog
-from .services import compute_water_reading, create_or_update_monthly_bill_from_reading
+from .services import (
+    ACTIVE_WATER_RATE_CONFLICT_MESSAGE,
+    ActiveWaterRateConflict,
+    compute_water_reading,
+    create_or_update_monthly_bill_from_reading,
+    save_water_rate,
+)
 
 
 class WaterChargeInline(admin.TabularInline):
@@ -40,7 +47,19 @@ class WaterRateAdmin(admin.ModelAdmin):
     
     def save_model(self, request, obj, form, change):
         obj.created_by = request.user
-        super().save_model(request, obj, form, change)
+        save_water_rate(obj)
+
+    def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
+        try:
+            return super().changeform_view(
+                request,
+                object_id=object_id,
+                form_url=form_url,
+                extra_context=extra_context,
+            )
+        except ActiveWaterRateConflict as exc:
+            messages.error(request, ACTIVE_WATER_RATE_CONFLICT_MESSAGE)
+            return redirect("admin:water_waterrate_changelist")
 
 
 @admin.register(WaterReading)

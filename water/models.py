@@ -59,6 +59,21 @@ class WaterRate(models.Model):
         if self.rate_per_cu_m <= 0:
             raise ValidationError("Rate must be greater than zero")
 
+        if self.is_active:
+            duplicates = WaterRate.objects.filter(
+                effective_date=self.effective_date,
+                is_active=True,
+            )
+            if self.pk:
+                duplicates = duplicates.exclude(pk=self.pk)
+            if duplicates.exists():
+                raise ValidationError({
+                    "effective_date": (
+                        "An active water rate already exists for this effective date. "
+                        "Review the existing rate before adding another."
+                    )
+                })
+
 
 class WaterBillingSettings(models.Model):
     """

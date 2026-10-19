@@ -1,18 +1,25 @@
 from datetime import date
 import importlib
 from decimal import Decimal
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
+from unittest.mock import patch
 
-from django.db import IntegrityError
+from django.db import IntegrityError, close_old_connections, connections
 from django.test import SimpleTestCase, TestCase, TransactionTestCase
+from django.urls import reverse
 
 from accounts.models import User
 from billing.models import MonthlyBill
 from rentals.models import Lease, Unit
 from water.models import WaterBillingSettings, WaterRate, WaterReading
 from water.services import (
+    ACTIVE_WATER_RATE_CONFLICT_MESSAGE,
+    ActiveWaterRateConflict,
     compute_water_reading,
     create_or_update_monthly_bill_from_reading,
     get_active_rate_for_date,
+    save_water_rate,
 )
 
 
@@ -56,6 +63,10 @@ class WaterRateConstraintTests(TransactionTestCase):
             WaterRate.objects.filter(effective_date=effective_date, is_active=False).count(),
             2,
         )
+        self.assertIn(
+            "unique_active_water_rate_per_effective_date",
+            {constraint.name for constraint in WaterRate._meta.constraints},
+        )
 
     def test_rate_selection_uses_latest_applicable_effective_date(self):
         WaterRate.objects.create(
@@ -70,6 +81,166 @@ class WaterRateConstraintTests(TransactionTestCase):
         self.assertEqual(
             get_active_rate_for_date(date(2026, 7, 31)).pk,
             latest_rate.pk,
+        )
+
+
+class WaterRateCreationTests(TestCase):
+    def setUp(self):
+        self.admin_user = User.objects.create_superuser(
+            email="water-rate-admin@example.com",
+            username="water-rate-admin",
+            password="safe-test-password",
+        )
+        self.client.force_login(self.admin_user)
+
+    def _post_rate(self, effective_date, rate="45.00"):
+        return self.client.post(
+            reverse("admin_water_rate"),
+            {
+                "effective_date": effective_date.isoformat(),
+                "rate_per_cu_m": rate,
+                "settings_month": effective_date.replace(day=1).isoformat(),
+                "shared_pump_total": "0.00",
+                "vat_percent": "12.00",
+                "notes": "Focused water-rate creation test",
+            },
+            follow=True,
+        )
+
+    def test_admin_portal_creates_active_rate_for_unique_date(self):
+        effective_date = date(2027, 4, 1)
+
+        response = self._post_rate(effective_date, "48.50")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            WaterRate.objects.filter(
+                effective_date=effective_date,
+                rate_per_cu_m=Decimal("48.50"),
+                is_active=True,
+            ).exists()
+        )
+
+    def test_admin_portal_rejects_second_active_rate_for_same_date(self):
+        effective_date = date(2027, 5, 1)
+        existing = WaterRate.objects.create(
+            effective_date=effective_date,
+            rate_per_cu_m=Decimal("45.00"),
+            notes="Keep unchanged",
+        )
+
+        response = self._post_rate(effective_date, "50.00")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, ACTIVE_WATER_RATE_CONFLICT_MESSAGE)
+        self.assertEqual(
+            WaterRate.objects.filter(effective_date=effective_date, is_active=True).count(),
+            1,
+        )
+        existing.refresh_from_db()
+        self.assertEqual(existing.rate_per_cu_m, Decimal("45.00"))
+        self.assertTrue(existing.is_active)
+        self.assertEqual(existing.notes, "Keep unchanged")
+
+    def test_django_admin_rate_form_rejects_duplicate_active_date(self):
+        effective_date = date(2027, 6, 1)
+        WaterRate.objects.create(
+            effective_date=effective_date,
+            rate_per_cu_m=Decimal("45.00"),
+        )
+
+        response = self.client.post(
+            reverse("admin:water_waterrate_add"),
+            {
+                "effective_date": effective_date.isoformat(),
+                "rate_per_cu_m": "55.00",
+                "is_active": "on",
+                "notes": "Should be rejected",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "An active water rate already exists")
+        self.assertEqual(
+            WaterRate.objects.filter(effective_date=effective_date, is_active=True).count(),
+            1,
+        )
+
+    def test_inactive_same_date_and_active_different_date_are_allowed(self):
+        effective_date = date(2027, 7, 1)
+        WaterRate.objects.create(
+            effective_date=effective_date,
+            rate_per_cu_m=Decimal("45.00"),
+            is_active=True,
+        )
+
+        inactive_duplicate = WaterRate(
+            effective_date=effective_date,
+            rate_per_cu_m=Decimal("40.00"),
+            is_active=False,
+        )
+        save_water_rate(inactive_duplicate)
+        different_date = WaterRate(
+            effective_date=date(2027, 8, 1),
+            rate_per_cu_m=Decimal("50.00"),
+            is_active=True,
+        )
+        save_water_rate(different_date)
+
+        self.assertEqual(
+            WaterRate.objects.filter(effective_date=effective_date).count(),
+            2,
+        )
+        self.assertTrue(different_date.is_active)
+
+    def test_editing_active_rate_does_not_conflict_with_itself(self):
+        rate = WaterRate.objects.create(
+            effective_date=date(2027, 9, 1),
+            rate_per_cu_m=Decimal("45.00"),
+        )
+        rate.notes = "Edited without changing effective date"
+
+        save_water_rate(rate)
+
+        rate.refresh_from_db()
+        self.assertEqual(rate.notes, "Edited without changing effective date")
+        self.assertTrue(rate.is_active)
+
+
+class WaterRateConcurrentCreationTests(TransactionTestCase):
+    reset_sequences = True
+
+    def test_concurrent_same_date_creation_returns_one_friendly_conflict(self):
+        effective_date = date(2027, 10, 1)
+        validation_barrier = Barrier(2)
+        original_full_clean = WaterRate.full_clean
+
+        def validate_then_wait(instance, *args, **kwargs):
+            original_full_clean(instance, *args, **kwargs)
+            validation_barrier.wait(timeout=15)
+
+        def create_rate(rate_value):
+            close_old_connections()
+            try:
+                rate = WaterRate(
+                    effective_date=effective_date,
+                    rate_per_cu_m=Decimal(rate_value),
+                )
+                save_water_rate(rate)
+                return "created"
+            except ActiveWaterRateConflict:
+                return "conflict"
+            finally:
+                connections.close_all()
+
+        with patch.object(WaterRate, "full_clean", validate_then_wait):
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                results = list(executor.map(create_rate, ("45.00", "50.00")))
+
+        self.assertCountEqual(results, ["created", "conflict"])
+        self.assertEqual(
+            WaterRate.objects.filter(effective_date=effective_date, is_active=True).count(),
+            1,
         )
 
 

@@ -6,7 +6,7 @@ from decimal import Decimal
 from datetime import date
 import logging
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.core.exceptions import ValidationError
 from django.db.models import Q, Sum
 
@@ -14,6 +14,45 @@ from billing.models import BillLineItem, MonthlyBill
 from .models import WaterBillingSettings, WaterRate, WaterReading, WaterComputationLog
 
 logger = logging.getLogger(__name__)
+
+ACTIVE_WATER_RATE_CONFLICT_MESSAGE = (
+    "An active water rate already exists for this effective date. "
+    "Review the existing rate before adding another."
+)
+
+
+class ActiveWaterRateConflict(ValidationError):
+    """Raised when a concurrent request wins the active-rate date slot."""
+
+
+def _is_active_water_rate_unique_violation(error: IntegrityError) -> bool:
+    constraint_name = "unique_active_water_rate_per_effective_date"
+    current = error
+    while current is not None:
+        diagnostic = getattr(current, "diag", None)
+        if getattr(diagnostic, "constraint_name", None) == constraint_name:
+            return True
+        current = current.__cause__ or current.__context__
+
+    # SQLite's test backend reports the indexed column rather than the index name.
+    return "UNIQUE constraint failed: water_waterrate.effective_date" in str(error)
+
+
+def save_water_rate(rate: WaterRate) -> WaterRate:
+    """Validate a rate and safely persist it, translating the unique-index race."""
+    rate.full_clean()
+    try:
+        # A savepoint lets callers handle this conflict without leaving an outer
+        # request transaction marked as broken.
+        with transaction.atomic():
+            rate.save()
+    except IntegrityError as exc:
+        if _is_active_water_rate_unique_violation(exc):
+            raise ActiveWaterRateConflict(
+                ACTIVE_WATER_RATE_CONFLICT_MESSAGE
+            ) from exc
+        raise
+    return rate
 
 
 def quantize_money(value) -> Decimal:

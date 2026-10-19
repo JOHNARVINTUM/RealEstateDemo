@@ -19,6 +19,7 @@ from rentals.models import Unit, TenantProfile, Lease
 from billing.models import MonthlyBill
 from payments.models import ManualPayment
 from water.models import WaterRate, WaterReading, WaterComputationLog
+from water.services import save_water_rate
 from maintenance.models import MaintenanceRequest
 
 User = get_user_model()
@@ -397,7 +398,7 @@ class Command(BaseCommand):
         if self.dry_run:
             self.stdout.write(f"  [DRY RUN] Would create water rate: ₱45.00/m³")
         else:
-            WaterRate.objects.create(**rate_data)
+            save_water_rate(WaterRate(**rate_data))
             self.stdout.write("  Created water rate: ₱45.00/m³")
 
     def create_water_readings(self):

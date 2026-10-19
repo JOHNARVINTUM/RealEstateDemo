@@ -5,6 +5,7 @@ from django.utils import timezone
 
 from accounts.decorators import tenant_required
 from rentals.models import Lease, Notification
+from rentals.notification_copy import maintenance_request_received_notification_copy
 from .forms import MaintenanceRequestForm
 from .models import MaintenanceRequest
 
@@ -92,13 +93,15 @@ def report_issue(request):
                     tenant_name = user.tenantprofile.full_name
                 except Exception:
                     tenant_name = user.email
-                unit_label = f" for Unit {unit.number}" if unit else ""
+                notification_title, notification_message = maintenance_request_received_notification_copy(
+                    tenant_name=tenant_name,
+                    category=obj.get_category_display(),
+                    title=obj.title,
+                    unit_number=unit.number if unit else "",
+                )
                 Notification.objects.create(
-                    title=f"New Maintenance Request{unit_label}",
-                    message=(
-                        f"{tenant_name} submitted a {obj.get_category_display().lower()} "
-                        f"maintenance request: {obj.title}."
-                    ),
+                    title=notification_title,
+                    message=notification_message,
                     notification_type="MAINTENANCE",
                     recipient_type="ADMIN",
                     related_unit=unit,

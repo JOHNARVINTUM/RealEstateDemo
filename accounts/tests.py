@@ -11,7 +11,7 @@ from zipfile import ZipFile
 from dateutil.relativedelta import relativedelta
 from PIL import Image
 
-from django.test import RequestFactory, TestCase, override_settings
+from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
@@ -28,6 +28,11 @@ from maintenance.models import MaintenanceRequest
 from payments.models import ManualPayment
 from rentals.models import ArchivedTenant, Lease, LeaseContractEvent, Notification, TenantAttachment, TenantProfile, Unit
 from rentals.storage import SupabaseStorage
+from rentals.notification_copy import (
+    move_in_payment_notification_copy,
+    tenant_account_updated_notification_copy,
+)
+from rentals import notification_copy
 from water.models import WaterRate, WaterReading
 
 
@@ -69,6 +74,107 @@ class SecretKeySettingsTests(TestCase):
         )
 
         self.assertEqual(result.returncode, 0, result.stderr)
+
+
+class AdminNotificationCopyTests(SimpleTestCase):
+    def test_move_in_payment_copy_keeps_details_on_separate_lines(self):
+        title, message = move_in_payment_notification_copy(
+            tenant_name="Alex Tenant",
+            amount=Decimal("45700.00"),
+            payment_method="GCash",
+            reference="REF-PM-F1526FC4",
+        )
+
+        self.assertEqual(title, "Move-in payment received")
+        self.assertEqual(
+            message,
+            "Alex Tenant's move-in payment of ₱45,700.00 was successfully received via GCash.\n"
+            "Lease activated · First month's bill is paid.\n"
+            "Payment reference: REF-PM-F1526FC4",
+        )
+
+    def test_account_update_copy_separates_summary_from_specific_action(self):
+        title, message = tenant_account_updated_notification_copy(
+            tenant_name="Alex Tenant",
+            changed_fields=["password"],
+        )
+
+        self.assertEqual(title, "Account updated")
+        self.assertEqual(
+            message,
+            "An administrator updated Alex Tenant's account information.\nUpdated: Password",
+        )
+
+    def test_all_other_notification_copy_builders_are_concise_and_retain_details(self):
+        cases = [
+            (notification_copy.payment_submitted_notification_copy(
+                tenant_name="Alex Tenant", amount=Decimal("1200"), method="GCash", reference="REF-1",
+            ), "Payment submitted", ("Alex Tenant", "₱1,200.00", "GCash", "REF-1")),
+            (notification_copy.cash_payment_scheduled_notification_copy(
+                tenant_name="Alex Tenant", amount=Decimal("1200"), schedule="June 4 at 1 PM", reference="REF-2",
+            ), "Cash payment requested", ("Alex Tenant", "₱1,200.00", "REF-2", "Please confirm")),
+            (notification_copy.payment_approved_notification_copy(
+                payment_method="GCash", amount=Decimal("1200"),
+            ), "Payment received", ("GCash", "₱1,200.00", "balance has been updated")),
+            (notification_copy.payment_declined_notification_copy(
+                payment_method="cash", amount=Decimal("1200"),
+            ), "Payment needs attention", ("cash", "₱1,200.00", "could not be approved")),
+            (notification_copy.online_payment_received_notification_copy(
+                tenant_name="Alex Tenant", amount=Decimal("1200"), method="Gcash", reference="REF-3",
+            ), "Online payment received", ("Alex Tenant", "₱1,200.00", "GCash", "REF-3", "marked as paid")),
+            (notification_copy.cash_appointment_confirmed_notification_copy(
+                amount=Decimal("1200"), schedule="June 4, 2026",
+            ), "Cash payment appointment confirmed", ("₱1,200.00", "June 4, 2026", "exact amount")),
+            (notification_copy.cash_appointment_rescheduled_notification_copy(
+                amount=Decimal("1200"), old_schedule="June 4", new_schedule="June 5",
+                reference="REF-4", admin_note="Please arrive at 1 PM.",
+            ), "Cash payment appointment updated", ("June 4", "June 5", "REF-4", "Please arrive")),
+            (notification_copy.maintenance_request_received_notification_copy(
+                tenant_name="Alex Tenant", category="Plumbing", title="Leaking sink", unit_number="A-2",
+            ), "Maintenance request received", ("Maintenance request: Leaking sink", "Alex Tenant", "Unit A-2")),
+            (notification_copy.maintenance_review_notification_copy(
+                review_status="ACCEPTED", title="Leaking sink", unit_number="A-2", assigned_staff="Sam",
+            ), "Maintenance request accepted", ("Leaking sink", "Unit: A-2", "Sam")),
+            (notification_copy.maintenance_review_notification_copy(
+                review_status="REJECTED", title="Leaking sink", unit_number="A-2", note="Please add a photo.",
+            ), "Maintenance request update", ("Leaking sink", "Please add a photo")),
+            (notification_copy.maintenance_review_notification_copy(
+                review_status="PENDING", title="Leaking sink", unit_number="A-2",
+            ), "Maintenance request under review", ("Leaking sink", "Unit: A-2")),
+            (notification_copy.maintenance_assignment_notification_copy(
+                request_id=7, title="Leaking sink", tenant_name="Alex Tenant", unit_number="A-2",
+            ), "Maintenance request assigned", ("request to work on", "Request number: 7", "Alex Tenant", "A-2")),
+            (notification_copy.maintenance_resolved_notification_copy(
+                staff_name="Sam", request_id=7, title="Leaking sink", tenant_name="Alex Tenant",
+                unit_number="A-2", completed_by="Sam",
+            ), "Maintenance work marked complete", ("resolved", "Request number: 7", "Alex Tenant", "Completed by: Sam")),
+            (notification_copy.repair_estimate_notification_copy(
+                staff_name="Sam", request_id=7, title="Leaking sink", tenant_name="Alex Tenant",
+                unit_number="A-2", amount=Decimal("625"), is_update=True,
+            ), "Repair estimate updated", ("Sam updated", "Request number: 7", "₱625.00")),
+            (notification_copy.maintenance_schedule_notification_copy(
+                title="Leaking sink", decision="APPROVED", visit_time="June 5 at 1 PM", unit_number="A-2",
+            ), "Maintenance visit updated", ("has been confirmed", "June 5 at 1 PM", "Unit: A-2")),
+            (notification_copy.pending_lease_welcome_notification_copy(
+                unit="A-2", security_deposit=Decimal("12000"),
+                total_move_in_cost=Decimal("48000"), start_date="June 1, 2026",
+            ), "Your lease for Unit A-2 is ready", ("Your move-in payment is still pending", "Move-in payment", "₱48,000.00", "Lease starts", "June 1, 2026", "Security deposit", "₱12,000.00 · Due upon move-in")),
+            (notification_copy.activated_lease_welcome_notification_copy(
+                unit="A-2", monthly_rent=Decimal("12000"), start_date="June 1, 2026", due_day=5,
+            ), "Lease active for Unit A-2", ("payment is confirmed", "₱12,000.00", "June 1, 2026", "portal is ready")),
+            (notification_copy.tenant_added_notification_copy(
+                tenant_name="Alex Tenant", email="alex@example.com",
+            ), "Tenant added: Alex Tenant", ("Alex Tenant", "alex@example.com", "sent by email")),
+            (notification_copy.unit_created_notification_copy(
+                unit_number="A-2", unit_type="Studio",
+            ), "Unit added", ("A-2", "Studio", "ready to be managed")),
+        ]
+
+        for (title, message), expected_title, expected_fragments in cases:
+            with self.subTest(title=expected_title):
+                self.assertEqual(title, expected_title)
+                for fragment in expected_fragments:
+                    self.assertIn(fragment, message)
 
 
 class AdminMonthlyBillingFilterTests(TestCase):
@@ -2413,6 +2519,41 @@ class TenantNotificationBehaviorTests(TestCase):
             password_change_required=False,
             created_by=None,
         )
+
+    def test_pending_lease_notification_renders_compact_payment_details(self):
+        title, message = notification_copy.pending_lease_welcome_notification_copy(
+            unit="301",
+            security_deposit=Decimal("12000.00"),
+            total_move_in_cost=Decimal("45700.00"),
+            start_date="June 1, 2026",
+        )
+        notification = Notification.objects.create(
+            title=title,
+            message=message,
+            notification_type="SYSTEM",
+            recipient_type="TENANT",
+            user=self.tenant,
+            is_read=False,
+        )
+        self.client.force_login(self.tenant)
+
+        response = self.client.get(reverse("tenant_notifications"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Your lease for Unit 301 is ready")
+        self.assertContains(response, "LEASE")
+        self.assertContains(response, "Your move-in payment is still pending.")
+        self.assertContains(response, "Please complete the required payment to activate your lease.")
+        self.assertContains(response, "Move-in payment")
+        self.assertContains(response, "₱45,700.00")
+        self.assertContains(response, "Lease starts")
+        self.assertContains(response, "June 1, 2026")
+        self.assertContains(response, "Security deposit")
+        self.assertContains(response, "₱12,000.00 · Due upon move-in")
+        self.assertNotContains(response, "Amenities")
+        self.assertContains(response, "Mark Read")
+        self.assertEqual(notification.notification_type, "SYSTEM")
+        self.assertFalse(notification.is_read)
 
     def test_tenant_can_delete_read_notification(self):
         notification = Notification.objects.create(

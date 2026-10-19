@@ -1774,22 +1774,25 @@ def approve_manual_payment(payment):
 def reject_manual_payment(payment):
     from payments.models import ManualPayment
     from rentals.models import Notification
+    from rentals.notification_copy import payment_declined_notification_copy
     import logging
-    logger = logging.getLogger(__name__)
 
+    logger = logging.getLogger(__name__)
     payment = ManualPayment.objects.select_for_update().get(pk=payment.pk)
     if payment.status != "REJECTED":
         payment.status = "REJECTED"
         payment.save(update_fields=["status"])
-        
-        # Notify tenant that payment was rejected
+        method_display = "GCash" if payment.payment_method == "GCASH" else "cash"
+        title, message = payment_declined_notification_copy(
+            payment_method=method_display,
+            amount=payment.amount,
+        )
         try:
-            method_display = "GCash" if payment.payment_method == "GCASH" else "Face-to-Face Cash"
             Notification.create_tenant_notification(
-                title="Payment Declined",
-                message=f"Your {method_display} payment request of â‚±{payment.amount:,.2f} was declined. Please contact the admin for more information or submit a new payment.",
-                notification_type='PAYMENT',
-                tenant_user=payment.user
+                title=title,
+                message=message,
+                notification_type="PAYMENT",
+                tenant_user=payment.user,
             )
         except Exception as e:
             logger.exception(f"Failed to create payment rejection notification: {e}")

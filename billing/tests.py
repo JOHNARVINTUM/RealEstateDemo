@@ -1044,6 +1044,213 @@ class BillingWorkflowTests(TestCase):
         self.assertEqual(bill.status, "PARTIALLY_PAID")
 
 
+class MonthlyBillRefreshMaintenanceLedgerTests(TestCase):
+    def setUp(self):
+        self.tenant = User.objects.create_user(
+            email="maintenance-ledger-refresh@example.test",
+            username="maintenance-ledger-refresh",
+            password="test-password",
+            role=User.Role.TENANT,
+        )
+        self.unit = Unit.objects.create(number="MREF-1")
+        self.lease = Lease.objects.create(
+            tenant=self.tenant,
+            unit=self.unit,
+            monthly_rent=Decimal("8272.00"),
+            due_day=1,
+            start_date=date(2026, 1, 1),
+            status=Lease.STATUS_ACTIVE,
+            is_active=True,
+        )
+
+    def make_bill(
+        self,
+        *,
+        billing_month=date(2026, 9, 1),
+        due_date=date(2026, 9, 1),
+        water=Decimal("0.00"),
+        interest=Decimal("0.00"),
+        maintenance=Decimal("0.00"),
+        rent_paid=Decimal("0.00"),
+        parking_paid=Decimal("0.00"),
+        water_paid=Decimal("0.00"),
+        maintenance_paid=Decimal("0.00"),
+        fee_paid=Decimal("0.00"),
+        status="UNPAID",
+        total_due=None,
+    ):
+        parking = self.lease.parking_fee
+        core_total = (
+            self.lease.monthly_rent + parking + water + interest
+        ).quantize(Decimal("0.01"))
+        paid_at = timezone.now()
+        bill = MonthlyBill.objects.create(
+            lease=self.lease,
+            billing_month=billing_month,
+            due_date=due_date,
+            base_rent=self.lease.monthly_rent,
+            water_amount=water,
+            water_computed_from_system=bool(water),
+            parking_fee=parking,
+            interest=interest,
+            rent_paid=rent_paid,
+            rent_paid_at=paid_at if rent_paid else None,
+            parking_paid=parking_paid,
+            water_paid=water_paid,
+            water_paid_at=paid_at if water_paid else None,
+            total_due=core_total if total_due is None else total_due,
+            status=status,
+            payment_reference="REF-MAINT-LEDGER-REFRESH",
+        )
+        line_values = [
+            (BillLineItem.LINE_TYPE_RENT, self.lease.monthly_rent, rent_paid),
+            (BillLineItem.LINE_TYPE_PARKING, parking, parking_paid),
+        ]
+        if water:
+            line_values.append((BillLineItem.LINE_TYPE_WATER, water, water_paid))
+        if interest:
+            line_values.append((BillLineItem.LINE_TYPE_LATE_FEE, interest, fee_paid))
+        if maintenance:
+            line_values.append((BillLineItem.LINE_TYPE_MAINTENANCE, maintenance, maintenance_paid))
+
+        for line_type, amount, allocated in line_values:
+            line = BillLineItem(
+                monthly_bill=bill,
+                line_type=line_type,
+                amount=amount,
+                paid_amount=allocated,
+                paid_at=paid_at if allocated else None,
+                payment_reference=bill.payment_reference if allocated else "",
+            )
+            line.refresh_status()
+            line.save()
+        return bill
+
+    def assert_ledger_invariants(self, bill):
+        bill.refresh_from_db()
+        lines = list(bill.line_items.all())
+        self.assertEqual(
+            sum((line.amount for line in lines), Decimal("0.00")),
+            bill.total_due,
+        )
+        self.assertEqual(
+            sum((line.balance for line in lines), Decimal("0.00")),
+            bill.total_balance,
+        )
+
+    def test_refresh_includes_maintenance_in_production_shaped_stale_summary(self):
+        bill = self.make_bill(total_due=Decimal("8272.00"))
+        maintenance = BillLineItem.objects.create(
+            monthly_bill=bill,
+            line_type=BillLineItem.LINE_TYPE_MAINTENANCE,
+            amount=Decimal("600.00"),
+        )
+
+        get_or_update_monthly_bill(
+            self.lease,
+            bill.billing_month,
+            today=bill.due_date,
+        )
+
+        bill.refresh_from_db()
+        maintenance.refresh_from_db()
+        self.assertEqual(maintenance.amount, Decimal("600.00"))
+        self.assertEqual(bill.total_due, Decimal("8872.00"))
+        self.assert_ledger_invariants(bill)
+
+    def test_refresh_preserves_all_lines_allocations_and_late_fee_basis(self):
+        self.lease.motorcycle_slots = 1
+        self.lease.save(update_fields=["motorcycle_slots"])
+        bill = self.make_bill(
+            billing_month=date(2026, 8, 1),
+            due_date=date(2026, 8, 1),
+            water=Decimal("500.00"),
+            interest=Decimal("258.66"),
+            maintenance=Decimal("600.00"),
+            rent_paid=Decimal("100.00"),
+            parking_paid=Decimal("50.00"),
+            water_paid=Decimal("50.00"),
+            maintenance_paid=Decimal("200.00"),
+            fee_paid=Decimal("25.00"),
+            status="PARTIALLY_PAID",
+            total_due=Decimal("9380.66"),
+        )
+        before = {
+            line.line_type: (line.amount, line.paid_amount, line.paid_at, line.payment_reference)
+            for line in bill.line_items.all()
+        }
+
+        get_or_update_monthly_bill(
+            self.lease,
+            bill.billing_month,
+            today=bill.due_date + timedelta(days=14),
+        )
+        get_or_update_monthly_bill(
+            self.lease,
+            bill.billing_month,
+            today=bill.due_date + timedelta(days=14),
+        )
+
+        bill.refresh_from_db()
+        after = {
+            line.line_type: (line.amount, line.paid_amount, line.paid_at, line.payment_reference)
+            for line in bill.line_items.all()
+        }
+        self.assertEqual(after, before)
+        self.assertEqual(bill.interest, Decimal("258.66"))
+        self.assertEqual(bill.total_due, Decimal("9980.66"))
+        self.assertEqual(
+            bill.line_items.filter(line_type=BillLineItem.LINE_TYPE_LATE_FEE).count(),
+            1,
+        )
+        # 3% is calculated from rent + parking only, not water or maintenance.
+        self.assertEqual(bill.interest, (Decimal("8272.00") + Decimal("350.00")) * Decimal("0.03"))
+        self.assert_ledger_invariants(bill)
+
+    def test_fully_paid_maintenance_line_remains_paid_after_refresh(self):
+        bill = self.make_bill(
+            status="PARTIALLY_PAID",
+            maintenance=Decimal("600.00"),
+            maintenance_paid=Decimal("600.00"),
+            total_due=Decimal("8272.00"),
+        )
+        line = bill.line_items.get(line_type=BillLineItem.LINE_TYPE_MAINTENANCE)
+        before = (line.amount, line.paid_amount, line.status, line.paid_at, line.payment_reference)
+
+        get_or_update_monthly_bill(self.lease, bill.billing_month, today=bill.due_date)
+
+        bill.refresh_from_db()
+        line.refresh_from_db()
+        self.assertEqual(
+            (line.amount, line.paid_amount, line.status, line.paid_at, line.payment_reference),
+            before,
+        )
+        self.assertEqual(bill.total_due, Decimal("8872.00"))
+        self.assert_ledger_invariants(bill)
+
+    def test_bulk_range_refresh_includes_existing_maintenance_line(self):
+        today = timezone.localdate()
+        billing_month = today.replace(day=1)
+        self.lease.due_day = 25
+        self.lease.save(update_fields=["due_day"])
+        bill = self.make_bill(
+            billing_month=billing_month,
+            due_date=date(billing_month.year, billing_month.month, self.lease.due_day),
+            total_due=Decimal("8272.00"),
+        )
+        BillLineItem.objects.create(
+            monthly_bill=bill,
+            line_type=BillLineItem.LINE_TYPE_MAINTENANCE,
+            amount=Decimal("600.00"),
+        )
+
+        ensure_bills_up_to(self.lease, billing_month, today=today)
+
+        bill.refresh_from_db()
+        self.assertEqual(bill.total_due, Decimal("8872.00"))
+        self.assert_ledger_invariants(bill)
+
+
 class LeaseActivationTimezoneTests(TestCase):
     """
     Ensure Lease.save() uses timezone.localdate() (Asia/Manila)

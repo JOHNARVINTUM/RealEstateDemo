@@ -788,7 +788,33 @@ def _apply_monthly_bill_changes(bill, *, due_date, base_rent, water_amount, park
         bill.parking_fee = parking_fee
         changed = True
 
-    new_total = (bill.base_rent + bill.water_amount + bill.parking_fee + bill.interest).quantize(Decimal("0.01"))
+    # MonthlyBill's legacy component fields do not represent every ledger
+    # charge (for example, maintenance). Project the legacy lines at their
+    # refreshed values while retaining every other existing line unchanged.
+    # A paid late-fee line is durable history and is intentionally preserved
+    # by ensure_bill_line_items_from_legacy(), even if the legacy interest
+    # summary differs.
+    existing_lines = list(bill.line_items.all())
+    planned_line_amounts = {line.line_type: line.amount for line in existing_lines}
+    planned_line_amounts.update({
+        BillLineItem.LINE_TYPE_RENT: bill.base_rent,
+        BillLineItem.LINE_TYPE_PARKING: bill.parking_fee,
+        BillLineItem.LINE_TYPE_WATER: bill.water_amount,
+    })
+    late_fee_line = next(
+        (
+            line
+            for line in existing_lines
+            if line.line_type == BillLineItem.LINE_TYPE_LATE_FEE
+        ),
+        None,
+    )
+    planned_line_amounts[BillLineItem.LINE_TYPE_LATE_FEE] = (
+        late_fee_line.amount
+        if late_fee_line and late_fee_line.paid_amount > 0
+        else bill.interest
+    )
+    new_total = sum(planned_line_amounts.values(), Decimal("0.00")).quantize(Decimal("0.01"))
     if bill.total_due != new_total:
         bill.total_due = new_total
         changed = True

@@ -1,6 +1,8 @@
 from datetime import date
 from decimal import Decimal
 import calendar
+import hashlib
+import json
 
 from django.db import IntegrityError, transaction
 from django.db.models import Sum
@@ -88,61 +90,222 @@ def expected_flat_late_interest_for_bill(bill: MonthlyBill, today: date | None =
     return interest
 
 
-def repair_inflated_unpaid_late_fees(*, today: date | None = None, dry_run: bool = False):
-    """
-    Correct legacy compounded late fees to the current flat 3% rule.
+def _late_fee_repair_references():
+    """Return exact bill IDs referenced by legacy payment/invoice bill_ids text."""
+    from payments.models import ManualPayment
 
-    Safety rules:
-    - paid bills are never touched
-    - only UNPAID / PARTIALLY_PAID bills are considered
-    - only reduces interest when the stored value is higher than the expected flat value
+    payment_bill_ids = set()
+    for raw_ids in ManualPayment.objects.exclude(bill_ids="").values_list("bill_ids", flat=True):
+        payment_bill_ids.update(parse_bill_ids(raw_ids))
+
+    invoice_bill_ids = set()
+    for raw_ids in BillingInvoice.objects.exclude(bill_ids="").values_list("bill_ids", flat=True):
+        invoice_bill_ids.update(parse_bill_ids(raw_ids))
+    return payment_bill_ids, invoice_bill_ids
+
+
+def _late_fee_repair_snapshot_token(bill, *, expected_interest, today):
+    payload = {
+        "id": bill.pk,
+        "status": bill.status,
+        "billing_month": bill.billing_month.isoformat() if bill.billing_month else None,
+        "due_date": bill.due_date.isoformat() if bill.due_date else None,
+        "base_rent": str(bill.base_rent),
+        "water_amount": str(bill.water_amount),
+        "parking_fee": str(bill.parking_fee),
+        "interest": str(bill.interest),
+        "total_due": str(bill.total_due),
+        "expected_interest": str(expected_interest),
+        "today": today.isoformat(),
+    }
+    return hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
+
+
+def _legacy_late_fee_repair_candidate(
+    bill, *, today, payment_bill_ids, invoice_bill_ids,
+):
+    """Return a preview row or a single explicit reason the legacy row is unsafe."""
+    old_interest = Decimal(bill.interest or 0).quantize(Decimal("0.01"))
+    expected_interest = expected_flat_late_interest_for_bill(bill, today=today)
+    row = {
+        "bill_id": bill.pk,
+        "billing_month": bill.billing_month,
+        "status": bill.status,
+        "tenant_email": bill.lease.tenant.email if bill.lease and bill.lease.tenant else "",
+        "unit": bill.lease.unit.number if bill.lease and bill.lease.unit else "",
+        "old_interest": old_interest,
+        "new_interest": expected_interest,
+        "old_total_due": Decimal(bill.total_due or 0).quantize(Decimal("0.01")),
+        "new_total_due": (
+            Decimal(bill.base_rent or 0)
+            + Decimal(bill.water_amount or 0)
+            + Decimal(bill.parking_fee or 0)
+            + expected_interest
+        ).quantize(Decimal("0.01")),
+        "reason": "Legacy summary-only bill exceeds the current one-time late fee.",
+    }
+
+    if bill.billing_month and bill.billing_month.replace(day=1) > today.replace(day=1):
+        return None, "Future billing month."
+    if bill.status == "PAID":
+        return None, "Paid bills are never repaired."
+    if bill.status == "PARTIALLY_PAID":
+        return None, "Partially paid bills require payment-allocation review."
+    if bill.status != "UNPAID":
+        return None, "Bill status is not UNPAID."
+    if bill.line_items.exists():
+        return None, "Bill has BillLineItems; the line ledger is authoritative."
+    if (
+        Decimal(bill.rent_paid or 0) != 0
+        or Decimal(bill.water_paid or 0) != 0
+        or Decimal(bill.parking_paid or 0) != 0
+        or bill.paid_at
+        or bill.rent_paid_at
+        or bill.water_paid_at
+        or (bill.payment_reference or "").strip()
+    ):
+        return None, "Legacy payment indicators are present."
+    if bill.pk in payment_bill_ids:
+        return None, "A ManualPayment references this bill through bill_ids."
+    if bill.pk in invoice_bill_ids:
+        return None, "A BillingInvoice references this bill through bill_ids."
+    if not bill.due_date:
+        return None, "Due date is missing; the late-fee rule cannot be evaluated."
+    if any(Decimal(value or 0) < 0 for value in (
+        bill.base_rent, bill.water_amount, bill.parking_fee, bill.interest,
+    )):
+        return None, "Negative legacy charge values require manual review."
+
+    legacy_total = (
+        Decimal(bill.base_rent or 0)
+        + Decimal(bill.water_amount or 0)
+        + Decimal(bill.parking_fee or 0)
+        + old_interest
+    ).quantize(Decimal("0.01"))
+    if row["old_total_due"] != legacy_total:
+        return None, "Summary fields do not reconcile before repair."
+    if Decimal(bill.total_balance).quantize(Decimal("0.01")) != row["old_total_due"]:
+        return None, "Legacy balance does not match total_due."
+    if row["old_total_due"] < 0 or row["new_total_due"] < 0:
+        return None, "Bill summary would have a negative total."
+    if bill.due_date.toordinal() + 14 > today.toordinal():
+        return None, "The 14-day late-fee threshold has not been reached."
+    if old_interest <= expected_interest:
+        return None, "Stored interest does not exceed the current flat fee."
+
+    row["reduction"] = (old_interest - expected_interest).quantize(Decimal("0.01"))
+    row["snapshot_token"] = _late_fee_repair_snapshot_token(
+        bill, expected_interest=expected_interest, today=today,
+    )
+    return row, None
+
+
+def repair_inflated_unpaid_late_fees(
+    *, today: date | None = None, dry_run: bool = True,
+    bill_ids=None, preview_tokens=None, operator=None,
+):
+    """Preview or explicitly apply safe repairs to legacy summary-only bills.
+
+    Line-backed, paid, allocated, invoiced, inconsistent, and otherwise
+    ambiguous bills are reported as skipped. Apply mode requires selected IDs,
+    the preview snapshot for each ID, and the authenticated operator.
     """
+    from django.contrib.admin.models import CHANGE, LogEntry
+    from django.contrib.contenttypes.models import ContentType
+
     today = today or timezone.localdate()
-    current_month = today.replace(day=1)
-    queryset = MonthlyBill.objects.filter(
-        status__in=("UNPAID", "PARTIALLY_PAID"),
-        billing_month__lte=current_month,
-    ).select_related("lease", "lease__tenant", "lease__unit")
-
+    eligible = []
+    skipped = []
     repaired = []
-    skipped = 0
     total_reduction = Decimal("0.00")
 
-    for bill in queryset:
-        old_interest = Decimal(bill.interest or 0).quantize(Decimal("0.01"))
-        expected_interest = expected_flat_late_interest_for_bill(bill, today=today)
-        if old_interest <= expected_interest:
-            skipped += 1
-            continue
+    if dry_run:
+        payment_bill_ids, invoice_bill_ids = _late_fee_repair_references()
+    else:
+        if operator is None or not getattr(operator, "is_authenticated", False):
+            raise ValueError("An authenticated operator is required to apply repairs.")
+        selected_ids = sorted({int(value) for value in (bill_ids or [])})
+        preview_tokens = preview_tokens or {}
+        with transaction.atomic():
+            queryset = list(
+                MonthlyBill.objects.select_for_update().filter(pk__in=selected_ids)
+                .select_related("lease", "lease__tenant", "lease__unit").order_by("pk")
+            )
+            # Recheck linkage only after locking the selected bill rows, rather
+            # than relying on preview-time or pre-lock references.
+            payment_bill_ids, invoice_bill_ids = _late_fee_repair_references()
+            found_ids = {bill.pk for bill in queryset}
+            for missing_id in sorted(set(selected_ids) - found_ids):
+                skipped.append({"bill_id": missing_id, "reason": "Bill no longer exists."})
 
-        reduction = (old_interest - expected_interest).quantize(Decimal("0.01"))
-        repaired.append({
-            "bill_id": bill.id,
-            "tenant_email": bill.lease.tenant.email if bill.lease and bill.lease.tenant else "",
-            "unit": bill.lease.unit.number if bill.lease and bill.lease.unit else "",
-            "billing_month": bill.billing_month,
-            "old_interest": old_interest,
-            "new_interest": expected_interest,
-            "reduction": reduction,
-        })
-        total_reduction += reduction
+            content_type = ContentType.objects.get_for_model(MonthlyBill)
+            for bill in queryset:
+                row, reason = _legacy_late_fee_repair_candidate(
+                    bill, today=today,
+                    payment_bill_ids=payment_bill_ids,
+                    invoice_bill_ids=invoice_bill_ids,
+                )
+                if reason:
+                    skipped.append({"bill_id": bill.pk, "reason": reason})
+                    continue
+                if preview_tokens.get(str(bill.pk)) != row["snapshot_token"]:
+                    skipped.append({"bill_id": bill.pk, "reason": "Bill changed since preview; refresh and review it."})
+                    continue
 
-        if not dry_run:
-            bill.interest = expected_interest
-            bill.total_due = (
-                Decimal(bill.base_rent or 0)
-                + Decimal(bill.water_amount or 0)
-                + Decimal(bill.parking_fee or 0)
-                + expected_interest
-            ).quantize(Decimal("0.01"))
-            bill.save(update_fields=["interest", "total_due"])
+                old_interest = row["old_interest"]
+                old_total_due = row["old_total_due"]
+                bill.interest = row["new_interest"]
+                bill.total_due = row["new_total_due"]
+                bill.save(update_fields=["interest", "total_due"])
+                LogEntry.objects.create(
+                    user=operator,
+                    content_type=content_type,
+                    object_id=str(bill.pk),
+                    object_repr=str(bill)[:200],
+                    action_flag=CHANGE,
+                    change_message=(
+                        "Legacy late-fee summary repair. "
+                        f"Reason: {row['reason']} "
+                        f"Interest: {old_interest} -> {row['new_interest']}. "
+                        f"total_due: {old_total_due} -> {row['new_total_due']}."
+                    ),
+                )
+                row["operator"] = operator.get_username()
+                repaired.append(row)
+                total_reduction += row["reduction"]
+
+    if dry_run:
+        queryset = MonthlyBill.objects.filter(interest__gt=0).select_related(
+            "lease", "lease__tenant", "lease__unit",
+        ).order_by("pk")
+        for bill in queryset:
+            row, reason = _legacy_late_fee_repair_candidate(
+                bill, today=today,
+                payment_bill_ids=payment_bill_ids,
+                invoice_bill_ids=invoice_bill_ids,
+            )
+            if reason:
+                skipped.append({
+                    "bill_id": bill.pk,
+                    "billing_month": bill.billing_month,
+                    "status": bill.status,
+                    "old_interest": Decimal(bill.interest or 0).quantize(Decimal("0.01")),
+                    "old_total_due": Decimal(bill.total_due or 0).quantize(Decimal("0.01")),
+                    "reason": reason,
+                })
+            else:
+                eligible.append(row)
+                total_reduction += row["reduction"]
 
     return {
-        "repaired_count": len(repaired),
-        "skipped_count": skipped,
-        "total_reduction": total_reduction.quantize(Decimal("0.01")),
-        "repaired": repaired,
         "dry_run": dry_run,
+        "eligible": eligible,
+        "skipped": skipped,
+        "repaired": repaired,
+        "eligible_count": len(eligible),
+        "repaired_count": len(repaired),
+        "skipped_count": len(skipped),
+        "total_reduction": total_reduction.quantize(Decimal("0.01")),
     }
 
 

@@ -1701,16 +1701,72 @@ class AdminBillingSettlementWarningTests(TestCase):
         preview_response = self.client.get(reverse("admin_repair_late_fees"))
 
         self.assertEqual(preview_response.status_code, 200)
-        self.assertContains(preview_response, "Repair Inflated Late Fees")
+        self.assertContains(preview_response, "Review inflated late-fee summaries")
         self.assertContains(preview_response, "106,944.75")
         self.assertContains(preview_response, "279.00")
+        candidate = next(
+            row for row in preview_response.context["preview"]["eligible"]
+            if row["bill_id"] == self.old_bill.pk
+        )
 
-        apply_response = self.client.post(reverse("admin_repair_late_fees"))
+        apply_response = self.client.post(
+            reverse("admin_repair_late_fees"),
+            {
+                "bill_ids": [str(self.old_bill.pk)],
+                f"snapshot_{self.old_bill.pk}": candidate["snapshot_token"],
+                "confirm_apply": "yes",
+            },
+        )
         self.old_bill.refresh_from_db()
 
-        self.assertEqual(apply_response.status_code, 302)
+        self.assertEqual(apply_response.status_code, 200)
+        self.assertContains(apply_response, "Repaired 1 bill(s)")
         self.assertEqual(self.old_bill.interest, Decimal("279.00"))
         self.assertEqual(self.old_bill.total_due, Decimal("10079.00"))
+
+    def test_admin_repair_requires_explicit_confirmation_and_selected_bill(self):
+        self.client.force_login(self.admin)
+        self.old_bill.interest = Decimal("106944.75")
+        self.old_bill.total_due = Decimal("116744.75")
+        self.old_bill.save(update_fields=["interest", "total_due"])
+
+        response = self.client.post(
+            reverse("admin_repair_late_fees"),
+            {"bill_ids": [str(self.old_bill.pk)]},
+        )
+
+        self.old_bill.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Confirm the selected repairs")
+        self.assertEqual(self.old_bill.interest, Decimal("106944.75"))
+
+    def test_admin_repair_reports_bill_changed_after_preview(self):
+        self.client.force_login(self.admin)
+        self.old_bill.interest = Decimal("106944.75")
+        self.old_bill.total_due = Decimal("116744.75")
+        self.old_bill.save(update_fields=["interest", "total_due"])
+        preview = self.client.get(reverse("admin_repair_late_fees"))
+        candidate = next(
+            row for row in preview.context["preview"]["eligible"]
+            if row["bill_id"] == self.old_bill.pk
+        )
+        self.old_bill.base_rent += Decimal("100.00")
+        self.old_bill.total_due += Decimal("100.00")
+        self.old_bill.save(update_fields=["base_rent", "total_due"])
+
+        response = self.client.post(
+            reverse("admin_repair_late_fees"),
+            {
+                "bill_ids": [str(self.old_bill.pk)],
+                f"snapshot_{self.old_bill.pk}": candidate["snapshot_token"],
+                "confirm_apply": "yes",
+            },
+        )
+
+        self.old_bill.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "changed since preview")
+        self.assertEqual(self.old_bill.interest, Decimal("106944.75"))
 
     def test_admin_cleanup_duplicate_bills_removes_unpaid_duplicate_shell(self):
         paid_april = MonthlyBill.objects.create(

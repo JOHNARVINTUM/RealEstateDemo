@@ -1,84 +1,119 @@
 {% extends "admin_portal/base.html" %}
 {% load humanize %}
-{% block title %}Repair Late Fees | Real Estate Administration{% endblock %}
+{% block title %}Review Legacy Late Fees | Real Estate Administration{% endblock %}
 
 {% block content %}
-<div class="max-w-5xl mx-auto font-sans text-slate-900 pb-12 px-4 py-6">
+<div class="max-w-6xl mx-auto font-sans text-slate-900 pb-12 px-4 py-6">
   <div class="mb-6">
-    <a href="{{ back_url }}" onclick="if (document.referrer) { window.history.back(); return false; }" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-700 hover:bg-slate-50 transition-all shadow-xs group">
-      <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
-      </svg>
-      <span>Back</span>
+    <a href="{{ back_url }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50">
+      <span aria-hidden="true">←</span><span>Back to Rent &amp; Bills</span>
     </a>
-    <p class="text-xs font-black uppercase tracking-wide text-amber-700">Penalty Repair</p>
-    <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 mt-1">Repair Inflated Late Fees</h1>
+    <p class="text-xs font-black uppercase tracking-wide text-amber-700 mt-4">Legacy billing review</p>
+    <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 mt-1">Review inflated late-fee summaries</h1>
     <p class="text-sm text-slate-600 mt-1">
-      This corrects old unpaid or partially paid bills where late fees exceeded the current flat 3% rule. Paid bills and invoices are not changed.
+      Only unpaid, line-free legacy bills with consistent summaries and no payment or invoice references can be repaired here. Line-backed bills are never changed by this tool.
     </p>
   </div>
 
+  {% if repair_result %}
+  <section class="bg-white border border-slate-200 rounded-xl p-5 mb-6" aria-live="polite">
+    <h2 class="font-bold text-slate-900">Apply result</h2>
+    <p class="text-sm text-slate-700 mt-1">
+      Repaired {{ repair_result.repaired_count }} bill(s); skipped {{ repair_result.skipped_count }} selected bill(s).
+      Total reduction: ₱{{ repair_result.total_reduction|floatformat:2|intcomma }}.
+    </p>
+    {% if repair_result.repaired %}
+    <ul class="mt-3 text-sm text-slate-700 list-disc pl-5">
+      {% for row in repair_result.repaired %}
+      <li>Bill #{{ row.bill_id }}: interest ₱{{ row.old_interest|floatformat:2|intcomma }} → ₱{{ row.new_interest|floatformat:2|intcomma }}; total ₱{{ row.old_total_due|floatformat:2|intcomma }} → ₱{{ row.new_total_due|floatformat:2|intcomma }}.</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if repair_result.skipped %}
+    <ul class="mt-3 text-sm text-amber-800 list-disc pl-5">
+      {% for row in repair_result.skipped %}<li>Bill #{{ row.bill_id }}: {{ row.reason }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+  </section>
+  {% endif %}
+
   <section class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
-      <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Bills to repair</span>
-      <p class="text-3xl font-black text-slate-900 mt-1">{{ preview.repaired_count }}</p>
+    <div class="bg-white border border-slate-200 rounded-xl p-4">
+      <span class="text-xs font-bold text-slate-500 uppercase">Eligible</span>
+      <p class="text-2xl font-black mt-1">{{ preview.eligible_count }}</p>
     </div>
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
-      <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Skipped</span>
-      <p class="text-3xl font-black text-slate-900 mt-1">{{ preview.skipped_count }}</p>
+    <div class="bg-white border border-slate-200 rounded-xl p-4">
+      <span class="text-xs font-bold text-slate-500 uppercase">Skipped for review</span>
+      <p class="text-2xl font-black mt-1">{{ preview.skipped_count }}</p>
     </div>
-    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs border-l-4 border-l-emerald-600 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
-      <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total reduction</span>
-      <p class="text-3xl font-black text-emerald-700 mt-1">₱{{ preview.total_reduction|floatformat:2|intcomma }}</p>
+    <div class="bg-white border border-slate-200 rounded-xl p-4">
+      <span class="text-xs font-bold text-slate-500 uppercase">Potential total reduction</span>
+      <p class="text-2xl font-black text-emerald-700 mt-1">₱{{ preview.total_reduction|floatformat:2|intcomma }}</p>
     </div>
   </section>
 
   <section class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-    <div class="bg-slate-50 border-b border-slate-200 px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-      <div>
-        <h2 class="font-black text-slate-900">Preview</h2>
-        <p class="text-xs text-slate-600 mt-0.5">Only rows where current late fee is higher than the corrected flat penalty are listed.</p>
-      </div>
-      {% if preview.repaired_count > 0 %}
-      <form method="post" action="{{ post_url }}">
-        {% csrf_token %}
-        <button type="submit" data-loading-button data-loading-text="Repairing..." class="px-4 py-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-black transition-colors">
-          <span class="button-label">Apply Repair</span>
-        </button>
-      </form>
-      {% endif %}
+    <div class="bg-slate-50 border-b border-slate-200 px-5 py-4">
+      <h2 class="font-black text-slate-900">Eligible legacy summaries</h2>
+      <p class="text-xs text-slate-600 mt-1">Review and select each bill. Applying rechecks the selected records and rejects stale previews.</p>
     </div>
-
-    <div class="overflow-x-auto">
-      <table class="w-full text-left border-collapse min-w-[900px]">
-        <thead>
-          <tr class="bg-slate-50 border-b border-slate-200">
-            <th class="px-5 py-3 text-xs font-bold text-slate-700">Tenant</th>
-            <th class="px-5 py-3 text-xs font-bold text-slate-700">Unit</th>
-            <th class="px-5 py-3 text-xs font-bold text-slate-700">Month</th>
-            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Old Late Fee</th>
-            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Correct Late Fee</th>
-            <th class="px-5 py-3 text-xs font-bold text-slate-700 text-right">Reduction</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-200">
-          {% for row in preview.repaired %}
+    <form method="post" action="{{ post_url }}">
+      {% csrf_token %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse min-w-[1050px]">
+          <thead><tr class="bg-slate-50 border-b border-slate-200 text-xs text-slate-600">
+            <th scope="col" class="px-4 py-3">Select</th>
+            <th scope="col" class="px-4 py-3">Bill / tenant / unit</th>
+            <th scope="col" class="px-4 py-3">Month</th>
+            <th scope="col" class="px-4 py-3 text-right">Interest before → after</th>
+            <th scope="col" class="px-4 py-3 text-right">Total before → after</th>
+            <th scope="col" class="px-4 py-3">Eligibility</th>
+          </tr></thead>
+          <tbody class="divide-y divide-slate-200">
+            {% for row in preview.eligible %}
             <tr>
-              <td class="px-5 py-4 font-bold text-slate-900">{{ row.tenant_email }}</td>
-              <td class="px-5 py-4 font-bold text-slate-700">{{ row.unit|default:"-" }}</td>
-              <td class="px-5 py-4 font-bold text-slate-700">{{ row.billing_month|date:"M Y" }}</td>
-              <td class="px-5 py-4 text-right font-black text-rose-700">₱{{ row.old_interest|floatformat:2|intcomma }}</td>
-              <td class="px-5 py-4 text-right font-black text-emerald-700">₱{{ row.new_interest|floatformat:2|intcomma }}</td>
-              <td class="px-5 py-4 text-right font-black text-slate-900">₱{{ row.reduction|floatformat:2|intcomma }}</td>
-            </tr>
-          {% empty %}
-            <tr>
-              <td colspan="6" class="py-14 text-center">
-                <strong class="text-sm text-slate-800 block">No inflated unpaid late fees found.</strong>
-                <p class="text-xs text-slate-600 mt-1">Current unpaid bills already match the flat 3% rule.</p>
+              <td class="px-4 py-3 align-top">
+                <input type="checkbox" name="bill_ids" value="{{ row.bill_id }}" checked aria-label="Select bill {{ row.bill_id }} for repair">
+                <input type="hidden" name="snapshot_{{ row.bill_id }}" value="{{ row.snapshot_token }}">
               </td>
+              <td class="px-4 py-3 align-top text-sm"><strong>Bill #{{ row.bill_id }}</strong><br>{{ row.tenant_email }} · Unit {{ row.unit|default:"-" }}</td>
+              <td class="px-4 py-3 align-top text-sm">{{ row.billing_month|date:"M Y" }}</td>
+              <td class="px-4 py-3 align-top text-right text-sm">₱{{ row.old_interest|floatformat:2|intcomma }} → ₱{{ row.new_interest|floatformat:2|intcomma }}</td>
+              <td class="px-4 py-3 align-top text-right text-sm">₱{{ row.old_total_due|floatformat:2|intcomma }} → ₱{{ row.new_total_due|floatformat:2|intcomma }}</td>
+              <td class="px-4 py-3 align-top text-sm">{{ row.reason }}</td>
             </tr>
-          {% endfor %}
+            {% empty %}
+            <tr><td colspan="6" class="px-4 py-10 text-center text-sm text-slate-600">No eligible legacy summary-only bills found.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if preview.eligible_count %}
+      <div class="border-t border-slate-200 bg-slate-50 px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <label class="flex items-start gap-2 text-sm text-slate-700">
+          <input type="checkbox" name="confirm_apply" value="yes" required class="mt-1">
+          <span>I reviewed the selected bills and confirm this financial summary correction.</span>
+        </label>
+        <button type="submit" class="px-4 py-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-bold">Apply selected repairs</button>
+      </div>
+      {% endif %}
+    </form>
+  </section>
+
+  <section class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mt-6">
+    <div class="bg-slate-50 border-b border-slate-200 px-5 py-4">
+      <h2 class="font-black text-slate-900">Skipped bills</h2>
+      <p class="text-xs text-slate-600 mt-1">These records are not changed. Review the reason before considering a separate evidence-based workflow.</p>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse min-w-[650px]">
+        <thead><tr class="bg-slate-50 border-b border-slate-200 text-xs text-slate-600">
+          <th scope="col" class="px-4 py-3">Bill</th><th scope="col" class="px-4 py-3">Month</th><th scope="col" class="px-4 py-3">Status</th><th scope="col" class="px-4 py-3">Reason</th>
+        </tr></thead>
+        <tbody class="divide-y divide-slate-200">
+          {% for row in preview.skipped %}
+          <tr><td class="px-4 py-3 text-sm">#{{ row.bill_id }}</td><td class="px-4 py-3 text-sm">{{ row.billing_month|date:"M Y"|default:"-" }}</td><td class="px-4 py-3 text-sm">{{ row.status|default:"-" }}</td><td class="px-4 py-3 text-sm">{{ row.reason }}</td></tr>
+          {% empty %}<tr><td colspan="4" class="px-4 py-8 text-center text-sm text-slate-600">No bills were skipped.</td></tr>{% endfor %}
         </tbody>
       </table>
     </div>

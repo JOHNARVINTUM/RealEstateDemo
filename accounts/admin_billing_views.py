@@ -282,20 +282,50 @@ def admin_mark_bill_unpaid(request, bill_id: int):
 
 @admin_required
 def admin_repair_late_fees(request):
-    preview = repair_inflated_unpaid_late_fees(dry_run=True)
     if request.method == "POST":
-        result = repair_inflated_unpaid_late_fees(dry_run=False)
-        messages.success(
-            request,
-            (
-                f"Repaired {result['repaired_count']} unpaid bill late fee(s). "
-                f"Total reduction: PHP {result['total_reduction']:,.2f}."
-            ),
-        )
-        return redirect("admin_billing")
+        if request.POST.get("confirm_apply") != "yes":
+            messages.error(request, "Confirm the selected repairs before applying them.")
+            result = None
+        else:
+            selected_ids = []
+            for value in request.POST.getlist("bill_ids"):
+                try:
+                    selected_ids.append(int(value))
+                except (TypeError, ValueError):
+                    continue
+            if not selected_ids:
+                result = None
+                messages.error(request, "Select at least one eligible bill before applying repairs.")
+            else:
+                preview_tokens = {
+                    str(bill_id): request.POST.get(f"snapshot_{bill_id}", "")
+                    for bill_id in selected_ids
+                }
+                result = repair_inflated_unpaid_late_fees(
+                    dry_run=False,
+                    bill_ids=selected_ids,
+                    preview_tokens=preview_tokens,
+                    operator=request.user,
+                )
+                if result["repaired_count"]:
+                    messages.success(
+                        request,
+                        f"Repaired {result['repaired_count']} legacy bill summary(s). "
+                        f"Total reduction: PHP {result['total_reduction']:,.2f}.",
+                    )
+                if result["skipped_count"]:
+                    messages.warning(
+                        request,
+                        f"{result['skipped_count']} selected bill(s) were skipped. Review the reasons below.",
+                    )
+        preview = repair_inflated_unpaid_late_fees(dry_run=True)
+    else:
+        result = None
+        preview = repair_inflated_unpaid_late_fees(dry_run=True)
 
     return render(request, "admin_portal/billing_repair_late_fees.html", {
         "preview": preview,
+        "repair_result": result,
         "post_url": reverse("admin_repair_late_fees"),
         "back_url": reverse("admin_billing"),
     })

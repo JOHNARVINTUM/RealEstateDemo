@@ -3,6 +3,7 @@ from decimal import Decimal
 from unittest.mock import patch
 
 from django.core.exceptions import ValidationError
+from django.contrib.admin.models import LogEntry
 from django.db import IntegrityError
 from django.test import TestCase
 from django.urls import reverse
@@ -732,7 +733,15 @@ class BillingWorkflowTests(TestCase):
             status="PAID",
         )
 
-        result = repair_inflated_unpaid_late_fees(today=date(2026, 6, 11))
+        preview = repair_inflated_unpaid_late_fees(today=date(2026, 6, 11))
+        candidate = next(row for row in preview["eligible"] if row["bill_id"] == inflated_bill.pk)
+        result = repair_inflated_unpaid_late_fees(
+            today=date(2026, 6, 11),
+            dry_run=False,
+            bill_ids=[inflated_bill.pk],
+            preview_tokens={str(inflated_bill.pk): candidate["snapshot_token"]},
+            operator=self.tenant,
+        )
 
         inflated_bill.refresh_from_db()
         paid_bill.refresh_from_db()
@@ -1333,3 +1342,217 @@ class Phase1PageFlowHistoricalSafetyTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(MonthlyBill.objects.filter(lease=self.lease, billing_month=self.current_month).exists())
         self.assertFalse(MonthlyBill.objects.filter(lease=self.lease, billing_month=self.previous_month).exists())
+
+
+class LegacyLateFeeRepairSafetyTests(TestCase):
+    audit_date = date(2026, 10, 15)
+
+    def setUp(self):
+        self.tenant = User.objects.create_user(
+            email="legacy-repair-tenant@example.test",
+            username="legacy-repair-tenant",
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        self.unit = Unit.objects.create(number="LR-101")
+        self.lease = Lease.objects.create(
+            tenant=self.tenant,
+            unit=self.unit,
+            monthly_rent=Decimal("10000.00"),
+            due_day=1,
+            start_date=date(2026, 1, 1),
+            status=Lease.STATUS_ACTIVE,
+            is_active=True,
+        )
+
+    def _bill(self, *, status="UNPAID", interest="900.00", total_due=None, **overrides):
+        values = {
+            "lease": self.lease,
+            "billing_month": date(2026, 10, 1),
+            "due_date": date(2026, 10, 1),
+            "base_rent": Decimal("10000.00"),
+            "water_amount": Decimal("200.00"),
+            "parking_fee": Decimal("500.00"),
+            "interest": Decimal(interest),
+            "status": status,
+        }
+        values["total_due"] = (
+            Decimal(values["base_rent"])
+            + Decimal(values["water_amount"])
+            + Decimal(values["parking_fee"])
+            + Decimal(values["interest"])
+            if total_due is None else Decimal(total_due)
+        )
+        values.update(overrides)
+        return MonthlyBill.objects.create(**values)
+
+    def _preview(self, *bill_ids):
+        result = repair_inflated_unpaid_late_fees(today=self.audit_date)
+        rows = {row["bill_id"]: row for row in result["eligible"]}
+        return result, {str(bill_id): rows[bill_id]["snapshot_token"] for bill_id in bill_ids if bill_id in rows}
+
+    def _apply(self, bill_ids, tokens):
+        return repair_inflated_unpaid_late_fees(
+            today=self.audit_date,
+            dry_run=False,
+            bill_ids=bill_ids,
+            preview_tokens=tokens,
+            operator=self.tenant,
+        )
+
+    def test_eligible_legacy_summary_is_repaired_and_audited(self):
+        bill = self._bill()
+        preview, tokens = self._preview(bill.pk)
+        self.assertEqual(preview["eligible_count"], 1)
+        self.assertEqual(preview["eligible"][0]["new_interest"], Decimal("315.00"))
+        self.assertEqual(preview["eligible"][0]["new_total_due"], Decimal("11015.00"))
+
+        result = self._apply([bill.pk], tokens)
+        bill.refresh_from_db()
+        self.assertEqual(result["repaired_count"], 1)
+        self.assertEqual(bill.interest, Decimal("315.00"))
+        self.assertEqual(bill.total_due, Decimal("11015.00"))
+        self.assertFalse(bill.line_items.exists())
+        self.assertGreaterEqual(bill.total_balance, 0)
+        self.assertLessEqual(bill.total_balance, bill.total_due)
+        self.assertEqual(bill.total_balance, bill.total_due)
+        entry = LogEntry.objects.get(object_id=str(bill.pk))
+        self.assertEqual(entry.user, self.tenant)
+        self.assertIn("Interest: 900.00 -> 315.00", entry.change_message)
+        self.assertIn("total_due: 11600.00 -> 11015.00", entry.change_message)
+
+    def test_line_backed_bill_is_skipped_without_summary_or_line_changes(self):
+        bill = self._bill()
+        for line_type, amount in (
+            (BillLineItem.LINE_TYPE_RENT, Decimal("10000.00")),
+            (BillLineItem.LINE_TYPE_WATER, Decimal("200.00")),
+            (BillLineItem.LINE_TYPE_PARKING, Decimal("500.00")),
+            (BillLineItem.LINE_TYPE_LATE_FEE, Decimal("900.00")),
+        ):
+            BillLineItem.objects.create(monthly_bill=bill, line_type=line_type, amount=amount)
+        old_summary = (bill.interest, bill.total_due)
+        old_lines = list(bill.line_items.values_list("line_type", "amount", "paid_amount"))
+
+        result = repair_inflated_unpaid_late_fees(today=self.audit_date)
+
+        bill.refresh_from_db()
+        self.assertEqual((bill.interest, bill.total_due), old_summary)
+        self.assertEqual(list(bill.line_items.values_list("line_type", "amount", "paid_amount")), old_lines)
+        self.assertEqual(sum(bill.line_items.values_list("amount", flat=True)), bill.total_due)
+        self.assertEqual(sum(line.balance for line in bill.line_items.all()), bill.total_balance)
+        self.assertIn("BillLineItems", result["skipped"][0]["reason"])
+
+    def test_paid_late_fee_line_is_never_changed_by_legacy_repair(self):
+        bill = self._bill(status="PARTIALLY_PAID")
+        fee = BillLineItem.objects.create(
+            monthly_bill=bill,
+            line_type=BillLineItem.LINE_TYPE_LATE_FEE,
+            amount=Decimal("900.00"),
+            paid_amount=Decimal("100.00"),
+        )
+        bill.interest = Decimal("900.00")
+        bill.total_due = Decimal("900.00")
+        bill.save(update_fields=["interest", "total_due"])
+
+        result = repair_inflated_unpaid_late_fees(today=self.audit_date)
+
+        bill.refresh_from_db()
+        fee.refresh_from_db()
+        self.assertEqual(result["skipped_count"], 1)
+        self.assertEqual((bill.interest, bill.total_due), (Decimal("900.00"), Decimal("900.00")))
+        self.assertEqual((fee.amount, fee.paid_amount), (Decimal("900.00"), Decimal("100.00")))
+
+    def test_partially_paid_and_paid_bills_are_skipped(self):
+        partial = self._bill(status="PARTIALLY_PAID", rent_paid=Decimal("100.00"))
+        paid = self._bill(status="PAID", billing_month=date(2026, 9, 1))
+        result, _ = self._preview(partial.pk, paid.pk)
+        reasons = {row["bill_id"]: row["reason"] for row in result["skipped"]}
+        self.assertIn("Partially paid", reasons[partial.pk])
+        self.assertIn("Paid bills", reasons[paid.pk])
+        self.assertFalse(LogEntry.objects.filter(object_id__in=[str(partial.pk), str(paid.pk)]).exists())
+
+    def test_manual_payment_bill_ids_reference_is_skipped(self):
+        bill = self._bill()
+        ManualPayment.objects.create(
+            user=self.tenant,
+            reference_code="REF-LEGACY-REPAIR-PAYMENT",
+            bill_ids=str(bill.pk),
+            amount=Decimal("1.00"),
+            status="PENDING",
+        )
+        result, _ = self._preview(bill.pk)
+        self.assertIn("ManualPayment", result["skipped"][0]["reason"])
+
+    def test_invoice_bill_ids_reference_is_skipped(self):
+        bill = self._bill()
+        BillingInvoice.objects.create(
+            invoice_number="LEGACY-REPAIR-INV-1",
+            tenant=self.tenant,
+            bill_ids=str(bill.pk),
+            amount_paid=Decimal("0.00"),
+        )
+        result, _ = self._preview(bill.pk)
+        self.assertIn("BillingInvoice", result["skipped"][0]["reason"])
+
+    def test_inconsistent_summary_and_future_bill_are_skipped(self):
+        inconsistent = self._bill(total_due=Decimal("12000.00"))
+        future = self._bill(
+            billing_month=date(2026, 11, 1), due_date=date(2026, 11, 1),
+        )
+        result, _ = self._preview(inconsistent.pk, future.pk)
+        reasons = {row["bill_id"]: row["reason"] for row in result["skipped"]}
+        self.assertIn("do not reconcile", reasons[inconsistent.pk])
+        self.assertIn("Future", reasons[future.pk])
+
+    def test_payment_indicators_and_unreached_late_fee_threshold_are_skipped(self):
+        payment_indicator = self._bill(payment_reference="REF-OLD-PAYMENT")
+        not_due = self._bill(
+            billing_month=date(2026, 10, 2),
+            due_date=date(2026, 10, 10),
+        )
+        result, _ = self._preview(payment_indicator.pk, not_due.pk)
+        reasons = {row["bill_id"]: row["reason"] for row in result["skipped"]}
+        self.assertIn("payment indicators", reasons[payment_indicator.pk])
+        self.assertIn("threshold", reasons[not_due.pk])
+
+    def test_dry_run_changes_no_bill_or_audit_log(self):
+        bill = self._bill()
+        before = (bill.interest, bill.total_due, bill.total_balance)
+        result = repair_inflated_unpaid_late_fees(today=self.audit_date)
+        bill.refresh_from_db()
+        self.assertEqual((bill.interest, bill.total_due, bill.total_balance), before)
+        self.assertEqual(result["repaired_count"], 0)
+        self.assertFalse(LogEntry.objects.exists())
+    def test_apply_is_limited_to_selected_ids_and_is_idempotent(self):
+        selected = self._bill()
+        unselected = self._bill(billing_month=date(2026, 9, 1), due_date=date(2026, 9, 1))
+        _, tokens = self._preview(selected.pk, unselected.pk)
+        first = self._apply([selected.pk], tokens)
+        selected.refresh_from_db()
+        unselected.refresh_from_db()
+        self.assertEqual(first["repaired_count"], 1)
+        self.assertEqual(selected.interest, Decimal("315.00"))
+        self.assertEqual(unselected.interest, Decimal("900.00"))
+
+        second = self._apply([selected.pk], tokens)
+        selected.refresh_from_db()
+        self.assertEqual(second["repaired_count"], 0)
+        self.assertEqual(second["skipped_count"], 1)
+        self.assertEqual(selected.interest, Decimal("315.00"))
+        self.assertEqual(LogEntry.objects.filter(object_id=str(selected.pk)).count(), 1)
+
+    def test_stale_preview_is_skipped_after_bill_changes(self):
+        bill = self._bill()
+        _, tokens = self._preview(bill.pk)
+        bill.base_rent = Decimal("11000.00")
+        bill.total_due = Decimal("12600.00")
+        bill.save(update_fields=["base_rent", "total_due"])
+
+        result = self._apply([bill.pk], tokens)
+
+        bill.refresh_from_db()
+        self.assertEqual(result["repaired_count"], 0)
+        self.assertIn("changed since preview", result["skipped"][0]["reason"])
+        self.assertEqual(bill.interest, Decimal("900.00"))
+        self.assertEqual(bill.total_due, Decimal("12600.00"))
+        self.assertFalse(LogEntry.objects.exists())

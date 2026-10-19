@@ -1013,6 +1013,197 @@ def get_or_update_monthly_bill(lease, billing_month: date, today: date | None = 
     return bill
 
 
+def _late_fee_refresh_plan(bill: MonthlyBill, *, today: date) -> dict:
+    """Build a read-only, conservative late-fee plan for one existing bill."""
+    lines = list(bill.line_items.all())
+    by_type = {}
+    duplicate_line_type = None
+    for line in lines:
+        if line.line_type in by_type:
+            duplicate_line_type = line.line_type
+            break
+        by_type[line.line_type] = line
+
+    fee_line = by_type.get(BillLineItem.LINE_TYPE_LATE_FEE)
+    fee_amount = fee_line.amount if fee_line else Decimal("0.00")
+    paid_fee = fee_line.paid_amount if fee_line else Decimal("0.00")
+    base = Decimal(bill.base_rent or 0).quantize(Decimal("0.01"))
+    parking = Decimal(bill.parking_fee or 0).quantize(Decimal("0.01"))
+    details = {
+        "bill_id": bill.pk,
+        "billing_month": bill.billing_month,
+        "due_date": bill.due_date,
+        "days_overdue": (today - bill.due_date).days if bill.due_date else None,
+        "status": bill.status,
+        "rent": base,
+        "parking": parking,
+        "current_interest": Decimal(bill.interest or 0),
+        "existing_fee_amount": fee_amount,
+        "expected_fee": Decimal("0.00"),
+        "proposed_total_due": bill.total_due,
+        "action": "skipped",
+        "reason": "not eligible",
+    }
+
+    if duplicate_line_type:
+        details["reason"] = f"duplicate {duplicate_line_type} lines"
+        return details
+
+    if bill.status not in {"UNPAID", "PARTIALLY_PAID"}:
+        details["reason"] = "status is not UNPAID or PARTIALLY_PAID"
+        return details
+    if not bill.due_date:
+        details["reason"] = "missing due date"
+        return details
+    if bill.billing_month.replace(day=1) > today.replace(day=1) or bill.due_date > today:
+        details["reason"] = "future bill"
+        return details
+    if details["days_overdue"] < 14:
+        details["reason"] = "less than 14 days past due"
+        return details
+    if base < 0 or parking < 0:
+        details["reason"] = "negative rent or parking value"
+        return details
+    if not lines:
+        details["reason"] = "bill has no line-item ledger"
+        return details
+
+    for line in lines:
+        if line.amount < 0 or line.paid_amount < 0 or line.paid_amount > line.amount:
+            details["reason"] = f"invalid amount/allocation on {line.line_type} line"
+            return details
+
+    rent_line = by_type.get(BillLineItem.LINE_TYPE_RENT)
+    parking_line = by_type.get(BillLineItem.LINE_TYPE_PARKING)
+    water_line = by_type.get(BillLineItem.LINE_TYPE_WATER)
+    if (base > 0 and rent_line is None) or (rent_line and rent_line.amount != base):
+        details["reason"] = "rent summary does not match its ledger line"
+        return details
+    if (parking > 0 and parking_line is None) or (parking_line and parking_line.amount != parking):
+        details["reason"] = "parking summary does not match its ledger line"
+        return details
+    if Decimal(bill.water_amount or 0) != (water_line.amount if water_line else Decimal("0.00")):
+        details["reason"] = "water summary does not match its ledger line"
+        return details
+    for summary_name, line, attribute in (
+        ("rent payment summary", rent_line, "rent_paid"),
+        ("parking payment summary", parking_line, "parking_paid"),
+        ("water payment summary", water_line, "water_paid"),
+    ):
+        summary_value = Decimal(getattr(bill, attribute) or 0)
+        line_value = line.paid_amount if line else Decimal("0.00")
+        if summary_value != line_value:
+            details["reason"] = f"{summary_name} does not match its ledger allocation"
+            return details
+    if rent_line and bill.rent_paid_at != (rent_line.paid_at if rent_line.paid_amount > 0 else None):
+        details["reason"] = "rent payment timestamp does not match its ledger line"
+        return details
+    if water_line and bill.water_paid_at != (water_line.paid_at if water_line.paid_amount > 0 else None):
+        details["reason"] = "water payment timestamp does not match its ledger line"
+        return details
+    if water_line and water_line.source_water_reading_id and bill.source_water_reading_id != water_line.source_water_reading_id:
+        details["reason"] = "water-reading source does not match its ledger line"
+        return details
+    if fee_line and Decimal(bill.interest or 0) != fee_line.amount:
+        details["reason"] = "interest summary does not match its late-fee line"
+        return details
+    if not fee_line and Decimal(bill.interest or 0) != 0:
+        details["reason"] = "interest summary exists without a late-fee line"
+        return details
+
+    line_total = sum((line.amount for line in lines), Decimal("0.00"))
+    line_balance = sum((line.balance for line in lines), Decimal("0.00"))
+    if line_total != bill.total_due or line_balance != bill.total_balance:
+        details["reason"] = "bill summary does not reconcile to its line-item ledger"
+        return details
+    if bill.total_balance <= 0:
+        details["reason"] = "bill has no outstanding balance"
+        return details
+    has_allocations = any(line.paid_amount > 0 for line in lines)
+    if (bill.status == "UNPAID" and has_allocations) or (bill.status == "PARTIALLY_PAID" and not has_allocations):
+        details["reason"] = "payment allocations do not match bill status"
+        return details
+    if bill.paid_at is not None:
+        details["reason"] = "unpaid/partially-paid bill has a paid timestamp"
+        return details
+
+    expected_fee, _, _ = compute_weekly_interest(base + parking, bill.due_date, today)
+    details["expected_fee"] = expected_fee
+    if expected_fee <= 0:
+        details["reason"] = "late-fee basis is zero"
+        return details
+    if fee_line and paid_fee > 0 and fee_amount != expected_fee:
+        details["reason"] = "allocated late-fee amount differs from the expected fee"
+        return details
+
+    target_fee = fee_amount if fee_line and paid_fee > 0 else expected_fee
+    details["proposed_total_due"] = (bill.total_due + target_fee - fee_amount).quantize(Decimal("0.01"))
+    if not fee_line:
+        details.update(action="created", reason="eligible; late-fee line will be created")
+    elif fee_amount != target_fee:
+        details.update(action="updated", reason="eligible; unpaid late-fee line will be corrected")
+    else:
+        details.update(action="unchanged", reason="late-fee line already matches the one-time fee")
+    return details
+
+
+def refresh_late_fee_for_bill(bill_id: int, *, today: date | None = None, dry_run: bool = False) -> dict:
+    """Safely add/update one eligible bill's late-fee line without recalculating other charges."""
+    today = today or timezone.localdate()
+    if dry_run:
+        bill = (
+            MonthlyBill.objects.filter(pk=bill_id)
+            .prefetch_related("line_items")
+            .first()
+        )
+        if bill is None:
+            return {"bill_id": bill_id, "action": "skipped", "reason": "bill not found"}
+        return _late_fee_refresh_plan(bill, today=today)
+
+    with transaction.atomic():
+        bill = (
+            MonthlyBill.objects.select_for_update()
+            .filter(pk=bill_id)
+            .prefetch_related("line_items")
+            .first()
+        )
+        if bill is None:
+            return {"bill_id": bill_id, "action": "skipped", "reason": "bill not found"}
+
+        plan = _late_fee_refresh_plan(bill, today=today)
+        if plan["action"] not in {"created", "updated"}:
+            return plan
+
+        fee_line = bill.line_items.filter(line_type=BillLineItem.LINE_TYPE_LATE_FEE).first()
+        if fee_line is None:
+            fee_line = BillLineItem(
+                monthly_bill=bill,
+                line_type=BillLineItem.LINE_TYPE_LATE_FEE,
+                amount=plan["expected_fee"],
+                paid_amount=Decimal("0.00"),
+            )
+        else:
+            # The plan only updates an unallocated line. Any existing payment
+            # allocation is left untouched.
+            fee_line.amount = plan["expected_fee"]
+        fee_line.refresh_status()
+        fee_line.save()
+
+        # The locked bill was prefetched for validation. Invalidate that cache
+        # so synchronization sees the inserted/updated fee line.
+        bill._prefetched_objects_cache.pop("line_items", None)
+        sync_monthly_bill_from_line_items(bill)
+        bill.refresh_from_db()
+        refreshed_lines = list(bill.line_items.all())
+        gross_sum = sum((line.amount for line in refreshed_lines), Decimal("0.00"))
+        balance_sum = sum((line.balance for line in refreshed_lines), Decimal("0.00"))
+        if gross_sum != bill.total_due or balance_sum != bill.total_balance:
+            raise ValidationError("Late-fee refresh failed bill ledger reconciliation.")
+
+        plan["reason"] = "late-fee line created" if plan["action"] == "created" else "unpaid late-fee line updated"
+        return plan
+
+
 def ensure_bills_since_move_in(lease, today: date | None = None):
     if lease is None:
         return

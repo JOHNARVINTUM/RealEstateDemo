@@ -18,11 +18,18 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib.sitemaps.views import sitemap
 from accounts.admin_portal_views import admin_dashboard
 from accounts.views import RoleBasedLoginView
 from django.contrib.auth.views import LogoutView
+from .seo import robots_txt
+from .sitemaps import PublicPageSitemap
+
+sitemaps = {"public": PublicPageSitemap}
 
 urlpatterns = [
+    path("sitemap.xml", sitemap, {"sitemaps": sitemaps}, name="sitemap"),
+    path("robots.txt", robots_txt, name="robots_txt"),
     path("admin/", admin.site.urls),
 
     # /login , /logout

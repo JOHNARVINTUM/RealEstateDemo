@@ -4576,3 +4576,36 @@ class StaffManagementMVPTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'New passwords do not match.')
+
+
+class PublicSeoEndpointTests(TestCase):
+    def test_sitemap_is_valid_xml_with_only_the_public_landing_page(self):
+        from xml.etree import ElementTree
+
+        response = self.client.get(reverse("sitemap"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("xml", response["Content-Type"])
+        root = ElementTree.fromstring(response.content)
+        self.assertEqual(root.tag, "{http://www.sitemaps.org/schemas/sitemap/0.9}urlset")
+        self.assertIn(b"https://realestate360.site/", response.content)
+        self.assertNotIn(b"/admin-portal/", response.content)
+        self.assertNotIn(b"/tenant/", response.content)
+        self.assertNotIn(b"/payments/", response.content)
+        self.assertNotIn(b"/maintenance/", response.content)
+
+    def test_robots_txt_points_to_canonical_sitemap_and_disallows_private_areas(self):
+        response = self.client.get(reverse("robots_txt"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/plain", response["Content-Type"])
+        self.assertContains(response, "User-agent: *")
+        self.assertContains(response, "Allow: /")
+        self.assertContains(response, "Disallow: /admin/")
+        self.assertContains(response, "Disallow: /admin-portal/")
+        self.assertContains(response, "Disallow: /tenant/")
+        self.assertContains(response, "Disallow: /payments/")
+        self.assertContains(response, "Disallow: /maintenance/")
+        self.assertContains(response, "Disallow: /water/")
+        self.assertContains(response, "Sitemap: https://realestate360.site/sitemap.xml")
+        self.assertNotContains(response, "railway.app")

@@ -563,11 +563,20 @@ def admin_billed_this_month(request):
     unpaid_count = sum(1 for bill in all_bills if bill.status == "UNPAID")
     partial_count = sum(1 for bill in all_bills if bill.status == "PARTIALLY_PAID")
 
-    total_rent = sum(bill.rent_paid for bill in all_bills)
-    total_water = sum(bill.water_paid for bill in all_bills)
-    total_parking = sum(bill.parking_paid for bill in all_bills)
-    total_interest = sum(bill.interest for bill in all_bills if bill.status == "PAID")
-    grand_total = total_rent + total_water + total_parking + total_interest
+    if payment_filter == "unpaid":
+        # Keep the summary aligned with the exact unpaid population displayed below.
+        total_rent = sum((bill.rent_balance for bill in bills), Decimal("0"))
+        total_water = sum((bill.water_balance for bill in bills), Decimal("0"))
+        total_parking = sum((bill.parking_balance for bill in bills), Decimal("0"))
+        total_interest = sum((bill.interest_balance for bill in bills), Decimal("0"))
+        grand_total = sum((bill.total_balance for bill in bills), Decimal("0"))
+    else:
+        # Preserve the existing Paid-view collection KPI behavior.
+        total_rent = sum(bill.rent_paid for bill in all_bills)
+        total_water = sum(bill.water_paid for bill in all_bills)
+        total_parking = sum(bill.parking_paid for bill in all_bills)
+        total_interest = sum(bill.interest for bill in all_bills if bill.status == "PAID")
+        grand_total = total_rent + total_water + total_parking + total_interest
 
     return render(
         request,

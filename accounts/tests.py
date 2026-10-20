@@ -255,6 +255,142 @@ class AdminMonthlyBillingFilterTests(TestCase):
         self.assertContains(response, "Outstanding")
 
 
+class AdminUnpaidBillsKpiTests(TestCase):
+    target_month = date(2026, 9, 1)
+
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            email="unpaid-kpi-admin@example.com",
+            username="unpaidkpiadmin",
+            password="password123",
+            role=User.Role.ADMIN,
+        )
+        self.client.force_login(self.admin)
+
+        self.unpaid_bill = self._make_bill(
+            "KPI-A", "unpaid-kpi-a@example.com", self.target_month,
+            status="UNPAID", rent=Decimal("10000.00"), rent_paid=Decimal("1000.00"),
+            water=Decimal("400.00"), water_paid=Decimal("100.00"),
+            parking=Decimal("600.00"), parking_paid=Decimal("200.00"),
+            interest=Decimal("500.00"), interest_paid=Decimal("125.00"),
+        )
+        self.second_unpaid_bill = self._make_bill(
+            "KPI-B", "unpaid-kpi-b@example.com", self.target_month,
+            status="UNPAID", rent=Decimal("2000.00"),
+        )
+        self.paid_bill = self._make_bill(
+            "KPI-P", "unpaid-kpi-paid@example.com", self.target_month,
+            status="PAID", rent=Decimal("3000.00"), rent_paid=Decimal("3000.00"),
+            interest=Decimal("50.00"),
+        )
+        self.partial_bill = self._make_bill(
+            "KPI-Q", "unpaid-kpi-partial@example.com", self.target_month,
+            status="PARTIALLY_PAID", rent=Decimal("800.00"), rent_paid=Decimal("200.00"),
+        )
+        self.other_month_bill = self._make_bill(
+            "KPI-O", "unpaid-kpi-other-month@example.com", date(2026, 8, 1),
+            status="UNPAID", rent=Decimal("5000.00"),
+        )
+
+    def _make_bill(
+        self, unit_number, email, billing_month, *, status, rent, rent_paid=Decimal("0.00"),
+        water=Decimal("0.00"), water_paid=Decimal("0.00"),
+        parking=Decimal("0.00"), parking_paid=Decimal("0.00"),
+        interest=Decimal("0.00"), interest_paid=Decimal("0.00"),
+    ):
+        tenant = User.objects.create_user(
+            email=email,
+            username=email.split("@")[0],
+            password="password123",
+            role=User.Role.TENANT,
+        )
+        lease = Lease.objects.create(
+            tenant=tenant,
+            unit=Unit.objects.create(number=unit_number),
+            status=Lease.STATUS_ACTIVE,
+            is_active=True,
+            monthly_rent=rent,
+            start_date=date(2026, 1, 1),
+        )
+        bill = MonthlyBill.objects.create(
+            lease=lease,
+            billing_month=billing_month,
+            base_rent=rent,
+            water_amount=water,
+            parking_fee=parking,
+            interest=interest,
+            total_due=rent + water + parking + interest,
+            rent_paid=rent_paid,
+            water_paid=water_paid,
+            parking_paid=parking_paid,
+            status=status,
+        )
+        for line_type, amount, paid_amount in (
+            (BillLineItem.LINE_TYPE_RENT, rent, rent_paid),
+            (BillLineItem.LINE_TYPE_WATER, water, water_paid),
+            (BillLineItem.LINE_TYPE_PARKING, parking, parking_paid),
+            (BillLineItem.LINE_TYPE_LATE_FEE, interest, interest_paid),
+        ):
+            if amount:
+                BillLineItem.objects.create(
+                    monthly_bill=bill,
+                    line_type=line_type,
+                    amount=amount,
+                    paid_amount=paid_amount,
+                )
+        return bill
+
+    def _get_unpaid_response(self):
+        return self.client.get(
+            reverse("admin_billed_this_month"),
+            {"month": "2026-09", "payment_status": "unpaid"},
+        )
+
+    def test_unpaid_kpis_match_the_table_outstanding_balances(self):
+        response = self._get_unpaid_response()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["total_rent"], Decimal("11000.00"))
+        self.assertEqual(response.context["total_water"], Decimal("300.00"))
+        self.assertEqual(response.context["total_parking"], Decimal("400.00"))
+        self.assertEqual(response.context["total_interest"], Decimal("375.00"))
+        self.assertEqual(response.context["grand_total"], Decimal("12075.00"))
+        self.assertEqual(response.context["total_rent"], response.context["table_total_rent"])
+        self.assertEqual(response.context["total_water"], response.context["table_total_water"])
+        self.assertEqual(response.context["total_parking"], response.context["table_total_parking"])
+        self.assertEqual(response.context["total_interest"], response.context["table_total_interest"])
+        self.assertEqual(response.context["grand_total"], response.context["table_grand_total"])
+        self.assertContains(response, "Total Outstanding")
+        self.assertContains(response, "Outstanding Interest")
+        self.assertNotContains(response, "Total Collected")
+
+    def test_unpaid_table_population_and_month_scope_are_unchanged(self):
+        response = self._get_unpaid_response()
+
+        self.assertEqual(
+            {bill.pk for bill in response.context["bills"]},
+            {self.unpaid_bill.pk, self.second_unpaid_bill.pk},
+        )
+        self.assertNotIn(self.paid_bill, response.context["bills"])
+        self.assertNotIn(self.partial_bill, response.context["bills"])
+        self.assertNotIn(self.other_month_bill, response.context["bills"])
+        self.assertEqual(response.context["table_grand_total"], Decimal("12075.00"))
+
+    def test_paid_view_keeps_its_existing_collection_kpi_calculation(self):
+        response = self.client.get(
+            reverse("admin_billed_this_month"),
+            {"month": "2026-09", "payment_status": "paid"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["total_rent"], Decimal("4200.00"))
+        self.assertEqual(response.context["total_water"], Decimal("100.00"))
+        self.assertEqual(response.context["total_parking"], Decimal("200.00"))
+        self.assertEqual(response.context["total_interest"], Decimal("50.00"))
+        self.assertEqual(response.context["grand_total"], Decimal("4550.00"))
+        self.assertContains(response, "Total Collected")
+
+
 class AdminBillingPrioritizationTests(TestCase):
     def setUp(self):
         self.admin = User.objects.create_superuser(

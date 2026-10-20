@@ -94,7 +94,11 @@
           <a href="{{ landing_editor_urls.hero }}" class="lp-cms-edit-link">Edit Section</a>
         </div>
         {% endif %}
-        <h1>{{ business_profile.hero_title|linebreaksbr }} <i>{{ business_profile.hero_subtitle }}</i></h1>
+        {% if business_profile.hero_title == "REALESTATE" and business_profile.hero_subtitle == "Find your home with us" %}
+          <h1>RealEstate360+ <i>Property Management, Simplified</i></h1>
+        {% else %}
+          <h1>{{ business_profile.hero_title|linebreaksbr }} <i>{{ business_profile.hero_subtitle }}</i></h1>
+        {% endif %}
         <p>{{ business_profile.hero_description }}</p>
         <a href="#about" class="lp-btn-primary">{{ business_profile.hero_button_text|default:"Explore RealEstate360+" }}</a>
       </div>

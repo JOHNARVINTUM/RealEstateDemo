@@ -1,11 +1,13 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}
+{% block title %}{% if request.path == '/' or request.path == '' %}RealEstate360+ | Property Management System in the Philippines{% else %}Login - RealEstate360+{% endif %}{% endblock %}
+
+{% block meta_description %}{% if request.path == '/' or request.path == '' %}RealEstate360+ is a property management system for rentals, tenants, billing, payments, maintenance, and property operations in the Philippines.{% else %}RealEstate360+ — Property Management Portal{% endif %}{% endblock %}
+
+{% block canonical_link %}
   {% if request.path == '/' or request.path == '' %}
-    Welcome to Sta. Maria - RealEstate360+
-  {% else %}
-    Login - RealEstate360+
+    <link rel="canonical" href="https://realestate360.site/">
   {% endif %}
 {% endblock %}
 

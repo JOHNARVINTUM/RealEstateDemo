@@ -4579,6 +4579,44 @@ class StaffManagementMVPTests(TestCase):
 
 
 class PublicSeoEndpointTests(TestCase):
+    homepage_title = "RealEstate360+ | Property Management System in the Philippines"
+    homepage_description = (
+        "RealEstate360+ is a property management system for rentals, tenants, billing, payments, "
+        "maintenance, and property operations in the Philippines."
+    )
+
+    def test_homepage_uses_requested_title_description_h1_and_canonical(self):
+        response = self.client.get(reverse("public_home"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f"<title>{self.homepage_title}</title>")
+        self.assertEqual(response.content.count(b"<title>"), 1)
+        self.assertContains(
+            response,
+            f'<meta name="description" content="{self.homepage_description}">',
+        )
+        self.assertEqual(response.content.count(b'<meta name="description"'), 1)
+        self.assertContains(response, "RealEstate360+ <i>Property Management, Simplified</i>")
+        self.assertContains(response, '<link rel="canonical" href="https://realestate360.site/">')
+        self.assertEqual(response.content.count(b'rel="canonical"'), 1)
+        self.assertNotContains(response, "noindex")
+
+    def test_admin_page_metadata_is_not_replaced_with_homepage_metadata(self):
+        admin_user = User.objects.create_superuser(
+            email="seo-admin@example.com",
+            username="seoadmin",
+            password="password123",
+            role=User.Role.ADMIN,
+        )
+        self.client.force_login(admin_user)
+
+        response = self.client.get(reverse("admin_dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "<title>Home | RealEstate360+</title>")
+        self.assertNotContains(response, self.homepage_title)
+        self.assertNotContains(response, self.homepage_description)
+
     def test_public_homepage_uses_dedicated_favicon(self):
         response = self.client.get(reverse("public_home"))
 

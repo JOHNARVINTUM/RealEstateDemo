@@ -3,11 +3,12 @@ from django.urls import reverse
 
 
 class PublicPageSitemap(Sitemap):
-    """Only include the public marketing/login landing page in search results."""
+    """Only include the public landing page in search results."""
 
     protocol = "https"
+
     def items(self):
-        return ("login",)
+        return ("public_home",)
 
     def location(self, url_name):
         return reverse(url_name)

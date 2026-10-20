@@ -4579,6 +4579,23 @@ class StaffManagementMVPTests(TestCase):
 
 
 class PublicSeoEndpointTests(TestCase):
+    def test_public_homepage_uses_dedicated_favicon(self):
+        response = self.client.get(reverse("public_home"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            '<link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">',
+        )
+
+    def test_favicon_asset_is_square_svg(self):
+        from xml.etree import ElementTree
+
+        favicon_path = Path(__file__).resolve().parent.parent / "static" / "img" / "favicon.svg"
+        root = ElementTree.parse(favicon_path).getroot()
+
+        self.assertEqual(root.attrib["viewBox"], "0 0 512 512")
+
     def test_sitemap_is_valid_xml_with_only_the_public_landing_page(self):
         from xml.etree import ElementTree
 
